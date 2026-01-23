@@ -1,0 +1,65 @@
+<!-- Candidate Info Card -->
+{% if candidate %}
+<style>
+    .candidate-info-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 12px;
+        padding: 20px 25px;
+        margin-bottom: 30px;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    }
+
+    .candidate-info-card .d-flex {
+        align-items: center;
+    }
+
+    .candidate-info-card .candidate-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        margin-right: 15px;
+        flex-shrink: 0;
+    }
+
+    .candidate-info-card h6 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 600;
+    }
+
+    .candidate-info-card small {
+        opacity: 0.9;
+        font-size: 14px;
+    }
+
+    @media (max-width: 768px) {
+        .candidate-info-card {
+            padding: 15px;
+        }
+
+        .candidate-info-card .candidate-avatar {
+            width: 40px;
+            height: 40px;
+            font-size: 20px;
+        }
+    }
+</style>
+
+<div class="candidate-info-card">
+    <div class="d-flex">
+        <div class="candidate-avatar">
+            <i class="fas fa-user-circle"></i>
+        </div>
+        <div>
+            <h6>Creating profile for: <strong>{{ candidate.first_name }}{% if candidate.last_name %} {{ candidate.last_name }}{% endif %}</strong></h6>
+            <small>{{ candidate.email }}</small>
+        </div>
+    </div>
+</div>
+{% endif %}

@@ -1,0 +1,44 @@
+// Font Imports
+// @import "../_vendors/_font-awesome/scss/font-awesome";
+
+@font-face {
+  font-family: 'museo500';
+  src: url('../fonts/museo500-regular-webfont.woff2') format('woff2'),
+       url('../fonts/museo500-regular-webfont.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'museo300';
+  src: url('../fonts/museo300-regular-webfont.woff2') format('woff2'),
+       url('../fonts/museo300-regular-webfont.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'melbourneregular';
+  src: url('../fonts/melbourne_reg-webfont.woff2') format('woff2'),
+       url('../fonts/melbourne_reg-webfont.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+}
+
+// Config
+$font-size-base: 13px;
+$headings-font-family: 'museo300', sans-serif;
+$headings-color: $venice-blue !default;
+
+$font-size-h1: 32px;
+
+h1 {
+  font-size: $font-size-h1;
+  margin-top: 0 !important;
+  margin-bottom: 24px !important;
+}
+
+h1 ~ p {
+  font-size: 16px;
+}
+

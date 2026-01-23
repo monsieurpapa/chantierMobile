@@ -1,0 +1,370 @@
+// Config
+$body-bg: white;
+$text-color: $bali-hai;
+$font-family-base: 'Open Sans', sans-serif !default;
+$link-hover-decoration: none;
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background-color: $body-bg;
+  color: $text-color;
+  font-family: $font-family-base;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 20px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  //@include gradient-vertical(#021D40, #1F76AA, 0%, 100%);
+}
+
+img {
+  max-width: 100%;
+}
+
+a {
+  &:active,
+  &:hover,
+  &:focus {
+    outline: 0 !important;
+    text-decoration: $link-hover-decoration;
+    transition: all 0.3s;
+  }
+}
+
+.abs-link {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+section {
+  &.pad-100 {
+    padding: 100px 0;
+  }
+
+  &.pad-70 {
+    padding: 70px 0;
+  }
+
+  &.bg-wild-sand {
+    background-color: $wild-sand;
+  }
+}
+
+.flex-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+
+  @media #{$md-up} {
+    flex-direction: row;
+  }
+}
+
+.title-with-hr {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 42px;
+  padding-bottom: 8px;
+  position: relative;
+
+  @media #{$sm-up} {
+    margin-bottom: 48px;
+    flex-direction: row;
+    justify-content: space-between;
+    padding-bottom: 0;
+  }
+
+  &:before {
+    @include pseudo;
+    background-color: #CECECE;
+    top: 100%;
+    height: 1px;
+    width: 100%;
+    z-index: 10;
+
+    @media #{$sm-up} {
+      top: 49px;
+    }
+  }
+
+  h1 {
+    float: left;
+  }
+}
+
+.m-top-15 {
+  margin-top: 15px !important;
+}
+
+.corner-ribbon {
+  width: 136px;
+  background: #00aeef;
+  font-size: 9px;
+  text-transform: uppercase;
+  position: absolute;
+  top: 13px;
+  right: -34px;
+  text-align: center;
+  line-height: 41px;
+  color: #fff;
+  transform: rotate(45deg);
+
+  &.fuzzy-brown {
+    background: #c75147;
+  }
+}
+
+.banner-ribbon {
+  background: #00aeef;
+  color: white;
+  font-weight: 600;
+  line-height: 54px;
+  text-align: center;
+  position: relative;
+  width: 233px;
+  height: 54px;
+
+  &:before {
+    content: '';
+    position: absolute;
+    height: 0;
+    width: 0;
+    border-top: 6px solid #457499;
+    border-left: 6px solid transparent;
+    left: 0;
+    bottom: -6px;
+  }
+
+  &:after {
+    content: '';
+    position: absolute;
+    height: 0;
+    width: 0;
+    border-top: 27px solid #00aeef;
+    border-bottom: 27px solid #00aeef;
+    border-right: 30px solid transparent;
+    right: -30px;
+  }
+}
+
+.checklist {
+  margin: 10px 16px 0;
+  list-style: none;
+  padding-left: 0;
+  li {
+    position: relative;
+    font-size: 16px;
+    color: #085485;
+    padding-right: 0 !important;
+    padding-left: 50px;
+    padding-bottom: 20px;
+    &:before {
+      content: '';
+      width: 25px;
+      height: 25px;
+      background: url('/static/app/img/shared/icons/checkbox.png');
+      background-repeat: no-repeat;
+      background-position: center;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+  }
+}
+
+.plainlist {
+  padding-left: 17px;
+  li {
+    padding-left: 10px;
+    padding-bottom: 15px;
+  }
+}
+
+.overdue {
+ color: $tia-maria !important;
+}
+
+.unpaid {
+  color: $meteor !important;
+}
+
+.paid {
+  color: $fun-green !important;
+}
+
+.mark-ticked {
+  margin-bottom: 25px;
+  h4 {
+    font-size: 16px !important;
+    color: $venice-blue !important;
+    &:before {
+      content: '';
+      background: url('/static/app/img/shared/icons/check-tick.png') no-repeat;
+      width: 25px;
+      height: 25px;      
+      display: inline-block;
+      margin-right: 10px;
+      vertical-align: middle; 
+    }
+  }
+  ul {
+    padding-left: 38px !important;
+  }
+}
+
+.mark-cross {
+  h4 {
+    font-size: 16px !important;
+    color: $venice-blue !important;
+    &:before {
+      content: '';
+      background: url('/static/app/img/shared/icons/check-cross.png') no-repeat;
+      width: 25px;
+      height: 25px;
+      display: inline-block;
+      margin-right: 10px;
+      vertical-align: middle;
+    }
+  }
+  ul {
+    padding-left: 38px !important;
+  }
+}
+
+.errorlist {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    position: absolute;
+    color: $flamingo;
+    z-index: 3;
+}
+
+.login-box,
+.registration-box,
+.forgotten-box {
+  .errorlist {
+    position: relative;
+    text-align: center;
+    margin-bottom: 0.9em;
+  }
+  input:not([type='hidden']) + .errorlist {
+    text-align: left;
+  }
+  h1 ~ p {
+    font-size: 13px;
+  } 
+}
+
+.fa-refresh {
+  font-size: 25px;
+  color: $venice-blue;
+}
+
+.helpdesk-ticket-history {
+  aside {
+    ul {
+      &.pagination {
+        li {
+          padding: 10px;
+          &.active {
+            color: $venice-blue;
+            border: 1px solid $venice-blue;
+            background: none;
+          }
+          &:hover {
+            background: none;
+            color: $venice-blue;
+          }
+          a {
+            display: inline-block;
+          }
+        }  
+      } 
+    }
+  }
+}
+
+.pagination {
+  padding: 0 18px 0 0;
+  margin-top: 10px;
+  li {
+    display: inline-block;
+    padding: 10px;
+    &.active {
+      color: $venice-blue;
+      border: 1px solid $venice-blue;
+      background: none;
+    }
+    &:hover {
+      background: none;
+      color: $venice-blue;
+    }
+    a {
+      display: inline;
+    }
+  }
+}
+
+.page-controls {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  @media #{$sm-up} {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+  .list-inline {
+    margin-top: 10px;
+    text-align: center;
+    @media #{$sm-up} {
+      text-align: left;
+    }
+  }
+}
+
+.page-nav {
+  text-align: right;
+  p {
+    a { 
+      display: inline-block;
+      vertical-align: middle;
+      height: 25px;
+      i {
+        position: relative;
+        color: white;
+        background: $cerulean;
+        border-radius: 100%;
+        width: 25px;
+        height: 25px;
+        line-height: 25px;
+        text-align: center;
+        margin: 0 auto;
+        &:before {
+          font-size: 16px;
+          line-height: 25px;
+        }
+      }
+      &:first-of-type {
+        padding-left: 10px;
+      }
+      + a {
+        padding-left: 10px;
+      } 
+    }
+  }
+}
+
+.section-aqua-haze {
+  background-color: #f6f8fa;
+}

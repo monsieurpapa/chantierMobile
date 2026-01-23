@@ -1,0 +1,210 @@
+{% load static i18n %}
+<script>
+    var isFluid = JSON.parse(localStorage.getItem('isFluid'));
+    if (isFluid) {
+        var container = document.querySelector('[data-layout]');
+        container.classList.remove('container');
+        container.classList.add('container-fluid');
+    }
+</script>
+<nav class="navbar navbar-light navbar-vertical navbar-expand-xl">
+    <script>
+        var navbarStyle = localStorage.getItem("navbarStyle");
+        if (navbarStyle && navbarStyle !== 'transparent') {
+            document.querySelector('.navbar-vertical').classList.add(`navbar-${navbarStyle}`);
+        }
+    </script>
+    <div class="d-flex align-items-center">
+        <div class="toggle-icon-wrapper">
+            <button class="btn navbar-toggler-humburger-icon navbar-vertical-toggle" data-bs-toggle="tooltip"
+                data-bs-placement="left" title="Toggle Navigation"><span class="navbar-toggle-icon"><span
+                        class="toggle-line"></span></span></button>
+        </div>
+        <a class="navbar-brand" href="{% url 'recruitment:home' %}">
+            <div class="d-flex align-items-center py-3" id="main-logo">
+                <picture>
+                  <source srcset="{% static 'app/img/TicTacFlow_logo_dark.png' %}" media="(prefers-color-scheme: dark)">
+                  <img class="me-2" src="{% static 'app/img/TicTacFlow_logo.png' %}" alt="TicTacFlow Solutions" width="100" />
+                </picture>
+            </div>
+        </a>
+    </div>
+    <div class="collapse navbar-collapse" id="navbarVerticalCollapse">
+        <div class="navbar-vertical-content scrollbar">
+            <ul class="navbar-nav flex-column mb-3" id="navbarVerticalNav">
+
+                <!-- Common Home/Dashboard -->
+                <li class="nav-item">
+                    <a class="nav-link {% if on == 'home' %}active{% endif %}" href="{% url 'recruitment:home' %}"
+                        role="button">
+                        <div class="d-flex align-items-center">
+                            <span class="nav-link-icon"><span class="fas fa-home fs-1"></span></span>
+                            <span class="nav-link-text ps-1">Home</span>
+                        </div>
+                    </a>
+                </li>
+
+                {% if user.is_authenticated %}
+                <li class="nav-item">
+                    <a class="nav-link {% if on == 'my_profile' %}active{% endif %}"
+                        href="{% url 'recruitment:my_profile' %}" role="button">
+                        <div class="d-flex align-items-center">
+                            <span class="nav-link-icon"><span class="fas fa-user-circle fs-1"></span></span>
+                            <span class="nav-link-text ps-1">My Dashboard</span>
+                        </div>
+                    </a>
+                </li>
+                {% endif %}
+
+                <!-- Jobs Section (Visible to all) -->
+                <li class="nav-item">
+                    <a class="nav-link {% if on == 'vacancy' %}active{% endif %}"
+                        href="{% url 'recruitment:vacancy_list' %}" role="button">
+                        <div class="d-flex align-items-center">
+                            <span class="nav-link-icon"><span class="fas fa-briefcase fs-1"></span></span>
+                            <span class="nav-link-text ps-1">Browse Jobs</span>
+                        </div>
+                    </a>
+                </li>
+
+                {% if user.is_authenticated %}
+
+                <div class="navbar-vertical-divider">
+                    <hr class="navbar-vertical-hr my-2" />
+                </div>
+
+                <!-- Candidate-Only Menu -->
+                {% if is_candidate %}
+                {% if user.candidate_profile %}
+                <li class="nav-item">
+                    <a class="nav-link {% if on == 'candidate_profile' %}active{% endif %}"
+                        href="{% url 'recruitment:candidate_detail' pk=user.candidate_profile.id %}" role="button">
+                        <div class="d-flex align-items-center">
+                            <span class="nav-link-icon"><span class="fas fa-address-card fs-1"></span></span>
+                            <span class="nav-link-text ps-1">My Detailed Profile</span>
+                        </div>
+                    </a>
+                </li>
+                {% endif %}
+
+                <li class="nav-item">
+                    <a class="nav-link {% if on == 'application' %}active{% endif %}"
+                        href="{% url 'recruitment:application_list' %}" role="button">
+                        <div class="d-flex align-items-center">
+                            <span class="nav-link-icon"><span class="fas fa-paper-plane fs-1"></span></span>
+                            <span class="nav-link-text ps-1">My Applications</span>
+                        </div>
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link {% if on == 'offer' %}active{% endif %}"
+                        href="{% url 'recruitment:application_list' %}" role="button">
+                        <div class="d-flex align-items-center">
+                            <span class="nav-link-icon"><span class="fas fa-file-contract fs-1"></span></span>
+                            <span class="nav-link-text ps-1">My Offers</span>
+                        </div>
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link {% if on == 'experience' %}active{% endif %}"
+                        href="{% url 'recruitment:experience_list' %}" role="button">
+                        <div class="d-flex align-items-center">
+                            <span class="nav-link-icon"><span class="fas fa-briefcase fs-1"></span></span>
+                            <span class="nav-link-text ps-1">My Experience</span>
+                        </div>
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link {% if on == 'education' %}active{% endif %}"
+                        href="{% url 'recruitment:education_list' %}" role="button">
+                        <div class="d-flex align-items-center">
+                            <span class="nav-link-icon"><span class="fas fa-graduation-cap fs-1"></span></span>
+                            <span class="nav-link-text ps-1">My Education</span>
+                        </div>
+                    </a>
+                </li>
+                {% endif %}
+
+                <!-- Staff/Admin-Only Menu -->
+                {% if is_staff_user %}
+                <li class="nav-divider">Recruitment Management</li>
+
+                <li class="nav-item">
+                    <a class="nav-link {% if on == 'dashboard' %}active{% endif %}"
+                        href="{% url 'recruitment:dashboard' %}" role="button">
+                        <div class="d-flex align-items-center">
+                            <span class="nav-link-icon"><span class="fas fa-chart-line fs-1"></span></span>
+                            <span class="nav-link-text ps-1">Admin Dashboard</span>
+                        </div>
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link {% if on == 'vacancy_create' %}active{% endif %}"
+                        href="{% url 'recruitment:vacancy_create' %}" role="button">
+                        <div class="d-flex align-items-center">
+                            <span class="nav-link-icon"><span class="fas fa-plus-square fs-1"></span></span>
+                            <span class="nav-link-text ps-1">Post New Job</span>
+                        </div>
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link {% if on == 'candidate' %}active{% endif %}"
+                        href="{% url 'recruitment:candidate_list' %}" role="button">
+                        <div class="d-flex align-items-center">
+                            <span class="nav-link-icon"><span class="fas fa-users fs-1"></span></span>
+                            <span class="nav-link-text ps-1">Manage Candidates</span>
+                        </div>
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link {% if on == 'application' %}active{% endif %}"
+                        href="{% url 'recruitment:application_list' %}" role="button">
+                        <div class="d-flex align-items-center">
+                            <span class="nav-link-icon"><span class="fas fa-clipboard-list fs-1"></span></span>
+                            <span class="nav-link-text ps-1">All Applications</span>
+                        </div>
+                    </a>
+                </li>
+                {% endif %}
+
+                {% if is_admin %}
+                <li class="nav-item">
+                    <a class="nav-link" href="/admin/" target="_blank" role="button">
+                        <div class="d-flex align-items-center">
+                            <span class="nav-link-icon"><span class="fas fa-user-shield fs-1"></span></span>
+                            <span class="nav-link-text ps-1">System Admin</span>
+                        </div>
+                    </a>
+                </li>
+                {% endif %}
+
+                {% else %}
+                <!-- Unauthenticated Users -->
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'account_login' %}" role="button">
+                        <div class="d-flex align-items-center">
+                            <span class="nav-link-icon"><span class="fas fa-sign-in-alt fs-1"></span></span>
+                            <span class="nav-link-text ps-1">Login</span>
+                        </div>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'account_signup' %}" role="button">
+                        <div class="d-flex align-items-center">
+                            <span class="nav-link-icon"><span class="fas fa-user-plus fs-1"></span></span>
+                            <span class="nav-link-text ps-1">Register</span>
+                        </div>
+                    </a>
+                </li>
+                {% endif %}
+
+            </ul>
+        </div>
+    </div>
+</nav>

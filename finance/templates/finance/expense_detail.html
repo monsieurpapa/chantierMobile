@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="mb-6">
+    <a href="{% url 'expense_list' %}"
+        style="display: inline-flex; align-items: center; gap: 0.5rem; color: var(--text-secondary);">
+        ← Back to list
+    </a>
+</div>
+
+<div class="flex gap-4">
+    <div style="flex: 2;">
+        <div class="card p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h1>Expense #{{ expense.id }}</h1>
+                <span class="badge 
+                    {% if expense.status == 'APPROVED' %}badge-success
+                    {% elif expense.status == 'REJECTED' %}badge-danger
+                    {% else %}badge-warning{% endif %}">
+                    {{ expense.get_status_display }}
+                </span>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                <div>
+                    <label>Amount</label>
+                    <div style="font-size: 1.5rem; font-weight: 700;">{{ expense.amount }}</div>
+                </div>
+                <div>
+                    <label>Category</label>
+                    <div style="font-size: 1.125rem;">{{ expense.category.name }}</div>
+                </div>
+                <div>
+                    <label>Site</label>
+                    <div>{{ expense.site.name }}</div>
+                </div>
+                <div>
+                    <label>Requester</label>
+                    <div>{{ expense.requester.username }}</div>
+                </div>
+            </div>
+
+            <div style="margin-top: 1.5rem;">
+                <label>Description</label>
+                <p>{{ expense.description }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div style="flex: 1;">
+        {% if expense.status == 'PENDING' %}
+        <div class="card p-6">
+            <h3 class="mb-4">Approval</h3>
+            <form action="{% url 'expense_approve' expense.pk %}" method="post">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label>Comments</label>
+                    <textarea name="comments" rows="3"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Approve Expense</button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

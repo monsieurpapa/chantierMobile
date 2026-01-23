@@ -1,0 +1,30 @@
+{% extends 'recruitment/falcon_base.html' %}
+{% load static %}
+
+{% block title %}System Error - TicTacFlow{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container">
+  <div class="row flex-center min-vh-100 py-6 text-center">
+    <div class="col-sm-10 col-md-8 col-lg-6 col-xxl-5">
+      <a class="d-flex flex-center mb-4 text-decoration-none" href="{% url 'recruitment:home' %}">
+        <i class="fas fa-briefcase text-primary fs-4 me-2"></i>
+        <span class="font-sans-serif fw-bolder fs-4 text-dark">TicTacFlow Recruitment</span>
+      </a>
+      <div class="card shadow-sm">
+        <div class="card-body p-4 p-sm-5">
+          <div class="display-1 fw-black text-200">500</div>
+          <p class="lead mt-4 text-800 font-sans-serif fw-semi-bold">Whoops, something went wrong!</p>
+          <hr />
+          <p>Try refreshing the page, or going back and attempting the action again. If the problem persists, please
+            contact support.</p>
+          <a class="btn btn-primary btn-sm mt-3" href="{% url 'recruitment:home' %}">
+            <span class="fas fa-home me-2"></span>Return to Dashboard
+          </a>
+        </div>
+      </div>
+      {% include 'recruitment/includes/footer.html' %}
+    </div>
+  </div>
+</div>
+{% endblock %}

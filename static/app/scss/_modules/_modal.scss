@@ -1,0 +1,108 @@
+.modal-open {
+  .modal {
+    background-color: rgba(0,0,0,0.7);
+  }
+}
+
+.modal-header {
+  border-bottom: 0;
+
+  .close {
+    display: none;
+    background: transparent;
+    border: 0;
+    color: white;
+    font-size: 30px;
+    position: absolute;
+    right: 0;
+    top: 0;
+
+    &:active,
+    &:focus {
+      outline: 0;
+    }
+  }
+
+  .modal-title {
+    font-size: 32px;
+    padding-top: 0;
+    padding-bottom: 9px;
+  }
+}
+
+.modal-content {
+  background-color: white;
+  border-radius: 0;
+  padding: 33px 43px;
+}
+
+.modal-footer {
+  border-top: 0;
+  padding: 18px 0 0;
+
+  .m-button-link {
+    margin-right: 14px;
+    position: relative;
+    top: 4px;
+  }
+}
+
+#frmLogIssue, #frmContactModal, #plan-signup {
+  textarea {
+    min-height: 103px;
+  }
+}
+
+.contact-modal {
+  position: relative;
+  z-index: 1;
+}
+
+#modal-debit-change {
+  .modal-dialog {
+    @media #{$sm-up} {
+      width: 462px;
+    }
+
+    .modal-content {
+      padding: 33px 32px;
+
+      @media #{$mobi-only} {
+        padding: 15px;
+      }
+    }
+  }
+}
+
+#modal-switch-account {
+  .modal-dialog {
+    @media #{$sm-up} {
+      width: 507px;
+    }
+
+    .modal-content {
+      padding: 33px 32px;
+
+      @media #{$mobi-only} {
+        padding: 15px;
+      }
+    }
+  }
+}
+
+#modal-log-issue,
+#modal-new-order, #modal-contact {
+  .modal-dialog {
+    @media #{$sm-up} {
+      width: 468px;
+    }
+
+    .modal-content {
+      padding: 33px 35px;
+
+      @media #{$mobi-only} {
+        padding: 15px;
+      }
+    }
+  }
+}

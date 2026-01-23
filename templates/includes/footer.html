@@ -1,0 +1,21 @@
+{% load static i18n %}
+
+<footer class="footer">            
+    <div class="row g-3 justify-content-between fs--1 mt-4 mb-3">
+      <div class="col-6 col-sm-auto text-left">
+        <p class="mb-0 text-600"> Software defined business automation and design by
+          <a href="https://TicTacFlowSolutions.com" target="_blank" style="color: green">              
+            <picture>
+              <source srcset="{% static 'app/img/TicTacFlow_logo_dark.png' %}" media="(prefers-color-scheme: dark)">
+              <img src="{% static 'app/img/TicTacFlow_Favicon.png' %}" alt="TicTacFlow Solutions" style="width:50px; height:auto;">
+            </picture>
+          </a>                  
+          <a style = "color: green" href="https://TicTacFlowSolutions.com">TicTacFlow Solutions.com</a>           
+        </p>               
+      </div>             
+      <div class="col-6 col-sm-auto text-right">
+        {% comment %}<p class="mb-0 text-600">{{ release_number }}</p>{% endcomment %}
+        {% comment %}<p class="mb-0 text-600">&copy; {% now "Y" %}</p>{% endcomment %}
+      </div>
+    </div>              
+</footer>

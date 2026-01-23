@@ -1,0 +1,90 @@
+{% extends 'recruitment/falcon_base.html' %}
+{% load static %}
+
+{% block rendered_variables %}
+{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+  <!-- vertical nav -->
+  {% include 'recruitment/includes/navbar-vertical.html' with on="recruitment" %}
+  <!-- /vertical nav -->
+
+  <div class="content">
+
+    <!-- navbar-top -->
+    {% include 'recruitment/includes/navbar-top.html' %}
+    <!-- /navbar-top -->
+
+    <!-- content -->
+    <div class="card mb-3">
+      <div class="card-header border-bottom border-200">
+        <h6 class="mb-0">Welcome to TicTacFlow Recruitment portal</h6>
+      </div>
+      <div class="card-body">
+        <div class="row gx-3">
+          <div class="col-xxl-4 col-md-6">
+            <div class="hover-bg-100 py-x1 text-center rounded-3 position-relative">
+              <div class="icon-item icon-item-xl shadow-none mx-auto mt-x1 bg-primary-subtle"><span class="text-primary"
+                  data-feather="user-check"></span></div>
+              <h5 class="mt-3 mb-2"><a class="text-900 hover-primary stretched-link"
+                  href="{% url 'recruitment:my_profile' %}">Profile</a></h5>
+              <h6 class="w-75 mx-auto text-600 mb-x1">View the status of your account and update your login credentials.
+              </h6>
+            </div>
+          </div>
+          <div class="col-xxl-4 col-md-6">
+            <div class="hover-bg-100 py-x1 text-center rounded-3 position-relative">
+              <div class="icon-item icon-item-xl shadow-none mx-auto mt-x1 bg-warning-subtle"><span class="text-warning"
+                  data-feather="sunrise"></span></div>
+              <h5 class="mt-3 mb-2"><a class="text-900 hover-primary stretched-link"
+                  href="{% url 'recruitment:experience_list' %}">Your Experience</a></h5>
+              <h6 class="w-75 mx-auto text-600 mb-x1">View, Add, Edit or Delete your Experience details</h6>
+            </div>
+          </div>
+          <div class="col-xxl-4 col-md-6">
+            <div class="hover-bg-100 py-x1 text-center rounded-3 position-relative">
+              <div class="icon-item icon-item-xl shadow-none mx-auto mt-x1 bg-success-subtle"><span class="text-success"
+                  data-feather="lock"></span></div>
+              <h5 class="mt-3 mb-2"><a class="text-900 hover-primary stretched-link"
+                  href="{% url 'recruitment:education_list' %}">Your Education</a></h5>
+              <h6 class="w-75 mx-auto text-600 mb-x1">View, Add, Edit or Delete your Education details </h6>
+            </div>
+          </div>
+          <div class="col-xxl-4 col-md-6">
+            <div class="hover-bg-100 py-x1 text-center rounded-3 position-relative">
+              <div class="icon-item icon-item-xl shadow-none mx-auto mt-x1 bg-primary-subtle"><span class="text-primary"
+                  data-feather="hexagon"></span></div>
+              <h5 class="mt-3 mb-2"><a class="text-900 hover-primary stretched-link"
+                  href="{% url 'recruitment:techlist' %}">Your Tech Stack</a></h5>
+              <h6 class="w-75 mx-auto text-600 mb-x1">View, Add, Edit or Delete your Tech Stack details</h6>
+            </div>
+          </div>
+          <div class="col-xxl-4 col-md-6">
+            <div class="hover-bg-100 py-x1 text-center rounded-3 position-relative">
+              <div class="icon-item icon-item-xl shadow-none mx-auto mt-x1 bg-info-subtle"><span class="text-info"
+                  data-feather="file-text"></span></div>
+              <h5 class="mt-3 mb-2"><a class="text-900 hover-primary stretched-link" href="#">Documents &amp; Extra
+                  files</a></h5>
+              <h6 class="w-75 mx-auto text-600 mb-x1">See your uploaded documents </h6>
+            </div>
+          </div>
+          <div class="col-xxl-4 col-md-6">
+            <div class="hover-bg-100 py-x1 text-center rounded-3 position-relative">
+              <div class="icon-item icon-item-xl shadow-none mx-auto mt-x1 bg-info-subtle"><span class="text-info"
+                  data-feather="alert-circle"></span></div>
+              <h5 class="mt-3 mb-2"><a class="text-900 hover-primary stretched-link" href="#">Helpdesk</a></h5>
+              <h6 class="w-75 mx-auto text-600 mb-x1">Log support queries and incidents on your services.</h6>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    {% include 'recruitment/includes/footer.html' %}
+  </div>
+</div>
+
+{% endblock %}
+{% block extra_js %}
+{% endblock %}

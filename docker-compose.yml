@@ -1,0 +1,110 @@
+services:
+  chantiermobile-service:
+    build: .
+    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8001"
+    volumes:
+      - .:/app
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env
+    environment:
+      SECRET_KEY: insecure-dev-key-change-me
+      DEBUG: "1"
+      ALLOWED_HOSTS: 127.0.0.1,localhost,testserver
+      DB_ENGINE: django.db.backends.postgresql
+      DB_NAME: postgres
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_HOST: tictacflow-postgres-service
+      DB_PORT: "5432"
+      REDIS_URL: redis://redis-service:6379/0
+    depends_on:
+      - tictacflow-postgres-service
+      - redis-service
+
+  celery-worker:
+    build: .
+    command: celery -A chantiermobile worker --loglevel=info
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    environment:
+      SECRET_KEY: insecure-dev-key-change-me
+      DEBUG: "1"
+      DB_ENGINE: django.db.backends.postgresql
+      DB_NAME: postgres
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_HOST: tictacflow-postgres-service
+      DB_PORT: "5432"
+      REDIS_URL: redis://redis-service:6379/0
+    depends_on:
+      - tictacflow-postgres-service
+      - redis-service
+
+  celery-beat:
+    build: .
+    command: celery -A chantiermobile beat --loglevel=info
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    environment:
+      SECRET_KEY: insecure-dev-key-change-me
+      DEBUG: "1"
+      DB_ENGINE: django.db.backends.postgresql
+      DB_NAME: postgres
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_HOST: tictacflow-postgres-service
+      DB_PORT: "5432"
+      REDIS_URL: redis://redis-service:6379/0
+    depends_on:
+      - tictacflow-postgres-service
+      - redis-service
+
+  redis-service:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  flower:
+    build: .
+    command: celery -A chantiermobile flower --port=5555
+    ports:
+      - "5555:5555"
+    env_file:
+      - .env
+    environment:
+      SECRET_KEY: insecure-dev-key-change-me
+      DEBUG: "1"
+      DB_ENGINE: django.db.backends.postgresql
+      DB_NAME: postgres
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_HOST: tictacflowflow-postgres-service
+      DB_PORT: "5432"
+      REDIS_URL: redis://redis-service:6379/0
+    depends_on:
+      - redis-service
+
+  tictacflow-postgres-service:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data_v15:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data_v15:
+  redis_data:

@@ -1,0 +1,51 @@
+<!-- Breadcrumb Navigation Component
+     ==================================
+     
+     This component displays breadcrumb navigation trails.
+     
+     Usage:
+     {% include 'recruitment/includes/breadcrumb.html' with items=breadcrumb_items %}
+     
+     breadcrumb_items should be a list of dicts:
+     [
+       {'title': 'Home', 'url': 'recruitment:home'},
+       {'title': 'Candidates', 'url': 'recruitment:candidate_list'},
+       {'title': 'John Doe', 'url': None}  # Current page (no link)
+     ]
+-->
+
+{% load static %}
+
+{% if items %}
+<nav aria-label="breadcrumb" class="breadcrumb-nav mb-4">
+  <ol class="breadcrumb mb-0">
+    <li class="breadcrumb-item">
+      <a href="{% url 'recruitment:home' %}">
+        <i class="fas fa-home me-2"></i>Home
+      </a>
+    </li>
+
+    {% for item in items %}
+    {% if item.url %}
+    <li class="breadcrumb-item">
+      <a href="{% url item.url %}">
+        {{ item.title }}
+      </a>
+    </li>
+    {% else %}
+    <li class="breadcrumb-item active" aria-current="page">
+      {{ item.title }}
+    </li>
+    {% endif %}
+    {% endfor %}
+  </ol>
+</nav>
+{% endif %}
+
+<style>
+  .breadcrumb-nav {
+    padding: 1rem 0;
+    border-bottom: 1px solid #e0e6ed;
+    margin-bottom: 2rem !important;
+  }
+</style>

@@ -1,0 +1,208 @@
+form {
+  label {
+    color: $limed-spruce;
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .form-group {
+    margin-bottom: 20px;
+    position: relative;
+  }
+
+  .form-control {
+    border: 1px solid $alto;
+    box-shadow: 2px 3px 9.5px 0.5px rgba(0, 0, 0, 0.1);
+    border-radius: 0;
+    color: $madison;
+    font-size: 14px;
+    transition: all 0.3s ease-in-out;
+
+    &:not(textarea) {
+      height: 43px;
+    }
+
+    &:active {
+      outline: 0;
+    }
+  }
+
+  textarea {
+    resize: none;
+  }
+
+  .form-buttons {
+    margin-top: 21px;
+  }
+
+  small {
+    font-size: 13px;
+    line-height: 20px;
+  }
+
+  p {
+    font-family: 'museo300', sans-serif;
+    font-size: 16px;
+    line-height: 23px;
+    margin-bottom: 20px;
+  }
+
+  .attachment-wrapper {
+    position: relative;
+
+    >span {
+      color: #36424a;
+      font-size: 14px;
+      font-weight: 700;
+      display: block;
+      margin-bottom: 8px;
+    }
+  }
+
+  .inputfile {
+    width: 0.1px;
+    height: 0.1px;
+    opacity: 0;
+    overflow: hidden;
+    position: absolute;
+    z-index: -1;
+  }
+
+  .inputfile + label {
+    display: inline-block;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+    margin-bottom: 0;
+    position: relative;
+    height: 44px;
+    width: 100%;
+  }
+
+  .inputfile + label span {
+    background-color: white;
+    border: 1px solid $alto;
+    box-shadow: 2px 3px 9.5px 0.5px rgba(0, 0, 0, 0.1);
+    color: #082d58;
+    opacity: 1;
+    width: 100%;
+    min-height: 43px;
+    line-height: 43px;
+    display: inline-block;
+    padding: 0 12px;
+    margin-right: 13px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+    vertical-align: top;
+  }
+
+  .inputfile + label strong {
+    display: inline-block;
+    border: 1px solid $limed-spruce;
+    font-size: 10px;
+    margin: 9px 0;
+    padding: 5px 20px;
+  }
+
+  div.error {
+    color: #EB5635;
+    position: absolute;
+  }
+}
+
+.date {
+  .form-control {
+    background-color: transparent;
+    border: 0;
+    box-shadow: none;
+    color: $venice-blue;
+    font-size: 16px;
+    opacity: 1;
+    max-width: 95px;
+  }
+
+  span {
+    background-color: transparent;
+    color: $corn;
+
+    &.input-group-addon {
+      border: 0;
+      padding: 0;
+    }
+  }
+}
+
+.filter-inline {
+  &.form-inline {
+    .form-group {
+      margin-bottom: 0;
+    }
+
+    label {
+      vertical-align: middle;
+      margin-bottom: 0;
+    }
+
+    button {
+      margin-left: 10px;
+    }
+  }
+}
+
+.profile {
+  #frmChangePassword {
+    .errorlist,
+    .error {
+      position: relative;
+    }
+  }
+}
+
+.auth-pages {
+  #frmAccountRegistration,
+  #frmForgottenPassword {
+    .errorlist,
+    .error {
+      position: relative;
+    }
+  }
+}
+
+#frmFeedbackForm {
+  .radio-inline {
+    label {
+      margin-bottom: 0;
+    }
+  }
+  .form-group {
+    >span {
+      color: #36424A;
+      display: inline-block;
+      font-size: 14px;
+      font-weight: 700;
+      position: relative;
+      top: 2px;
+
+      &:first-of-type {
+        margin-right: 27px;
+        @media #{$mobi-only} {
+          margin-right: 15px;
+        }
+      }
+
+      &:last-of-type {
+        margin-left: 25px;
+        @media #{$mobi-only} {
+          margin-left: 13px;
+        }
+      }
+    }
+  }
+}
+
+.attachment_error2,
+.attachment_error {
+  color: $flamingo;
+}

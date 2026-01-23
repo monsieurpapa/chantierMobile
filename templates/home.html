@@ -1,0 +1,646 @@
+{% extends 'recruitment/falcon_base.html' %}
+{% load static %}
+{% block rendered_variables %}
+<script>
+  {
+    var peer_path_bandwidth_data = JSON.stringify([[0, 0], [0, 0]]);
+    var peer_path_packet_loss_data = JSON.stringify([[0, 0], [0, 0]])
+    var peer_path_jitter_data = JSON.stringify([[0, 0], [0, 0]])
+    var peer_path_latency_data = JSON.stringify([[0, 0], [0, 0]])
+    var top_sources_dataset = '{{ top_sources_dataset | safe }}';
+    var selected_peers_geo_data = '{{ selected_peers_geo_data | safe }}';
+    var selected_node_geo_data = '{{ selected_node_geo_data | safe }}';
+    var node_geo_data = '{{ node_geo_data | safe }}';
+    var markers = [];
+
+    console.log('top_sources_dataset: ', top_sources_dataset);
+    console.log('node_geo_data: ', node_geo_data);
+  }
+</script>
+{% endblock %}
+
+
+{% block content %}
+<!-- Top Navigation Bar -->
+<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
+  <div class="container">
+    <a class="navbar-brand fw-bold fs-4" href="{% url 'recruitment:home' %}">
+      <i class="fas fa-briefcase me-2 text-primary"></i>TicTacFlow Solutions
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+      aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav ms-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="{% url 'recruitment:vacancy_list' %}">Browse Jobs</a>
+        </li>
+        {% if user.is_authenticated %}
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown"
+            aria-expanded="false">
+            <i class="fas fa-user-circle me-1"></i>{{ user.email }}
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
+            <li><a class="dropdown-item" href="{% url 'recruitment:dashboard' %}"><i
+                  class="fas fa-tachometer-alt me-2"></i>Dashboard</a></li>
+            <li><a class="dropdown-item" href="{% url 'recruitment:my_profile' %}"><i class="fas fa-user me-2"></i>My
+                Profile</a></li>
+            <li>
+              <hr class="dropdown-divider">
+            </li>
+            <li><a class="dropdown-item" href="{% url 'account_logout' %}"><i
+                  class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+          </ul>
+        </li>
+        {% else %}
+        <li class="nav-item">
+          <a class="nav-link btn btn-primary text-white px-4 ms-2" href="{% url 'account_login' %}">
+            <i class="fas fa-sign-in-alt me-2"></i>Login
+          </a>
+        </li>
+        {% endif %}
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<div class="container py-5">
+  <div class="row">
+    <div class="col-12">
+
+      <!-- Welcome Section -->
+      <!-- Welcome Section -->
+      <div class="card mb-4 bg-gradient" style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);">
+        <div class="card-body text-center py-5">
+          <h1 class="display-4 fw-bold mb-3 text-dark">
+            <i class="fas fa-briefcase me-3 text-primary"></i>Welcome to TicTacFlow Recruitment Portal
+          </h1>
+          <p class="lead mb-4 text-secondary">Manage your career journey with our comprehensive recruitment platform</p>
+          <a href="{% url 'recruitment:candidate_create' %}" class="btn btn-primary btn-lg px-4 me-3 shadow-sm">
+            <i class="fas fa-user-plus me-2"></i>Start Your Application
+          </a>
+          <a href="{% url 'recruitment:vacancy_list' %}" class="btn btn-outline-dark btn-lg px-4">
+            <i class="fas fa-search me-2"></i>Browse Jobs
+          </a>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="card mb-4">
+        <div class="card-header border-bottom border-200 bg-light">
+          <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Quick Actions</h5>
+        </div>
+        <div class="card-body">
+          <div class="row g-4">
+
+            {% if is_candidate %}
+            <!-- Candidate Quick Actions -->
+            <div class="col-lg-3 col-md-6">
+              <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                  <div
+                    class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                    style="width: 60px; height: 60px;">
+                    <i class="fas fa-user-plus text-primary fs-4"></i>
+                  </div>
+                  <h6 class="card-title">Create Profile</h6>
+                  <p class="card-text small text-muted">Set up your candidate profile and start applying</p>
+                  <a href="{% url 'recruitment:candidate_create' %}" class="btn btn-primary btn-sm">Get Started</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6">
+              <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                  <div
+                    class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                    style="width: 60px; height: 60px;">
+                    <i class="fas fa-briefcase text-success fs-4"></i>
+                  </div>
+                  <h6 class="card-title">Add Experience</h6>
+                  <p class="card-text small text-muted">Document your work experience and achievements</p>
+                  <a href="{% url 'recruitment:experience_list' %}" class="btn btn-success btn-sm">Add Experience</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6">
+              <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                  <div
+                    class="bg-info bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                    style="width: 60px; height: 60px;">
+                    <i class="fas fa-graduation-cap text-info fs-4"></i>
+                  </div>
+                  <h6 class="card-title">Add Education</h6>
+                  <p class="card-text small text-muted">Include your educational background and qualifications</p>
+                  <a href="{% url 'recruitment:education_list' %}" class="btn btn-info btn-sm">Add Education</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6">
+              <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                  <div
+                    class="bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                    style="width: 60px; height: 60px;">
+                    <i class="fas fa-code text-warning fs-4"></i>
+                  </div>
+                  <h6 class="card-title">Add Skills</h6>
+                  <p class="card-text small text-muted">Showcase your technical skills and expertise</p>
+                  <a href="{% url 'recruitment:technology_list' %}" class="btn btn-warning btn-sm">Add Skills</a>
+                </div>
+              </div>
+            </div>
+            {% endif %}
+
+            {% if is_recruiter %}
+            <!-- Recruiter Quick Actions -->
+            <div class="col-lg-3 col-md-6">
+              <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                  <div
+                    class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                    style="width: 60px; height: 60px;">
+                    <i class="fas fa-briefcase text-primary fs-4"></i>
+                  </div>
+                  <h6 class="card-title">Post Job</h6>
+                  <p class="card-text small text-muted">Create and publish new job vacancies</p>
+                  <a href="{% url 'recruitment:vacancy_create' %}" class="btn btn-primary btn-sm">Post Vacancy</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6">
+              <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                  <div
+                    class="bg-info bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                    style="width: 60px; height: 60px;">
+                    <i class="fas fa-user-tie text-info fs-4"></i>
+                  </div>
+                  <h6 class="card-title">Manage Candidates</h6>
+                  <p class="card-text small text-muted">Review and screen candidate applications</p>
+                  <a href="{% url 'recruitment:candidate_list' %}" class="btn btn-info btn-sm">View Candidates</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6">
+              <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                  <div
+                    class="bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                    style="width: 60px; height: 60px;">
+                    <i class="fas fa-file-alt text-warning fs-4"></i>
+                  </div>
+                  <h6 class="card-title">Track Applications</h6>
+                  <p class="card-text small text-muted">Monitor application status and progress</p>
+                  <a href="{% url 'recruitment:application_list' %}" class="btn btn-warning btn-sm">View
+                    Applications</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6">
+              <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                  <div
+                    class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                    style="width: 60px; height: 60px;">
+                    <i class="fas fa-tachometer-alt text-success fs-4"></i>
+                  </div>
+                  <h6 class="card-title">Dashboard</h6>
+                  <p class="card-text small text-muted">View recruitment metrics and analytics</p>
+                  <a href="{% url 'recruitment:dashboard' %}" class="btn btn-success btn-sm">Go to Dashboard</a>
+                </div>
+              </div>
+            </div>
+            {% endif %}
+
+            {% if is_hiring_manager %}
+            <!-- Hiring Manager Quick Actions -->
+            <div class="col-lg-3 col-md-6">
+              <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                  <div
+                    class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                    style="width: 60px; height: 60px;">
+                    <i class="fas fa-file-alt text-primary fs-4"></i>
+                  </div>
+                  <h6 class="card-title">View Applications</h6>
+                  <p class="card-text small text-muted">Review applications for your positions</p>
+                  <a href="{% url 'recruitment:application_list' %}" class="btn btn-primary btn-sm">Applications</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6">
+              <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                  <div
+                    class="bg-info bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                    style="width: 60px; height: 60px;">
+                    <i class="fas fa-calendar-plus text-info fs-4"></i>
+                  </div>
+                  <h6 class="card-title">Schedule Interviews</h6>
+                  <p class="card-text small text-muted">Create and manage interviews</p>
+                  <a href="{% url 'recruitment:application_list' %}" class="btn btn-info btn-sm">Schedule</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6">
+              <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                  <div
+                    class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                    style="width: 60px; height: 60px;">
+                    <i class="fas fa-handshake text-success fs-4"></i>
+                  </div>
+                  <h6 class="card-title">Make Offers</h6>
+                  <p class="card-text small text-muted">Create and send job offers</p>
+                  <a href="{% url 'recruitment:application_list' %}" class="btn btn-success btn-sm">Offers</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6">
+              <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                  <div
+                    class="bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                    style="width: 60px; height: 60px;">
+                    <i class="fas fa-chart-line text-warning fs-4"></i>
+                  </div>
+                  <h6 class="card-title">Dashboard</h6>
+                  <p class="card-text small text-muted">View hiring progress and metrics</p>
+                  <a href="{% url 'recruitment:dashboard' %}" class="btn btn-warning btn-sm">Dashboard</a>
+                </div>
+              </div>
+            </div>
+            {% endif %}
+
+          </div>
+        </div>
+      </div>
+
+      <!-- Dashboard Stats -->
+      <div class="row g-4 mb-4">
+        <div class="col-lg-4 col-md-6">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body">
+              <div class="d-flex align-items-center">
+                <div class="bg-primary bg-opacity-10 rounded-circle p-3 me-3">
+                  <i class="fas fa-users text-primary fs-4"></i>
+                </div>
+                <div>
+                  <h6 class="mb-1">Total Candidates</h6>
+                  <h4 class="mb-0 text-primary">{{ total_candidates|default:"0" }}</h4>
+                  <small class="text-muted">+12% from last month</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-4 col-md-6">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body">
+              <div class="d-flex align-items-center">
+                <div class="bg-success bg-opacity-10 rounded-circle p-3 me-3">
+                  <i class="fas fa-briefcase text-success fs-4"></i>
+                </div>
+                <div>
+                  <h6 class="mb-1">Active Jobs</h6>
+                  <h4 class="mb-0 text-success">{{ total_vacancies|default:"0" }}</h4>
+                  <small class="text-muted">+5 new this week</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-4 col-md-6">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body">
+              <div class="d-flex align-items-center">
+                <div class="bg-info bg-opacity-10 rounded-circle p-3 me-3">
+                  <i class="fas fa-check-circle text-info fs-4"></i>
+                </div>
+                <div>
+                  <h6 class="mb-1">Applications</h6>
+                  <h4 class="mb-0 text-info">{{ total_applications|default:"0" }}</h4>
+                  <small class="text-muted">+18% this month</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="card">
+        <div class="card-header border-bottom border-200 bg-light">
+          <h5 class="mb-0"><i class="fas fa-clock me-2"></i>{% if is_candidate %}Your Activities{% elif is_recruiter
+            %}Recruitment Activities{% elif is_hiring_manager %}Hiring Activities{% else %}Recent Activity{% endif %}
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="row gx-3">
+
+            {% if is_candidate %}
+            <!-- Candidate Activity -->
+            <div class="col-xxl-4 col-md-6 mb-4">
+              <div class="card border-0 bg-light h-100">
+                <div class="card-body text-center">
+                  <div class="icon-item icon-item-xl shadow-none mx-auto mb-3 bg-primary-subtle">
+                    <i class="fas fa-user-check text-primary fs-3"></i>
+                  </div>
+                  <h6 class="card-title">Profile Management</h6>
+                  <p class="card-text small text-muted">View and update your candidate profile information</p>
+                  <a href="{% url 'recruitment:candidate_list' %}" class="btn btn-outline-primary btn-sm">Manage
+                    Profile</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-xxl-4 col-md-6 mb-4">
+              <div class="card border-0 bg-light h-100">
+                <div class="card-body text-center">
+                  <div class="icon-item icon-item-xl shadow-none mx-auto mb-3 bg-warning-subtle">
+                    <i class="fas fa-briefcase text-warning fs-3"></i>
+                  </div>
+                  <h6 class="card-title">Work Experience</h6>
+                  <p class="card-text small text-muted">Manage your professional work experience</p>
+                  <a href="{% url 'recruitment:experience_list' %}" class="btn btn-outline-warning btn-sm">View
+                    Experience</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-xxl-4 col-md-6 mb-4">
+              <div class="card border-0 bg-light h-100">
+                <div class="card-body text-center">
+                  <div class="icon-item icon-item-xl shadow-none mx-auto mb-3 bg-success-subtle">
+                    <i class="fas fa-graduation-cap text-success fs-3"></i>
+                  </div>
+                  <h6 class="card-title">Education</h6>
+                  <p class="card-text small text-muted">Manage your educational qualifications</p>
+                  <a href="{% url 'recruitment:education_list' %}" class="btn btn-outline-success btn-sm">View
+                    Education</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-xxl-4 col-md-6 mb-4">
+              <div class="card border-0 bg-light h-100">
+                <div class="card-body text-center">
+                  <div class="icon-item icon-item-xl shadow-none mx-auto mb-3 bg-info-subtle">
+                    <i class="fas fa-code text-info fs-3"></i>
+                  </div>
+                  <h6 class="card-title">Technical Skills</h6>
+                  <p class="card-text small text-muted">Showcase your technical expertise</p>
+                  <a href="{% url 'recruitment:technology_list' %}" class="btn btn-outline-info btn-sm">View Skills</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-xxl-4 col-md-6 mb-4">
+              <div class="card border-0 bg-light h-100">
+                <div class="card-body text-center">
+                  <div class="icon-item icon-item-xl shadow-none mx-auto mb-3 bg-secondary-subtle">
+                    <i class="fas fa-file-alt text-secondary fs-3"></i>
+                  </div>
+                  <h6 class="card-title">My Applications</h6>
+                  <p class="card-text small text-muted">Track your job applications</p>
+                  <a href="{% url 'recruitment:application_list' %}" class="btn btn-outline-secondary btn-sm">View
+                    Applications</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-xxl-4 col-md-6 mb-4">
+              <div class="card border-0 bg-light h-100">
+                <div class="card-body text-center">
+                  <div class="icon-item icon-item-xl shadow-none mx-auto mb-3 bg-danger-subtle">
+                    <i class="fas fa-search text-danger fs-3"></i>
+                  </div>
+                  <h6 class="card-title">Job Search</h6>
+                  <p class="card-text small text-muted">Browse available job opportunities</p>
+                  <a href="{% url 'recruitment:vacancy_list' %}" class="btn btn-outline-danger btn-sm">Search Jobs</a>
+                </div>
+              </div>
+            </div>
+            {% endif %}
+
+            {% if is_recruiter %}
+            <!-- Recruiter Activity -->
+            <div class="col-xxl-4 col-md-6 mb-4">
+              <div class="card border-0 bg-light h-100">
+                <div class="card-body text-center">
+                  <div class="icon-item icon-item-xl shadow-none mx-auto mb-3 bg-primary-subtle">
+                    <i class="fas fa-briefcase text-primary fs-3"></i>
+                  </div>
+                  <h6 class="card-title">Job Vacancies</h6>
+                  <p class="card-text small text-muted">Create and manage job openings</p>
+                  <a href="{% url 'recruitment:vacancy_list' %}" class="btn btn-outline-primary btn-sm">Manage
+                    Vacancies</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-xxl-4 col-md-6 mb-4">
+              <div class="card border-0 bg-light h-100">
+                <div class="card-body text-center">
+                  <div class="icon-item icon-item-xl shadow-none mx-auto mb-3 bg-info-subtle">
+                    <i class="fas fa-user-tie text-info fs-3"></i>
+                  </div>
+                  <h6 class="card-title">Candidate Pool</h6>
+                  <p class="card-text small text-muted">Manage candidate profiles and screening</p>
+                  <a href="{% url 'recruitment:candidate_list' %}" class="btn btn-outline-info btn-sm">View
+                    Candidates</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-xxl-4 col-md-6 mb-4">
+              <div class="card border-0 bg-light h-100">
+                <div class="card-body text-center">
+                  <div class="icon-item icon-item-xl shadow-none mx-auto mb-3 bg-warning-subtle">
+                    <i class="fas fa-file-alt text-warning fs-3"></i>
+                  </div>
+                  <h6 class="card-title">Applications</h6>
+                  <p class="card-text small text-muted">Review and process applications</p>
+                  <a href="{% url 'recruitment:application_list' %}" class="btn btn-outline-warning btn-sm">View
+                    Applications</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-xxl-4 col-md-6 mb-4">
+              <div class="card border-0 bg-light h-100">
+                <div class="card-body text-center">
+                  <div class="icon-item icon-item-xl shadow-none mx-auto mb-3 bg-success-subtle">
+                    <i class="fas fa-calendar-alt text-success fs-3"></i>
+                  </div>
+                  <h6 class="card-title">Interviews</h6>
+                  <p class="card-text small text-muted">Schedule and manage interviews</p>
+                  <a href="{% url 'recruitment:application_list' %}" class="btn btn-outline-success btn-sm">View
+                    Interviews</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-xxl-4 col-md-6 mb-4">
+              <div class="card border-0 bg-light h-100">
+                <div class="card-body text-center">
+                  <div class="icon-item icon-item-xl shadow-none mx-auto mb-3 bg-danger-subtle">
+                    <i class="fas fa-handshake text-danger fs-3"></i>
+                  </div>
+                  <h6 class="card-title">Offers</h6>
+                  <p class="card-text small text-muted">Create and track job offers</p>
+                  <a href="{% url 'recruitment:application_list' %}" class="btn btn-outline-danger btn-sm">Manage
+                    Offers</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-xxl-4 col-md-6 mb-4">
+              <div class="card border-0 bg-light h-100">
+                <div class="card-body text-center">
+                  <div class="icon-item icon-item-xl shadow-none mx-auto mb-3 bg-secondary-subtle">
+                    <i class="fas fa-chart-line text-secondary fs-3"></i>
+                  </div>
+                  <h6 class="card-title">Dashboard</h6>
+                  <p class="card-text small text-muted">View recruitment metrics and analytics</p>
+                  <a href="{% url 'recruitment:dashboard' %}" class="btn btn-outline-secondary btn-sm">Go to
+                    Dashboard</a>
+                </div>
+              </div>
+            </div>
+            {% endif %}
+
+            {% if is_hiring_manager %}
+            <!-- Hiring Manager Activity -->
+            <div class="col-xxl-4 col-md-6 mb-4">
+              <div class="card border-0 bg-light h-100">
+                <div class="card-body text-center">
+                  <div class="icon-item icon-item-xl shadow-none mx-auto mb-3 bg-primary-subtle">
+                    <i class="fas fa-file-alt text-primary fs-3"></i>
+                  </div>
+                  <h6 class="card-title">Applications</h6>
+                  <p class="card-text small text-muted">Review applications for your positions</p>
+                  <a href="{% url 'recruitment:application_list' %}" class="btn btn-outline-primary btn-sm">View
+                    Applications</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-xxl-4 col-md-6 mb-4">
+              <div class="card border-0 bg-light h-100">
+                <div class="card-body text-center">
+                  <div class="icon-item icon-item-xl shadow-none mx-auto mb-3 bg-info-subtle">
+                    <i class="fas fa-user-tie text-info fs-3"></i>
+                  </div>
+                  <h6 class="card-title">Candidates</h6>
+                  <p class="card-text small text-muted">View candidate profiles and qualifications</p>
+                  <a href="{% url 'recruitment:candidate_list' %}" class="btn btn-outline-info btn-sm">View
+                    Candidates</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-xxl-4 col-md-6 mb-4">
+              <div class="card border-0 bg-light h-100">
+                <div class="card-body text-center">
+                  <div class="icon-item icon-item-xl shadow-none mx-auto mb-3 bg-warning-subtle">
+                    <i class="fas fa-calendar-plus text-warning fs-3"></i>
+                  </div>
+                  <h6 class="card-title">Schedule Interviews</h6>
+                  <p class="card-text small text-muted">Create and manage interviews</p>
+                  <a href="{% url 'recruitment:application_list' %}" class="btn btn-outline-warning btn-sm">Schedule</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-xxl-4 col-md-6 mb-4">
+              <div class="card border-0 bg-light h-100">
+                <div class="card-body text-center">
+                  <div class="icon-item icon-item-xl shadow-none mx-auto mb-3 bg-success-subtle">
+                    <i class="fas fa-handshake text-success fs-3"></i>
+                  </div>
+                  <h6 class="card-title">Make Offers</h6>
+                  <p class="card-text small text-muted">Create and send job offers</p>
+                  <a href="{% url 'recruitment:application_list' %}" class="btn btn-outline-success btn-sm">Create
+                    Offer</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-xxl-4 col-md-6 mb-4">
+              <div class="card border-0 bg-light h-100">
+                <div class="card-body text-center">
+                  <div class="icon-item icon-item-xl shadow-none mx-auto mb-3 bg-danger-subtle">
+                    <i class="fas fa-briefcase text-danger fs-3"></i>
+                  </div>
+                  <h6 class="card-title">Open Positions</h6>
+                  <p class="card-text small text-muted">Manage your job vacancies</p>
+                  <a href="{% url 'recruitment:vacancy_list' %}" class="btn btn-outline-danger btn-sm">View
+                    Positions</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-xxl-4 col-md-6 mb-4">
+              <div class="card border-0 bg-light h-100">
+                <div class="card-body text-center">
+                  <div class="icon-item icon-item-xl shadow-none mx-auto mb-3 bg-secondary-subtle">
+                    <i class="fas fa-chart-line text-secondary fs-3"></i>
+                  </div>
+                  <h6 class="card-title">Hiring Dashboard</h6>
+                  <p class="card-text small text-muted">View hiring progress and metrics</p>
+                  <a href="{% url 'recruitment:dashboard' %}" class="btn btn-outline-secondary btn-sm">Dashboard</a>
+                </div>
+              </div>
+            </div>
+            {% endif %}
+
+          </div>
+        </div>
+      </div>
+
+
+
+      <!-- Footer -->
+      {% include 'recruitment/includes/footer.html' %}
+
+    </div>
+  </div>
+  {% endblock %}
+
+  {% block extra_js %}
+  <script>
+    $(function () {
+
+      function csrfSafeMethod(method) {
+        // these HTTP methods do not require CSRF protection
+        return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+      }
+
+      $.ajaxSetup({
+        beforeSend: function (xhr, settings) {
+          if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+            xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token }}");
+          }
+        }
+      });
+
+    });
+
+  </script>
+  {% endblock %}

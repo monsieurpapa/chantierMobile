@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <h1>Expenses</h1>
+    <a href="{% url 'expense_create' %}" class="btn btn-primary">+ New Expense</a>
+</div>
+
+<div class="card table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>Site</th>
+                <th>Category</th>
+                <th>Amount</th>
+                <th>Requester</th>
+                <th>Status</th>
+                <th>Date</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for expense in expenses %}
+            <tr>
+                <td>{{ expense.site.name }}</td>
+                <td>{{ expense.category.name }}</td>
+                <td style="font-weight: 600;">{{ expense.amount }}</td>
+                <td>{{ expense.requester.username }}</td>
+                <td>
+                    <span class="badge 
+                        {% if expense.status == 'APPROVED' %}badge-success
+                        {% elif expense.status == 'REJECTED' %}badge-danger
+                        {% else %}badge-warning{% endif %}">
+                        {{ expense.get_status_display }}
+                    </span>
+                </td>
+                <td>{{ expense.created_at|date:"M d, Y" }}</td>
+                <td>
+                    <a href="{% url 'expense_detail' expense.pk %}" class="btn-outline"
+                        style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">View</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" style="text-align: center; color: var(--text-secondary);">No expenses found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

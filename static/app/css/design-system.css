@@ -1,0 +1,833 @@
+/**
+ * TicTacFlow Recruitment Platform - Design System
+ * Professional UI/UX Enhancement
+ * ================================
+ * 
+ * This CSS provides:
+ * - Enhanced color palette with role-based coloring
+ * - Professional typography and spacing
+ * - Improved component styles (buttons, cards, forms, alerts)
+ * - Toast notifications and feedback components
+ * - Breadcrumb navigation styling
+ * - Smooth transitions and hover effects
+ * - Responsive design patterns
+ */
+
+/* ============================================
+   1. CSS VARIABLES & COLOR PALETTE
+   ============================================ */
+
+:root {
+  /* Primary Colors */
+  --primary: #667eea;
+  --primary-light: #8b9dff;
+  --primary-dark: #4e5fa0;
+  --primary-pale: #f0f3ff;
+  
+  /* Secondary Colors */
+  --secondary: #764ba2;
+  --secondary-light: #9b6bb7;
+  --secondary-dark: #593878;
+  --secondary-pale: #f8f4ff;
+  
+  /* Role-Based Colors */
+  --candidate-color: #3498db;
+  --candidate-light: #d6eef8;
+  --recruiter-color: #27ae60;
+  --recruiter-light: #d5f4e6;
+  --hiring-manager-color: #e67e22;
+  --hiring-manager-light: #fce5d0;
+  --admin-color: #e74c3c;
+  --admin-light: #fadad5;
+  
+  /* Status Colors */
+  --success: #27ae60;
+  --success-light: #d5f4e6;
+  --warning: #f39c12;
+  --warning-light: #fef5e7;
+  --danger: #e74c3c;
+  --danger-light: #fadad5;
+  --info: #3498db;
+  --info-light: #d6eef8;
+  
+  /* Neutrals */
+  --text-dark: #2c3e50;
+  --text-muted: #7f8c8d;
+  --text-light: #bdc3c7;
+  --bg-light: #f8f9fa;
+  --bg-white: #ffffff;
+  --border-color: #e0e6ed;
+  --border-hover: #d0d7e3;
+  
+  /* Spacing */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-base: 1rem;
+  --spacing-md: 1.5rem;
+  --spacing-lg: 2rem;
+  --spacing-xl: 3rem;
+  --spacing-2xl: 4rem;
+  
+  /* Typography */
+  --font-family: 'Open Sans', 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.5rem;
+  --font-size-2xl: 2rem;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-base: 0 2px 8px rgba(0, 0, 0, 0.12);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.15);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.18);
+  --shadow-xl: 0 12px 32px rgba(0, 0, 0, 0.2);
+  
+  /* Border Radius */
+  --radius-sm: 0.25rem;
+  --radius-base: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-full: 9999px;
+  
+  /* Transitions */
+  --transition-fast: 150ms ease-in-out;
+  --transition-base: 250ms ease-in-out;
+  --transition-slow: 350ms ease-in-out;
+}
+
+/* ============================================
+   2. BASE STYLES & TYPOGRAPHY
+   ============================================ */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-family);
+  color: var(--text-dark);
+  background-color: var(--bg-light);
+  line-height: 1.6;
+}
+
+a {
+  color: var(--primary);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+a:hover {
+  color: var(--primary-dark);
+}
+
+/* ============================================
+   3. ENHANCED BUTTONS
+   ============================================ */
+
+.btn {
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  transition: all var(--transition-fast);
+  border: 2px solid transparent;
+  font-size: var(--font-size-sm);
+  letter-spacing: 0.5px;
+}
+
+.btn:not(:disabled) {
+  cursor: pointer;
+}
+
+/* Primary Button */
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+  color: white;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--primary-dark) 0%, var(--secondary-dark) 100%);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* Secondary Button */
+.btn-secondary {
+  background-color: var(--secondary);
+  color: white;
+  border: 2px solid var(--secondary);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: var(--secondary-dark);
+  border-color: var(--secondary-dark);
+}
+
+/* Outline Button */
+.btn-outline-primary {
+  background-color: transparent;
+  color: var(--primary);
+  border: 2px solid var(--primary);
+}
+
+.btn-outline-primary:hover:not(:disabled) {
+  background-color: var(--primary-pale);
+  border-color: var(--primary-dark);
+  color: var(--primary-dark);
+}
+
+/* Success Button */
+.btn-success {
+  background-color: var(--success);
+  color: white;
+  border: 2px solid var(--success);
+}
+
+.btn-success:hover:not(:disabled) {
+  opacity: 0.9;
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+/* Danger Button */
+.btn-danger {
+  background-color: var(--danger);
+  color: white;
+  border: 2px solid var(--danger);
+}
+
+.btn-danger:hover:not(:disabled) {
+  opacity: 0.9;
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+/* Small Button */
+.btn-sm {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--font-size-sm);
+}
+
+/* Large Button */
+.btn-lg {
+  padding: var(--spacing-md) var(--spacing-lg);
+  font-size: var(--font-size-lg);
+}
+
+/* Icon Button */
+.btn-icon {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+}
+
+/* ============================================
+   4. ENHANCED CARDS & CONTAINERS
+   ============================================ */
+
+.card {
+  border: none;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  background-color: var(--bg-white);
+  transition: all var(--transition-base);
+  margin-bottom: var(--spacing-base);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.card-header {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+  border-bottom: 1px solid var(--border-color);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.card-header h5,
+.card-header h6 {
+  color: var(--text-dark);
+  font-weight: 700;
+  margin: 0;
+}
+
+.card-body {
+  padding: var(--spacing-md);
+}
+
+.card-footer {
+  background-color: var(--bg-light);
+  border-top: 1px solid var(--border-color);
+  padding: var(--spacing-md);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+
+/* Status Cards */
+.card-status {
+  border-left: 4px solid;
+  padding-left: var(--spacing-lg);
+}
+
+.card-status.candidate {
+  border-left-color: var(--candidate-color);
+  background: linear-gradient(90deg, var(--candidate-light) 0%, transparent 100%);
+}
+
+.card-status.recruiter {
+  border-left-color: var(--recruiter-color);
+  background: linear-gradient(90deg, var(--recruiter-light) 0%, transparent 100%);
+}
+
+.card-status.hiring-manager {
+  border-left-color: var(--hiring-manager-color);
+  background: linear-gradient(90deg, var(--hiring-manager-light) 0%, transparent 100%);
+}
+
+.card-status.admin {
+  border-left-color: var(--admin-color);
+  background: linear-gradient(90deg, var(--admin-light) 0%, transparent 100%);
+}
+
+/* ============================================
+   5. ALERTS & NOTIFICATIONS
+   ============================================ */
+
+.alert {
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-radius: var(--radius-lg);
+  border-left: 4px solid;
+  margin-bottom: var(--spacing-base);
+  animation: slideIn 300ms ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.alert-success {
+  background-color: var(--success-light);
+  border-left-color: var(--success);
+  color: var(--success);
+}
+
+.alert-danger {
+  background-color: var(--danger-light);
+  border-left-color: var(--danger);
+  color: var(--danger);
+}
+
+.alert-warning {
+  background-color: var(--warning-light);
+  border-left-color: var(--warning);
+  color: #8b6914;
+}
+
+.alert-info {
+  background-color: var(--info-light);
+  border-left-color: var(--info);
+  color: var(--info);
+}
+
+.alert-icon {
+  display: inline-block;
+  margin-right: var(--spacing-base);
+  font-size: var(--font-size-lg);
+}
+
+.alert-close {
+  background: none;
+  border: none;
+  font-size: var(--font-size-lg);
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.7;
+  transition: opacity var(--transition-fast);
+}
+
+.alert-close:hover {
+  opacity: 1;
+}
+
+/* ============================================
+   6. TOAST NOTIFICATIONS
+   ============================================ */
+
+.toast-container {
+  position: fixed;
+  top: var(--spacing-lg);
+  right: var(--spacing-lg);
+  z-index: 9999;
+  max-width: 400px;
+}
+
+.toast {
+  background-color: var(--bg-white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: var(--spacing-md) var(--spacing-lg);
+  margin-bottom: var(--spacing-base);
+  display: flex;
+  align-items: flex-start;
+  animation: slideInRight 300ms ease-out;
+  min-width: 350px;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.toast-icon {
+  flex-shrink: 0;
+  font-size: var(--font-size-xl);
+  margin-right: var(--spacing-base);
+  width: 24px;
+}
+
+.toast-content {
+  flex: 1;
+}
+
+.toast-title {
+  font-weight: 700;
+  color: var(--text-dark);
+  margin: 0 0 var(--spacing-xs) 0;
+}
+
+.toast-message {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.toast-success {
+  border-left: 4px solid var(--success);
+}
+
+.toast-success .toast-icon {
+  color: var(--success);
+}
+
+.toast-danger {
+  border-left: 4px solid var(--danger);
+}
+
+.toast-danger .toast-icon {
+  color: var(--danger);
+}
+
+.toast-warning {
+  border-left: 4px solid var(--warning);
+}
+
+.toast-warning .toast-icon {
+  color: var(--warning);
+}
+
+.toast-info {
+  border-left: 4px solid var(--info);
+}
+
+.toast-info .toast-icon {
+  color: var(--info);
+}
+
+/* ============================================
+   7. BREADCRUMBS
+   ============================================ */
+
+.breadcrumb {
+  background-color: transparent;
+  padding: var(--spacing-base) 0;
+  margin-bottom: var(--spacing-lg);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.breadcrumb-item {
+  font-size: var(--font-size-sm);
+}
+
+.breadcrumb-item a {
+  color: var(--primary);
+  font-weight: 500;
+}
+
+.breadcrumb-item a:hover {
+  text-decoration: underline;
+}
+
+.breadcrumb-item.active {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+  content: "›";
+  padding: 0 var(--spacing-sm);
+  color: var(--text-light);
+  font-weight: bold;
+}
+
+/* ============================================
+   8. ENHANCED FORMS
+   ============================================ */
+
+.form-group {
+  margin-bottom: var(--spacing-lg);
+}
+
+.form-label {
+  display: block;
+  font-weight: 600;
+  color: var(--text-dark);
+  margin-bottom: var(--spacing-sm);
+  font-size: var(--font-size-sm);
+}
+
+.form-label .required {
+  color: var(--danger);
+  margin-left: 2px;
+}
+
+.form-control,
+.form-select,
+textarea {
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-sm) var(--spacing-base);
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  transition: all var(--transition-fast);
+  background-color: var(--bg-white);
+}
+
+.form-control:focus,
+.form-select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-pale);
+}
+
+.form-control::placeholder {
+  color: var(--text-light);
+}
+
+.form-help {
+  display: block;
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  margin-top: var(--spacing-xs);
+}
+
+.form-error {
+  color: var(--danger);
+  font-size: var(--font-size-sm);
+  margin-top: var(--spacing-xs);
+}
+
+.form-group.error .form-control,
+.form-group.error .form-select {
+  border-color: var(--danger);
+  background-color: rgba(231, 76, 60, 0.02);
+}
+
+/* ============================================
+   9. BADGES & LABELS
+   ============================================ */
+
+.badge {
+  display: inline-block;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.badge-primary {
+  background-color: var(--primary-pale);
+  color: var(--primary);
+}
+
+.badge-success {
+  background-color: var(--success-light);
+  color: var(--success);
+}
+
+.badge-danger {
+  background-color: var(--danger-light);
+  color: var(--danger);
+}
+
+.badge-warning {
+  background-color: var(--warning-light);
+  color: #8b6914;
+}
+
+.badge-info {
+  background-color: var(--info-light);
+  color: var(--info);
+}
+
+.badge-candidate {
+  background-color: var(--candidate-light);
+  color: var(--candidate-color);
+}
+
+.badge-recruiter {
+  background-color: var(--recruiter-light);
+  color: var(--recruiter-color);
+}
+
+.badge-hiring-manager {
+  background-color: var(--hiring-manager-light);
+  color: var(--hiring-manager-color);
+}
+
+.badge-admin {
+  background-color: var(--admin-light);
+  color: var(--admin-color);
+}
+
+/* ============================================
+   10. TABLES
+   ============================================ */
+
+.table {
+  margin-bottom: 0;
+  background-color: var(--bg-white);
+}
+
+.table thead th {
+  background-color: var(--bg-light);
+  border-color: var(--border-color);
+  font-weight: 700;
+  color: var(--text-dark);
+  padding: var(--spacing-base);
+}
+
+.table tbody td {
+  padding: var(--spacing-base);
+  border-color: var(--border-color);
+  vertical-align: middle;
+}
+
+.table tbody tr {
+  transition: background-color var(--transition-fast);
+}
+
+.table tbody tr:hover {
+  background-color: var(--bg-light);
+}
+
+/* ============================================
+   11. PROGRESS INDICATORS
+   ============================================ */
+
+.progress-wrapper {
+  margin-bottom: var(--spacing-lg);
+}
+
+.progress-label {
+  font-weight: 600;
+  color: var(--text-dark);
+  margin-bottom: var(--spacing-sm);
+  font-size: var(--font-size-sm);
+}
+
+.progress {
+  height: 8px;
+  border-radius: var(--radius-full);
+  background-color: var(--border-color);
+  overflow: hidden;
+}
+
+.progress-bar {
+  background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 100%);
+  transition: width var(--transition-base);
+  border-radius: var(--radius-full);
+}
+
+/* ============================================
+   12. SPINNERS & LOADING
+   ============================================ */
+
+.spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border-color);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner-sm {
+  width: 16px;
+  height: 16px;
+  border-width: 2px;
+}
+
+.spinner-lg {
+  width: 32px;
+  height: 32px;
+  border-width: 3px;
+}
+
+/* ============================================
+   13. MODALS & DIALOGS
+   ============================================ */
+
+.modal-content {
+  border: none;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+.modal-header {
+  background: linear-gradient(135deg, var(--primary-pale) 0%, var(--secondary-pale) 100%);
+  border-bottom: 1px solid var(--border-color);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  padding: var(--spacing-lg);
+}
+
+.modal-header h5 {
+  color: var(--text-dark);
+  font-weight: 700;
+  margin: 0;
+}
+
+.modal-body {
+  padding: var(--spacing-lg);
+}
+
+.modal-footer {
+  background-color: var(--bg-light);
+  border-top: 1px solid var(--border-color);
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+
+/* ============================================
+   14. RESPONSIVE DESIGN
+   ============================================ */
+
+@media (max-width: 768px) {
+  :root {
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+  }
+
+  .toast-container {
+    left: var(--spacing-base);
+    right: var(--spacing-base);
+    max-width: none;
+  }
+
+  .toast {
+    min-width: auto;
+  }
+
+  .btn-lg {
+    width: 100%;
+  }
+
+  .card {
+    margin-bottom: var(--spacing-md);
+  }
+}
+
+/* ============================================
+   15. UTILITY CLASSES
+   ============================================ */
+
+.text-primary {
+  color: var(--primary);
+}
+
+.text-success {
+  color: var(--success);
+}
+
+.text-danger {
+  color: var(--danger);
+}
+
+.text-warning {
+  color: var(--warning);
+}
+
+.text-muted {
+  color: var(--text-muted);
+}
+
+.bg-light-primary {
+  background-color: var(--primary-pale);
+  color: var(--primary);
+}
+
+.bg-light-success {
+  background-color: var(--success-light);
+  color: var(--success);
+}
+
+.bg-light-danger {
+  background-color: var(--danger-light);
+  color: var(--danger);
+}
+
+.border-primary {
+  border-color: var(--primary) !important;
+}
+
+.shadow-sm {
+  box-shadow: var(--shadow-sm);
+}
+
+.shadow-md {
+  box-shadow: var(--shadow-md);
+}
+
+.shadow-lg {
+  box-shadow: var(--shadow-lg);
+}
+
+.rounded-lg {
+  border-radius: var(--radius-lg);
+}
+
+.rounded-xl {
+  border-radius: var(--radius-xl);
+}

@@ -1,0 +1,70 @@
+{% load static i18n %}
+        <script>
+          var isFluid = JSON.parse(localStorage.getItem('isFluid'));
+          if (isFluid) {
+            var container = document.querySelector('[data-layout]');
+            container.classList.remove('container');
+            container.classList.add('container-fluid');
+          }
+        </script>
+        <nav class="navbar navbar-light navbar-vertical navbar-expand-xl">
+          <script>
+            var navbarStyle = localStorage.getItem("navbarStyle");
+            if (navbarStyle && navbarStyle !== 'transparent') {
+              document.querySelector('.navbar-vertical').classList.add(`navbar-${navbarStyle}`);
+            }
+          </script>
+
+          <div class="collapse navbar-collapse" id="navbarVerticalCollapse">
+            <div class="navbar-vertical-content scrollbar">
+              <ul class="navbar-nav flex-column mb-3" id="navbarVerticalNav">
+                <li class="nav-item">
+                  <!-- parent pages--><!-- <a class="nav-link dropdown-indicator" href="#dashboard" role="button" data-bs-toggle="collapse" aria-expanded="true" aria-controls="dashboard"> -->
+                 <a class="nav-link" href="{% url 'home' %}" role="button" aria-expanded="true" aria-controls="dashboard">
+                    <div class="d-flex align-items-center"><span class="nav-link-icon"><span class="fas fa-chart-pie"></span></span><span class="nav-link-text ps-1">Dashboard</span>
+                    </div>
+                  </a>
+                  <!-- parent pages--><a class="nav-link" href="{% url 'routers_page' %}" role="button" data-bs-toggle="" aria-expanded="false">
+                    <div class="d-flex align-items-center"><span class="nav-link-icon"><span class="fas fa-poll"></span></span><span class="nav-link-text ps-1">Routers</span>
+                    </div>
+                  </a>                  
+                  <!-- parent pages--><a class="nav-link active" href="{% url 'topology_page' %}" role="button" data-bs-toggle="" aria-expanded="false" aria-controls="maps">
+                    <div class="d-flex align-items-center"><span class="nav-link-icon"><span class="fas fa-map"></span></span><span class="nav-link-text ps-1">Topology</span>
+                    </div>
+                  </a>
+                  <!-- parent pages--><a class="nav-link" href="#user" role="button" data-bs-toggle="collapse" aria-expanded="false" aria-controls="user">
+                    <div class="d-flex align-items-center"><span class="nav-link-icon"><span class="fas fa-user"></span></span><span class="nav-link-text ps-1">Profile</span>
+                    </div>
+                  </a>
+                  <!-- parent pages--><a class="nav-link" href="#user" role="button" data-bs-toggle="collapse" aria-expanded="false" aria-controls="user">
+                    <div class="d-flex align-items-center"><span class="nav-link-icon"><span class="fas fa-shopping-cart"></span></span><span class="nav-link-text ps-1">Customers</span>
+                    </div>
+                  </a>                  
+                  <!-- parent pages--><a class="nav-link" href="#!" role="button" data-bs-toggle="" aria-expanded="false">
+                    <div class="d-flex align-items-center"><span class="nav-link-icon"><span class="fas fa-comments"></span></span><span class="nav-link-text ps-1">Tickets</span>
+                    </div>
+                  </a>                   
+                </li>
+              </ul>
+              <div class="settings mb-3">
+                <div class="card alert p-0 shadow-none bg-transparent light" role="alert">
+                  <div class="card-body text-left">
+                    <!-- <img src="{% static 'falcon/assets/img/icons/spot-illustrations/navbar-vertical.png' %}" alt="" width="80" /> -->
+                    <picture>
+                      <source srcset="{% static 'app/img/TicTacFlow_logo_dark.png' %}" media="(prefers-color-scheme: dark)">
+                      <img src="{% static 'app/img/TicTacFlow_logo.png' %}" alt="TicTacFlow Solutions" width="150" />
+                    </picture>
+                  </div>
+                  {% comment %}
+                  <div class="card-body text-center">
+                    <img class="me-2" src="{% static 'assets/img/icons/cmc-logo.png' %}" alt="" width="60" />                    
+                  </div>
+                  <div class="card-body text-center">
+                    <img class="me-2" src="{% static 'assets/img/icons/cmc-logo-white-transparent.png' %}" alt="" width="80" />                    
+                  </div> 
+                  {% endcomment %}                                   
+                </div>
+              </div>
+            </div>
+          </div>
+        </nav>

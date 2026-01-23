@@ -1,0 +1,108 @@
+<!-- Status & Badge Components
+     ===========================
+     
+     Reusable badge and status indicators with role-based coloring.
+-->
+
+{% load static %}
+
+<!-- Application Status Badge -->
+{% macro 'app_status_badge' status %}
+  {% if status == 'pending' %}
+    <span class="badge badge-warning">
+      <i class="fas fa-clock me-1"></i>Pending Review
+    </span>
+  {% elif status == 'shortlisted' %}
+    <span class="badge badge-info">
+      <i class="fas fa-star me-1"></i>Shortlisted
+    </span>
+  {% elif status == 'interviewed' %}
+    <span class="badge badge-primary">
+      <i class="fas fa-check me-1"></i>Interviewed
+    </span>
+  {% elif status == 'offered' %}
+    <span class="badge badge-success">
+      <i class="fas fa-gift me-1"></i>Offered
+    </span>
+  {% elif status == 'rejected' %}
+    <span class="badge badge-danger">
+      <i class="fas fa-times me-1"></i>Rejected
+    </span>
+  {% elif status == 'accepted' %}
+    <span class="badge badge-success">
+      <i class="fas fa-check-circle me-1"></i>Accepted
+    </span>
+  {% endif %}
+{% endmacro %}
+
+<!-- Role Badge -->
+{% macro 'role_badge' role %}
+  {% if role == 'candidate' %}
+    <span class="badge badge-candidate">
+      <i class="fas fa-user me-1"></i>Candidate
+    </span>
+  {% elif role == 'recruiter' %}
+    <span class="badge badge-recruiter">
+      <i class="fas fa-users me-1"></i>Recruiter
+    </span>
+  {% elif role == 'hiring_manager' %}
+    <span class="badge badge-hiring-manager">
+      <i class="fas fa-briefcase me-1"></i>Hiring Manager
+    </span>
+  {% elif role == 'admin' %}
+    <span class="badge badge-admin">
+      <i class="fas fa-shield me-1"></i>Admin
+    </span>
+  {% endif %}
+{% endmacro %}
+
+<!-- Vacancy Status Badge -->
+{% macro 'vacancy_status_badge' status %}
+  {% if status == 'open' %}
+    <span class="badge badge-success">
+      <i class="fas fa-door-open me-1"></i>Open
+    </span>
+  {% elif status == 'closed' %}
+    <span class="badge badge-danger">
+      <i class="fas fa-ban me-1"></i>Closed
+    </span>
+  {% elif status == 'on_hold' %}
+    <span class="badge badge-warning">
+      <i class="fas fa-pause me-1"></i>On Hold
+    </span>
+  {% endif %}
+{% endmacro %}
+
+<!-- Gender Badge -->
+{% macro 'gender_badge' gender %}
+  {% if gender == 'M' or gender == 'male' %}
+    <span class="badge badge-info">
+      <i class="fas fa-mars me-1"></i>Male
+    </span>
+  {% elif gender == 'F' or gender == 'female' %}
+    <span class="badge badge-primary">
+      <i class="fas fa-venus me-1"></i>Female
+    </span>
+  {% else %}
+    <span class="badge badge-secondary">
+      <i class="fas fa-user me-1"></i>Not Specified
+    </span>
+  {% endif %}
+{% endmacro %}
+
+<!-- Experience Level Badge -->
+{% macro 'experience_badge' years %}
+  {% if years <= 2 %}
+    <span class="badge badge-info">
+      <i class="fas fa-seedling me-1"></i>Junior (≤2 yrs)
+    </span>
+  {% elif years <= 5 %}
+    <span class="badge badge-primary">
+      <i class="fas fa-leaf me-1"></i>Mid-level (2-5 yrs)
+    </span>
+  {% else %}
+    <span class="badge badge-success">
+      <i class="fas fa-tree me-1"></i>Senior (5+ yrs)
+    </span>
+  {% endif %}
+{% endmacro %}

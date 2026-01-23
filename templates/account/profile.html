@@ -1,0 +1,209 @@
+{% extends 'recruitment/falcon_base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+  {% include 'recruitment/includes/navbar-vertical.html' with on="account" %}
+
+  <div class="content">
+    {% include 'recruitment/includes/navbar-top.html' %}
+
+    <div class="row">
+      <div class="col-12">
+        <div class="card mb-3">
+          <div class="card-header position-relative min-vh-25 mb-7">
+            <div class="bg-holder rounded-3 rounded-bottom-0"
+              style="background-image:url({% static 'assets/img/generic/4.jpg' %});"></div>
+            <!--/.bg-holder-->
+            <div class="avatar avatar-5xl avatar-profile"><img class="rounded-circle img-thumbnail shadow-sm"
+                src="{% static 'assets/img/team/2.jpg' %}" width="200" alt="" /></div>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-lg-8">
+                <h4 class="mb-1">{{ user.get_full_name|default:user.username }} <span data-bs-toggle="tooltip"
+                    data-bs-placement="right" title="Verified"><small class="fa fa-check-circle text-primary"
+                      data-fa-transform="shrink-4 down-2"></small></span></h4>
+                <h5 class="fs-0 fw-normal">Member since {{ user.date_joined|date:"M Y" }}</h5>
+                <p class="text-500">{{ user.user_role.get_role_display }}</p>
+                <div class="border-dashed-bottom my-4 d-lg-none"></div>
+              </div>
+              <div class="col ps-2 ps-lg-3">
+                <div class="d-flex align-items-center mb-2">
+                  <span class="fas fa-envelope text-700 me-2"></span>
+                  <div class="flex-1"><a class="text-700" href="mailto:{{ user.email }}">{{ user.email }}</a></div>
+                </div>
+                <div class="d-flex align-items-center">
+                  <span class="fas fa-shield-alt text-700 me-2"></span>
+                  <div class="flex-1"><span class="text-700">Account Security: Active</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-lg-8">
+        <!-- Candidate Specific Section -->
+        {% if is_candidate and candidate %}
+        <div class="card mb-3">
+          <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Professional Profile</h5>
+            <a class="btn btn-falcon-default btn-sm" href="{% url 'recruitment:candidate_detail' pk=candidate.id %}">
+              <span class="fas fa-external-link-alt me-1"></span>View Full Profile
+            </a>
+          </div>
+          <div class="card-body">
+            <div class="row g-0">
+              <div class="col-sm-6 text-sm-end pe-sm-3 border-sm-end">
+                <p class="fw-semi-bold mb-1">City</p>
+                <p class="text-700">{{ candidate.city|default:"Not specified" }}</p>
+              </div>
+              <div class="col-sm-6 ps-sm-3">
+                <p class="fw-semi-bold mb-1">Phone</p>
+                <p class="text-700">{{ candidate.phone|default:"Not specified" }}</p>
+              </div>
+            </div>
+            <div class="border-dashed-bottom my-3"></div>
+            <div class="row">
+              <div class="col-12">
+                <h6 class="mb-2">Skills Overview</h6>
+                {% if skills %}
+                {% for skill in skills|slice:":5" %}
+                <span class="badge bg-soft-primary text-primary me-1 mb-1">{{ skill.name }}</span>
+                {% endfor %}
+                {% if skills.count > 5 %}<small class="text-500">+{{ skills.count|add:"-5" }} more</small>{% endif %}
+                {% else %}
+                <p class="text-500 small">No skills added yet.</p>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Applications Section -->
+        <div class="card mb-3">
+          <div class="card-header bg-light">
+            <h5 class="mb-0">My Applications</h5>
+          </div>
+          <div class="card-body p-0">
+            {% if applications %}
+            <div class="table-responsive scrollbar">
+              <table class="table table-sm table-striped fs--1 mb-0">
+                <thead class="bg-200 text-900">
+                  <tr>
+                    <th class="sort pe-1 align-middle white-space-nowrap">Vacancy Title</th>
+                    <th class="sort pe-1 align-middle white-space-nowrap text-center">Status</th>
+                    <th class="sort pe-1 align-middle white-space-nowrap text-end">Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for app in applications|slice:":5" %}
+                  <tr class="btn-reveal-trigger">
+                    <td class="align-middle white-space-nowrap"><a class="fw-semi-bold"
+                        href="{% url 'recruitment:vacancy_detail' reference_code=app.vacancy.reference_code %}">{{
+                        app.vacancy.title }}</a></td>
+                    <td class="align-middle text-center">
+                      <span
+                        class="badge rounded-pill bg-{% if app.status == 'applied' %}primary{% elif app.status == 'hired' %}success{% elif app.status == 'rejected' %}danger{% else %}info{% endif %}">
+                        {{ app.get_status_display }}
+                      </span>
+                    </td>
+                    <td class="align-middle text-end">{{ app.created_at|date:"d M Y" }}</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            {% if applications.count > 5 %}
+            <div class="card-footer bg-light p-2 text-center">
+              <a class="btn btn-sm btn-link" href="{% url 'recruitment:application_list' %}">View All Applications</a>
+            </div>
+            {% endif %}
+            {% else %}
+            <div class="p-4 text-center">
+              <p class="text-500 mb-0">You haven't applied to any roles yet.</p>
+              <a class="btn btn-link btn-sm" href="{% url 'recruitment:vacancy_list' %}">Browse Vacancies</a>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- General Account Info -->
+        <div class="card mb-3">
+          <div class="card-header bg-light">
+            <h5 class="mb-0">Account Settings</h5>
+          </div>
+          <div class="card-body">
+            <form>
+              <div class="row mb-3">
+                <label class="col-sm-3 col-form-label" for="username">Username</label>
+                <div class="col-sm-9">
+                  <input class="form-control-plaintext" id="username" type="text" value="{{ user.username }}"
+                    readonly />
+                </div>
+              </div>
+              <div class="row mb-3">
+                <label class="col-sm-3 col-form-label" for="email">Email</label>
+                <div class="col-sm-9">
+                  <input class="form-control-plaintext" id="email" type="email" value="{{ user.email }}" readonly />
+                </div>
+              </div>
+            </form>
+          </div>
+          <div class="card-footer">
+            <a class="btn btn-falcon-default btn-sm" href="{% url 'account_change_password' %}">
+              <span class="fas fa-lock me-1"></span>Change Password
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-4">
+        <div class="sticky-top" style="top: 80px;">
+          <div class="card mb-3">
+            <div class="card-header bg-light">
+              <h5 class="mb-0">System Preferences</h5>
+            </div>
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                  <h6 class="mb-0">Email Notifications</h6>
+                  <p class="fs--1 text-500 mb-0">Manage alert preferences</p>
+                </div>
+                <div class="form-check form-switch mb-0">
+                  <input class="form-check-input" type="checkbox" checked />
+                </div>
+              </div>
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <h6 class="mb-0">Public Profile</h6>
+                  <p class="fs--1 text-500 mb-0">Visible to recruiters</p>
+                </div>
+                <div class="form-check form-switch mb-0">
+                  <input class="form-check-input" type="checkbox" checked />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {% if is_staff_user %}
+          <div class="card bg-info-subtle">
+            <div class="card-body p-3">
+              <h6 class="text-info-dark"><span class="fas fa-info-circle me-2"></span>Staff Access</h6>
+              <p class="fs--1 mb-2">You have elevated permissions as a {{ user.user_role.get_role_display|lower }}.</p>
+              <a class="btn btn-sm btn-info w-100" href="{% url 'recruitment:dashboard' %}">Access Admin Dashboard</a>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {% include 'recruitment/includes/footer.html' %}
+  </div>
+</div>
+{% endblock %}

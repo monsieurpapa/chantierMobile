@@ -1,0 +1,65 @@
+<!-- Django Messages Toast Notifications
+     ====================================
+     This include displays Django messages as professional toast notifications.
+     Works with all message levels: debug, info, success, warning, error
+     
+     Usage: {% include 'recruitment/includes/messages_toast.html' %}
+-->
+
+{% if messages %}
+<div class="toast-container">
+  {% for message in messages %}
+    <div class="toast toast-{{ message.tags|default:'info' }}" role="alert">
+      <div class="toast-icon">
+        {% if message.tags == 'success' %}
+          <i class="fas fa-check-circle"></i>
+        {% elif message.tags == 'danger' or message.tags == 'error' %}
+          <i class="fas fa-exclamation-circle"></i>
+        {% elif message.tags == 'warning' %}
+          <i class="fas fa-exclamation-triangle"></i>
+        {% else %}
+          <i class="fas fa-info-circle"></i>
+        {% endif %}
+      </div>
+      <div class="toast-content">
+        <div class="toast-title">
+          {% if message.tags == 'success' %}
+            Success!
+          {% elif message.tags == 'danger' or message.tags == 'error' %}
+            Error!
+          {% elif message.tags == 'warning' %}
+            Warning!
+          {% else %}
+            Information
+          {% endif %}
+        </div>
+        <p class="toast-message">{{ message }}</p>
+      </div>
+    </div>
+    
+    <script>
+      // Auto-dismiss toast after 5 seconds
+      setTimeout(function() {
+        const toast = document.querySelector('.toast:last-child');
+        if (toast) {
+          toast.style.animation = 'slideOutRight 300ms ease-in';
+          setTimeout(() => toast.remove(), 300);
+        }
+      }, 5000);
+    </script>
+  {% endfor %}
+</div>
+
+<style>
+  @keyframes slideOutRight {
+    from {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateX(20px);
+    }
+  }
+</style>
+{% endif %}

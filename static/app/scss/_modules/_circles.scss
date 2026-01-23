@@ -1,0 +1,18 @@
+.m-circle-green,
+.m-circle-yellow {
+  border-radius: 100%;
+  display: inline-block;
+  text-align: center;
+
+  i {
+    color: white;
+  }
+}
+
+.m-circle-green {
+  background-color: $crete;
+}
+
+.m-circle-yellow {
+  background-color: $corn;
+}

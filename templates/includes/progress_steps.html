@@ -1,0 +1,118 @@
+<!-- Progress Steps Indicator -->
+<style>
+    .progress-steps {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 30px 0;
+        position: relative;
+        margin-bottom: 30px;
+    }
+
+    .progress-steps::before {
+        content: '';
+        position: absolute;
+        top: 35px;
+        left: 50px;
+        right: 50px;
+        height: 3px;
+        background: #e0e0e0;
+        z-index: 0;
+    }
+
+    .step {
+        flex: 1;
+        text-align: center;
+        position: relative;
+        z-index: 1;
+    }
+
+    .step-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: #fff;
+        border: 3px solid #e0e0e0;
+        color: #999;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 20px;
+        margin-bottom: 12px;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .step.completed .step-icon {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        border-color: #28a745;
+        color: white;
+    }
+
+    .step.active .step-icon {
+        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+        border-color: #007bff;
+        color: white;
+        box-shadow: 0 0 0 6px rgba(0, 123, 255, 0.15);
+    }
+
+    .step-label {
+        font-size: 14px;
+        color: #666;
+        font-weight: 500;
+    }
+
+    .step.active .step-label {
+        color: #007bff;
+        font-weight: 600;
+    }
+
+    .step.completed .step-label {
+        color: #28a745;
+    }
+
+    @media (max-width: 768px) {
+        .progress-steps::before {
+            left: 30px;
+            right: 30px;
+        }
+
+        .step-icon {
+            width: 45px;
+            height: 45px;
+            font-size: 16px;
+        }
+
+        .step-label {
+            font-size: 11px;
+        }
+    }
+</style>
+
+<div class="progress-steps">
+    <div class="step {% if current_step >= 1 %}completed{% elif current_step == 0 %}active{% endif %}">
+        <div class="step-icon">
+            {% if current_step >= 1 %}<i class="fas fa-check"></i>{% else %}1{% endif %}
+        </div>
+        <div class="step-label">Personal Info</div>
+    </div>
+    <div class="step {% if current_step >= 2 %}completed{% elif current_step == 1 %}active{% endif %}">
+        <div class="step-icon">
+            {% if current_step >= 2 %}<i class="fas fa-check"></i>{% else %}2{% endif %}
+        </div>
+        <div class="step-label">Experience</div>
+    </div>
+    <div class="step {% if current_step >= 3 %}completed{% elif current_step == 2 %}active{% endif %}">
+        <div class="step-icon">
+            {% if current_step >= 3 %}<i class="fas fa-check"></i>{% else %}3{% endif %}
+        </div>
+        <div class="step-label">Education</div>
+    </div>
+    <div class="step {% if current_step >= 4 %}completed{% elif current_step == 3 %}active{% endif %}">
+        <div class="step-icon">
+            {% if current_step >= 4 %}<i class="fas fa-check"></i>{% else %}4{% endif %}
+        </div>
+        <div class="step-label">Skills</div>
+    </div>
+</div>
