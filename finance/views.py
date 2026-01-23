@@ -47,6 +47,8 @@ class ExpenseCreateView(LoginRequiredMixin, PageHeaderMixin, CreateView):
 
     def form_valid(self, form):
         form.instance.requester = self.request.user
+        from django.contrib import messages
+        messages.success(self.request, "Expense request submitted successfully!")
         return super().form_valid(form)
 
 class ExpenseDetailView(LoginRequiredMixin, PageHeaderMixin, DetailView):

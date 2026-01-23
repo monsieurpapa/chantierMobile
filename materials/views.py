@@ -36,6 +36,11 @@ class MaterialCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin,
     template_name = 'materials/material_form.html'
     success_url = reverse_lazy('materials:material_list')
     allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER']
+    
+    def form_valid(self, form):
+        from django.contrib import messages
+        messages.success(self.request, f"Material '{form.instance.name}' added to catalog successfully!")
+        return super().form_valid(form)
     header_title = "Add New Material"
     header_subtitle = "Define a new item in the material catalog"
     back_url = reverse_lazy('materials:material_list')
@@ -52,6 +57,11 @@ class MaterialUpdateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin,
     template_name = 'materials/material_form.html'
     success_url = reverse_lazy('materials:material_list')
     allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER']
+    
+    def form_valid(self, form):
+        from django.contrib import messages
+        messages.success(self.request, f"Material '{form.instance.name}' updated successfully!")
+        return super().form_valid(form)
     
     def get_header_title(self):
         return f"Edit: {self.object.name}"
