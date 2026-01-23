@@ -62,7 +62,7 @@
           {% if request.user.is_authenticated %}
           {{ request.user.email }}
           {% else %}
-          Guest
+          <a href="{% url 'account_login' %}">Login</a>
           {% endif %}
         </span>
       </button>
