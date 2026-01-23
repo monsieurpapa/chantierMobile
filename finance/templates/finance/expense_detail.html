@@ -1,66 +1,152 @@
-{% extends 'base.html' %}
+{% extends 'falcon_base.html' %}
+{% load static rbac_tags %}
+
+{% block title %}Expense Detail - ChantierMobile{% endblock %}
 
 {% block content %}
-<div class="mb-6">
-    <a href="{% url 'expense_list' %}"
-        style="display: inline-flex; align-items: center; gap: 0.5rem; color: var(--text-secondary);">
-        ← Back to list
-    </a>
-</div>
+<div class="container" data-layout="container-fluid">
+    <!-- vertical nav -->
+    {% include 'includes/navbar-vertical.html' with on="finance" %}
+    <!-- /vertical nav -->
 
-<div class="flex gap-4">
-    <div style="flex: 2;">
-        <div class="card p-6">
-            <div class="flex justify-between items-center mb-6">
-                <h1>Expense #{{ expense.id }}</h1>
-                <span class="badge 
-                    {% if expense.status == 'APPROVED' %}badge-success
-                    {% elif expense.status == 'REJECTED' %}badge-danger
-                    {% else %}badge-warning{% endif %}">
-                    {{ expense.get_status_display }}
-                </span>
-            </div>
+    <div class="content">
+        <!-- navbar-top -->
+        {% include 'includes/navbar-top.html' %}
+        <!-- /navbar-top -->
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-                <div>
-                    <label>Amount</label>
-                    <div style="font-size: 1.5rem; font-weight: 700;">{{ expense.amount }}</div>
-                </div>
-                <div>
-                    <label>Category</label>
-                    <div style="font-size: 1.125rem;">{{ expense.category.name }}</div>
-                </div>
-                <div>
-                    <label>Site</label>
-                    <div>{{ expense.site.name }}</div>
-                </div>
-                <div>
-                    <label>Requester</label>
-                    <div>{{ expense.requester.username }}</div>
-                </div>
-            </div>
+        <!-- Main Content -->
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
 
-            <div style="margin-top: 1.5rem;">
-                <label>Description</label>
-                <p>{{ expense.description }}</p>
+            <div class="row g-3">
+                <div class="col-lg-8 pe-lg-2">
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <div class="row g-0">
+                                <div class="col-sm-6 mb-3">
+                                    <label class="form-label text-600">Site</label>
+                                    <p class="fs-0"><a
+                                            href="{% url 'projects:site_detail' unique_id=expense.site.unique_id %}">{{
+                                            expense.site.name }}</a></p>
+                                </div>
+                                <div class="col-sm-6 mb-3">
+                                    <label class="form-label text-600">Category</label>
+                                    <p class="fs-0">{{ expense.category.name }}</p>
+                                </div>
+                                <div class="col-sm-6 mb-3">
+                                    <label class="form-label text-600">Amount</label>
+                                    <p class="fs-2 fw-bold text-primary">${{ expense.amount }}</p>
+                                </div>
+                                <div class="col-sm-6 mb-3">
+                                    <label class="form-label text-600">Status</label>
+                                    <div>
+                                        <span class="badge rounded-pill 
+                                                    {% if expense.status == 'APPROVED' %}badge-soft-success
+                                                    {% elif expense.status == 'PAID' %}badge-soft-info
+                                                    {% elif expense.status == 'REJECTED' %}badge-soft-danger
+                                                    {% else %}badge-soft-warning{% endif %}">
+                                            {{ expense.get_status_display }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-600">Description</label>
+                                <p class="fs-0">{{ expense.description }}</p>
+                            </div>
+                            {% if expense.receipt_image %}
+                            <div class="mb-3">
+                                <label class="form-label text-600">Receipt Image</label>
+                                <div class="img-thumbnail">
+                                    <img src="{{ expense.receipt_image.url }}" alt="Receipt" class="img-fluid"
+                                        style="max-height: 400px;">
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">Approval History</h5>
+                        </div>
+                        <div class="card-body fs--1">
+                            {% if expense.approvals.exists %}
+                            {% for approval in expense.approvals.all %}
+                            <div class="d-flex mb-3">
+                                <div class="flex-1 ms-2">
+                                    <h6 class="mb-0">{{ approval.get_status_display }} by {{ approval.approver }}</h6>
+                                    <p class="text-500 mb-0">{{ approval.approval_date|date:"M d, Y H:i" }}</p>
+                                    {% if approval.comments %}
+                                    <p class="text-1000 bg-100 p-2 rounded mt-1">{{ approval.comments }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                            {% else %}
+                            <p class="text-center py-3 text-500">No approval history yet.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4 ps-lg-2">
+                    {% if expense.status == 'PENDING' and request.user|has_role:'DIRECTOR,ACCOUNTANT' %}
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">Approval Actions</h5>
+                        </div>
+                        <div class="card-body">
+                            <form action="{% url 'finance:expense_approve' pk=expense.pk %}" method="post">
+                                {% csrf_token %}
+                                <div class="mb-3">
+                                    <label class="form-label">Review Comments</label>
+                                    <textarea name="comments" class="form-control" rows="3"
+                                        placeholder="Optional notes..."></textarea>
+                                </div>
+                                <div class="d-grid gap-2">
+                                    <button type="submit" class="btn btn-primary">Approve Request</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if expense.status == 'APPROVED' and request.user|has_role:'DIRECTOR,CASHIER' %}
+                    <div class="card mb-3">
+                        <div class="card-header bg-light text-white bg-primary">
+                            <h5 class="mb-0">Cashier Payment</h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="fs--1">Mark this expense as PAID once funds are disbursed.</p>
+                            <form action="{% url 'finance:expense_pay' pk=expense.pk %}" method="post">
+                                {% csrf_token %}
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-success">Confirm Disbursement (PAID)</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">Metadata</h5>
+                        </div>
+                        <div class="card-body fs--1">
+                            <div class="row">
+                                <div class="col-5">Requester:</div>
+                                <div class="col-7 fw-semi-bold">{{ expense.requester }}</div>
+                                <div class="col-5">Submitted:</div>
+                                <div class="col-7">{{ expense.created_at|date }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
-
-    <div style="flex: 1;">
-        {% if expense.status == 'PENDING' %}
-        <div class="card p-6">
-            <h3 class="mb-4">Approval</h3>
-            <form action="{% url 'expense_approve' expense.pk %}" method="post">
-                {% csrf_token %}
-                <div class="form-group">
-                    <label>Comments</label>
-                    <textarea name="comments" rows="3"></textarea>
-                </div>
-                <button type="submit" class="btn btn-primary" style="width: 100%;">Approve Expense</button>
-            </form>
-        </div>
-        {% endif %}
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
     </div>
 </div>
 {% endblock %}

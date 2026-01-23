@@ -1,0 +1,74 @@
+{% extends 'falcon_base.html' %}
+{% load static %}
+
+{% block title %}Log Progress - {{ phase.name }} - ChantierMobile{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'vendors/flatpickr/flatpickr.min.css' %}" rel="stylesheet" />
+{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    <!-- vertical nav -->
+    {% include 'includes/navbar-vertical.html' with on="projects" %}
+    <!-- /vertical nav -->
+
+    <div class="content">
+        <!-- navbar-top -->
+        {% include 'includes/navbar-top.html' %}
+        <!-- /navbar-top -->
+
+        <!-- Main Content -->
+        <div class="container-fluid py-4">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <div class="row flex-between-end">
+                        <div class="col-auto align-self-center">
+                            <h5 class="mb-0">Log Progress: {{ phase.name }}</h5>
+                            <p class="fs--1 text-600 mb-0">Project: {{ phase.site.name }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body bg-light">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label class="form-label" for="id_report_date">Report Date</label>
+                            <input class="form-control datetimepicker" id="id_report_date" name="report_date"
+                                type="text" placeholder="YYYY-MM-DD" value="{% now 'Y-m-d' %}"
+                                data-options='{"dateFormat":"Y-m-d","disableMobile":true}' required />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="id_percentage_complete">Percentage Complete (0-100%)</label>
+                            <div class="range-slider-style">
+                                <input class="form-range" id="id_percentage_complete" name="percentage_complete"
+                                    type="range" min="0" max="100" value="0"
+                                    oninput="this.nextElementSibling.value = this.value" />
+                                <output>0</output>%
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="id_description">Description / Notes</label>
+                            <textarea class="form-control" id="id_description" name="description" rows="4"
+                                required></textarea>
+                        </div>
+
+                        <div class="col-12 d-flex justify-content-end">
+                            <button class="btn btn-primary" type="submit">Log Progress</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'assets/js/flatpickr.js' %}"></script>
+{% endblock %}

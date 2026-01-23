@@ -1,0 +1,76 @@
+{% extends 'falcon_base.html' %}
+
+{% block title %}Request Material - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    <!-- vertical nav -->
+    {% include 'includes/navbar-vertical.html' with on="materials" %}
+    <!-- /vertical nav -->
+
+    <div class="content">
+        <!-- navbar-top -->
+        {% include 'includes/navbar-top.html' %}
+        <!-- /navbar-top -->
+
+        <!-- Main Content -->
+        <div class="container-fluid py-4">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0">Request Material</h5>
+                </div>
+                <div class="card-body bg-light">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ form.site.id_for_label }}">Project / Site</label>
+                            {{ form.site }}
+                            {% if form.site.errors %}<div class="text-danger fs--2">{{ form.site.errors }}</div>{% endif
+                            %}
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-8">
+                                <label class="form-label" for="{{ form.material.id_for_label }}">Select Material</label>
+                                {{ form.material }}
+                                {% if form.material.errors %}<div class="text-danger fs--2">{{ form.material.errors }}
+                                </div>{% endif %}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label" for="{{ form.quantity.id_for_label }}">Quantity
+                                    Required</label>
+                                {{ form.quantity }}
+                                {% if form.quantity.errors %}<div class="text-danger fs--2">{{ form.quantity.errors }}
+                                </div>{% endif %}
+                            </div>
+                        </div>
+
+                        <div class="col-12 d-flex justify-content-end gap-2">
+                            <a href="{% url 'materials:request_list' %}" class="btn btn-falcon-default">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Submit Request</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const inputs = document.querySelectorAll('input, select, textarea');
+        inputs.forEach(input => {
+            if (input.tagName === 'SELECT') {
+                input.classList.add('form-select');
+            } else {
+                input.classList.add('form-control');
+            }
+        });
+    });
+</script>
+{% endblock %}

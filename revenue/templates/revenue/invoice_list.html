@@ -1,0 +1,78 @@
+{% extends 'falcon_base.html' %}
+{% load static %}
+
+{% block title %}Invoices - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    <!-- vertical nav -->
+    {% include 'includes/navbar-vertical.html' with on="revenue" %}
+    <!-- /vertical nav -->
+
+    <div class="content">
+        <!-- navbar-top -->
+        {% include 'includes/navbar-top.html' %}
+        <!-- /navbar-top -->
+
+        <!-- Main Content -->
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            <div class="card mb-3">
+                <div class="card-body p-0">
+                    <div class="table-responsive scrollbar">
+                        <table class="table table-sm table-striped fs--1 mb-0">
+                            <thead class="bg-200 text-900">
+                                <tr>
+                                    <th>Invoice #</th>
+                                    <th>Site / Client</th>
+                                    <th>Amount</th>
+                                    <th class="text-center">Status</th>
+                                    <th>Due Date</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for invoice in invoices %}
+                                <tr class="align-middle">
+                                    <td><a href="{% url 'revenue:invoice_detail' pk=invoice.pk %}"><strong>{{
+                                                invoice.invoice_number
+                                                }}</strong></a></td>
+                                    <td>
+                                        <p class="mb-0 fw-semi-bold">{{ invoice.contract.site.name }}</p>
+                                        <p class="mb-0 fs--2 text-500">{{ invoice.contract.client_name }}</p>
+                                    </td>
+                                    <td class="fw-semi-bold text-primary">${{ invoice.amount|floatformat:2 }}</td>
+                                    <td class="text-center">
+                                        <span class="badge rounded-pill 
+                                            {% if invoice.status == 'PAID' %}badge-soft-success
+                                            {% elif invoice.status == 'SENT' %}badge-soft-info
+                                            {% elif invoice.status == 'OVERDUE' %}badge-soft-danger
+                                            {% else %}badge-soft-warning{% endif %}">
+                                            {{ invoice.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ invoice.due_date }}</td>
+                                    <td class="text-end">
+                                        <a class="btn btn-falcon-default btn-sm"
+                                            href="{% url 'revenue:payment_create' invoice_id=invoice.id %}">
+                                            <span class="fas fa-plus me-1"></span>Payment
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center py-4 text-500">No invoices generated yet.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}

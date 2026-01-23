@@ -1,0 +1,45 @@
+{% load static i18n %}
+<script>
+      function setMainLogo(pageTheme) {
+            if (pageTheme === 'dark') {
+                  var mainLogoDiv = document.getElementById("main-logo")
+                  var mainLogo = document.createElement("img");
+                  mainLogo.setAttribute("src", "{% static 'app/img/TicTacFlow_Favicon.png' %}");
+                  mainLogo.setAttribute("class", "me-2");
+                  mainLogo.setAttribute("alt", "");
+                  mainLogo.setAttribute("width", "150");
+
+
+                  while (mainLogoDiv.hasChildNodes()) {
+                        mainLogoDiv.removeChild(mainLogoDiv.firstChild);
+                  }
+                  mainLogoDiv.appendChild(mainLogo);
+            } else {
+                  var mainLogoDiv = document.getElementById("main-logo")
+                  var mainLogo = document.createElement("img");
+                  mainLogo.setAttribute("src", "{% static 'app/img/TicTacFlow_Favicon.png' %}");
+                  mainLogo.setAttribute("class", "me-2");
+                  mainLogo.setAttribute("alt", "");
+                  mainLogo.setAttribute("width", "120");
+                  while (mainLogoDiv.hasChildNodes()) {
+                        mainLogoDiv.removeChild(mainLogoDiv.firstChild);
+                  }
+                  mainLogoDiv.appendChild(mainLogo);
+            }
+      }
+
+      function toggleMainLogo() {
+            var pageTheme = localStorage.getItem('theme');
+            setMainLogo(pageTheme);
+            var themeController = document.body;
+            themeController.addEventListener('clickControl', function (_ref31) {
+                  var _ref31$detail = _ref31.detail,
+                        control = _ref31$detail.control,
+                        value = _ref31$detail.value;
+                  if (control === 'theme') {
+                        setMainLogo(value);
+                  }
+            });
+      }
+      toggleMainLogo();
+</script>

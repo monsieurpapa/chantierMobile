@@ -1,0 +1,119 @@
+{% extends 'falcon_base.html' %}
+{% load static rbac_tags %}
+
+{% block title %}Sites - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    <!-- vertical nav -->
+    {% include 'includes/navbar-vertical.html' with on="projects" %}
+    <!-- /vertical nav -->
+
+    <div class="content">
+        <!-- navbar-top -->
+        {% include 'includes/navbar-top.html' %}
+        <!-- /navbar-top -->
+
+        <!-- Main Content -->
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            <div class="card mb-3">
+                <div class="card-header border-bottom">
+                    <div class="row flex-between-center">
+                        <div class="col-4 col-sm-auto d-flex align-items-center pe-0">
+                            <h5 class="fs-0 mb-0 text-nowrap py-2 py-xl-0">Active Sites</h5>
+                        </div>
+                        <div class="col-8 col-sm-auto ms-auto text-end ps-0">
+                            <div id="orders-actions">
+                                <button class="btn btn-falcon-default btn-sm" type="button"><span
+                                        class="fas fa-filter me-1"></span>Filter</button>
+                                <button class="btn btn-falcon-default btn-sm" type="button"><span
+                                        class="fas fa-external-link-alt me-1"></span>Export</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive scrollbar">
+                        <table class="table table-sm table-striped fs--1 mb-0 overflow-hidden">
+                            <thead class="bg-200 text-900">
+                                <tr>
+                                    <th class="sort pe-1 align-middle white-space-nowrap" data-sort="name">Site Name
+                                    </th>
+                                    <th class="sort pe-1 align-middle white-space-nowrap" data-sort="location">Location
+                                    </th>
+                                    <th class="sort pe-1 align-middle white-space-nowrap" data-sort="status">Status</th>
+                                    <th class="sort pe-1 align-middle white-space-nowrap" data-sort="start">Start Date
+                                    </th>
+                                    <th class="sort pe-1 align-middle white-space-nowrap" data-sort="end">Expected End
+                                    </th>
+                                    <th class="no-sort pe-1 align-middle data-table-row-action"></th>
+                                </tr>
+                            </thead>
+                            <tbody class="list" id="table-orders-body">
+                                {% for site in sites %}
+                                <tr class="btn-reveal-trigger">
+                                    <td class="name py-2 align-middle white-space-nowrap">
+                                        <a href="{% url 'projects:site_detail' unique_id=site.unique_id %}">
+                                            <strong>{{ site.name }}</strong>
+                                        </a>
+                                    </td>
+                                    <td class="location py-2 align-middle">{{ site.location }}</td>
+                                    <td class="status py-2 align-middle">
+                                        {% if site.status == 'ACTIVE' %}
+                                        <span class="badge badge-soft-success rounded-pill">Active</span>
+                                        {% elif site.status == 'PLANNING' %}
+                                        <span class="badge badge-soft-primary rounded-pill">Planning</span>
+                                        {% elif site.status == 'PAUSED' %}
+                                        <span class="badge badge-soft-warning rounded-pill">Paused</span>
+                                        {% elif site.status == 'COMPLETED' %}
+                                        <span class="badge badge-soft-secondary rounded-pill">Completed</span>
+                                        {% else %}
+                                        <span class="badge badge-soft-danger rounded-pill">{{ site.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="start py-2 align-middle">{{ site.start_date|default:"-" }}</td>
+                                    <td class="end py-2 align-middle">{{ site.expected_end_date|default:"-" }}</td>
+                                    <td class="align-middle white-space-nowrap text-end">
+                                        <div class="dropdown font-sans-serif position-static">
+                                            <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal"
+                                                type="button" id="order-dropdown-0" data-bs-toggle="dropdown"
+                                                data-boundary="window" aria-haspopup="true" aria-expanded="false"><span
+                                                    class="fas fa-ellipsis-h fs--1"></span></button>
+                                            <div class="dropdown-menu dropdown-menu-end border py-0"
+                                                aria-labelledby="order-dropdown-0">
+                                                <div class="bg-white py-2">
+                                                    <a class="dropdown-item"
+                                                        href="{% url 'projects:site_detail' unique_id=site.unique_id %}">View</a>
+                                                    {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER' %}
+                                                    <a class="dropdown-item"
+                                                        href="{% url 'projects:site_update' unique_id=site.unique_id %}">Edit</a>
+                                                    {% endif %}
+                                                    {% if request.user|has_role:'DIRECTOR' %}
+                                                    <div class="dropdown-divider"></div>
+                                                    <a class="dropdown-item text-danger"
+                                                        href="{% url 'projects:site_delete' unique_id=site.unique_id %}">Delete</a>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center py-4">No sites found. Add your first project!
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}

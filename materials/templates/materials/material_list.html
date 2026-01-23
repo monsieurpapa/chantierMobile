@@ -1,0 +1,71 @@
+{% extends 'falcon_base.html' %}
+{% load rbac_tags %}
+
+{% block title %}Material Catalog - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    <!-- vertical nav -->
+    {% include 'includes/navbar-vertical.html' with on="materials" %}
+    <!-- /vertical nav -->
+
+    <div class="content">
+        <!-- navbar-top -->
+        {% include 'includes/navbar-top.html' %}
+        <!-- /navbar-top -->
+
+        <!-- Main Content -->
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            <div class="card mb-3">
+                <div class="card-body p-0">
+                    <div class="table-responsive scrollbar">
+                        <table class="table table-sm table-striped fs--1 mb-0 overflow-hidden">
+                            <thead class="bg-200 text-900">
+                                <tr>
+                                    <th class="sort pe-1 align-middle white-space-nowrap">Material Name</th>
+                                    <th class="sort pe-1 align-middle white-space-nowrap">Unit</th>
+                                    <th class="sort pe-1 align-middle white-space-nowrap text-end">Est. Cost / Unit</th>
+                                    <th class="no-sort pe-1 align-middle data-table-row-action text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="list">
+                                {% for mat in materials %}
+                                <tr>
+                                    <td class="name py-2 align-middle white-space-nowrap">
+                                        <strong>{{ mat.name }}</strong>
+                                    </td>
+                                    <td class="unit py-2 align-middle">{{ mat.unit }}</td>
+                                    <td class="cost py-2 align-middle text-end">
+                                        {% if mat.estimated_cost_per_unit %}
+                                        ${{ mat.estimated_cost_per_unit }}
+                                        {% else %}
+                                        -
+                                        {% endif %}
+                                    </td>
+                                    <td class="align-middle white-space-nowrap text-end">
+                                        {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER' %}
+                                        <a class="btn btn-link text-600 btn-sm"
+                                            href="{% url 'materials:material_update' pk=mat.pk %}">
+                                            <span class="fas fa-edit"></span>
+                                        </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center py-4">No materials in catalog.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}

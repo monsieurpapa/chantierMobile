@@ -8,28 +8,29 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-
   <!-- ===============================================-->
   <!--    Document Title-->
   <!-- ===============================================-->
-  <title>{% block title %}Recruitment Portal{% endblock %}</title>
+  <title>{% block title %}Action-B{% endblock %}</title>
 
 
   <!-- ===============================================-->
-  <!--    Favicons (TicTacFlow) -->
+  <!--    Favicons-->
   <!-- ===============================================-->
-  <link rel="apple-touch-icon" sizes="180x180" href="{% static 'app/img/TicTacFlow_Final_Favicon.png' %}">
-  <link rel="icon" type="image/png" sizes="32x32" href="{% static 'app/img/TicTacFlow_Final_Favicon.png' %}">
-  <link rel="icon" type="image/png" sizes="16x16" href="{% static 'app/img/TicTacFlow_Favicon.png' %}">
-  <link rel="shortcut icon" type="image/x-icon" href="{% static 'app/img/TicTacFlow_Final_Favicon.png' %}">
-  <meta name="msapplication-TileImage" content="{% static 'app/img/TicTacFlow_Final_Favicon.png' %}">
-  <meta name="theme-color" content="#0B2740">
+  {% comment %}
+  <link rel="apple-touch-icon" sizes="180x180" href="{% static 'assets/img/favicons/cmc/apple-touch-icon.png' %}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{% static 'assets/img/favicons/cmc/favicon-32x32.png' %}">
+  <link rel="icon" type="image/png" sizes="16x16" href="{% static 'assets/img/favicons/cmc/favicon-16x16.png' %}">
+  <link rel="shortcut icon" type="image/x-icon" href="{% static 'assets/img/favicons/cmc/favicon.ico' %}">
+  <link rel="manifest" href="{% static 'assets/img/favicons/cmc/manifest.json' %}">
+  <meta name="msapplication-TileImage" content="{% static 'assets/img/favicons/cmc/mstile-150x150.png' %}">
+  {% endcomment %}
+  <meta name="theme-color" content="#ffffff">
   <script src="{% static 'assets/js/config.js' %}"></script>
   <script src="{% static 'vendors/overlayscrollbars/OverlayScrollbars.min.js' %}"></script>
   <script src="{% static 'vendors/leaflet/leaflet.js' %}"></script>
   <script src="{% static 'vendors/leaflet.markercluster/leaflet.markercluster.js' %}"></script>
   <script src="{% static 'vendors/leaflet.tilelayer.colorfilter/leaflet-tilelayer-colorfilter.min.js' %}"></script>
-  <script src="{% static 'vendors/simplebar/simplebar.min.js' %}"></script>
 
   <!-- ===============================================-->
   <!--    Stylesheets-->
@@ -38,7 +39,6 @@
   <link
     href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,500,600,700%7cPoppins:300,400,500,600,700,800,900&amp;display=swap"
     rel="stylesheet">
-  <link href="{% static 'vendors/simplebar/simplebar.min.css' %}" rel="stylesheet">
   <link href="{% static 'vendors/overlayscrollbars/OverlayScrollbars.min.css' %}" rel="stylesheet">
   <link href="{% static 'assets/css/theme-rtl.min.css' %}" rel="stylesheet" id="style-rtl">
   <link href="{% static 'assets/css/theme.min.css' %}" rel="stylesheet" id="style-default">
@@ -80,7 +80,8 @@
       userLinkRTL.setAttribute('disabled', true);
     }
   </script>
-  {% block rendered_variables %}{% endblock %}
+  {% block rendered_variables %}
+  {% endblock %}
 </head>
 
 
@@ -137,7 +138,7 @@
           <div class="flex-1">
             <h5 class="fs-0">RTL Mode</h5>
             <p class="fs--1 mb-0">Switch your language direction </p><a class="fs--1"
-              href="{% static 'falcon/documentation/customization/configuration.html' %}">RTL Documentation</a>
+              href="{% static 'documentation/customization/configuration.html' %}">RTL Documentation</a>
           </div>
         </div>
         <div class="form-check form-switch">
@@ -170,19 +171,19 @@
           <div>
             <div class="form-check form-check-inline">
               <input class="form-check-input" id="option-navbar-vertical" type="radio" name="navbar" value="vertical"
-                data-page-url="{% static 'falcon/modules/components/navs-and-tabs/vertical-navbar.html' %}"
+                data-page-url="{% static 'modules/components/navs-and-tabs/vertical-navbar.html' %}"
                 data-theme-control="navbarPosition" />
               <label class="form-check-label" for="option-navbar-vertical">Vertical</label>
             </div>
             <div class="form-check form-check-inline">
               <input class="form-check-input" id="option-navbar-top" type="radio" name="navbar" value="top"
-                data-page-url="{% static 'falcon/modules/components/navs-and-tabs/top-navbar.html' %}"
+                data-page-url="{% static 'modules/components/navs-and-tabs/top-navbar.html' %}"
                 data-theme-control="navbarPosition" />
               <label class="form-check-label" for="option-navbar-top">Top</label>
             </div>
             <div class="form-check form-check-inline me-0">
               <input class="form-check-input" id="option-navbar-combo" type="radio" name="navbar" value="combo"
-                data-page-url="{% static 'falcon/modules/components/navs-and-tabs/combo-navbar.html' %}"
+                data-page-url="{% static 'modules/components/navs-and-tabs/combo-navbar.html' %}"
                 data-theme-control="navbarPosition" />
               <label class="form-check-label" for="option-navbar-combo">Combo</label>
             </div>
@@ -194,8 +195,7 @@
       <h5 class="fs-0 d-flex align-items-center">Vertical Navbar Option</h5>
       <p class="fs--1 mb-0">Switch between styles for your vertical navbar </p>
       {% comment %}
-      <p> <a class="fs--1"
-          href="{% static 'falcon/modules/components/navs-and-tabs/vertical-navbar.html#navbar-styles' %}">See
+      <p> <a class="fs--1" href="{% static 'modules/components/navs-and-tabs/vertical-navbar.html#navbar-styles' %}">See
           Documentation</a></p>
       {% endcomment %}
       <div class="btn-group d-block w-100 btn-group-navbar-style">
@@ -231,6 +231,14 @@
         </div>
       </div>
 
+      {% comment %}
+      <div class="text-center mt-5"><img class="mb-4" src="{% static 'assets/img/icons/spot-illustrations/47.png' %}"
+          alt="" width="120" />
+        <h5>Like What You See?</h5>
+        <p class="fs--1">Contact TicTacFlow for further automation advice.</p><a class="mb-3 btn btn-primary"
+          href="https://TicTacFlow.com" target="_blank">Contact Us</a>
+      </div>
+      {% endcomment %}
     </div>
   </div><a class="card setting-toggle" href="#settings-offcanvas" data-bs-toggle="offcanvas">
     <div class="card-body d-flex align-items-center py-md-2 px-2 py-1">
@@ -264,204 +272,16 @@
   <script src="{% static 'vendors/list.js/list.min.js' %}"></script>
   <script src="{% static 'vendors/chart/chart.min.js' %}"></script>
   <script src="{% static 'vendors/dayjs/dayjs.min.js' %}"></script>
+  <script src="{% static 'vendors/lodash/lodash.min.js' %}"></script>
   <script src="{% static 'assets/js/theme.js' %}"></script>
+  <script src="{% static 'assets/js/htmx.min.js' %}" defer></script>
   <script src="{% static 'assets/data/world.js' %}"></script>
   <script src="https://cdn.datatables.net/1.13.1/js/jquery.dataTables.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
-  <script>
-    feather.replace()
-  </script>
+  <script src="{% static 'assets/js/echart-utils.js' %}"></script>
 
+  {% block echarts %}{% endblock %}
   {% block extra_js %}{% endblock %}
-
-  <!-- Back to Top Button -->
-  {% include 'recruitment/includes/back-to-top.html' %}
-
-  <!-- Floating Action Button -->
-  <div class="fab-container">
-    <div class="fab-main">
-      <button class="fab-button" id="fab-main" aria-label="Quick Actions">
-        <i class="fas fa-plus"></i>
-      </button>
-      <div class="fab-options">
-        {% if user.is_authenticated %}
-        <a href="{% url 'recruitment:vacancy_create' %}" class="fab-option" title="Post Job">
-          <i class="fas fa-briefcase"></i>
-        </a>
-        <a href="{% url 'recruitment:candidate_create' %}" class="fab-option" title="Add Candidate">
-          <i class="fas fa-user-plus"></i>
-        </a>
-        <!-- Interview and Offer creation require an application pk, so link to the applications list instead -->
-        <a href="{% url 'recruitment:application_list' %}" class="fab-option" title="Applications">
-          <i class="fas fa-calendar-check"></i>
-        </a>
-        {% else %}
-        <a href="{% url 'recruitment:vacancy_list' %}" class="fab-option" title="View Jobs">
-          <i class="fas fa-briefcase"></i>
-        </a>
-        <a href="{% url 'recruitment:home' %}" class="fab-option" title="About Us">
-          <i class="fas fa-info-circle"></i>
-        </a>
-        {% endif %}
-        <a href="{% url 'recruitment:home' %}" class="fab-option" title="Dashboard">
-          <i class="fas fa-tachometer-alt"></i>
-        </a>
-      </div>
-    </div>
-  </div>
-
-  <style>
-    .fab-container {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      z-index: 1000;
-    }
-
-    .fab-main {
-      position: relative;
-    }
-
-    .fab-button {
-      width: 56px;
-      height: 56px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      border: none;
-      color: white;
-      font-size: 24px;
-      cursor: pointer;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      transition: all 0.3s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .fab-button:hover {
-      transform: scale(1.1);
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
-    }
-
-    .fab-button.active {
-      transform: rotate(45deg);
-    }
-
-    .fab-options {
-      position: absolute;
-      bottom: 70px;
-      right: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      opacity: 0;
-      visibility: hidden;
-      transform: translateY(20px);
-      transition: all 0.3s ease;
-    }
-
-    .fab-options.active {
-      opacity: 1;
-      visibility: visible;
-      transform: translateY(0);
-    }
-
-    .fab-option {
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      background: white;
-      border: 2px solid #e9ecef;
-      color: #495057;
-      text-decoration: none;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      transition: all 0.3s ease;
-    }
-
-    .fab-option:hover {
-      background: #667eea;
-      color: white;
-      transform: scale(1.1);
-      text-decoration: none;
-    }
-
-    .fab-option:nth-child(1) {
-      animation-delay: 0.1s;
-    }
-
-    .fab-option:nth-child(2) {
-      animation-delay: 0.2s;
-    }
-
-    .fab-option:nth-child(3) {
-      animation-delay: 0.3s;
-    }
-
-    .fab-option:nth-child(4) {
-      animation-delay: 0.4s;
-    }
-
-    .fab-option:nth-child(5) {
-      animation-delay: 0.5s;
-    }
-
-    @media (max-width: 768px) {
-      .fab-container {
-        bottom: 15px;
-        right: 15px;
-      }
-
-      .fab-button {
-        width: 50px;
-        height: 50px;
-        font-size: 20px;
-      }
-
-      .fab-option {
-        width: 44px;
-        height: 44px;
-        font-size: 16px;
-      }
-    }
-  </style>
-
-  <script>
-    document.addEventListener('DOMContentLoaded', function () {
-      const fabButton = document.getElementById('fab-main');
-      const fabOptions = document.querySelector('.fab-options');
-
-      fabButton.addEventListener('click', function () {
-        fabButton.classList.toggle('active');
-        fabOptions.classList.toggle('active');
-      });
-
-      // Close FAB when clicking outside
-      document.addEventListener('click', function (event) {
-        if (!event.target.closest('.fab-container')) {
-          fabButton.classList.remove('active');
-          fabOptions.classList.remove('active');
-        }
-      });
-
-      // Add smooth scrolling for anchor links
-      document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener('click', function (e) {
-          e.preventDefault();
-          const target = document.querySelector(this.getAttribute('href'));
-          if (target) {
-            target.scrollIntoView({
-              behavior: 'smooth',
-              block: 'start'
-            });
-          }
-        });
-      });
-    });
-  </script>
+  {% include 'includes/base.toggle.main.logo.js.html' %}
 </body>
 
 </html>

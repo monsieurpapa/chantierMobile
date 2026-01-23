@@ -1,0 +1,75 @@
+{% extends 'falcon_base.html' %}
+{% load static %}
+
+{% block title %}Budget Form - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    <!-- vertical nav -->
+    {% include 'includes/navbar-vertical.html' with on="finance" %}
+    <!-- /vertical nav -->
+
+    <div class="content">
+        <!-- navbar-top -->
+        {% include 'includes/navbar-top.html' %}
+        <!-- /navbar-top -->
+
+        <!-- Main Content -->
+        <div class="container-fluid py-4">
+            <div class="card mb-3">
+                <div class="card-body bg-light">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ form.site.id_for_label }}">Project / Site</label>
+                            {{ form.site }}
+                            {% if form.site.errors %}<div class="text-danger fs--2">{{ form.site.errors }}</div>{% endif
+                            %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ form.total_amount.id_for_label }}">Total Budget Amount
+                                ($)</label>
+                            {{ form.total_amount }}
+                            {% if form.total_amount.errors %}<div class="text-danger fs--2">{{ form.total_amount.errors
+                                }}</div>{% endif %}
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label" for="{{ form.start_date.id_for_label }}">Start Date</label>
+                                {{ form.start_date }}
+                                {% if form.start_date.errors %}<div class="text-danger fs--2">{{ form.start_date.errors
+                                    }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="{{ form.end_date.id_for_label }}">End Date</label>
+                                {{ form.end_date }}
+                                {% if form.end_date.errors %}<div class="text-danger fs--2">{{ form.end_date.errors }}
+                                </div>{% endif %}
+                            </div>
+                        </div>
+
+                        <div class="col-12 d-flex justify-content-end gap-2">
+                            <a href="{% url 'finance:budget_list' %}" class="btn btn-falcon-default">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Save Budget</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.querySelectorAll('input, select, textarea').forEach(el => {
+        if (!el.classList.contains('form-range')) el.classList.add('form-control');
+        if (el.tagName === 'SELECT') { el.classList.remove('form-control'); el.classList.add('form-select'); }
+    });
+</script>
+{% endblock %}

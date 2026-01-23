@@ -1,135 +1,57 @@
-<!-- Page Header Component
-     =====================
-     
-     Displays page title, breadcrumbs, and action buttons in a professional layout.
-     
-     Usage:
-     {% include 'recruitment/includes/page_header.html' with 
-       title="Page Title"
-       breadcrumb_items=breadcrumbs
-       actions=action_buttons
-     %}
-     
-     actions should be a list of dicts:
-     [
-       {'label': 'Create', 'url': 'recruitment:item_create', 'icon': 'plus', 'class': 'btn-primary'},
-       {'label': 'Export', 'url': '#', 'icon': 'download', 'class': 'btn-secondary'},
-     ]
--->
-
 {% load static %}
 
-<div class="page-header mb-4">
-  <!-- Breadcrumb -->
-  {% if breadcrumb_items %}
-  <nav aria-label="breadcrumb" class="mb-3">
-    <ol class="breadcrumb mb-0 small">
-      <li class="breadcrumb-item">
-        <a href="{% url 'recruitment:home' %}">
-          <i class="fas fa-home me-1"></i>Home
-        </a>
-      </li>
-      {% for item in breadcrumb_items %}
-      {% if item.url %}
-      <li class="breadcrumb-item">
-        <a href="{% url item.url %}">{{ item.title }}</a>
-      </li>
-      {% else %}
-      <li class="breadcrumb-item active" aria-current="page">
-        {{ item.title }}
-      </li>
-      {% endif %}
-      {% endfor %}
-    </ol>
-  </nav>
-  {% endif %}
+{# Page Header Component - displays title, subtitle, breadcrumbs, back button, and action buttons #}
+<div class="card mb-3">
+  <div class="card-body">
+    <div class="row align-items-center">
+      <div class="col">
+        {% if back_url %}
+        <div class="mb-2">
+          <a href="{{ back_url }}" class="btn btn-link btn-sm ps-0">
+            <span class="fas fa-arrow-left me-1"></span> Back
+          </a>
+        </div>
+        {% endif %}
 
-  <!-- Title and Actions Row -->
-  <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-    <!-- Title Section -->
-    <div class="page-title-section">
-      {% if icon %}
-      <div class="page-icon mb-2">
-        <i class="fas {{ icon }} text-primary"></i>
+        {% if breadcrumb_items %}
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb breadcrumb-custom">
+            {% for item in breadcrumb_items %}
+            {% if item.url %}
+            <li class="breadcrumb-item">
+              <a href="{{ item.url }}">{{ item.title }}</a>
+            </li>
+            {% else %}
+            <li class="breadcrumb-item active" aria-current="page">{{ item.title }}</li>
+            {% endif %}
+            {% endfor %}
+          </ol>
+        </nav>
+        {% endif %}
+
+        {% if header_title %}
+        <h4 class="mb-0">{{ header_title }}</h4>
+        {% endif %}
+
+        {% if header_subtitle %}
+        <p class="text-500 mb-0">{{ header_subtitle }}</p>
+        {% endif %}
+      </div>
+
+      {% if header_actions %}
+      <div class="col-auto">
+        <div class="d-flex gap-2">
+          {% for action in header_actions %}
+          <a href="{{ action.url }}" class="btn {{ action.class|default:'btn-falcon-default' }} btn-sm">
+            {% if action.icon %}
+            <span class="fas fa-{{ action.icon }} me-1"></span>
+            {% endif %}
+            {{ action.label }}
+          </a>
+          {% endfor %}
+        </div>
       </div>
       {% endif %}
-      <h1 class="h3 mb-2">
-        <strong>{{ title }}</strong>
-      </h1>
-      {% if subtitle %}
-      <p class="text-muted mb-0">{{ subtitle }}</p>
-      {% endif %}
     </div>
-
-    <!-- Action Buttons -->
-    {% if actions %}
-    <div class="page-actions d-flex gap-2 flex-wrap">
-      {% for action in actions %}
-      {% if action.url %}
-      <a href="{% url action.url %}" class="btn {{ action.class|default:'btn-secondary' }} btn-sm">
-        {% if action.icon %}
-        <i class="fas fa-{{ action.icon }} me-2"></i>
-        {% endif %}
-        {{ action.label }}
-      </a>
-      {% else %}
-      <button class="btn {{ action.class|default:'btn-secondary' }} btn-sm" onclick="{{ action.onclick }}">
-        {% if action.icon %}
-        <i class="fas fa-{{ action.icon }} me-2"></i>
-        {% endif %}
-        {{ action.label }}
-      </button>
-      {% endif %}
-      {% endfor %}
-    </div>
-    {% endif %}
   </div>
 </div>
-
-<style>
-  .page-header {
-    background-color: white;
-    padding: 2rem;
-    border-radius: 0.75rem;
-    border-bottom: 1px solid #e0e6ed;
-    margin-bottom: 2rem;
-  }
-
-  .page-title-section {
-    flex: 1;
-  }
-
-  .page-icon {
-    font-size: 2rem;
-    opacity: 0.8;
-  }
-
-  .page-header h1 {
-    color: #2c3e50;
-    margin: 0;
-    font-size: 1.75rem;
-  }
-
-  .page-actions {
-    flex-shrink: 0;
-  }
-
-  @media (max-width: 768px) {
-    .page-header {
-      padding: 1.5rem;
-    }
-
-    .page-header h1 {
-      font-size: 1.5rem;
-    }
-
-    .d-flex.justify-content-between {
-      flex-direction: column;
-    }
-
-    .page-actions {
-      width: 100%;
-      justify-content: flex-start;
-    }
-  }
-</style>

@@ -1,0 +1,17 @@
+from django.urls import path
+from . import views
+
+app_name = 'materials'
+
+urlpatterns = [
+    # Catalog
+    path('catalog/', views.MaterialListView.as_view(), name='material_list'),
+    path('catalog/add/', views.MaterialCreateView.as_view(), name='material_create'),
+    path('catalog/<int:pk>/edit/', views.MaterialUpdateView.as_view(), name='material_update'),
+    
+    # Requests
+    path('requests/', views.MaterialRequestListView.as_view(), name='request_list'),
+    path('requests/add/', views.MaterialRequestCreateView.as_view(), name='request_create'),
+    path('requests/<int:pk>/', views.MaterialRequestDetailView.as_view(), name='request_detail'),
+    path('requests/<int:pk>/approve/', views.approve_material_request, name='request_approve'),
+]

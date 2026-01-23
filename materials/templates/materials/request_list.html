@@ -1,0 +1,74 @@
+{% extends 'falcon_base.html' %}
+{% load rbac_tags %}
+
+{% block title %}Material Requests - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    <!-- vertical nav -->
+    {% include 'includes/navbar-vertical.html' with on="materials" %}
+    <!-- /vertical nav -->
+
+    <div class="content">
+        <!-- navbar-top -->
+        {% include 'includes/navbar-top.html' %}
+        <!-- /navbar-top -->
+
+        <!-- Main Content -->
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            <div class="card mb-3">
+                <div class="card-body p-0">
+                    <div class="table-responsive scrollbar">
+                        <table class="table table-sm table-striped fs--1 mb-0 overflow-hidden">
+                            <thead class="bg-200 text-900">
+                                <tr>
+                                    <th class="sort pe-1 align-middle">Site</th>
+                                    <th class="sort pe-1 align-middle">Material</th>
+                                    <th class="sort pe-1 align-middle text-center">Quantity</th>
+                                    <th class="sort pe-1 align-middle text-center">Status</th>
+                                    <th class="sort pe-1 align-middle text-end">Date</th>
+                                    <th class="no-sort pe-1 align-middle text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="list">
+                                {% for req in requests %}
+                                <tr>
+                                    <td class="align-middle">
+                                        <a href="{% url 'projects:site_detail' unique_id=req.site.unique_id %}">{{
+                                            req.site.name }}</a>
+                                    </td>
+                                    <td class="align-middle">{{ req.material.name }}</td>
+                                    <td class="align-middle text-center">{{ req.quantity }} {{ req.material.unit }}</td>
+                                    <td class="align-middle text-center">
+                                        <span class="badge rounded-pill 
+                                        {% if req.status == 'APPROVED' %}badge-soft-success
+                                        {% elif req.status == 'DELIVERED' %}badge-soft-info
+                                        {% elif req.status == 'REJECTED' %}badge-soft-danger
+                                        {% else %}badge-soft-warning{% endif %}">
+                                            {{ req.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td class="align-middle text-end text-500">{{ req.created_at|date:"M d, Y" }}</td>
+                                    <td class="align-middle text-end">
+                                        <a class="btn btn-link text-600 btn-sm"
+                                            href="{% url 'materials:request_detail' pk=req.pk %}">View</a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center py-4">No material requests found.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}

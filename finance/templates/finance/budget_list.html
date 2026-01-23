@@ -1,0 +1,67 @@
+{% extends 'falcon_base.html' %}
+{% load rbac_tags %}
+
+{% block title %}Budgets - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    <!-- vertical nav -->
+    {% include 'includes/navbar-vertical.html' with on="finance" %}
+    <!-- /vertical nav -->
+
+    <div class="content">
+        <!-- navbar-top -->
+        {% include 'includes/navbar-top.html' %}
+        <!-- /navbar-top -->
+
+        <!-- Main Content -->
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            <div class="card mb-3">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped fs--1 mb-0">
+                            <thead class="bg-200 text-900">
+                                <tr>
+                                    <th class="align-middle">Site</th>
+                                    <th class="align-middle">Total Amount</th>
+                                    <th class="align-middle">Period</th>
+                                    <th class="align-middle text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for budget in budgets %}
+                                <tr>
+                                    <td class="align-middle">
+                                        <a href="{% url 'projects:site_detail' unique_id=budget.site.unique_id %}">
+                                            <strong>{{ budget.site.name }}</strong>
+                                        </a>
+                                    </td>
+                                    <td class="align-middle fw-bold text-primary">${{ budget.total_amount }}</td>
+                                    <td class="align-middle">{{ budget.start_date }} to {{ budget.end_date }}</td>
+                                    <td class="align-middle text-end">
+                                        {% if request.user|has_role:'DIRECTOR,ACCOUNTANT' %}
+                                        <a class="btn btn-link text-600 btn-sm"
+                                            href="{% url 'finance:budget_update' pk=budget.pk %}">
+                                            <span class="fas fa-edit"></span>
+                                        </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center py-4">No budgets defined yet.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}

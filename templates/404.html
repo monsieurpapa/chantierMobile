@@ -1,15 +1,15 @@
-{% extends 'recruitment/falcon_base.html' %}
+{% extends 'falcon_base.html' %}
 {% load static %}
 
-{% block title %}Page Not Found - TicTacFlow{% endblock %}
+{% block title %}Page Not Found - Chantier Mobile{% endblock %}
 
 {% block content %}
 <div class="container" data-layout="container">
   <div class="row flex-center min-vh-100 py-6 text-center">
     <div class="col-sm-10 col-md-8 col-lg-6 col-xxl-5">
-      <a class="d-flex flex-center mb-4 text-decoration-none" href="{% url 'recruitment:home' %}">
-        <i class="fas fa-briefcase text-primary fs-4 me-2"></i>
-        <span class="font-sans-serif fw-bolder fs-4 text-dark">TicTacFlow Recruitment</span>
+      <a class="d-flex flex-center mb-4 text-decoration-none" href="{% url 'home' %}">
+        <i class="fas fa-hard-hat text-primary fs-4 me-2"></i>
+        <span class="font-sans-serif fw-bolder fs-4 text-dark">Chantier Mobile</span>
       </a>
       <div class="card shadow-sm">
         <div class="card-body p-4 p-sm-5">
@@ -17,12 +17,12 @@
           <p class="lead mt-4 text-800 font-sans-serif fw-semi-bold">The page you're looking for is not found.</p>
           <hr />
           <p>Make sure the address is correct and that the page hasn't moved.</p>
-          <a class="btn btn-primary btn-sm mt-3" href="{% url 'recruitment:home' %}">
+          <a class="btn btn-primary btn-sm mt-3" href="{% url 'home' %}">
             <span class="fas fa-home me-2"></span>Return to Dashboard
           </a>
         </div>
       </div>
-      {% include 'recruitment/includes/footer.html' %}
+      {% include 'includes/footer.html' %}
     </div>
   </div>
 </div>

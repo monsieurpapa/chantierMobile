@@ -1,0 +1,99 @@
+{% extends 'falcon_base.html' %}
+{% load rbac_tags %}
+
+{% block title %}Request Details - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    <!-- vertical nav -->
+    {% include 'includes/navbar-vertical.html' with on="materials" %}
+    <!-- /vertical nav -->
+
+    <div class="content">
+        <!-- navbar-top -->
+        {% include 'includes/navbar-top.html' %}
+        <!-- /navbar-top -->
+
+        <!-- Main Content -->
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            <div class="row g-3">
+                <div class="col-lg-8 pe-lg-2">
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <div class="row g-0">
+                                <div class="col-sm-6 mb-3">
+                                    <label class="form-label text-600">Material</label>
+                                    <p class="fs-1 fw-bold">{{ req.material.name }}</p>
+                                </div>
+                                <div class="col-sm-6 mb-3">
+                                    <label class="form-label text-600">Quantity</label>
+                                    <p class="fs-1 fw-bold text-primary">{{ req.quantity }} {{ req.material.unit }}</p>
+                                </div>
+                                <div class="col-sm-6 mb-3">
+                                    <label class="form-label text-600">Site</label>
+                                    <p class="fs-0"><a
+                                            href="{% url 'projects:site_detail' unique_id=req.site.unique_id %}">{{
+                                            req.site.name }}</a></p>
+                                </div>
+                                <div class="col-sm-6 mb-3">
+                                    <label class="form-label text-600">Current Status</label>
+                                    <div>
+                                        <span class="badge rounded-pill 
+                                        {% if req.status == 'APPROVED' %}badge-soft-success
+                                        {% elif req.status == 'REJECTED' %}badge-soft-danger
+                                        {% else %}badge-soft-warning{% endif %}">
+                                            {{ req.get_status_display }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4 ps-lg-2">
+                    {% if req.status == 'PENDING' and request.user|has_role:'DIRECTOR,CHIEF_ENGINEER' %}
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">Review Decision</h5>
+                        </div>
+                        <div class="card-body">
+                            <form action="{% url 'materials:request_approve' pk=req.pk %}" method="post">
+                                {% csrf_token %}
+                                <div class="d-grid gap-2">
+                                    <button type="submit" name="action" value="approve" class="btn btn-primary">
+                                        <span class="fas fa-check me-1"></span>Approve Request
+                                    </button>
+                                    <button type="submit" name="action" value="reject" class="btn btn-falcon-danger">
+                                        <span class="fas fa-times me-1"></span>Reject Request
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">Requester Info</h5>
+                        </div>
+                        <div class="card-body fs--1">
+                            <div class="row">
+                                <div class="col-5 text-600">Requested By:</div>
+                                <div class="col-7 fw-semi-bold">{{
+                                    req.requested_by.get_full_name|default:req.requested_by.username }}</div>
+                                <div class="col-5 text-600">Date:</div>
+                                <div class="col-7">{{ req.created_at|date }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}

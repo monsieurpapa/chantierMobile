@@ -1,0 +1,128 @@
+{% extends 'falcon_base.html' %}
+{% load static %}
+
+{% block title %}Invoice Details - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    <!-- vertical nav -->
+    {% include 'includes/navbar-vertical.html' with on="revenue" %}
+    <!-- /vertical nav -->
+
+    <div class="content">
+        <!-- navbar-top -->
+        {% include 'includes/navbar-top.html' %}
+        <!-- /navbar-top -->
+
+        <!-- Main Content -->
+        <div class="container-fluid py-4">
+            <div class="row g-3">
+                <div class="col-lg-8 pe-lg-2">
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <div class="row g-0">
+                                <div class="col-sm-6 mb-3">
+                                    <label class="form-label text-600 text-uppercase fs--2 fw-bold">Site</label>
+                                    <p class="fs-0"><a
+                                            href="{% url 'projects:site_detail' unique_id=invoice.contract.site.unique_id %}">{{
+                                            invoice.contract.site.name }}</a></p>
+                                </div>
+                                <div class="col-sm-6 mb-3 text-sm-end">
+                                    <label class="form-label text-600 text-uppercase fs--2 fw-bold">Client</label>
+                                    <p class="fs-0 text-900 fw-semi-bold">{{ invoice.contract.client_name }}</p>
+                                </div>
+                            </div>
+                            <hr class="border-300" />
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label text-600 text-uppercase fs--2 fw-bold">Amount Due</label>
+                                    <h3 class="text-primary fw-bold">${{ invoice.amount|floatformat:2 }}</h3>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label text-600 text-uppercase fs--2 fw-bold">Issued Date</label>
+                                    <p class="fs-0">{{ invoice.issued_date }}</p>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label text-600 text-uppercase fs--2 fw-bold">Due Date</label>
+                                    <p class="fs-0 text-danger fw-semi-bold">{{ invoice.due_date }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">Payment Records</h6>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-striped mb-0 fs--1">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Method</th>
+                                            <th>Reference</th>
+                                            <th class="text-end">Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for payment in invoice.payments.all %}
+                                        <tr>
+                                            <td>{{ payment.payment_date }}</td>
+                                            <td>{{ payment.get_method_display }}</td>
+                                            <td>{{ payment.reference }}</td>
+                                            <td class="text-end fw-semi-bold text-success">${{
+                                                payment.amount|floatformat:2 }}</td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="4" class="text-center py-3 text-500">No payments recorded for
+                                                this invoice.
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4 ps-lg-2">
+                    {% if invoice.status != 'PAID' %}
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">Actions</h6>
+                        </div>
+                        <div class="card-body">
+                            <a class="btn btn-success d-block w-100"
+                                href="{% url 'revenue:payment_create' invoice_id=invoice.id %}">
+                                <span class="fas fa-money-bill-wave me-1"></span>Record Payment
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">Contract Summary</h6>
+                        </div>
+                        <div class="card-body fs--1">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-600">Total Contract:</span>
+                                <span class="fw-semi-bold">${{ invoice.contract.total_value|floatformat:2 }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span class="text-600">Site:</span>
+                                <span class="fw-semi-bold text-primary">{{ invoice.contract.site.name }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}

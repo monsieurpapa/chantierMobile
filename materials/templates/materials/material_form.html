@@ -1,0 +1,69 @@
+{% extends 'falcon_base.html' %}
+{% load static %}
+
+{% block title %}Material Form - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    <!-- vertical nav -->
+    {% include 'includes/navbar-vertical.html' with on="materials" %}
+    <!-- /vertical nav -->
+
+    <div class="content">
+        <!-- navbar-top -->
+        {% include 'includes/navbar-top.html' %}
+        <!-- /navbar-top -->
+
+        <!-- Main Content -->
+        <div class="container-fluid py-4">
+            <div class="card mb-3">
+                <div class="card-body bg-light">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ form.name.id_for_label }}">Material Name</label>
+                            {{ form.name }}
+                            {% if form.name.errors %}<div class="text-danger fs--2">{{ form.name.errors }}</div>{% endif
+                            %}
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label" for="{{ form.unit.id_for_label }}">Unit (e.g. kg, L,
+                                    m3)</label>
+                                {{ form.unit }}
+                                {% if form.unit.errors %}<div class="text-danger fs--2">{{ form.unit.errors }}</div>{%
+                                endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="{{ form.estimated_cost_per_unit.id_for_label }}">Est.
+                                    Cost / Unit ($)</label>
+                                {{ form.estimated_cost_per_unit }}
+                                {% if form.estimated_cost_per_unit.errors %}<div class="text-danger fs--2">{{
+                                    form.estimated_cost_per_unit.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+
+                        <div class="col-12 d-flex justify-content-end gap-2">
+                            <a href="{% url 'materials:material_list' %}" class="btn btn-falcon-default">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Save Material</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.querySelectorAll('input, select, textarea').forEach(el => {
+        if (!el.classList.contains('form-range')) el.classList.add('form-control');
+        if (el.tagName === 'SELECT') { el.classList.remove('form-control'); el.classList.add('form-select'); }
+    });
+</script>
+{% endblock %}

@@ -21,6 +21,47 @@ class Site(BaseModel):
     def __str__(self):
         return f"{self.name} ({self.status})"
 
+    @property
+    def active_assignments(self):
+        from django.utils import timezone
+        today = timezone.now().date()
+        return self.assignments.filter(
+            start_date__lte=today
+        ).filter(
+            models.Q(end_date__gte=today) | models.Q(end_date__isnull=True)
+        )
+
+    @property
+    def total_daily_personnel_cost(self):
+        return self.active_assignments.aggregate(
+            total=models.Sum('daily_rate')
+        )['total'] or 0
+
+    @property
+    def total_spent(self):
+        return self.expenses.filter(status__in=['APPROVED', 'PAID']).aggregate(
+            total=models.Sum('amount')
+        )['total'] or 0
+
+    @property
+    def budget_usage_percentage(self):
+        if hasattr(self, 'budget') and self.budget.total_amount > 0:
+            return min(int((self.total_spent / self.budget.total_amount) * 100), 100)
+        return 0
+
+    @property
+    def total_revenue(self):
+        # Site -> Contract (OneToOne) -> Invoices
+        if hasattr(self, 'contract'):
+            return self.contract.invoices.filter(status='PAID').aggregate(
+                total=models.Sum('amount')
+            )['total'] or 0
+        return 0
+
+    @property
+    def net_profit(self):
+        return self.total_revenue - self.total_spent
+
 class ProjectPhase(BaseModel):
     site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name='phases')
     name = models.CharField(max_length=255)

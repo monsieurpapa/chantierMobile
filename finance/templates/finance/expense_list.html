@@ -1,51 +1,76 @@
-{% extends 'base.html' %}
+{% extends 'falcon_base.html' %}
+{% load static %}
+
+{% block title %}Expenses - ChantierMobile{% endblock %}
 
 {% block content %}
-<div class="flex justify-between items-center mb-6">
-    <h1>Expenses</h1>
-    <a href="{% url 'expense_create' %}" class="btn btn-primary">+ New Expense</a>
-</div>
+<div class="container" data-layout="container-fluid">
+    <!-- vertical nav -->
+    {% include 'includes/navbar-vertical.html' with on="finance" %}
+    <!-- /vertical nav -->
 
-<div class="card table-container">
-    <table>
-        <thead>
-            <tr>
-                <th>Site</th>
-                <th>Category</th>
-                <th>Amount</th>
-                <th>Requester</th>
-                <th>Status</th>
-                <th>Date</th>
-                <th>Action</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for expense in expenses %}
-            <tr>
-                <td>{{ expense.site.name }}</td>
-                <td>{{ expense.category.name }}</td>
-                <td style="font-weight: 600;">{{ expense.amount }}</td>
-                <td>{{ expense.requester.username }}</td>
-                <td>
-                    <span class="badge 
-                        {% if expense.status == 'APPROVED' %}badge-success
-                        {% elif expense.status == 'REJECTED' %}badge-danger
-                        {% else %}badge-warning{% endif %}">
-                        {{ expense.get_status_display }}
-                    </span>
-                </td>
-                <td>{{ expense.created_at|date:"M d, Y" }}</td>
-                <td>
-                    <a href="{% url 'expense_detail' expense.pk %}" class="btn-outline"
-                        style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">View</a>
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="7" style="text-align: center; color: var(--text-secondary);">No expenses found.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="content">
+        <!-- navbar-top -->
+        {% include 'includes/navbar-top.html' %}
+        <!-- /navbar-top -->
+
+        <!-- Main Content -->
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            <div class="card mb-3">
+                <div class="card-body p-0">
+                    <div class="table-responsive scrollbar">
+                        <table class="table table-sm table-striped fs--1 mb-0 overflow-hidden">
+                            <thead class="bg-200 text-900">
+                                <tr>
+                                    <th class="sort pe-1 align-middle white-space-nowrap">Site</th>
+                                    <th class="sort pe-1 align-middle white-space-nowrap">Category</th>
+                                    <th class="sort pe-1 align-middle white-space-nowrap">Amount</th>
+                                    <th class="sort pe-1 align-middle white-space-nowrap">Requester</th>
+                                    <th class="sort pe-1 align-middle white-space-nowrap">Status</th>
+                                    <th class="sort pe-1 align-middle white-space-nowrap">Date</th>
+                                    <th class="no-sort pe-1 align-middle data-table-row-action"></th>
+                                </tr>
+                            </thead>
+                            <tbody class="list">
+                                {% for expense in expenses %}
+                                <tr class="btn-reveal-trigger">
+                                    <td class="align-middle white-space-nowrap">
+                                        <strong>{{ expense.site.name }}</strong>
+                                    </td>
+                                    <td class="align-middle white-space-nowrap">{{ expense.category.name }}</td>
+                                    <td class="align-middle white-space-nowrap fw-bold text-primary">${{ expense.amount
+                                        }}</td>
+                                    <td class="align-middle white-space-nowrap">{{ expense.requester.username }}</td>
+                                    <td class="align-middle white-space-nowrap">
+                                        <span class="badge rounded-pill 
+                                            {% if expense.status == 'APPROVED' %}badge-soft-success
+                                            {% elif expense.status == 'REJECTED' %}badge-soft-danger
+                                            {% else %}badge-soft-warning{% endif %}">
+                                            {{ expense.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td class="align-middle white-space-nowrap">{{ expense.created_at|date:"M d, Y" }}
+                                    </td>
+                                    <td class="align-middle white-space-nowrap text-end">
+                                        <a href="{% url 'finance:expense_detail' expense.pk %}"
+                                            class="btn btn-falcon-default btn-sm">View</a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center py-4">No expenses found.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
+    </div>
 </div>
 {% endblock %}

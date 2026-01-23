@@ -1,0 +1,86 @@
+{% extends 'falcon_base.html' %}
+{% load static %}
+
+{% block title %}Personnel Profile Form - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    <!-- vertical nav -->
+    {% include 'includes/navbar-vertical.html' with on="personnel" %}
+    <!-- /vertical nav -->
+
+    <div class="content">
+        <!-- navbar-top -->
+        {% include 'includes/navbar-top.html' %}
+        <!-- /navbar-top -->
+
+        <!-- Main Content -->
+        <div class="container-fluid py-4">
+            <div class="card mb-3">
+                <div class="card-body bg-light">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">First Name</label>
+                                {{ form.first_name }}
+                                {% if form.first_name.errors %}<div class="text-danger fs--2">{{ form.first_name.errors
+                                    }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Last Name</label>
+                                {{ form.last_name }}
+                                {% if form.last_name.errors %}<div class="text-danger fs--2">{{ form.last_name.errors }}
+                                </div>{% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ form.skills.id_for_label }}">Skills</label>
+                            {{ form.skills }}
+                            <p class="fs--2 text-500">Select skills for this profile.</p>
+                            {% if form.skills.errors %}<div class="text-danger fs--2">{{ form.skills.errors }}</div>{%
+                            endif %}
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label" for="{{ form.default_daily_rate.id_for_label }}">Default Daily
+                                    Rate ($)</label>
+                                {{ form.default_daily_rate }}
+                                {% if form.default_daily_rate.errors %}<div class="text-danger fs--2">{{
+                                    form.default_daily_rate.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="{{ form.user.id_for_label }}">System User (Link for
+                                    Login)</label>
+                                {{ form.user }}
+                                {% if form.user.errors %}<div class="text-danger fs--2">{{ form.user.errors }}</div>{%
+                                endif %}
+                            </div>
+                        </div>
+
+                        <div class="col-12 d-flex justify-content-end gap-2">
+                            <a class="btn btn-falcon-default" href="{{ request.META.HTTP_REFERER }}">Cancel</a>
+                            <button class="btn btn-primary" type="submit">Save Profile</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Script to add Falcon classes to django form widgets if needed -->
+<script>
+    document.querySelectorAll('input, select, textarea').forEach(el => {
+        if (!el.classList.contains('form-range')) el.classList.add('form-control');
+        if (el.tagName === 'SELECT') { el.classList.remove('form-control'); el.classList.add('form-select'); }
+    });
+</script>
+{% endblock %}

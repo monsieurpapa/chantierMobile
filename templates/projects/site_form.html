@@ -1,0 +1,89 @@
+{% extends 'falcon_base.html' %}
+{% load static %}
+
+{% block title %}Site Form - ChantierMobile{% endblock %}
+
+{% block extra_css %}
+<!-- Include Flatpickr CSS if not already in base -->
+<link href="{% static 'vendors/flatpickr/flatpickr.min.css' %}" rel="stylesheet" />
+{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    <!-- vertical nav -->
+    {% include 'includes/navbar-vertical.html' with on="projects" %}
+    <!-- /vertical nav -->
+
+    <div class="content">
+        <!-- navbar-top -->
+        {% include 'includes/navbar-top.html' %}
+        <!-- /navbar-top -->
+
+        <!-- Main Content -->
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            <div class="card mb-3">
+                <div class="card-body bg-light">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label" for="{{ form.name.id_for_label }}">Site Name</label>
+                                {{ form.name }}
+                                {% if form.name.errors %}
+                                <div class="invalid-feedback d-block">{{ form.name.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="{{ form.location.id_for_label }}">Location /
+                                    Address</label>
+                                {{ form.location }}
+                                {% if form.location.errors %}
+                                <div class="invalid-feedback d-block">{{ form.location.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label" for="{{ form.status.id_for_label }}">Status</label>
+                                {{ form.status }}
+                                {% if form.status.errors %}
+                                <div class="invalid-feedback d-block">{{ form.status.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label" for="{{ form.start_date.id_for_label }}">Start Date</label>
+                                {{ form.start_date }}
+                                {% if form.start_date.errors %}
+                                <div class="invalid-feedback d-block">{{ form.start_date.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label" for="{{ form.expected_end_date.id_for_label }}">Expected End
+                                    Date</label>
+                                {{ form.expected_end_date }}
+                                {% if form.expected_end_date.errors %}
+                                <div class="invalid-feedback d-block">{{ form.expected_end_date.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="col-12 d-flex justify-content-end">
+                            <button class="btn btn-primary" type="submit">Save Site</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'assets/js/flatpickr.js' %}"></script>
+{% endblock %}

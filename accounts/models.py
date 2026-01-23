@@ -28,9 +28,19 @@ class UserCabinetRole(BaseModel):
         CASHIER = 'CASHIER', _('Cashier')
         WORKER = 'WORKER', _('Worker')
 
+    class Status(models.TextChoices):
+        PENDING = 'PENDING', _('Pending Approval')
+        APPROVED = 'APPROVED', _('Approved')
+        REJECTED = 'REJECTED', _('Rejected')
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='cabinet_roles')
     cabinet = models.ForeignKey(Cabinet, on_delete=models.CASCADE, related_name='user_roles')
     role = models.CharField(max_length=50, choices=Role.choices)
+    status = models.CharField(
+        max_length=20, 
+        choices=Status.choices, 
+        default=Status.PENDING
+    )
     
     class Meta:
         unique_together = ('user', 'cabinet')

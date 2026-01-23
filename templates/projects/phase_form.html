@@ -1,0 +1,71 @@
+{% extends 'falcon_base.html' %}
+{% load static %}
+
+{% block title %}Add Phase - {{ site.name }} - ChantierMobile{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'vendors/flatpickr/flatpickr.min.css' %}" rel="stylesheet" />
+{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    <!-- vertical nav -->
+    {% include 'includes/navbar-vertical.html' with on="projects" %}
+    <!-- /vertical nav -->
+
+    <div class="content">
+        <!-- navbar-top -->
+        {% include 'includes/navbar-top.html' %}
+        <!-- /navbar-top -->
+
+        <!-- Main Content -->
+        <div class="container-fluid py-4">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <div class="row flex-between-end">
+                        <div class="col-auto align-self-center">
+                            <h5 class="mb-0">Add Phase to: {{ site.name }}</h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body bg-light">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label class="form-label" for="id_name">Phase Name</label>
+                            <input class="form-control" id="id_name" name="name" type="text"
+                                placeholder="e.g. Foundation, Roofing, electrical" required />
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label" for="id_start_date">Start Date</label>
+                                <input class="form-control datetimepicker" id="id_start_date" name="start_date"
+                                    type="text" placeholder="YYYY-MM-DD"
+                                    data-options='{"dateFormat":"Y-m-d","disableMobile":true}' />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="id_end_date">End Date</label>
+                                <input class="form-control datetimepicker" id="id_end_date" name="end_date" type="text"
+                                    placeholder="YYYY-MM-DD"
+                                    data-options='{"dateFormat":"Y-m-d","disableMobile":true}' />
+                            </div>
+                        </div>
+
+                        <div class="col-12 d-flex justify-content-end">
+                            <button class="btn btn-primary" type="submit">Add Phase</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'assets/js/flatpickr.js' %}"></script>
+{% endblock %}

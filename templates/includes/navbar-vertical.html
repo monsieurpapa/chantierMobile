@@ -20,11 +20,13 @@
                 data-bs-placement="left" title="Toggle Navigation"><span class="navbar-toggle-icon"><span
                         class="toggle-line"></span></span></button>
         </div>
-        <a class="navbar-brand" href="{% url 'recruitment:home' %}">
+        <a class="navbar-brand" href="/">
             <div class="d-flex align-items-center py-3" id="main-logo">
                 <picture>
-                  <source srcset="{% static 'app/img/TicTacFlow_logo_dark.png' %}" media="(prefers-color-scheme: dark)">
-                  <img class="me-2" src="{% static 'app/img/TicTacFlow_logo.png' %}" alt="TicTacFlow Solutions" width="100" />
+                    <source srcset="{% static 'app/img/TicTacFlow_logo_dark.png' %}"
+                        media="(prefers-color-scheme: dark)">
+                    <img class="me-2" src="{% static 'app/img/TicTacFlow_logo.png' %}" alt="TicTacFlow Solutions"
+                        width="120" />
                 </picture>
             </div>
         </a>
@@ -33,147 +35,112 @@
         <div class="navbar-vertical-content scrollbar">
             <ul class="navbar-nav flex-column mb-3" id="navbarVerticalNav">
 
-                <!-- Common Home/Dashboard -->
+                <!-- Dashboard -->
                 <li class="nav-item">
-                    <a class="nav-link {% if on == 'home' %}active{% endif %}" href="{% url 'recruitment:home' %}"
-                        role="button">
+                    <a class="nav-link {% if on == 'home' %}active{% endif %}" href="{% url 'home' %}" role="button">
                         <div class="d-flex align-items-center">
                             <span class="nav-link-icon"><span class="fas fa-home fs-1"></span></span>
-                            <span class="nav-link-text ps-1">Home</span>
+                            <span class="nav-link-text ps-1">Dashboard</span>
                         </div>
                     </a>
                 </li>
 
-                {% if user.is_authenticated %}
+                <li class="nav-divider">Modules</li>
+
+                <!-- Projects -->
                 <li class="nav-item">
-                    <a class="nav-link {% if on == 'my_profile' %}active{% endif %}"
-                        href="{% url 'recruitment:my_profile' %}" role="button">
+                    <a class="nav-link {% if on == 'projects' %}active{% endif %}" href="{% url 'projects:site_list' %}"
+                        role="button">
                         <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-user-circle fs-1"></span></span>
-                            <span class="nav-link-text ps-1">My Dashboard</span>
-                        </div>
-                    </a>
-                </li>
-                {% endif %}
-
-                <!-- Jobs Section (Visible to all) -->
-                <li class="nav-item">
-                    <a class="nav-link {% if on == 'vacancy' %}active{% endif %}"
-                        href="{% url 'recruitment:vacancy_list' %}" role="button">
-                        <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-briefcase fs-1"></span></span>
-                            <span class="nav-link-text ps-1">Browse Jobs</span>
+                            <span class="nav-link-icon"><span class="fas fa-project-diagram fs-1"></span></span>
+                            <span class="nav-link-text ps-1">Projects & Sites</span>
                         </div>
                     </a>
                 </li>
 
-                {% if user.is_authenticated %}
-
-                <div class="navbar-vertical-divider">
-                    <hr class="navbar-vertical-hr my-2" />
-                </div>
-
-                <!-- Candidate-Only Menu -->
-                {% if is_candidate %}
-                {% if user.candidate_profile %}
+                <!-- Personnel -->
                 <li class="nav-item">
-                    <a class="nav-link {% if on == 'candidate_profile' %}active{% endif %}"
-                        href="{% url 'recruitment:candidate_detail' pk=user.candidate_profile.id %}" role="button">
-                        <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-address-card fs-1"></span></span>
-                            <span class="nav-link-text ps-1">My Detailed Profile</span>
-                        </div>
-                    </a>
-                </li>
-                {% endif %}
-
-                <li class="nav-item">
-                    <a class="nav-link {% if on == 'application' %}active{% endif %}"
-                        href="{% url 'recruitment:application_list' %}" role="button">
-                        <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-paper-plane fs-1"></span></span>
-                            <span class="nav-link-text ps-1">My Applications</span>
-                        </div>
-                    </a>
-                </li>
-
-                <li class="nav-item">
-                    <a class="nav-link {% if on == 'offer' %}active{% endif %}"
-                        href="{% url 'recruitment:application_list' %}" role="button">
-                        <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-file-contract fs-1"></span></span>
-                            <span class="nav-link-text ps-1">My Offers</span>
-                        </div>
-                    </a>
-                </li>
-
-                <li class="nav-item">
-                    <a class="nav-link {% if on == 'experience' %}active{% endif %}"
-                        href="{% url 'recruitment:experience_list' %}" role="button">
-                        <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-briefcase fs-1"></span></span>
-                            <span class="nav-link-text ps-1">My Experience</span>
-                        </div>
-                    </a>
-                </li>
-
-                <li class="nav-item">
-                    <a class="nav-link {% if on == 'education' %}active{% endif %}"
-                        href="{% url 'recruitment:education_list' %}" role="button">
-                        <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-graduation-cap fs-1"></span></span>
-                            <span class="nav-link-text ps-1">My Education</span>
-                        </div>
-                    </a>
-                </li>
-                {% endif %}
-
-                <!-- Staff/Admin-Only Menu -->
-                {% if is_staff_user %}
-                <li class="nav-divider">Recruitment Management</li>
-
-                <li class="nav-item">
-                    <a class="nav-link {% if on == 'dashboard' %}active{% endif %}"
-                        href="{% url 'recruitment:dashboard' %}" role="button">
-                        <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-chart-line fs-1"></span></span>
-                            <span class="nav-link-text ps-1">Admin Dashboard</span>
-                        </div>
-                    </a>
-                </li>
-
-                <li class="nav-item">
-                    <a class="nav-link {% if on == 'vacancy_create' %}active{% endif %}"
-                        href="{% url 'recruitment:vacancy_create' %}" role="button">
-                        <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-plus-square fs-1"></span></span>
-                            <span class="nav-link-text ps-1">Post New Job</span>
-                        </div>
-                    </a>
-                </li>
-
-                <li class="nav-item">
-                    <a class="nav-link {% if on == 'candidate' %}active{% endif %}"
-                        href="{% url 'recruitment:candidate_list' %}" role="button">
+                    <a class="nav-link {% if on == 'personnel' %}active{% endif %}"
+                        href="{% url 'personnel:personnel_list' %}" role="button">
                         <div class="d-flex align-items-center">
                             <span class="nav-link-icon"><span class="fas fa-users fs-1"></span></span>
-                            <span class="nav-link-text ps-1">Manage Candidates</span>
+                            <span class="nav-link-text ps-1">Personnel</span>
                         </div>
                     </a>
                 </li>
 
+                <!-- Finance -->
                 <li class="nav-item">
-                    <a class="nav-link {% if on == 'application' %}active{% endif %}"
-                        href="{% url 'recruitment:application_list' %}" role="button">
+                    <a class="nav-link dropdown-indicator" href="#finance" role="button" data-bs-toggle="collapse"
+                        aria-expanded="false" aria-controls="finance">
                         <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-clipboard-list fs-1"></span></span>
-                            <span class="nav-link-text ps-1">All Applications</span>
+                            <span class="nav-link-icon"><span class="fas fa-money-bill-wave fs-1"></span></span>
+                            <span class="nav-link-text ps-1">Finance</span>
+                        </div>
+                    </a>
+                    <ul class="nav collapse" id="finance">
+                        <li class="nav-item">
+                            <a class="nav-link {% if on == 'expense_list' %}active{% endif %}"
+                                href="{% url 'finance:expense_list' %}">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-text ps-1">Expenses</span>
+                                </div>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if on == 'budget_list' %}active{% endif %}"
+                                href="{% url 'finance:budget_list' %}">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-text ps-1">Budgets</span>
+                                </div>
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <!-- Materials -->
+                <li class="nav-item">
+                    <a class="nav-link dropdown-indicator" href="#materials" role="button" data-bs-toggle="collapse"
+                        aria-expanded="false" aria-controls="materials">
+                        <div class="d-flex align-items-center">
+                            <span class="nav-link-icon"><span class="fas fa-boxes fs-1"></span></span>
+                            <span class="nav-link-text ps-1">Materials</span>
+                        </div>
+                    </a>
+                    <ul class="nav collapse" id="materials">
+                        <li class="nav-item">
+                            <a class="nav-link {% if on == 'material_list' %}active{% endif %}"
+                                href="{% url 'materials:material_list' %}">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-text ps-1">Logistics / Catalog</span>
+                                </div>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if on == 'request_list' %}active{% endif %}"
+                                href="{% url 'materials:request_list' %}">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-text ps-1">Requests</span>
+                                </div>
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <!-- Revenue -->
+                <li class="nav-item">
+                    <a class="nav-link {% if on == 'revenue' %}active{% endif %}" href="#" role="button">
+                        <div class="d-flex align-items-center">
+                            <span class="nav-link-icon"><span class="fas fa-chart-line fs-1"></span></span>
+                            <span class="nav-link-text ps-1">Revenue</span>
                         </div>
                     </a>
                 </li>
-                {% endif %}
 
-                {% if is_admin %}
+                <li class="nav-divider">Administration</li>
+
+                <!-- Admin -->
+                {% if user.is_staff %}
                 <li class="nav-item">
                     <a class="nav-link" href="/admin/" target="_blank" role="button">
                         <div class="d-flex align-items-center">
@@ -184,27 +151,38 @@
                 </li>
                 {% endif %}
 
-                {% else %}
-                <!-- Unauthenticated Users -->
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'account_login' %}" role="button">
-                        <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-sign-in-alt fs-1"></span></span>
-                            <span class="nav-link-text ps-1">Login</span>
-                        </div>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'account_signup' %}" role="button">
-                        <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-user-plus fs-1"></span></span>
-                            <span class="nav-link-text ps-1">Register</span>
-                        </div>
-                    </a>
-                </li>
-                {% endif %}
-
             </ul>
         </div>
     </div>
 </nav>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const currentPath = window.location.pathname;
+        const navLinks = document.querySelectorAll('#navbarVerticalNav .nav-link');
+
+        navLinks.forEach(link => {
+            const linkPath = link.getAttribute('href');
+            if (linkPath && linkPath !== '#' && (currentPath.startsWith(linkPath) && linkPath !== '/' || currentPath === linkPath)) {
+                link.classList.add('active');
+
+                // Expand parent collapse if it's a sub-item
+                let parentCollapse = link.closest('.collapse');
+                if (parentCollapse) {
+                    parentCollapse.classList.add('show');
+                    const toggle = document.querySelector(`[aria-controls="${parentCollapse.id}"]`);
+                    if (toggle) {
+                        toggle.setAttribute('aria-expanded', 'true');
+                        toggle.classList.remove('collapsed');
+                    }
+                }
+            }
+        });
+
+        // Handle home link specifically
+        if (currentPath === '/' || currentPath === '{% url "home" %}') {
+            const homeLink = document.querySelector('#navbarVerticalNav a[href="{% url "home" %}"]');
+            if (homeLink) homeLink.classList.add('active');
+        }
+    });
+</script>

@@ -1,0 +1,94 @@
+{% extends 'falcon_base.html' %}
+{% load static %}
+
+{% block title %}Invoice Form - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    <!-- vertical nav -->
+    {% include 'includes/navbar-vertical.html' with on="revenue" %}
+    <!-- /vertical nav -->
+
+    <div class="content">
+        <!-- navbar-top -->
+        {% include 'includes/navbar-top.html' %}
+        <!-- /navbar-top -->
+
+        <!-- Main Content -->
+        <div class="container-fluid py-4">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0">Invoice Information</h5>
+                </div>
+                <div class="card-body bg-light">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ form.contract.id_for_label }}">Contract</label>
+                            {{ form.contract }}
+                            {% if form.contract.errors %}<div class="text-danger fs--1">{{ form.contract.errors }}</div>
+                            {%
+                            endif %}
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="{{ form.invoice_number.id_for_label }}">Invoice
+                                    ID</label>
+                                {{ form.invoice_number }}
+                                {% if form.invoice_number.errors %}<div class="text-danger fs--1">{{
+                                    form.invoice_number.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="{{ form.amount.id_for_label }}">Invoice Amount</label>
+                                {{ form.amount }}
+                                {% if form.amount.errors %}<div class="text-danger fs--1">{{ form.amount.errors }}</div>
+                                {%
+                                endif %}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label" for="{{ form.issued_date.id_for_label }}">Issued Date</label>
+                                {{ form.issued_date }}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label" for="{{ form.due_date.id_for_label }}">Due Date</label>
+                                {{ form.due_date }}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label" for="{{ form.status.id_for_label }}">Status</label>
+                                {{ form.status }}
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <button class="btn btn-primary" type="submit">Generate Invoice</button>
+                            <a class="btn btn-link link-danger" href="javascript:history.back()">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const inputs = document.querySelectorAll('input, select, textarea');
+        inputs.forEach(input => {
+            if (input.tagName === 'SELECT') {
+                input.classList.add('form-select');
+            } else {
+                input.classList.add('form-control');
+            }
+        });
+    });
+</script>
+{% endblock %}

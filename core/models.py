@@ -1,4 +1,5 @@
 from django.db import models
+import uuid
 from django.utils import timezone
 from django.conf import settings
 
@@ -60,5 +61,7 @@ class BaseModel(SoftDeleteModel, AuditableModel):
     Standard base model for most entities in the system.
     Includes soft delete, audit fields (created/updated by/at).
     """
+    unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+
     class Meta:
         abstract = True

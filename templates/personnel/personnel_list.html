@@ -1,0 +1,95 @@
+{% extends 'falcon_base.html' %}
+{% load static rbac_tags %}
+
+{% block title %}Personnel - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    <!-- vertical nav -->
+    {% include 'includes/navbar-vertical.html' with on="personnel" %}
+    <!-- /vertical nav -->
+
+    <div class="content">
+        <!-- navbar-top -->
+        {% include 'includes/navbar-top.html' %}
+        <!-- /navbar-top -->
+
+        <!-- Main Content -->
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            <div class="card mb-3">
+                <div class="card-body p-0">
+                    <div class="table-responsive scrollbar">
+                        <table class="table table-sm table-striped fs--1 mb-0 overflow-hidden">
+                            <thead class="bg-200 text-900">
+                                <tr>
+                                    <th class="sort pe-1 align-middle white-space-nowrap">Name</th>
+                                    <th class="sort pe-1 align-middle white-space-nowrap">Skills</th>
+                                    <th class="sort pe-1 align-middle white-space-nowrap text-end">Default Rate</th>
+                                    <th class="no-sort pe-1 align-middle data-table-row-action"></th>
+                                </tr>
+                            </thead>
+                            <tbody class="list">
+                                {% for person in personnel_list %}
+                                <tr class="btn-reveal-trigger">
+                                    <td class="name py-2 align-middle white-space-nowrap">
+                                        <a href="{% url 'personnel:personnel_detail' unique_id=person.unique_id %}">
+                                            <strong>{{ person.first_name }} {{ person.last_name }}</strong>
+                                        </a>
+                                    </td>
+                                    <td class="skills py-2 align-middle">
+                                        {% for skill in person.skills.all %}
+                                        <span class="badge badge-soft-primary rounded-pill">{{ skill.name }}</span>
+                                        {% empty %}
+                                        <span class="text-300 fs--2">No skills listed</span>
+                                        {% endfor %}
+                                    </td>
+                                    <td class="rate py-2 align-middle text-end">
+                                        {% if request.user|has_role:'DIRECTOR,ACCOUNTANT' %}
+                                        ${{ person.default_daily_rate }}
+                                        {% else %}
+                                        <span class="text-400">Restricted</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="align-middle white-space-nowrap text-end">
+                                        <div class="dropdown font-sans-serif position-static">
+                                            <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal"
+                                                type="button" data-bs-toggle="dropdown" aria-haspopup="true"
+                                                aria-expanded="false"><span
+                                                    class="fas fa-ellipsis-h fs--1"></span></button>
+                                            <div class="dropdown-menu dropdown-menu-end border py-0">
+                                                <div class="bg-white py-2">
+                                                    <a class="dropdown-item"
+                                                        href="{% url 'personnel:personnel_detail' unique_id=person.unique_id %}">View
+                                                        Profile</a>
+                                                    {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER' %}
+                                                    <a class="dropdown-item"
+                                                        href="{% url 'personnel:personnel_update' unique_id=person.unique_id %}">Edit</a>
+                                                    {% endif %}
+                                                    {% if request.user|has_role:'DIRECTOR' %}
+                                                    <div class="dropdown-divider"></div>
+                                                    <a class="dropdown-item text-danger"
+                                                        href="{% url 'personnel:personnel_delete' unique_id=person.unique_id %}">Delete</a>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center py-4">No personnel registered yet.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}

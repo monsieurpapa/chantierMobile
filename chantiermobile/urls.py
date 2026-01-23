@@ -8,7 +8,11 @@ from core.views import HomeView
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', HomeView.as_view(), name='home'),
-    path('finance/', include('finance.urls')),
+    path('finance/', include('finance.urls'), name='finance'),
+    path('projects/', include('projects.urls'), name='projects'),
+    path('personnel/', include('personnel.urls'), name='personnel'),
+    path('materials/', include('materials.urls'), name='materials'),
+    path('revenue/', include('revenue.urls'), name='revenue'),
     
     # Auth
     # Auth (Allauth)

@@ -2,95 +2,109 @@
 <!-- Navbar (sit on top) -->
 
 {% block extra_css %}
-  <style>
+<style>
   .top-nav {
-    font-family: 'Open Sans', sans-serif; color:#0B5E96; font-size:10px;
+    font-family: 'Open Sans', sans-serif;
+    color: #0B5E96;
+    font-size: 10px;
   }
+
   .top-nav-active {
-    color:#15281f; font-family: 'Open Sans', sans-serif; font-size:10px;  
+    color: #15281f;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 10px;
   }
+
   .top-nav:hover {
-    color:#3e2a22; 
-    font-family: 'Open Sans', sans-serif; 
-    font-size:20px;  
+    color: #3e2a22;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 20px;
   }
-  </style>
+</style>
 {% endblock %}
 
 <div class="w3-top">
-  <div class="w3-bar w3-white w3-card" id="myNavbar"> 
-      <nav class="m-navigation" role="navigation" style="background-color: white;">
-        <div class="container-fluid">
-          {% if user.is_authenticated %}
-            <a class="navbar-brand" href="/">
-              <picture>
-                <source srcset="{% static 'app/img/TicTacFlow_logo_dark.png' %}" media="(prefers-color-scheme: dark)">
-                <img src="{% static 'app/img/TicTacFlow_logo_dark.png' %}" alt="TicTacFlow Solutions" style="width:150px; height:auto; padding-left: 50px;">
-              </picture>
-            </a>
-          <div class="top-bar m-navbar" > 
+  <div class="w3-bar w3-white w3-card" id="myNavbar">
+    <nav class="m-navigation" role="navigation" style="background-color: white;">
+      <div class="container-fluid">
+        {% if user.is_authenticated %}
+        <a class="navbar-brand" href="/">
+          <picture>
+            <source srcset="{% static 'app/img/TicTacFlow_logo_dark.png' %}" media="(prefers-color-scheme: dark)">
+            <img src="{% static 'app/img/TicTacFlow_logo_dark.png' %}" alt="TicTacFlow Solutions"
+              style="width:150px; height:auto; padding-left: 50px;">
+          </picture>
+        </a>
+        <div class="top-bar m-navbar">
 
-                <!-- <div class="w3-text-dark-grey"> -->
-                    <ul class="navigation-list m-navbar--left">
-                      <li><a href="/" {% ifequal on 'dashboard' %}style="color:#15281f; font-family: 'Open Sans', sans-serif; font-size:14px;" {% endifequal %} style="font-family: 'Open Sans', sans-serif; color:#686868; font-size:14px;"><i class="fa fa-fw fa-home"></i>Home</a></li>
-                        {% if user_account.id %}
-                            <li><a href="{% url 'account_detail_view' %}" {% ifequal on 'account' %}style="color:#15281f; font-family: 'Open Sans', sans-serif; font-size:14px;" {% endifequal %} style="font-family: 'Open Sans', sans-serif; color:#686868; font-size:14px;"><i class="fa fa-fw fa-briefcase"></i>Company</a></li>
-                        {% endif %}         
+          <!-- <div class="w3-text-dark-grey"> -->
+          <ul class="navigation-list m-navbar--left">
+            <li><a href="/" {% ifequal on 'dashboard'
+                %}style="color:#15281f; font-family: 'Open Sans', sans-serif; font-size:14px;" {% endifequal %}
+                style="font-family: 'Open Sans', sans-serif; color:#686868; font-size:14px;"><i
+                  class="fa fa-fw fa-home"></i>Home</a></li>
+            {% if user_account.id %}
+            <li><a href="{% url 'account_detail_view' %}" {% ifequal on 'account'
+                %}style="color:#15281f; font-family: 'Open Sans', sans-serif; font-size:14px;" {% endifequal %}
+                style="font-family: 'Open Sans', sans-serif; color:#686868; font-size:14px;"><i
+                  class="fa fa-fw fa-briefcase"></i>Company</a></li>
+            {% endif %}
 
-                        {% if user_account.id %}
-                          {% comment %}{% if perms.app.can_view_order %}{% endif %}{% endcomment %} 
-                            <li><a href="{% url 'home' %}" {% ifequal on 'orders' %}style="color:#15281f; font-family: 'Open Sans', sans-serif; font-size:14px;" {% endifequal %} style="font-family: 'Open Sans', sans-serif; color:#686868; font-size:14px;"><i class="fa fa-fw fa-cart-arrow-down"></i>Circuits</a></li>        
-                        {% endif %} 
- 
-                        {% if user_account.id %}
-                           <li><a href="https://documenter.getpostman.com/view/607261/Szzei1En" target="_blank" style="font-family: 'Open Sans', sans-serif; color:#686868; font-size:14px;"><i class="fa fa-fw fa-code"></i>API</a></li> 
-                        {% endif %}     
+            {% if user_account.id %}
+            {% comment %}{% if perms.app.can_view_order %}{% endif %}{% endcomment %}
+            <li><a href="{% url 'home' %}" {% ifequal on 'orders'
+                %}style="color:#15281f; font-family: 'Open Sans', sans-serif; font-size:14px;" {% endifequal %}
+                style="font-family: 'Open Sans', sans-serif; color:#686868; font-size:14px;"><i
+                  class="fa fa-fw fa-cart-arrow-down"></i>Circuits</a></li>
+            {% endif %}
 
-                    </ul>    
-              <!-- </div> -->
-              <div class="navigation-list-wrapper ">
-                  {% if user_account.id %}
-                    <ul class="navigation-list m-navbar--right">    
-                        {% if user_accounts.count > 1 %}
-                          <li class="visible-xs visible-sm"><a href="{% url 'switch_account' %}">Switch Profile</a></li>
-                        {% endif %}
-                      <li class="visible-xs visible-sm"><a href="{% url 'account_logout' %}">Logout</a></li>
-                      <li class="visible-xs visible-sm"><a href="{% url 'account_detail_view' %}">{{ user_account.account.name }}</a></li>
-                    </ul>
-                    {% endif %}
-              </div>      
-              <ul class="m-navbar--right">
-                <li><a href="{% url 'user_profile' %}"><i class="fa fa-user-circle"></i> {{ user.display_name }} </a></li>
-                {% if user_account.id %}
-                <li>
-                  <div class="dropdown">
-                    <button class="btn btn-default dropdown-toggle" class="active" style="color:black;" type="button" id="switchAccount" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-                      {{ user_account.account.name }}
-                    </button>
-                    <ul class="dropdown-menu" aria-labelledby="switchAccount">
-                      {% if user_accounts.count > 1 %}<li><a href="{% url 'switch_account' %}">Switch Profile</a></li>{% endif %}
-                      <li><a href="{% url 'account_detail_view' %}">Profile Details</a></li>                
-                    </ul>
-                  </div>
-                </li>
-                {% endif %}
-                <li><a href="{% url 'account_logout' %}">Logout</a></li>
-              </ul>
+            {% if user_account.id %}
+            <li><a href="https://documenter.getpostman.com/view/607261/Szzei1En" target="_blank"
+                style="font-family: 'Open Sans', sans-serif; color:#686868; font-size:14px;"><i
+                  class="fa fa-fw fa-code"></i>API</a></li>
+            {% endif %}
 
+          </ul>
+          <!-- </div> -->
+          <div class="navigation-list-wrapper ">
+            {% if user_account.id %}
+            <ul class="navigation-list m-navbar--right">
+              {% if user_accounts.count > 1 %}
+              <li class="visible-xs visible-sm"><a href="{% url 'switch_account' %}">Switch Profile</a></li>
+              {% endif %}
+              <li class="visible-xs visible-sm"><a href="{% url 'account_logout' %}">Logout</a></li>
+              <li class="visible-xs visible-sm"><a href="{% url 'account_detail_view' %}">{{ user_account.account.name
+                  }}</a></li>
+            </ul>
+            {% endif %}
           </div>
-            <!-- </div>  -->
-            <!-- </div>  -->
-            <!-- </div>     -->
-          {% endif %}    
-        </div>
+          <ul class="m-navbar--right">
+            <li><a href="{% url 'user_profile' %}"><i class="fa fa-user-circle"></i> {{ user.display_name }} </a></li>
+            {% if user_account.id %}
+            <li>
+              <div class="dropdown">
+                <button class="btn btn-default dropdown-toggle" class="active" style="color:black;" type="button"
+                  id="switchAccount" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                  {{ user_account.account.name }}
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="switchAccount">
+                  {% if user_accounts.count > 1 %}<li><a href="{% url 'switch_account' %}">Switch Profile</a></li>{%
+                  endif %}
+                  <li><a href="{% url 'account_detail_view' %}">Profile Details</a></li>
+                </ul>
+              </div>
+            </li>
+            {% endif %}
+            <li><a href="{% url 'account_logout' %}">Logout</a></li>
+          </ul>
 
-      </nav> 
+        </div>
+        <!-- </div>  -->
+        <!-- </div>  -->
+        <!-- </div>     -->
+        {% endif %}
+      </div>
+
+    </nav>
   </div>
 </div>
-
-
-
-
-
-
-
