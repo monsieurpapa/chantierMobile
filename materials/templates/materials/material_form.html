@@ -27,35 +27,35 @@
                             {% if form.name.errors %}<div class="text-danger fs--2">{{ form.name.errors }}</div>{% endif
                             %}
                         </div>
-
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label" for="{{ form.unit.id_for_label }}">Unit (e.g. kg, L,
-                                    m3)</label>
-                                {{ form.unit }}
-                                {% if form.unit.errors %}<div class="text-danger fs--2">{{ form.unit.errors }}</div>{%
-                                endif %}
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label" for="{{ form.estimated_cost_per_unit.id_for_label }}">Est.
-                                    Cost / Unit ($)</label>
-                                {{ form.estimated_cost_per_unit }}
-                                {% if form.estimated_cost_per_unit.errors %}<div class="text-danger fs--2">{{
-                                    form.estimated_cost_per_unit.errors }}</div>{% endif %}
-                            </div>
-                        </div>
-
-                        <div class="col-12 d-flex justify-content-end gap-2">
-                            <a href="{% url 'materials:material_list' %}" class="btn btn-falcon-default">Cancel</a>
-                            <button type="submit" class="btn btn-primary">Save Material</button>
-                        </div>
-                    </form>
                 </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label" for="{{ form.unit.id_for_label }}">Unit (e.g. kg, L,
+                            m3)</label>
+                        {{ form.unit }}
+                        {% if form.unit.errors %}<div class="text-danger fs--2">{{ form.unit.errors }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="{{ form.estimated_cost_per_unit.id_for_label }}">Est.
+                            Cost / Unit ($)</label>
+                        {{ form.estimated_cost_per_unit }}
+                        {% if form.estimated_cost_per_unit.errors %}<div class="text-danger fs--2">{{
+                            form.estimated_cost_per_unit.errors }}</div>{% endif %}
+                    </div>
+                </div>
+
+                <div class="col-12 d-flex justify-content-end gap-2">
+                    <a href="{% url 'materials:material_list' %}" class="btn btn-falcon-default">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Save Material</button>
+                </div>
+                </form>
             </div>
         </div>
-        <!-- Footer -->
-        {% include 'includes/footer.html' %}
     </div>
+    <!-- Footer -->
+    {% include 'includes/footer.html' %}
+</div>
 </div>
 {% endblock %}
 

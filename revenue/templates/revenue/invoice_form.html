@@ -28,8 +28,7 @@
                             <label class="form-label" for="{{ form.contract.id_for_label }}">Contract</label>
                             {{ form.contract }}
                             {% if form.contract.errors %}<div class="text-danger fs--1">{{ form.contract.errors }}</div>
-                            {%
-                            endif %}
+                            {% endif %}
                         </div>
 
                         <div class="row">
@@ -44,8 +43,7 @@
                                 <label class="form-label" for="{{ form.amount.id_for_label }}">Invoice Amount</label>
                                 {{ form.amount }}
                                 {% if form.amount.errors %}<div class="text-danger fs--1">{{ form.amount.errors }}</div>
-                                {%
-                                endif %}
+                                {% endif %}
                             </div>
                         </div>
 

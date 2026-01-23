@@ -28,48 +28,49 @@
                                 {% if form.site.errors %}<div class="text-danger fs--2">{{ form.site.errors }}</div>{%
                                 endif %}
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label" for="{{ form.category.id_for_label }}">Category</label>
-                                {{ form.category }}
-                                {% if form.category.errors %}<div class="text-danger fs--2">{{ form.category.errors }}
-                                </div>{% endif %}
-                            </div>
                         </div>
-
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label" for="{{ form.amount.id_for_label }}">Amount ($)</label>
-                                {{ form.amount }}
-                                {% if form.amount.errors %}<div class="text-danger fs--2">{{ form.amount.errors }}</div>
-                                {% endif %}
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label" for="{{ form.receipt_image.id_for_label }}">Receipt Image
-                                    (Optional)</label>
-                                {{ form.receipt_image }}
-                                {% if form.receipt_image.errors %}<div class="text-danger fs--2">{{
-                                    form.receipt_image.errors }}</div>{% endif %}
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label" for="{{ form.description.id_for_label }}">Description</label>
-                            {{ form.description }}
-                            {% if form.description.errors %}<div class="text-danger fs--2">{{ form.description.errors }}
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ form.category.id_for_label }}">Category</label>
+                            {{ form.category }}
+                            {% if form.category.errors %}<div class="text-danger fs--2">{{ form.category.errors }}
                             </div>{% endif %}
                         </div>
-
-                        <div class="col-12 d-flex justify-content-end gap-2">
-                            <a href="{% url 'finance:expense_list' %}" class="btn btn-falcon-default">Cancel</a>
-                            <button type="submit" class="btn btn-primary">Submit Request</button>
-                        </div>
-                    </form>
                 </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label" for="{{ form.amount.id_for_label }}">Amount ($)</label>
+                        {{ form.amount }}
+                        {% if form.amount.errors %}<div class="text-danger fs--2">{{ form.amount.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="{{ form.receipt_image.id_for_label }}">Receipt Image
+                            (Optional)</label>
+                        {{ form.receipt_image }}
+                        {% if form.receipt_image.errors %}<div class="text-danger fs--2">{{
+                            form.receipt_image.errors }}</div>{% endif %}
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="{{ form.description.id_for_label }}">Description</label>
+                    {{ form.description }}
+                    {% if form.description.errors %}<div class="text-danger fs--2">{{ form.description.errors }}
+                    </div>{% endif %}
+                </div>
+
+                <div class="col-12 d-flex justify-content-end gap-2">
+                    <a href="{% url 'finance:expense_list' %}" class="btn btn-falcon-default">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Submit Request</button>
+                </div>
+                </form>
             </div>
         </div>
-        <!-- Footer -->
-        {% include 'includes/footer.html' %}
     </div>
+    <!-- Footer -->
+    {% include 'includes/footer.html' %}
+</div>
 </div>
 {% endblock %}
 
