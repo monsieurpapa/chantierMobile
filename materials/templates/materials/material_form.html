@@ -24,8 +24,11 @@
                         <div class="mb-3">
                             <label class="form-label" for="{{ form.name.id_for_label }}">Material Name</label>
                             {{ form.name }}
-                            {% if form.name.errors %}<div class="text-danger fs--2">{{ form.name.errors }}</div>{% endif
-                            %}
+                            {% if form.name.errors %}
+                            <div class="text-danger fs--2">
+                                {{ form.name.errors }}
+                            </div>
+                            {% endif %}
                         </div>
                 </div>
 
@@ -34,14 +37,21 @@
                         <label class="form-label" for="{{ form.unit.id_for_label }}">Unit (e.g. kg, L,
                             m3)</label>
                         {{ form.unit }}
-                        {% if form.unit.errors %}<div class="text-danger fs--2">{{ form.unit.errors }}</div>{% endif %}
+                        {% if form.unit.errors %}
+                        <div class="text-danger fs--2">
+                            {{ form.unit.errors }}
+                        </div>
+                        {% endif %}
                     </div>
                     <div class="col-md-6">
                         <label class="form-label" for="{{ form.estimated_cost_per_unit.id_for_label }}">Est.
                             Cost / Unit ($)</label>
                         {{ form.estimated_cost_per_unit }}
-                        {% if form.estimated_cost_per_unit.errors %}<div class="text-danger fs--2">{{
-                            form.estimated_cost_per_unit.errors }}</div>{% endif %}
+                        {% if form.estimated_cost_per_unit.errors %}
+                        <div class="text-danger fs--2">
+                            {{ form.estimated_cost_per_unit.errors }}
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
 

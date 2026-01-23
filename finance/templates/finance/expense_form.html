@@ -25,15 +25,21 @@
                             <div class="col-md-6">
                                 <label class="form-label" for="{{ form.site.id_for_label }}">Project / Site</label>
                                 {{ form.site }}
-                                {% if form.site.errors %}<div class="text-danger fs--2">{{ form.site.errors }}</div>{%
-                                endif %}
+                                {% if form.site.errors %}
+                                <div class="text-danger fs--2">
+                                    {{ form.site.errors }}
+                                </div>
+                                {% endif %}
                             </div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label" for="{{ form.category.id_for_label }}">Category</label>
                             {{ form.category }}
-                            {% if form.category.errors %}<div class="text-danger fs--2">{{ form.category.errors }}
-                            </div>{% endif %}
+                            {% if form.category.errors %}
+                            <div class="text-danger fs--2">
+                                {{ form.category.errors }}
+                            </div>
+                            {% endif %}
                         </div>
                 </div>
 
@@ -41,15 +47,21 @@
                     <div class="col-md-6">
                         <label class="form-label" for="{{ form.amount.id_for_label }}">Amount ($)</label>
                         {{ form.amount }}
-                        {% if form.amount.errors %}<div class="text-danger fs--2">{{ form.amount.errors }}</div>
+                        {% if form.amount.errors %}
+                        <div class="text-danger fs--2">
+                            {{ form.amount.errors }}
+                        </div>
                         {% endif %}
                     </div>
                     <div class="col-md-6">
                         <label class="form-label" for="{{ form.receipt_image.id_for_label }}">Receipt Image
                             (Optional)</label>
                         {{ form.receipt_image }}
-                        {% if form.receipt_image.errors %}<div class="text-danger fs--2">{{
-                            form.receipt_image.errors }}</div>{% endif %}
+                        {% if form.receipt_image.errors %}
+                        <div class="text-danger fs--2">
+                            {{ form.receipt_image.errors }}
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
 

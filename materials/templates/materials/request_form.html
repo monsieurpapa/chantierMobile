@@ -26,8 +26,11 @@
                         <div class="mb-3">
                             <label class="form-label" for="{{ form.site.id_for_label }}">Project / Site</label>
                             {{ form.site }}
-                            {% if form.site.errors %}<div class="text-danger fs--2">{{ form.site.errors }}</div>{% endif
-                            %}
+                            {% if form.site.errors %}
+                            <div class="text-danger fs--2">
+                                {{ form.site.errors }}
+                            </div>
+                            {% endif %}
                         </div>
                 </div>
 
@@ -35,15 +38,21 @@
                     <div class="col-md-8">
                         <label class="form-label" for="{{ form.material.id_for_label }}">Select Material</label>
                         {{ form.material }}
-                        {% if form.material.errors %}<div class="text-danger fs--2">{{ form.material.errors }}
-                        </div>{% endif %}
+                        {% if form.material.errors %}
+                        <div class="text-danger fs--2">
+                            {{ form.material.errors }}
+                        </div>
+                        {% endif %}
                     </div>
                     <div class="col-md-4">
                         <label class="form-label" for="{{ form.quantity.id_for_label }}">Quantity
                             Required</label>
                         {{ form.quantity }}
-                        {% if form.quantity.errors %}<div class="text-danger fs--2">{{ form.quantity.errors }}
-                        </div>{% endif %}
+                        {% if form.quantity.errors %}
+                        <div class="text-danger fs--2">
+                            {{ form.quantity.errors }}
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
 

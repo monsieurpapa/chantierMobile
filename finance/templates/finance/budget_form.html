@@ -24,8 +24,11 @@
                         <div class="mb-3">
                             <label class="form-label" for="{{ form.site.id_for_label }}">Project / Site</label>
                             {{ form.site }}
-                            {% if form.site.errors %}<div class="text-danger fs--2">{{ form.site.errors }}</div>{% endif
-                            %}
+                            {% if form.site.errors %}
+                            <div class="text-danger fs--2">
+                                {{ form.site.errors }}
+                            </div>
+                            {% endif %}
                         </div>
                 </div>
 
@@ -33,22 +36,31 @@
                     <label class="form-label" for="{{ form.total_amount.id_for_label }}">Total Budget Amount
                         ($)</label>
                     {{ form.total_amount }}
-                    {% if form.total_amount.errors %}<div class="text-danger fs--2">{{ form.total_amount.errors
-                        }}</div>{% endif %}
+                    {% if form.total_amount.errors %}
+                    <div class="text-danger fs--2">
+                        {{ form.total_amount.errors }}
+                    </div>
+                    {% endif %}
                 </div>
 
                 <div class="row mb-3">
                     <div class="col-md-6">
                         <label class="form-label" for="{{ form.start_date.id_for_label }}">Start Date</label>
                         {{ form.start_date }}
-                        {% if form.start_date.errors %}<div class="text-danger fs--2">{{ form.start_date.errors
-                            }}</div>{% endif %}
+                        {% if form.start_date.errors %}
+                        <div class="text-danger fs--2">
+                            {{ form.start_date.errors }}
+                        </div>
+                        {% endif %}
                     </div>
                     <div class="col-md-6">
                         <label class="form-label" for="{{ form.end_date.id_for_label }}">End Date</label>
                         {{ form.end_date }}
-                        {% if form.end_date.errors %}<div class="text-danger fs--2">{{ form.end_date.errors }}
-                        </div>{% endif %}
+                        {% if form.end_date.errors %}
+                        <div class="text-danger fs--2">
+                            {{ form.end_date.errors }}
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
 
