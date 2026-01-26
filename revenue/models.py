@@ -14,10 +14,10 @@ class Contract(BaseModel):
 
 class Invoice(BaseModel):
     class Status(models.TextChoices):
-        DRAFT = 'DRAFT', _('Draft')
-        SENT = 'SENT', _('Sent')
-        PAID = 'PAID', _('Paid')
-        OVERDUE = 'OVERDUE', _('Overdue')
+        DRAFT = 'DRAFT', _('Brouillon')
+        SENT = 'SENT', _('Envoyé')
+        PAID = 'PAID', _('Payé')
+        OVERDUE = 'OVERDUE', _('En retard')
 
     contract = models.ForeignKey(Contract, on_delete=models.CASCADE, related_name='invoices')
     invoice_number = models.CharField(max_length=50, unique=True)
@@ -31,9 +31,9 @@ class Invoice(BaseModel):
 
 class Payment(BaseModel):
     class Method(models.TextChoices):
-        BANK_TRANSFER = 'BANK_TRANSFER', _('Bank Transfer')
-        CHECK = 'CHECK', _('Check')
-        CASH = 'CASH', _('Cash')
+        BANK_TRANSFER = 'BANK_TRANSFER', _('Virement bancaire')
+        CHECK = 'CHECK', _('Chèque')
+        CASH = 'CASH', _('Espèces')
         MOBILE_MONEY = 'MOBILE_MONEY', _('Mobile Money')
 
     invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name='payments')

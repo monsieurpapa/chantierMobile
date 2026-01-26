@@ -38,31 +38,43 @@
                         <div class="mb-3">
                             <label class="form-label" for="{{ form.site.id_for_label }}">Project / Site</label>
                             {{ form.site }}
-                            {% if form.site.errors %}<div class="text-danger fs--2">{{ form.site.errors }}</div>{% endif
-                            %}
+                            {% if form.site.errors %}
+                            <div class="text-danger fs--2">
+                                {{ form.site.errors }}
+                            </div>
+                            {% endif %}
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label" for="{{ form.role.id_for_label }}">Role on Site</label>
                             {{ form.role }}
                             <p class="fs--2 text-500">e.g. Site Supervisor, Master Mason, General Laborer</p>
-                            {% if form.role.errors %}<div class="text-danger fs--2">{{ form.role.errors }}</div>{% endif
-                            %}
+                            {% if form.role.errors %}
+                            <div class="text-danger fs--2">
+                                {{ form.role.errors }}
+                            </div>
+                            {% endif %}
                         </div>
 
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label class="form-label" for="{{ form.start_date.id_for_label }}">Start Date</label>
                                 {{ form.start_date }}
-                                {% if form.start_date.errors %}<div class="text-danger fs--2">{{ form.start_date.errors
-                                    }}</div>{% endif %}
+                                {% if form.start_date.errors %}
+                                <div class="text-danger fs--2">
+                                    {{ form.start_date.errors }}
+                                </div>
+                                {% endif %}
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label" for="{{ form.end_date.id_for_label }}">End Date
                                     (Optional)</label>
                                 {{ form.end_date }}
-                                {% if form.end_date.errors %}<div class="text-danger fs--2">{{ form.end_date.errors }}
-                                </div>{% endif %}
+                                {% if form.end_date.errors %}
+                                <div class="text-danger fs--2">
+                                    {{ form.end_date.errors }}
+                                </div>
+                                {% endif %}
                             </div>
                         </div>
 
@@ -71,8 +83,11 @@
                             {{ form.daily_rate }}
                             <p class="fs--2 text-500">This overrides the worker's default daily rate for this specific
                                 project.</p>
-                            {% if form.daily_rate.errors %}<div class="text-danger fs--2">{{ form.daily_rate.errors }}
-                            </div>{% endif %}
+                            {% if form.daily_rate.errors %}
+                            <div class="text-danger fs--2">
+                                {{ form.daily_rate.errors }}
+                            </div>
+                            {% endif %}
                         </div>
 
                         <div class="col-12 d-flex justify-content-end gap-2">

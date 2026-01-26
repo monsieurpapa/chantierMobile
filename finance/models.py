@@ -25,10 +25,10 @@ class ExpenseCategory(BaseModel):
 
 class Expense(BaseModel):
     class Status(models.TextChoices):
-        PENDING = 'PENDING', _('Pending Approval')
-        APPROVED = 'APPROVED', _('Approved')
-        REJECTED = 'REJECTED', _('Rejected')
-        PAID = 'PAID', _('Paid')
+        PENDING = 'PENDING', _('En attente d\'approbation')
+        APPROVED = 'APPROVED', _('Approuvé')
+        REJECTED = 'REJECTED', _('Rejeté')
+        PAID = 'PAID', _('Payé')
 
     site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name='expenses')
     requester = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='requested_expenses')

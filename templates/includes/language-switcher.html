@@ -1,0 +1,70 @@
+{% load i18n %}
+
+<!-- Language Switcher Component -->
+<div class="language-switcher dropdown">
+    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+            type="button" 
+            id="languageDropdown" 
+            data-bs-toggle="dropdown" 
+            aria-expanded="false"
+            title="{% trans 'Change language' %}">
+        <i class="fas fa-globe me-2"></i>
+        <span class="lang-code">{{ LANGUAGE_CODE|upper }}</span>
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="languageDropdown">
+        {% for lang_code, lang_name in LANGUAGES %}
+        <li>
+            <form method="post" action="{% url 'set_language' %}" class="d-inline-block w-100">
+                {% csrf_token %}
+                <input type="hidden" name="language" value="{{ lang_code }}">
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit" class="dropdown-item {% if lang_code == LANGUAGE_CODE %}active{% endif %}">
+                    {% if lang_code == 'fr' %}
+                    <i class="fas fa-flag-france me-2"></i>
+                    {% elif lang_code == 'en' %}
+                    <i class="fas fa-flag-usa me-2"></i>
+                    {% endif %}
+                    {{ lang_name }}
+                </button>
+            </form>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+
+<style>
+.language-switcher {
+    display: inline-block;
+}
+
+.language-switcher .btn {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+.language-switcher .dropdown-menu {
+    min-width: 150px;
+}
+
+.language-switcher .dropdown-item {
+    cursor: pointer;
+    border: none;
+    width: 100%;
+    text-align: left;
+    padding: 0.5rem 1rem;
+}
+
+.language-switcher .dropdown-item:hover {
+    background-color: #f8f9fa;
+}
+
+.language-switcher .dropdown-item.active {
+    background-color: #e7f1ff;
+    color: #0c63e4;
+}
+
+.lang-code {
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+</style>

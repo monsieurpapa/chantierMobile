@@ -18,47 +18,83 @@
         <div class="container-fluid py-4">
             {% include 'includes/page_header.html' %}
 
-            <div class="card mb-3">
+            <div class="card mb-3 border-0 shadow-sm">
                 <div class="card-body p-0">
                     <div class="table-responsive scrollbar">
-                        <table class="table table-sm table-striped fs--1 mb-0 overflow-hidden">
-                            <thead class="bg-200 text-900">
+                        <table class="table table-hover table-sm mb-0 overflow-hidden">
+                            <thead class="bg-light border-bottom">
                                 <tr>
-                                    <th class="sort pe-1 align-middle">Site</th>
-                                    <th class="sort pe-1 align-middle">Material</th>
-                                    <th class="sort pe-1 align-middle text-center">Quantity</th>
-                                    <th class="sort pe-1 align-middle text-center">Status</th>
-                                    <th class="sort pe-1 align-middle text-end">Date</th>
-                                    <th class="no-sort pe-1 align-middle text-end">Actions</th>
+                                    <th class="ps-3 fw-semibold text-600">Site</th>
+                                    <th class="fw-semibold text-600">Materials</th>
+                                    <th class="text-center fw-semibold text-600">Total Items</th>
+                                    <th class="text-center fw-semibold text-600">Est. Cost</th>
+                                    <th class="text-center fw-semibold text-600">Status</th>
+                                    <th class="text-end pe-3 fw-semibold text-600">Date</th>
+                                    <th class="text-end pe-3 fw-semibold text-600">Actions</th>
                                 </tr>
                             </thead>
                             <tbody class="list">
                                 {% for req in requests %}
-                                <tr>
-                                    <td class="align-middle">
-                                        <a href="{% url 'projects:site_detail' unique_id=req.site.unique_id %}">{{
-                                            req.site.name }}</a>
+                                <tr class="border-bottom">
+                                    <td class="ps-3 align-middle fw-semibold">
+                                        <a href="{% url 'projects:site_detail' unique_id=req.site.unique_id %}" class="text-decoration-none">
+                                            {{ req.site.name }}
+                                        </a>
                                     </td>
-                                    <td class="align-middle">{{ req.material.name }}</td>
-                                    <td class="align-middle text-center">{{ req.quantity }} {{ req.material.unit }}</td>
+                                    <td class="align-middle">
+                                        <div class="d-flex flex-wrap gap-2">
+                                            {% for item in req.items.all|slice:":3" %}
+                                            <span class="badge bg-light text-dark border border-secondary">
+                                                {{ item.material.name }} ({{ item.quantity }})
+                                            </span>
+                                            {% endfor %}
+                                            {% if req.items.count > 3 %}
+                                            <span class="badge bg-secondary">+{{ req.items.count|add:-3 }} more</span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td class="align-middle text-center">
+                                        <span class="badge bg-info">{{ req.total_items }}</span>
+                                    </td>
+                                    <td class="align-middle text-center fw-semibold text-success">
+                                        ${{ req.total_estimated_cost|floatformat:0 }}
+                                    </td>
                                     <td class="align-middle text-center">
                                         <span class="badge rounded-pill 
-                                        {% if req.status == 'APPROVED' %}badge-soft-success
-                                        {% elif req.status == 'DELIVERED' %}badge-soft-info
-                                        {% elif req.status == 'REJECTED' %}badge-soft-danger
-                                        {% else %}badge-soft-warning{% endif %}">
+                                        {% if req.status == 'APPROVED' %}bg-success
+                                        {% elif req.status == 'DELIVERED' %}bg-info
+                                        {% elif req.status == 'REJECTED' %}bg-danger
+                                        {% elif req.status == 'ORDERED' %}bg-primary
+                                        {% else %}bg-warning{% endif %}">
                                             {{ req.get_status_display }}
                                         </span>
                                     </td>
-                                    <td class="align-middle text-end text-500">{{ req.created_at|date:"M d, Y" }}</td>
-                                    <td class="align-middle text-end">
-                                        <a class="btn btn-link text-600 btn-sm"
-                                            href="{% url 'materials:request_detail' pk=req.pk %}">View</a>
+                                    <td class="align-middle text-end pe-3 text-600 fs--1">
+                                        {{ req.created_at|date:"M d, Y" }}
+                                    </td>
+                                    <td class="align-middle text-end pe-3">
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <a class="btn btn-outline-primary btn-sm"
+                                                href="{% url 'materials:request_detail' pk=req.pk %}">
+                                                <i class="fas fa-eye me-1"></i>View
+                                            </a>
+                                            {% if req.status == 'PENDING' %}
+                                            <a class="btn btn-outline-warning btn-sm"
+                                                href="{% url 'materials:request_update' pk=req.pk %}">
+                                                <i class="fas fa-edit me-1"></i>Edit
+                                            </a>
+                                            {% endif %}
+                                        </div>
                                     </td>
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="6" class="text-center py-4">No material requests found.</td>
+                                    <td colspan="7" class="text-center py-5">
+                                        <p class="text-muted mb-0">
+                                            <i class="fas fa-inbox fa-2x mb-2 d-block opacity-50"></i>
+                                            No material requests found.
+                                        </p>
+                                    </td>
                                 </tr>
                                 {% endfor %}
                             </tbody>

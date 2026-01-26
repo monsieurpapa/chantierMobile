@@ -3,8 +3,9 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from django.shortcuts import redirect, get_object_or_404
 from django.contrib import messages
+from django.http import HttpResponseRedirect
 from .models import Material, MaterialRequest
-from .forms import MaterialForm, MaterialRequestForm
+from .forms import MaterialForm, MaterialRequestForm, MaterialRequestItemFormSet
 from projects.models import Site
 from core.mixins import RoleRequiredMixin, PageHeaderMixin
 
@@ -92,7 +93,7 @@ class MaterialRequestListView(LoginRequiredMixin, PageHeaderMixin, ListView):
         }]
 
     def get_queryset(self):
-        qs = super().get_queryset().select_related('site', 'material', 'requested_by')
+        qs = super().get_queryset().prefetch_related('items__material').select_related('site', 'requested_by')
         if not self.request.user.is_staff:
             user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
             qs = qs.filter(site__cabinet__id__in=user_cabinet_ids)
@@ -125,22 +126,85 @@ class MaterialRequestCreateView(LoginRequiredMixin, PageHeaderMixin, CreateView)
         user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
         form.fields['site'].queryset = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
         return form
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.request.POST:
+            context['items_formset'] = MaterialRequestItemFormSet(self.request.POST, instance=self.object)
+        else:
+            context['items_formset'] = MaterialRequestItemFormSet(instance=self.object)
+        return context
 
     def form_valid(self, form):
-        form.instance.requested_by = self.request.user
-        messages.success(self.request, "Material request submitted.")
-        return super().form_valid(form)
+        context = self.get_context_data()
+        items_formset = context['items_formset']
+        
+        if items_formset.is_valid():
+            form.instance.requested_by = self.request.user
+            self.object = form.save()
+            items_formset.instance = self.object
+            items_formset.save()
+            messages.success(self.request, f"Material request submitted with {self.object.total_items} item(s).")
+            return HttpResponseRedirect(self.get_success_url())
+        else:
+            return self.form_invalid(form)
+
+class MaterialRequestUpdateView(LoginRequiredMixin, PageHeaderMixin, UpdateView):
+    model = MaterialRequest
+    form_class = MaterialRequestForm
+    template_name = 'materials/request_form.html'
+    success_url = reverse_lazy('materials:request_list')
+    
+    def get_header_title(self):
+        return f"Edit Request #{self.object.id}"
+
+    def get_header_subtitle(self):
+        return f"Site: {self.object.site.name}"
+
+    def get_back_url(self):
+        return reverse_lazy('materials:request_detail', kwargs={'pk': self.object.pk})
+
+    def get_breadcrumb_items(self):
+        return [
+            {'title': 'Requests', 'url': str(reverse_lazy('materials:request_list'))},
+            {'title': f"REQ-{self.object.id}", 'url': str(reverse_lazy('materials:request_detail', kwargs={'pk': self.object.pk}))},
+            {'title': 'Edit', 'url': None},
+        ]
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.request.POST:
+            context['items_formset'] = MaterialRequestItemFormSet(self.request.POST, instance=self.object)
+        else:
+            context['items_formset'] = MaterialRequestItemFormSet(instance=self.object)
+        return context
+
+    def form_valid(self, form):
+        context = self.get_context_data()
+        items_formset = context['items_formset']
+        
+        if items_formset.is_valid():
+            self.object = form.save()
+            items_formset.instance = self.object
+            items_formset.save()
+            messages.success(self.request, f"Material request updated with {self.object.total_items} item(s).")
+            return HttpResponseRedirect(self.get_success_url())
+        else:
+            return self.form_invalid(form)
 
 class MaterialRequestDetailView(LoginRequiredMixin, PageHeaderMixin, DetailView):
     model = MaterialRequest
     template_name = 'materials/request_detail.html'
     context_object_name = 'req'
+    
+    def get_queryset(self):
+        return super().get_queryset().prefetch_related('items__material')
 
     def get_header_title(self):
-        return f"Request: {self.object.material.name}"
+        return f"Request #{self.object.id}"
 
     def get_header_subtitle(self):
-        return f"Qty: {self.object.quantity} {self.object.material.unit} | Site: {self.object.site.name}"
+        return f"Site: {self.object.site.name} | {self.object.total_items} item(s) | Status: {self.object.get_status_display()}"
 
     def get_back_url(self):
         return str(reverse_lazy('materials:request_list'))
@@ -167,3 +231,20 @@ def approve_material_request(request, pk):
             messages.error(request, "Unauthorized.")
         return redirect('materials:request_detail', pk=pk)
     return redirect('materials:request_list')
+
+
+def materials_data_api(request):
+    """API endpoint to fetch material data (units and costs) for dynamic form"""
+    from django.http import JsonResponse
+    
+    materials = Material.objects.all().values('id', 'name', 'unit', 'estimated_cost_per_unit')
+    
+    data = {}
+    for material in materials:
+        data[str(material['id'])] = {
+            'name': material['name'],
+            'unit': material['unit'],
+            'cost_per_unit': float(material['estimated_cost_per_unit'] or 0)
+        }
+    
+    return JsonResponse(data)

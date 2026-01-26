@@ -21,17 +21,17 @@ class Cabinet(BaseModel):
 
 class UserCabinetRole(BaseModel):
     class Role(models.TextChoices):
-        DIRECTOR = 'DIRECTOR', _('Cabinet Director')
-        CHIEF_ENGINEER = 'CHIEF_ENGINEER', _('Chief of Engineers')
-        ENGINEER = 'ENGINEER', _('Engineer')
-        ACCOUNTANT = 'ACCOUNTANT', _('Accountant')
-        CASHIER = 'CASHIER', _('Cashier')
-        WORKER = 'WORKER', _('Worker')
+        DIRECTOR = 'DIRECTOR', _('Directeur de Cabinet')
+        CHIEF_ENGINEER = 'CHIEF_ENGINEER', _('Chef des Ingénieurs')
+        ENGINEER = 'ENGINEER', _('Ingénieur')
+        ACCOUNTANT = 'ACCOUNTANT', _('Comptable')
+        CASHIER = 'CASHIER', _('Caissier')
+        WORKER = 'WORKER', _('Ouvrier')
 
     class Status(models.TextChoices):
-        PENDING = 'PENDING', _('Pending Approval')
-        APPROVED = 'APPROVED', _('Approved')
-        REJECTED = 'REJECTED', _('Rejected')
+        PENDING = 'PENDING', _('En attente d\'approbation')
+        APPROVED = 'APPROVED', _('Approuvé')
+        REJECTED = 'REJECTED', _('Rejeté')
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='cabinet_roles')
     cabinet = models.ForeignKey(Cabinet, on_delete=models.CASCADE, related_name='user_roles')

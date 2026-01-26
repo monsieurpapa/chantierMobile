@@ -1,0 +1,26 @@
+{% extends 'email/base.html' %}
+{% load account %}
+{% block email-header %}Please Confirm Your E-mail Address{% endblock %}
+
+{% block content %}
+<p style="margin: 0;padding: 0;font-family: Helvetica, Arial, sans-serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: 1.6;color: #999999;">
+    {% user_display user as user_display %}{% load i18n %}{% autoescape off %}{% blocktrans with site_name=current_site.name site_domain=current_site.domain %}Hello from the <b>{{ site_name }}</b>!
+</p>
+
+<p style="margin: 0;padding: 0;font-family: Helvetica, Arial, sans-serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: 1.6;color: #999999;">
+    You're receiving this e-mail because <b>{{ user_display }}</b> has been registered at {{ site_domain }}.
+</p>
+
+<p style="margin: 0;padding: 0;font-family: Helvetica, Arial, sans-serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: 1.6;color: #999999;">
+To confirm that this is correct, please click on the "Confirm" button below. 
+<br/>
+<a href="{{ activate_url }}" target="_blank" style="display: inline-block; color: #ffffff; background-color: #3498db; border: solid 1px #3498db; border-radius: 5px; box-sizing: border-box; cursor: pointer; text-decoration: none; font-size: 14px; font-weight: bold; margin: 0; padding: 12px 25px; text-transform: capitalize; border-color: #3498db;">Confirm</a> 
+
+{% endblocktrans %}{% endautoescape %}
+</p>
+
+<p style="margin: 0;padding: 0;font-family: Helvetica, Arial, sans-serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: 1.6;color: #999999;">
+    Regards,<br/>
+    The CMC Team
+</p>
+{% endblock %}

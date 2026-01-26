@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block body_class %}auth-pages{% endblock %}
+
+{% block top_nav %}{% endblock %}
+
+{% block content %}
+
+<section>    
+  <div class="logo">
+    <img src="{% static 'falcon/assets/img/logos/cran/png/logo.png' %}" alt="" width="200">
+  </div>
+    <div class="box login-box text-center">
+        <h1>Verify Your <br>E-mail Address</h1>
+        <p>We have sent an e-mail to you for verification. Follow the link provided to finalize the signup process. Please contact us if you do not receive it within a few minutes.</p>
+
+        <p class="text-center">
+          <a href="{% url 'home' %}" class="m-button m-button-venice-blue">Home</a>
+        </p>        
+    </div>
+ </section>
+
+{% endblock %}

@@ -1,0 +1,138 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: ChantiérMobile 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-01-26 17:00+0000\n"
+"PO-Revision-Date: 2026-01-26 17:00+0000\n"
+"Last-Translator: ChantiérMobile Team\n"
+"Language-Team: French\n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#: accounts/models.py:27
+msgid "Directeur de Cabinet"
+msgstr "Directeur de Cabinet"
+
+#: accounts/models.py:28
+msgid "Chef des Ingénieurs"
+msgstr "Chef des Ingénieurs"
+
+#: accounts/models.py:29
+msgid "Ingénieur"
+msgstr "Ingénieur"
+
+#: accounts/models.py:30
+msgid "Comptable"
+msgstr "Comptable"
+
+#: accounts/models.py:31
+msgid "Caissier"
+msgstr "Caissier"
+
+#: accounts/models.py:32
+msgid "Ouvrier"
+msgstr "Ouvrier"
+
+#: accounts/models.py:35 finance/models.py:12
+msgid "En attente d'approbation"
+msgstr "En attente d'approbation"
+
+#: accounts/models.py:36 materials/models.py:16 finance/models.py:13
+msgid "Approuvé"
+msgstr "Approuvé"
+
+#: accounts/models.py:37 materials/models.py:17 finance/models.py:14
+msgid "Rejeté"
+msgstr "Rejeté"
+
+#: projects/models.py:20
+msgid "En planification"
+msgstr "En planification"
+
+#: projects/models.py:21
+msgid "Actif"
+msgstr "Actif"
+
+#: projects/models.py:22
+msgid "En pause"
+msgstr "En pause"
+
+#: projects/models.py:23
+msgid "Complété"
+msgstr "Complété"
+
+#: projects/models.py:24
+msgid "Annulé"
+msgstr "Annulé"
+
+#: materials/models.py:15
+msgid "En attente"
+msgstr "En attente"
+
+#: materials/models.py:18
+msgid "Commandé"
+msgstr "Commandé"
+
+#: materials/models.py:19
+msgid "Livré"
+msgstr "Livré"
+
+#: finance/models.py:15 revenue/models.py:20
+msgid "Payé"
+msgstr "Payé"
+
+#: revenue/models.py:18
+msgid "Brouillon"
+msgstr "Brouillon"
+
+#: revenue/models.py:19
+msgid "Envoyé"
+msgstr "Envoyé"
+
+#: revenue/models.py:21
+msgid "En retard"
+msgstr "En retard"
+
+#: revenue/models.py:35
+msgid "Virement bancaire"
+msgstr "Virement bancaire"
+
+#: revenue/models.py:36
+msgid "Chèque"
+msgstr "Chèque"
+
+#: revenue/models.py:37
+msgid "Espèces"
+msgstr "Espèces"
+
+#: revenue/models.py:38
+msgid "Mobile Money"
+msgstr "Mobile Money"
+
+#: templates/includes/navbar-top.html:72
+msgid "Profile Settings"
+msgstr "Paramètres du profil"
+
+#: templates/includes/navbar-top.html:76
+msgid "Logout"
+msgstr "Déconnexion"
+
+#: templates/includes/language-switcher.html:7
+msgid "Change language"
+msgstr "Changer de langue"
+
+#: chantiermobile/settings.py:122
+msgid "Français"
+msgstr "Français"
+
+#: chantiermobile/settings.py:123
+msgid "English"
+msgstr "English"

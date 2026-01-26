@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block body_class %}auth-pages{% endblock %}
+
+{% block top_nav %}{% endblock %}
+
+{% block content %}
+  <section>
+    <div class="logo">
+      <img src="{% static 'falcon/assets/img/logos/cran/png/logo.png' %}" alt="" width="200">
+    </div>
+    <div class="box login-box">
+    <h1  class="text-blue">You have been signed out</h1>
+    <p class="text-center">
+      <a href="{% url 'account_login' %}" class="m-button m-button-venice-blue">Login</a>
+    </p>       
+    </div>
+  </section>
+{% endblock %}

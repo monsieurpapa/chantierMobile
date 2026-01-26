@@ -1,0 +1,129 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block body_class %}switch-acc{% endblock %}
+
+{% block top_nav %}{% endblock %}
+
+{% block content %}
+  <section>
+    <div class="box m-navigation" style="background-color: white;">
+        <div class="box-header navigation-list-wrapper">
+        <div class="logo">
+          <img src="{% static 'falcon/assets/img/logos/cran/png/logo.png' %}" alt="" width="200">
+        </div>
+        <ul>
+          <li>{{ user.username }}</li>
+          <li><a href="{% url 'account_logout' %}">Logout</a></li>
+        </ul>
+        </div>
+    </div>
+    <header class="m-page-header">
+        <div class="container">
+          <div class="row">
+            <div class="col-lg-9 col-lg-offset-1 col-md-10 col-md-offset-1">
+              <h2 class="text-center">Select a Company Profile</h2>
+              <ul class="list-unstyled list-inline">
+                {% if accounts %}
+                  {% for letter in accounts_index %}
+                      <li>
+                        {% if letter.accounts %}
+                            <a href="#{{ letter.index }}"{% if letter.index == index %} class="selected"{% endif %}>{{ letter.index }}</a>
+                        {% else %}
+                            {{ letter.index }}
+                        {% endif %}
+                      </li>
+                  {% endfor %}
+                {% else %}
+                  <h5>There are no accounts to pick from</h5>
+                  <p>It seems that you are not associated to any company Profile. Please contact us below for further help</p>
+                {% endif %}
+
+              </ul>
+            </div>
+          </div>
+        </div>
+    </header>
+  </section>
+      <section id="A" class="l-default__content">
+        <div class="container">
+          <div class="row">
+            <div class="visible-xs visible-sm hidden-md col-md-3">
+              <aside class="sidebar">
+                <h3 class="side-heading">Index</h3>
+              </aside>
+            </div>
+            <div class="col-md-8 col-md-offset-2">
+              <ul>
+                {% for letter in accounts_index %}                
+                      {% if forloop.first %}                
+                           {% for account in letter.accounts %}
+                              <li><a href="{% url 'change_account' account.token %}">{{ account.name }}</a></li>
+                           {% endfor %}
+                      {% elif not forloop.first %}
+                           {% for account in letter.accounts %}
+                              <li><a href="{% url 'change_account' account.token %}">{{ account.name }}</a></li>               
+                           {% endfor %}   
+                      {% endif %}
+                {% endfor %}                                                   
+              </ul>
+            </div>
+            <div class="hidden-xs hidden-sm col-md-3"></div>
+          </div>
+        </div>
+      </section>                  
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  $(function() {
+
+    $(document).on("scroll", onScroll);
+
+    $('.m-page-header ul a').on('click', function(e) {
+
+      var curr = $(this);
+      var refHref = $(curr.attr("href"));
+      var scrollPos = $(document).scrollTop();
+
+      if (scrollPos === 0) {
+        $('html, body').animate({
+          scrollTop: refHref.offset().top - 90
+        }, 1000);
+
+      } else {
+        $('html, body').animate({
+          scrollTop: refHref.offset().top - 55
+        }, 1000);
+      }
+
+      e.preventDefault();
+    });
+
+    var list = $('.m-page-header ul');
+    var listPos = $('.m-page-header ul').offset().top - 30;
+
+    function onScroll(event) {
+      var scrollPos = $(document).scrollTop();
+
+      if (scrollPos >= listPos) {
+        list.addClass('snap');
+      }else {
+        list.removeClass('snap');
+      }
+
+       // Scrollspy
+      $('.m-page-header ul a').each(function () {
+          var currLink = $(this);
+          var refElement = $(currLink.attr("href"));
+          var refElementTop = refElement.offset().top - 70;
+
+          if (refElementTop <= scrollPos && refElementTop + refElement.height() > scrollPos) {
+              $('.m-page-header ul li a').removeClass("selected");
+              currLink.addClass("selected");
+          }
+      });
+    }
+  });
+</script>
+{% endblock %}

@@ -5,11 +5,11 @@ from accounts.models import Cabinet
 
 class Site(BaseModel):
     class Status(models.TextChoices):
-        PLANNING = 'PLANNING', _('Planning')
-        ACTIVE = 'ACTIVE', _('Active')
-        PAUSED = 'PAUSED', _('Paused')
-        COMPLETED = 'COMPLETED', _('Completed')
-        CANCELLED = 'CANCELLED', _('Cancelled')
+        PLANNING = 'PLANNING', _('En planification')
+        ACTIVE = 'ACTIVE', _('Actif')
+        PAUSED = 'PAUSED', _('En pause')
+        COMPLETED = 'COMPLETED', _('Complété')
+        CANCELLED = 'CANCELLED', _('Annulé')
 
     cabinet = models.ForeignKey(Cabinet, on_delete=models.CASCADE, related_name='sites')
     name = models.CharField(max_length=255)

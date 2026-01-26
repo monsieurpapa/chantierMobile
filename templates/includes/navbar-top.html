@@ -72,14 +72,19 @@
             {{ request.user.username }}
           </div>
           <div class="dropdown-divider"></div>
-          <a class="dropdown-item" href="#">Profile Settings</a>
+          <a class="dropdown-item" href="#">{% trans "Profile Settings" %}</a>
           {% if user.is_staff %}
           <a class="dropdown-item" href="/admin/" target="_blank">Django Admin</a>
           {% endif %}
           <div class="dropdown-divider"></div>
-          <a class="dropdown-item" href="{% url 'account_logout' %}">Logout</a>
+          <a class="dropdown-item" href="{% url 'account_logout' %}">{% trans "Logout" %}</a>
         </div>
       </div>
+    </li>
+    
+    <!-- Language Switcher -->
+    <li class="nav-item ms-2">
+      {% include 'includes/language-switcher.html' %}
     </li>
   </ul>
   </ul>

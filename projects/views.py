@@ -172,13 +172,13 @@ class SiteDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, De
             })
             
         # 3. Material Requests
-        for req in site.material_requests.all().select_related('material', 'requested_by'):
+        for req in site.material_requests.all().select_related('requested_by').prefetch_related('items__material'):
             timeline.append({
                 'type': 'MATERIAL',
                 'date': req.created_at.date(),
                 'timestamp': req.created_at,
-                'title': f"Material Request: {req.material.name}",
-                'content': f"Qty: {req.quantity} {req.material.unit} - Status: {req.get_status_display()}",
+                'title': f"Material Request #{req.id}",
+                'content': f"{req.total_items} item(s) - Status: {req.get_status_display()}",
                 'icon': 'fas fa-boxes',
                 'color': 'info'
             })

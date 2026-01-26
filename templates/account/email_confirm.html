@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block body_class %}auth-pages{% endblock %}
+
+{% block top_nav %}{% endblock %}
+
+{% block content %}
+<section>
+  <div class="logo">
+    <img src="{% static 'falcon/assets/img/logos/cran/png/logo.png' %}" alt="" width="200">
+  </div>  
+  <div class="box login-box">
+      {% if confirmation %}    
+        <form method="post" action="{% url 'account_confirm_email' confirmation.key %}">
+          <h1>Verify Your <br>E-mail Address</h1>
+            <p class="text-center">Please confirm that <b><a href="mailto:{{ confirmation.email_address.email }}">{{ confirmation.email_address.email }} </a></b>is an e-mail address for user <b>{{ confirmation.email_address.user.display_name }}.</b></p>
+            {% csrf_token %}
+            <button type="submit" class="m-button m-button-venice-blue">Confirm</button>
+        </form>        
+      {% else %}
+        <form method="post" action=".">      
+            {% url 'account_email' as email_url %}
+            <p class="text-center">This e-mail confirmation link expired or is invalid. 
+
+              {% comment %}
+                Please <b><a href="{{ email_url }}">issue a new e-mail confirmation request</a></b>.</p>
+              {% endcomment %}
+        </form>
+        <br>
+        <p class="text-center">
+          <a href="{% url 'home' %}" class="m-button m-button-cerulean">Home</a>
+        </p>         
+      {% endif %}        
+  </div>
+</section>
+{% endblock %}

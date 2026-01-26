@@ -4,6 +4,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
 from core.views import HomeView
+from django.views.i18n import set_language
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -14,7 +15,10 @@ urlpatterns = [
     path('materials/', include('materials.urls'), name='materials'),
     path('revenue/', include('revenue.urls'), name='revenue'),
     
-    # Auth
+    # Language switching
+    path('i18n/', include('django.conf.urls.i18n')),
+    path('set-language/', set_language, name='set_language'),
+    
     # Auth (Allauth)
     path('accounts/', include('allauth.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block body_class %}auth-pages{% endblock %}
+
+{% block top_nav %}{% endblock %}
+
+{% block content %}
+<section>
+  <div class="logo">
+    <div class="logo"><img src="{% static 'falcon/assets/img/logos/cran/png/logo.png' %}" alt="" width="200"></div>
+  </div>
+  <div class="box login-box">
+    <ul class="errorlist">
+      <li>Hello. Looks like your profile is not associated to a Company on our platform. Please contact your account manager or log a support ticket.</li>
+    </ul>
+    <p class="text-center">
+      <a href="{% url 'account_logout' %}" class="m-button m-button-venice-blue">Logout</a>
+    </p>
+  </div>
+</section>
+
+{% endblock %}

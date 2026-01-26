@@ -16,145 +16,214 @@
 
         <!-- Main Content -->
         <div class="container-fluid py-4">
+            <!-- Site Header Section with Key Metrics -->
+            <div class="row g-3 mb-4">
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body p-4">
+                            <div class="row align-items-center g-3">
+                                <div class="col-md-8">
+                                    <div class="d-flex align-items-start gap-3 mb-3">
+                                        <div class="avatar avatar-xxl">
+                                            <div class="avatar-name rounded-3"><span>{{ site.name|slice:":1"|upper }}</span></div>
+                                        </div>
+                                        <div>
+                                            <h2 class="mb-1">{{ site.name }}</h2>
+                                            <p class="fs-0 mb-2 text-600"><i class="fas fa-map-marker-alt me-2"></i>{{ site.location }}</p>
+                                            <div>
+                                                <span class="badge rounded-pill {% if site.status == 'ACTIVE' %}bg-success{% else %}bg-warning{% endif %} me-2">{{ site.status }}</span>
+                                                {% if site.phases.exists %}
+                                                <span class="badge rounded-pill bg-info">{{ site.phases.count }} Phase{{ site.phases.count|pluralize }}</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="text-md-end">
+                                        {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER' %}
+                                        <a class="btn btn-sm btn-outline-primary me-2" href="{% url 'projects:site_update' unique_id=site.unique_id %}">
+                                            <i class="fas fa-edit me-1"></i>Edit
+                                        </a>
+                                        {% endif %}
+                                        {% if request.user|has_role:'DIRECTOR' %}
+                                        <a class="btn btn-sm btn-outline-danger" href="{% url 'projects:site_delete' unique_id=site.unique_id %}">
+                                            <i class="fas fa-trash me-1"></i>Delete
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Key Metrics Row -->
+                            <div class="row g-3 mt-2">
+                                <div class="col-6 col-md-3">
+                                    <div class="p-3 bg-light rounded-3">
+                                        <p class="fs--2 text-500 text-uppercase fw-bold mb-1">Total Staff</p>
+                                        <h5 class="mb-0">{{ site.assignments.count }}</h5>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <div class="p-3 bg-light rounded-3">
+                                        <p class="fs--2 text-500 text-uppercase fw-bold mb-1">Material Requests</p>
+                                        <h5 class="mb-0">{{ site.material_requests.count }}</h5>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <div class="p-3 bg-light rounded-3">
+                                        <p class="fs--2 text-500 text-uppercase fw-bold mb-1">Budget Usage</p>
+                                        <h5 class="mb-0">{% if site.budget %}{{ site.budget_usage_percentage }}%{% else %}-{% endif %}</h5>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <div class="p-3 bg-light rounded-3">
+                                        <p class="fs--2 text-500 text-uppercase fw-bold mb-1">Net Profit</p>
+                                        <h5 class="mb-0 {% if site.net_profit < 0 %}text-danger{% else %}text-success{% endif %}">${{ site.net_profit|floatformat:0 }}</h5>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="row g-3">
                 <div class="col-lg-8 pe-lg-2">
-                    <div class="card mb-3">
-                        <div class="card-header bg-light p-0">
+                    <div class="card mb-3 border-0 shadow-sm">
+                        <div class="card-header bg-white border-bottom p-3">
                             <ul class="nav nav-tabs border-0" id="siteDetailsTab" role="tablist">
-                                <li class="nav-item breadcrumb-item">
-                                    <a class="nav-link active py-3" id="overview-tab" data-bs-toggle="tab"
+                                <li class="nav-item">
+                                    <a class="nav-link active fw-semibold py-3" id="overview-tab" data-bs-toggle="tab"
                                         href="#tab-overview" role="tab" aria-controls="tab-overview"
-                                        aria-selected="true">Overview</a>
+                                        aria-selected="true"><i class="fas fa-chart-line me-2"></i>Overview</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link py-3" id="personnel-tab" data-bs-toggle="tab"
+                                    <a class="nav-link fw-semibold py-3" id="personnel-tab" data-bs-toggle="tab"
                                         href="#tab-personnel" role="tab" aria-controls="tab-personnel"
-                                        aria-selected="false">Personnel</a>
+                                        aria-selected="false"><i class="fas fa-users me-2"></i>Personnel</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link py-3" id="materials-tab" data-bs-toggle="tab"
+                                    <a class="nav-link fw-semibold py-3" id="materials-tab" data-bs-toggle="tab"
                                         href="#tab-materials" role="tab" aria-controls="tab-materials"
-                                        aria-selected="false">Materials</a>
+                                        aria-selected="false"><i class="fas fa-boxes me-2"></i>Materials</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link py-3" id="finance-tab" data-bs-toggle="tab" href="#tab-finance"
-                                        role="tab" aria-controls="tab-finance" aria-selected="false">Finance &
-                                        Expenses</a>
+                                    <a class="nav-link fw-semibold py-3" id="finance-tab" data-bs-toggle="tab" href="#tab-finance"
+                                        role="tab" aria-controls="tab-finance" aria-selected="false"><i class="fas fa-dollar-sign me-2"></i>Finance</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link py-3" id="history-tab" data-bs-toggle="tab" href="#tab-history"
-                                        role="tab" aria-controls="tab-history" aria-selected="false">Site History</a>
+                                    <a class="nav-link fw-semibold py-3" id="history-tab" data-bs-toggle="tab" href="#tab-history"
+                                        role="tab" aria-controls="tab-history" aria-selected="false"><i class="fas fa-history me-2"></i>Activity</a>
                                 </li>
                             </ul>
                         </div>
-                        <div class="card-body">
+                        <div class="card-body p-4">
                             <div class="tab-content" id="siteDetailsTabContent">
 
                                 <!-- OVERVIEW TAB -->
                                 <div class="tab-pane fade show active" id="tab-overview" role="tabpanel"
                                     aria-labelledby="overview-tab">
-                                    <div class="d-flex justify-content-between align-items-center mb-3">
-                                        <h6 class="mb-0">Project Phases & Progress</h6>
-                                        {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER' %}
-                                        <a class="btn btn-falcon-default btn-xs"
-                                            href="{% url 'projects:phase_create' site_id=site.unique_id %}">
-                                            <span class="fas fa-plus me-1"></span>Add Phase
-                                        </a>
+                                    <div class="mb-4">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <h5 class="mb-0"><i class="fas fa-tasks text-primary me-2"></i>Project Phases & Progress</h5>
+                                            {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER' %}
+                                            <a class="btn btn-primary btn-sm"
+                                                href="{% url 'projects:phase_create' site_id=site.unique_id %}">
+                                                <span class="fas fa-plus me-1"></span>Add Phase
+                                            </a>
+                                            {% endif %}
+                                        </div>
+
+                                        {% if site.phases.exists %}
+                                        <div>
+                                            {% for phase in site.phases.all %}
+                                            <div class="p-3 border rounded-3 border-200">
+                                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                                    <div>
+                                                        <h6 class="mb-1 fw-bold text-900">{{ phase.name }}</h6>
+                                                        <p class="fs--1 mb-0 text-600">
+                                                            <i class="fas fa-calendar-alt me-1"></i>
+                                                            {{ phase.start_date|date:"M d, Y" }} 
+                                                            {% if phase.end_date %}
+                                                                - {{ phase.end_date|date:"M d, Y" }}
+                                                            {% else %}
+                                                                <span class="badge bg-info ms-1">Ongoing</span>
+                                                            {% endif %}
+                                                        </p>
+                                                    </div>
+                                                    {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER' %}
+                                                    <div class="dropdown">
+                                                        <button class="btn btn-link btn-sm text-600" type="button" data-bs-toggle="dropdown">
+                                                            <i class="fas fa-ellipsis-v"></i>
+                                                        </button>
+                                                        <div class="dropdown-menu dropdown-menu-end">
+                                                            <a class="dropdown-item" href="{% url 'projects:phase_update' unique_id=phase.unique_id %}">
+                                                                <i class="fas fa-edit me-2"></i>Edit
+                                                            </a>
+                                                            <a class="dropdown-item text-danger" href="{% url 'projects:phase_delete' unique_id=phase.unique_id %}">
+                                                                <i class="fas fa-trash me-2"></i>Delete
+                                                            </a>
+                                                        </div>
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+
+                                                {% with last_progress=phase.progress_reports.last %}
+                                                <div>
+                                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                                        <span class="fs--1 text-600">Progress</span>
+                                                        <span class="badge bg-primary">{{ last_progress.percentage_complete|default:0 }}%</span>
+                                                    </div>
+                                                    <div class="progress" style="height: 8px;">
+                                                        <div class="progress-bar bg-primary" role="progressbar"
+                                                            style="width: {{ last_progress.percentage_complete|default:0 }}%;"
+                                                            aria-valuenow="{{ last_progress.percentage_complete|default:0 }}"
+                                                            aria-valuemin="0" aria-valuemax="100"></div>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between mt-2">
+                                                        <small class="text-500">Updated: {{ last_progress.report_date|default:"Never" }}</small>
+                                                        {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER,ENGINEER' %}
+                                                        <a class="btn btn-link btn-sm p-0" href="{% url 'projects:progress_create' phase_id=phase.unique_id %}">
+                                                            <span class="fas fa-plus me-1"></span>Log Update
+                                                        </a>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                                {% endwith %}
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                        {% else %}
+                                        <div class="alert alert-info d-flex align-items-center p-3 mb-0" role="alert">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            <span>No project phases defined yet. Start by creating the first phase.</span>
+                                        </div>
                                         {% endif %}
                                     </div>
-
-                                    {% if site.phases.exists %}
-                                    <div class="list-group list-group-flush border-top">
-                                        {% for phase in site.phases.all %}
-                                        <div class="list-group-item px-0 py-3">
-                                            <div class="row align-items-center g-3">
-                                                <div class="col-sm-8">
-                                                    <div class="d-flex align-items-center">
-                                                        <div class="calendar me-2">
-                                                            <span class="calendar-month">{{ phase.start_date|date:"M"
-                                                                }}</span>
-                                                            <span class="calendar-day">{{ phase.start_date|date:"d"
-                                                                }}</span>
-                                                        </div>
-                                                        <div>
-                                                            <h6 class="mb-0 text-900">{{ phase.name }}</h6>
-                                                            <p class="fs--2 mb-0 text-500">End: {{
-                                                                phase.end_date|default:"Ongoing"
-                                                                }}</p>
-                                                        </div>
-                                                    </div>
-                                                    {% with last_progress=phase.progress_reports.last %}
-                                                    <div class="mt-2">
-                                                        <div class="progress" style="height: 6px;">
-                                                            <div class="progress-bar bg-primary rounded-pill"
-                                                                role="progressbar"
-                                                                style="width: {{ last_progress.percentage_complete|default:0 }}%;"
-                                                                aria-valuenow="{{ last_progress.percentage_complete|default:0 }}"
-                                                                aria-valuemin="0" aria-valuemax="100"></div>
-                                                        </div>
-                                                        <div class="d-flex justify-content-between mt-1">
-                                                            <small class="text-600">{{
-                                                                last_progress.percentage_complete|default:0
-                                                                }}% Complete</small>
-                                                            <small class="text-500 fs--2">Last update: {{
-                                                                last_progress.report_date|default:"Never" }}</small>
-                                                        </div>
-                                                    </div>
-                                                    {% endwith %}
-                                                </div>
-                                                <div class="col-sm-4 text-sm-end">
-                                                    {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER,ENGINEER' %}
-                                                    <a class="btn btn-falcon-default btn-sm"
-                                                        href="{% url 'projects:progress_create' phase_id=phase.unique_id %}">
-                                                        <span class="fas fa-plus me-1"></span>Log Progress
-                                                    </a>
-                                                    {% endif %}
-                                                    {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER' %}
-                                                    <div class="dropdown font-sans-serif d-inline-block ms-2">
-                                                        <button
-                                                            class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal"
-                                                            type="button" data-bs-toggle="dropdown"><span
-                                                                class="fas fa-ellipsis-h"></span></button>
-                                                        <div class="dropdown-menu dropdown-menu-end border py-2">
-                                                            <a class="dropdown-item"
-                                                                href="{% url 'projects:phase_update' unique_id=phase.unique_id %}">Edit</a>
-                                                            <div class="dropdown-divider"></div>
-                                                            <a class="dropdown-item text-danger"
-                                                                href="{% url 'projects:phase_delete' unique_id=phase.unique_id %}">Delete</a>
-                                                        </div>
-                                                    </div>
-                                                    {% endif %}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        {% endfor %}
-                                    </div>
-                                    {% else %}
-                                    <div class="alert alert-info py-2 fs--1">No phases defined yet.</div>
-                                    {% endif %}
                                 </div>
 
                                 <!-- PERSONNEL TAB -->
                                 <div class="tab-pane fade" id="tab-personnel" role="tabpanel"
                                     aria-labelledby="personnel-tab">
-                                    <div class="d-flex justify-content-between align-items-center mb-3">
-                                        <h6 class="mb-0">Assigned Personnel</h6>
+                                    <div class="d-flex justify-content-between align-items-center mb-4">
+                                        <h5 class="mb-0"><i class="fas fa-users text-info me-2"></i>Assigned Personnel</h5>
                                         {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER' %}
-                                        <a class="btn btn-falcon-primary btn-sm"
+                                        <a class="btn btn-info btn-sm"
                                             href="{% url 'personnel:assignment_create' %}?site={{ site.pk }}">
                                             <span class="fas fa-user-plus me-1"></span>Assign Staff
                                         </a>
                                         {% endif %}
                                     </div>
+                                    
+                                    {% if site.assignments.all %}
                                     <div class="table-responsive scrollbar">
-                                        <table class="table table-sm table-striped fs--1 mb-0">
-                                            <thead class="bg-200 text-900">
+                                        <table class="table table-hover table-sm mb-0">
+                                            <thead class="bg-light">
                                                 <tr>
-                                                    <th class="white-space-nowrap">Name</th>
-                                                    <th>Role</th>
-                                                    <th>Period</th>
+                                                    <th class="white-space-nowrap fs--1">Name & Role</th>
+                                                    <th class="fs--1">Assignment Period</th>
                                                     {% if request.user|has_role:'DIRECTOR,ACCOUNTANT' %}
-                                                    <th class="text-end">Daily Rate</th>
+                                                    <th class="text-end fs--1">Daily Rate</th>
                                                     {% endif %}
                                                 </tr>
                                             </thead>
@@ -162,247 +231,292 @@
                                                 {% for assignment in site.assignments.all %}
                                                 <tr class="align-middle">
                                                     <td class="text-nowrap">
-                                                        <a
-                                                            href="{% url 'personnel:personnel_detail' unique_id=assignment.personnel.unique_id %}">
-                                                            <div class="d-flex align-items-center">
-                                                                <div class="avatar avatar-l me-2">
-                                                                    <div class="avatar-name rounded-circle"><span>{{
+                                                        <a href="{% url 'personnel:personnel_detail' unique_id=assignment.personnel.unique_id %}" class="text-decoration-none">
+                                                            <div class="d-flex align-items-center gap-2">
+                                                                <div class="avatar avatar-m">
+                                                                    <div class="avatar-name rounded-2"><span>{{
                                                                             assignment.personnel.username|slice:":1"|upper
                                                                             }}</span>
                                                                     </div>
                                                                 </div>
-                                                                <div class="flex-1">
-                                                                    <h6 class="mb-0">{{
+                                                                <div>
+                                                                    <h6 class="mb-0 fw-semibold">{{
                                                                         assignment.personnel.get_full_name|default:assignment.personnel.username
                                                                         }}</h6>
+                                                                    <p class="fs--2 mb-0 text-600">{{ assignment.role }}</p>
                                                                 </div>
                                                             </div>
                                                         </a>
                                                     </td>
-                                                    <td>{{ assignment.role }}</td>
-                                                    <td>{{ assignment.start_date|date:"M d, y" }} - {{
-                                                        assignment.end_date|default:"Present" }}</td>
+                                                    <td class="fs--1">
+                                                        <span class="text-600">{{ assignment.start_date|date:"M d, y" }}</span>
+                                                        <span class="text-500 mx-1">→</span>
+                                                        {% if assignment.end_date %}
+                                                            <span class="text-600">{{ assignment.end_date|date:"M d, y" }}</span>
+                                                        {% else %}
+                                                            <span class="badge bg-success">Active</span>
+                                                        {% endif %}
+                                                    </td>
                                                     {% if request.user|has_role:'DIRECTOR,ACCOUNTANT' %}
-                                                    <td class="text-end fw-semi-bold">${{
+                                                    <td class="text-end fw-semibold">${{
                                                         assignment.daily_rate|floatformat:2 }}
                                                     </td>
                                                     {% endif %}
-                                                </tr>
-                                                {% empty %}
-                                                <tr>
-                                                    <td colspan="4" class="text-center py-4 text-500">No personnel
-                                                        assigned to this
-                                                        site.</td>
                                                 </tr>
                                                 {% endfor %}
                                             </tbody>
                                         </table>
                                     </div>
+                                    {% else %}
+                                    <div class="alert alert-light d-flex align-items-center p-3 mb-0" role="alert">
+                                        <i class="fas fa-users text-muted me-2" style="font-size: 1.5rem;"></i>
+                                        <div>
+                                            <strong>No personnel assigned</strong>
+                                            <p class="fs--1 mb-0 text-600">Start by assigning staff members to this site</p>
+                                        </div>
+                                    </div>
+                                    {% endif %}
                                 </div>
 
                                 <!-- MATERIALS TAB -->
                                 <div class="tab-pane fade" id="tab-materials" role="tabpanel"
                                     aria-labelledby="materials-tab">
-                                    <div class="d-flex justify-content-between align-items-center mb-3">
-                                        <h6 class="mb-0">Material Logistics</h6>
-                                        <a class="btn btn-falcon-primary btn-sm"
+                                    <div class="d-flex justify-content-between align-items-center mb-4">
+                                        <h5 class="mb-0"><i class="fas fa-boxes text-warning me-2"></i>Material Logistics</h5>
+                                        <a class="btn btn-warning btn-sm"
                                             href="{% url 'materials:request_create' %}?site={{ site.id }}">
                                             <span class="fas fa-plus me-1"></span>New Request
                                         </a>
                                     </div>
+                                    
+                                    {% if site.material_requests.all %}
                                     <div class="table-responsive scrollbar">
-                                        <table class="table table-sm table-striped fs--1 mb-0">
-                                            <thead class="bg-200 text-900">
+                                        <table class="table table-hover table-sm mb-0">
+                                            <thead class="bg-light">
                                                 <tr>
-                                                    <th>Material</th>
-                                                    <th class="text-center">Quantity</th>
-                                                    <th class="text-center">Status</th>
-                                                    <th class="text-end">Requested On</th>
+                                                    <th class="fs--1">Material</th>
+                                                    <th class="text-center fs--1">Quantity</th>
+                                                    <th class="text-center fs--1">Status</th>
+                                                    <th class="text-end fs--1">Requested On</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {% for req in site.material_requests.all %}
                                                 <tr class="align-middle">
-                                                    <td><a href="{% url 'materials:request_detail' pk=req.pk %}"><strong>{{
-                                                                req.material.name }}</strong></a></td>
-                                                    <td class="text-center fw-semi-bold">{{ req.quantity }} {{
-                                                        req.material.unit }}
+                                                    <td>
+                                                        <a href="{% url 'materials:request_detail' pk=req.pk %}" class="text-decoration-none">
+                                                            <div class="d-flex align-items-center gap-2">
+                                                                <i class="fas fa-box text-secondary"></i>
+                                                                <div>
+                                                                    <h6 class="mb-0 fw-semibold">{{ req.material.name }}</h6>
+                                                                    <p class="fs--2 mb-0 text-600">{{ req.material.category }}</p>
+                                                                </div>
+                                                            </div>
+                                                        </a>
+                                                    </td>
+                                                    <td class="text-center fw-semibold">
+                                                        <span class="badge bg-light text-dark">{{ req.quantity }} {{ req.material.unit }}</span>
                                                     </td>
                                                     <td class="text-center">
                                                         <span class="badge rounded-pill 
-                                                        {% if req.status == 'APPROVED' %}badge-soft-success
-                                                        {% elif req.status == 'DELIVERED' %}badge-soft-info
-                                                        {% elif req.status == 'REJECTED' %}badge-soft-danger
-                                                        {% else %}badge-soft-warning{% endif %}">
+                                                        {% if req.status == 'APPROVED' %}bg-success
+                                                        {% elif req.status == 'DELIVERED' %}bg-info
+                                                        {% elif req.status == 'REJECTED' %}bg-danger
+                                                        {% else %}bg-warning{% endif %}">
                                                             {{ req.get_status_display }}
                                                         </span>
                                                     </td>
-                                                    <td class="text-end text-500">{{ req.created_at|date:"M d, Y" }}
-                                                    </td>
-                                                </tr>
-                                                {% empty %}
-                                                <tr>
-                                                    <td colspan="4" class="text-center py-4 text-500">No material
-                                                        requests found.
-                                                    </td>
+                                                    <td class="text-end text-600 fs--1">{{ req.created_at|date:"M d, Y" }}</td>
                                                 </tr>
                                                 {% endfor %}
                                             </tbody>
                                         </table>
                                     </div>
+                                    {% else %}
+                                    <div class="alert alert-light d-flex align-items-center p-3 mb-0" role="alert">
+                                        <i class="fas fa-box text-muted me-2" style="font-size: 1.5rem;"></i>
+                                        <div>
+                                            <strong>No material requests</strong>
+                                            <p class="fs--1 mb-0 text-600">Create your first material request to track supplies</p>
+                                        </div>
+                                    </div>
+                                    {% endif %}
                                 </div>
 
                                 <!-- FINANCE TAB -->
                                 <div class="tab-pane fade" id="tab-finance" role="tabpanel"
                                     aria-labelledby="finance-tab">
-                                    <div class="row g-3">
-                                        <div class="col-12">
-                                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                                <h6 class="mb-0">Revenue & Invoicing</h6>
-                                                {% if not contract %}
+                                    <h5 class="mb-4"><i class="fas fa-dollar-sign text-success me-2"></i>Revenue & Invoicing</h5>
+                                    
+                                    <!-- Revenue/Contract Section -->
+                                    <div class="mb-4">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <h6 class="mb-0 text-700">Invoices</h6>
+                                            {% if not contract %}
                                                 {% if request.user|has_role:'DIRECTOR,ACCOUNTANT' %}
-                                                <a class="btn btn-falcon-default btn-xs"
+                                                <a class="btn btn-sm btn-outline-success"
                                                     href="{% url 'revenue:contract_create' site_id=site.unique_id %}">
                                                     <span class="fas fa-plus me-1"></span>Create Contract
                                                 </a>
                                                 {% endif %}
-                                                {% else %}
-                                                <a class="btn btn-falcon-default btn-xs"
+                                            {% else %}
+                                                <a class="btn btn-sm btn-outline-success"
                                                     href="{% url 'revenue:invoice_create' contract_id=contract.id %}">
                                                     <span class="fas fa-file-invoice me-1"></span>New Invoice
                                                 </a>
-                                                {% endif %}
-                                            </div>
-                                            <div class="table-responsive scrollbar">
-                                                <table class="table table-sm table-striped fs--1 mb-0">
-                                                    <thead class="bg-200 text-900">
-                                                        <tr>
-                                                            <th>Invoice #</th>
-                                                            <th>Amount</th>
-                                                            <th class="text-center">Status</th>
-                                                            <th class="text-end">Due Date</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {% for invoice in invoices %}
-                                                        <tr class="align-middle">
-                                                            <td><a
-                                                                    href="{% url 'revenue:invoice_detail' pk=invoice.pk %}"><strong>{{
-                                                                        invoice.invoice_number }}</strong></a></td>
-                                                            <td class="fw-bold text-success">${{
-                                                                invoice.amount|floatformat:2 }}
-                                                            </td>
-                                                            <td class="text-center">
-                                                                <span class="badge rounded-pill 
-                                                                {% if invoice.status == 'PAID' %}badge-soft-success
-                                                                {% elif invoice.status == 'SENT' %}badge-soft-info
-                                                                {% elif invoice.status == 'OVERDUE' %}badge-soft-danger
-                                                                {% else %}badge-soft-warning{% endif %}">
-                                                                    {{ invoice.get_status_display }}
-                                                                </span>
-                                                            </td>
-                                                            <td class="text-end text-500">{{ invoice.due_date }}</td>
-                                                        </tr>
-                                                        {% empty %}
-                                                        <tr>
-                                                            <td colspan="4" class="text-center py-3 text-500">No
-                                                                invoices found.
-                                                            </td>
-                                                        </tr>
-                                                        {% endfor %}
-                                                    </tbody>
-                                                </table>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        {% if invoices %}
+                                        <div class="table-responsive scrollbar">
+                                            <table class="table table-hover table-sm mb-0">
+                                                <thead class="bg-light">
+                                                    <tr>
+                                                        <th class="fs--1">Invoice #</th>
+                                                        <th class="fs--1">Amount</th>
+                                                        <th class="text-center fs--1">Status</th>
+                                                        <th class="text-end fs--1">Due Date</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for invoice in invoices %}
+                                                    <tr class="align-middle">
+                                                        <td>
+                                                            <a href="{% url 'revenue:invoice_detail' pk=invoice.pk %}" class="text-decoration-none">
+                                                                <span class="fw-semibold">{{ invoice.invoice_number }}</span>
+                                                            </a>
+                                                        </td>
+                                                        <td class="fw-bold text-success">${{ invoice.amount|floatformat:2 }}</td>
+                                                        <td class="text-center">
+                                                            <span class="badge rounded-pill 
+                                                            {% if invoice.status == 'PAID' %}bg-success
+                                                            {% elif invoice.status == 'SENT' %}bg-info
+                                                            {% elif invoice.status == 'OVERDUE' %}bg-danger
+                                                            {% else %}bg-warning{% endif %}">
+                                                                {{ invoice.get_status_display }}
+                                                            </span>
+                                                        </td>
+                                                        <td class="text-end text-600 fs--1">{{ invoice.due_date }}</td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        {% else %}
+                                        <div class="alert alert-light d-flex align-items-center p-3" role="alert">
+                                            <i class="fas fa-file-invoice text-muted me-2" style="font-size: 1.5rem;"></i>
+                                            <div>
+                                                <strong>No invoices</strong>
+                                                <p class="fs--1 mb-0 text-600">Create a contract first to generate invoices</p>
                                             </div>
                                         </div>
+                                        {% endif %}
+                                    </div>
 
-                                        <div class="col-12 mt-4">
-                                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                                <h6 class="mb-0">Expenses</h6>
-                                                <a class="btn btn-falcon-primary btn-sm"
-                                                    href="{% url 'finance:expense_create' %}?site={{ site.id }}">
-                                                    <span class="fas fa-file-invoice-dollar me-1"></span>Log Expense
-                                                </a>
-                                            </div>
-                                            <div class="table-responsive scrollbar">
-                                                <table class="table table-sm table-striped fs--1 mb-0">
-                                                    <thead class="bg-200 text-900">
-                                                        <tr>
-                                                            <th>Category</th>
-                                                            <th>Amount</th>
-                                                            <th class="text-center">Status</th>
-                                                            <th class="text-end">Submitted By</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {% for expense in expenses %}
-                                                        <tr class="align-middle">
-                                                            <td><a
-                                                                    href="{% url 'finance:expense_detail' pk=expense.pk %}"><strong>{{
-                                                                        expense.category.name }}</strong></a></td>
-                                                            <td class="fw-bold text-primary">${{
-                                                                expense.amount|floatformat:2 }}
-                                                            </td>
-                                                            <td class="text-center">
-                                                                <span class="badge rounded-pill 
-                                                                {% if expense.status == 'PAID' %}badge-soft-info
-                                                                {% elif expense.status == 'APPROVED' %}badge-soft-success
-                                                                {% elif expense.status == 'REJECTED' %}badge-soft-danger
-                                                                {% else %}badge-soft-warning{% endif %}">
-                                                                    {{ expense.get_status_display }}
-                                                                </span>
-                                                            </td>
-                                                            <td class="text-end text-500 text-nowrap">{{
-                                                                expense.requester.username
-                                                                }}</td>
-                                                        </tr>
-                                                        {% empty %}
-                                                        <tr>
-                                                            <td colspan="4" class="text-center py-3 text-500">No
-                                                                expenses logged.
-                                                            </td>
-                                                        </tr>
-                                                        {% endfor %}
-                                                    </tbody>
-                                                </table>
+                                    <hr class="my-4" />
+
+                                    <!-- Expenses Section -->
+                                    <div>
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <h6 class="mb-0 text-700">Expenses</h6>
+                                            <a class="btn btn-sm btn-outline-danger"
+                                                href="{% url 'finance:expense_create' %}?site={{ site.id }}">
+                                                <span class="fas fa-file-invoice-dollar me-1"></span>Log Expense
+                                            </a>
+                                        </div>
+                                        
+                                        {% if expenses %}
+                                        <div class="table-responsive scrollbar">
+                                            <table class="table table-hover table-sm mb-0">
+                                                <thead class="bg-light">
+                                                    <tr>
+                                                        <th class="fs--1">Category</th>
+                                                        <th class="fs--1">Amount</th>
+                                                        <th class="text-center fs--1">Status</th>
+                                                        <th class="text-end fs--1">Submitted By</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for expense in expenses %}
+                                                    <tr class="align-middle">
+                                                        <td>
+                                                            <a href="{% url 'finance:expense_detail' pk=expense.pk %}" class="text-decoration-none">
+                                                                <div class="d-flex align-items-center gap-2">
+                                                                    <i class="fas fa-receipt text-secondary"></i>
+                                                                    <div>
+                                                                        <h6 class="mb-0 fw-semibold">{{ expense.category.name }}</h6>
+                                                                        <p class="fs--2 mb-0 text-600">{{ expense.created_at|date:"M d, Y" }}</p>
+                                                                    </div>
+                                                                </div>
+                                                            </a>
+                                                        </td>
+                                                        <td class="fw-bold text-primary">${{ expense.amount|floatformat:2 }}</td>
+                                                        <td class="text-center">
+                                                            <span class="badge rounded-pill 
+                                                            {% if expense.status == 'PAID' %}bg-info
+                                                            {% elif expense.status == 'APPROVED' %}bg-success
+                                                            {% elif expense.status == 'REJECTED' %}bg-danger
+                                                            {% else %}bg-warning{% endif %}">
+                                                                {{ expense.get_status_display }}
+                                                            </span>
+                                                        </td>
+                                                        <td class="text-end text-600 fs--1 text-nowrap">{{ expense.requester.username }}</td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        {% else %}
+                                        <div class="alert alert-light d-flex align-items-center p-3 mb-0" role="alert">
+                                            <i class="fas fa-receipt text-muted me-2" style="font-size: 1.5rem;"></i>
+                                            <div>
+                                                <strong>No expenses logged</strong>
+                                                <p class="fs--1 mb-0 text-600">Log your first expense to track site spending</p>
                                             </div>
                                         </div>
+                                        {% endif %}
                                     </div>
                                 </div>
 
                                 <!-- HISTORY TAB (TIMELINE) -->
                                 <div class="tab-pane fade" id="tab-history" role="tabpanel"
                                     aria-labelledby="history-tab">
-                                    <h6 class="mb-4">Recent Activity Timeline</h6>
-                                    <div class="timeline-vertical">
+                                    <h5 class="mb-4"><i class="fas fa-history text-secondary me-2"></i>Recent Activity Timeline</h5>
+                                    
+                                    {% if timeline %}
+                                    <div class="position-relative">
                                         {% for event in timeline %}
-                                        <div class="timeline-item">
-                                            <div class="row g-0">
-                                                <div
-                                                    class="col-auto d-flex flex-column align-items-center timeline-item-vertical-line">
-                                                    <div
-                                                        class="timeline-item-icon bg-soft-{{ event.color }} text-{{ event.color }} shadow-none">
-                                                        <span class="{{ event.icon }} fs--2"></span>
-                                                    </div>
-                                                    {% if not forloop.last %}
-                                                    <div class="timeline-vertical-line"></div>
-                                                    {% endif %}
+                                        <div class="d-flex gap-3 mb-4">
+                                            <!-- Timeline Icon -->
+                                            <div class="flex-shrink-0">
+                                                <div class="avatar avatar-m rounded-circle shadow-sm bg-soft-{{ event.color }} text-{{ event.color }}">
+                                                    <i class="{{ event.icon }}"></i>
                                                 </div>
-                                                <div class="col ps-3 pb-4">
-                                                    <div class="d-flex justify-content-between align-items-center">
-                                                        <h6 class="text-900 mb-1 fw-bold">{{ event.title }}</h6>
-                                                        <span class="fs--2 text-500">{{ event.timestamp|timesince }}
-                                                            ago</span>
+                                            </div>
+                                            
+                                            <!-- Timeline Content -->
+                                            <div class="flex-grow-1">
+                                                <div class="p-3 border rounded-3 border-200 bg-light">
+                                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                                        <h6 class="mb-0 fw-semibold text-900">{{ event.title }}</h6>
+                                                        <small class="text-500 fs--2 text-nowrap ms-2">{{ event.timestamp|timesince }} ago</small>
                                                     </div>
-                                                    <p class="fs--1 text-700 mb-1">{{ event.content }}</p>
-                                                    <small class="text-500 fs--2">{{ event.timestamp|date:"M d, h:i A"
-                                                        }}</small>
+                                                    <p class="fs--1 text-700 mb-2">{{ event.content }}</p>
+                                                    <small class="text-500 fs--2">{{ event.timestamp|date:"M d, Y • h:i A" }}</small>
                                                 </div>
                                             </div>
                                         </div>
-                                        {% empty %}
-                                        <p class="text-center py-4 text-500">No activity history found.</p>
                                         {% endfor %}
                                     </div>
+                                    {% else %}
+                                    <div class="alert alert-light d-flex align-items-center p-4 mb-0 text-center justify-content-center" role="alert">
+                                        <div>
+                                            <i class="fas fa-history text-muted mb-3" style="font-size: 2rem; display: block;"></i>
+                                            <strong>No activity yet</strong>
+                                            <p class="fs--1 mb-0 text-600">Activity will appear here as you work on this site</p>
+                                        </div>
+                                    </div>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
@@ -411,102 +525,146 @@
 
                 <!-- SIDEBAR -->
                 <div class="col-lg-4 ps-lg-2">
-                    <div class="card mb-3">
-                        <div class="card-header bg-light">
-                            <h5 class="mb-0">Financial Pulse</h5>
+                    <!-- Financial Pulse Card -->
+                    <div class="card mb-3 border-0 shadow-sm">
+                        <div class="card-header bg-white border-bottom">
+                            <h5 class="mb-0"><i class="fas fa-pulse text-danger me-2"></i>Financial Pulse</h5>
                         </div>
                         <div class="card-body">
-                            <div class="mb-3">
-                                <div class="d-flex flex-between-center mb-1">
-                                    <h6 class="mb-0 text-700">Budget Usage</h6>
-                                    <span class="badge badge-soft-warning">{{ site.budget_usage_percentage }}%</span>
+                            <!-- Budget Usage -->
+                            {% if site.budget %}
+                            <div class="mb-4">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="mb-0 text-700"><i class="fas fa-chart-pie me-1"></i>Budget Usage</h6>
+                                    <span class="badge rounded-pill {% if site.budget_usage_percentage > 80 %}bg-danger{% elif site.budget_usage_percentage > 60 %}bg-warning{% else %}bg-success{% endif %}">
+                                        {{ site.budget_usage_percentage }}%
+                                    </span>
                                 </div>
-                                {% if site.budget %}
-                                <div class="progress" style="height: 10px;">
-                                    <div class="progress-bar bg-warning rounded-pill" role="progressbar"
+                                <div class="progress" style="height: 12px;">
+                                    <div class="progress-bar {% if site.budget_usage_percentage > 80 %}bg-danger{% elif site.budget_usage_percentage > 60 %}bg-warning{% else %}bg-success{% endif %} rounded-pill" role="progressbar"
                                         style="width: {{ site.budget_usage_percentage }}%"
                                         aria-valuenow="{{ site.budget_usage_percentage }}" aria-valuemin="0"
-                                        aria-valuemax="100">
-                                    </div>
+                                        aria-valuemax="100"></div>
                                 </div>
-                                <div class="row g-0 mt-2">
-                                    <div class="col-6">
-                                        <p class="fs--2 mb-0 text-500 text-uppercase fw-bold">Budgeted</p>
-                                        <h5 class="mb-0">${{ site.budget.total_amount|floatformat:0 }}</h5>
+                                <div class="row g-2 mt-3">
+                                    <div class="col-6 p-2 bg-light rounded-2">
+                                        <p class="fs--2 mb-1 text-500 text-uppercase fw-bold">Budgeted</p>
+                                        <h5 class="mb-0 text-primary">${{ site.budget.total_amount|floatformat:0 }}</h5>
                                     </div>
-                                    <div class="col-6 text-end text-warning">
-                                        <p class="fs--2 mb-0 text-500 text-uppercase fw-bold">Spent</p>
-                                        <h5 class="mb-0 text-warning">${{ site.total_spent|floatformat:0 }}</h5>
-                                    </div>
-                                </div>
-                                {% else %}
-                                <p class="fs--1 text-500 italic mb-0">No budget assigned yet.</p>
-                                {% endif %}
-                            </div>
-                            <div class="mb-0">
-                                <h6 class="mb-2 text-700">Revenue Performance</h6>
-                                <div class="row g-2">
-                                    <div class="col-6">
-                                        <div class="bg-soft-success p-2 rounded-3">
-                                            <p class="fs--2 mb-0 text-success text-uppercase fw-bold">Income</p>
-                                            <h5 class="mb-0 text-success">${{ site.total_revenue|floatformat:0 }}</h5>
-                                        </div>
-                                    </div>
-                                    <div class="col-6">
-                                        <div
-                                            class="{% if site.net_profit >= 0 %}bg-soft-primary{% else %}bg-soft-danger{% endif %} p-2 rounded-3">
-                                            <p class="fs--2 mb-0 text-uppercase fw-bold">Net Profit</p>
-                                            <h5 class="mb-0 {% if site.net_profit < 0 %}text-danger{% endif %}">${{
-                                                site.net_profit|floatformat:0 }}</h5>
-                                        </div>
+                                    <div class="col-6 p-2 bg-light rounded-2">
+                                        <p class="fs--2 mb-1 text-500 text-uppercase fw-bold">Spent</p>
+                                        <h5 class="mb-0 {% if site.budget_usage_percentage > 80 %}text-danger{% elif site.budget_usage_percentage > 60 %}text-warning{% else %}text-success{% endif %}">
+                                            ${{ site.total_spent|floatformat:0 }}
+                                        </h5>
                                     </div>
                                 </div>
                             </div>
+                            {% else %}
+                            <div class="alert alert-info p-2 fs--1 mb-0">
+                                <i class="fas fa-info-circle me-1"></i>No budget assigned to this site
+                            </div>
+                            {% endif %}
 
                             <hr class="my-3" />
-                            <div class="d-flex align-items-center mb-3">
-                                <div class="icon-item icon-item-sm bg-soft-primary shadow-none me-3"><span
-                                        class="fas fa-users text-primary"></span></div>
-                                <div class="flex-1">
-                                    <h6 class="mb-0">Active Staff</h6>
-                                    <p class="fs--1 mb-0">{{ site.assignments.count }} assigned personnel</p>
-                                </div>
-                            </div>
-                            <div class="d-flex align-items-center">
-                                <div class="icon-item icon-item-sm bg-soft-info shadow-none me-3"><span
-                                        class="fas fa-truck-loading text-info"></span></div>
-                                <div class="flex-1">
-                                    <h6 class="mb-0">Supply Line</h6>
-                                    <p class="fs--1 mb-0">{{ site.material_requests.count }} material requests</p>
+
+                            <!-- Revenue Performance -->
+                            <div class="mb-3">
+                                <h6 class="mb-3 text-700"><i class="fas fa-chart-line me-1"></i>Revenue Performance</h6>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <div class="p-3 bg-soft-success rounded-3 text-center border border-success border-opacity-25">
+                                            <p class="fs--2 mb-1 text-600 text-uppercase fw-bold">Income</p>
+                                            <h5 class="mb-0 text-success fw-bold">${{ site.total_revenue|floatformat:0 }}</h5>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="p-3 {% if site.net_profit >= 0 %}bg-soft-primary{% else %}bg-soft-danger{% endif %} rounded-3 text-center border {% if site.net_profit >= 0 %}border-primary{% else %}border-danger{% endif %} border-opacity-25">
+                                            <p class="fs--2 mb-1 text-uppercase fw-bold {% if site.net_profit >= 0 %}text-primary{% else %}text-danger{% endif %}">Net Profit</p>
+                                            <h5 class="mb-0 fw-bold {% if site.net_profit < 0 %}text-danger{% else %}text-primary{% endif %}">
+                                                ${{ site.net_profit|floatformat:0 }}
+                                            </h5>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="card mb-3">
-                        <div class="card-header bg-light">
-                            <h5 class="mb-0">Project Metadata</h5>
+                    <!-- Quick Stats Card -->
+                    <div class="card mb-3 border-0 shadow-sm">
+                        <div class="card-header bg-white border-bottom">
+                            <h5 class="mb-0"><i class="fas fa-tachometer-alt text-info me-2"></i>Quick Stats</h5>
                         </div>
-                        <div class="card-body fs--1">
-                            <div class="row g-0 mb-2">
-                                <div class="col-5 text-600">Site ID:</div>
-                                <div class="col-7 fw-semi-bold">{{ site.unique_id }}</div>
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-3 pb-3 border-bottom">
+                                <div class="avatar avatar-m rounded-2 bg-soft-primary text-primary me-3">
+                                    <i class="fas fa-users"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="mb-0 fs--1 text-600">Active Staff</p>
+                                    <h6 class="mb-0 fw-semibold">{{ site.assignments.count }}</h6>
+                                </div>
                             </div>
-                            <div class="row g-0 mb-2">
-                                <div class="col-5 text-600">Location:</div>
-                                <div class="col-7">{{ site.location }}</div>
+                            <div class="d-flex align-items-center mb-3 pb-3 border-bottom">
+                                <div class="avatar avatar-m rounded-2 bg-soft-warning text-warning me-3">
+                                    <i class="fas fa-boxes"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="mb-0 fs--1 text-600">Material Requests</p>
+                                    <h6 class="mb-0 fw-semibold">{{ site.material_requests.count }}</h6>
+                                </div>
                             </div>
-                            <div class="row g-0 mb-2">
-                                <div class="col-5 text-600">Status:</div>
-                                <div class="col-7">
-                                    <span
-                                        class="badge rounded-pill {% if site.status == 'ACTIVE' %}badge-soft-success{% else %}badge-soft-warning{% endif %}">{{
-                                        site.status }}</span>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar avatar-m rounded-2 bg-soft-info text-info me-3">
+                                    <i class="fas fa-tasks"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="mb-0 fs--1 text-600">Project Phases</p>
+                                    <h6 class="mb-0 fw-semibold">{{ site.phases.count }}</h6>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Project Metadata Card -->
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white border-bottom">
+                            <h5 class="mb-0"><i class="fas fa-file-alt text-secondary me-2"></i>Project Details</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-0 mb-3 pb-3 border-bottom">
+                                <div class="col-5">
+                                    <p class="fs--1 text-600 mb-0 fw-bold">Site ID</p>
+                                </div>
+                                <div class="col-7 text-end">
+                                    <code class="fs--2 bg-light px-2 py-1 rounded">{{ site.unique_id }}</code>
+                                </div>
+                            </div>
+                            <div class="row g-0 mb-3 pb-3 border-bottom">
+                                <div class="col-5">
+                                    <p class="fs--1 text-600 mb-0 fw-bold">Location</p>
+                                </div>
+                                <div class="col-7 text-end">
+                                    <p class="fs--1 mb-0">{{ site.location }}</p>
+                                </div>
+                            </div>
+                            <div class="row g-0 mb-3 pb-3 border-bottom">
+                                <div class="col-5">
+                                    <p class="fs--1 text-600 mb-0 fw-bold">Status</p>
+                                </div>
+                                <div class="col-7 text-end">
+                                    <span class="badge rounded-pill {% if site.status == 'ACTIVE' %}bg-success{% else %}bg-warning{% endif %}">
+                                        {{ site.status }}
+                                    </span>
                                 </div>
                             </div>
                             <div class="row g-0">
-                                <div class="col-5 text-600">Managing Entity:</div>
-                                <div class="col-7 text-primary fw-semi-bold">{{ site.cabinet.name }}</div>
+                                <div class="col-5">
+                                    <p class="fs--1 text-600 mb-0 fw-bold">Entity</p>
+                                </div>
+                                <div class="col-7 text-end">
+                                    <p class="fs--1 mb-0 text-primary fw-semibold">{{ site.cabinet.name }}</p>
+                                </div>
                             </div>
                         </div>
                     </div>

@@ -1,6 +1,6 @@
 {% extends 'falcon_base.html' %}
 
-{% block title %}Request Material - ChantierMobile{% endblock %}
+{% block title %}Material Request - ChantierMobile{% endblock %}
 
 {% block content %}
 <div class="container" data-layout="container-fluid">
@@ -15,72 +15,401 @@
 
         <!-- Main Content -->
         <div class="container-fluid py-4">
-            <div class="card mb-3">
-                <div class="card-header">
-                    <h5 class="mb-0">Request Material</h5>
+            <div class="card mb-3 border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom p-3">
+                    <h5 class="mb-0"><i class="fas fa-shopping-cart me-2 text-primary"></i>Create Material Request</h5>
+                    <p class="fs--1 text-600 mb-0 mt-1">Add one or multiple materials for this site</p>
                 </div>
-                <div class="card-body bg-light">
-                    <form method="post">
+                <div class="card-body p-4">
+                    <form method="post" id="material-request-form">
                         {% csrf_token %}
 
-                        <div class="mb-3">
-                            <label class="form-label" for="{{ form.site.id_for_label }}">Project / Site</label>
-                            {{ form.site }}
-                            {% if form.site.errors %}
-                            <div class="text-danger fs--2">
-                                {{ form.site.errors }}
+                        <!-- Site Selection -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-12">
+                                <label class="form-label fw-semibold" for="{{ form.site.id_for_label }}">
+                                    <i class="fas fa-map-marker-alt me-1"></i>Project / Site
+                                </label>
+                                {{ form.site }}
+                                {% if form.site.errors %}
+                                <div class="text-danger fs--2 mt-1">
+                                    {{ form.site.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Materials Formset Section -->
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="mb-0"><i class="fas fa-boxes me-2 text-warning"></i>Materials to Request</h6>
+                                <span class="badge bg-info" id="item-count">{{ items_formset|length }} item{{ items_formset|length|pluralize }}</span>
+                            </div>
+                            
+                            <!-- Materials List -->
+                            <div id="materials-container" class="space-y-2">
+                                {% for form in items_formset %}
+                                <div class="material-item p-3 border rounded-3 border-200 mb-2" data-form-index="{{ forloop.counter0 }}">
+                                    <div class="row g-2 align-items-end">
+                                        <!-- Material Selection -->
+                                        <div class="col-md-5">
+                                            <label class="form-label fs--1 fw-semibold">Material</label>
+                                            {{ form.material }}
+                                            {% if form.material.errors %}
+                                            <div class="text-danger fs--2 mt-1">
+                                                {{ form.material.errors }}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+
+                                        <!-- Quantity -->
+                                        <div class="col-md-3">
+                                            <label class="form-label fs--1 fw-semibold">Quantity</label>
+                                            <div class="input-group">
+                                                {{ form.quantity }}
+                                                <span class="input-group-text material-unit" id="unit-{{ forloop.counter0 }}">unit</span>
+                                            </div>
+                                            {% if form.quantity.errors %}
+                                            <div class="text-danger fs--2 mt-1">
+                                                {{ form.quantity.errors }}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+
+                                        <!-- Actions -->
+                                        <div class="col-md-4 d-flex gap-2 align-items-end">
+                                            {% if not forloop.first %}
+                                            <button type="button" class="btn btn-sm btn-outline-danger remove-material" title="Remove this material">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                            {% endif %}
+                                            <button type="button" class="btn btn-sm btn-outline-secondary toggle-notes" title="Add notes">
+                                                <i class="fas fa-sticky-note"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Notes Section (Hidden by default) -->
+                                    <div class="notes-section mt-2" style="display: none;">
+                                        <label class="form-label fs--1 fw-semibold">Notes (Optional)</label>
+                                        {{ form.notes }}
+                                        {% if form.notes.errors %}
+                                        <div class="text-danger fs--2 mt-1">
+                                            {{ form.notes.errors }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Estimated Cost Display -->
+                                    <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center">
+                                        <small class="text-600">Estimated Cost:</small>
+                                        <strong class="text-primary" id="cost-{{ forloop.counter0 }}">$0.00</strong>
+                                    </div>
+
+                                    <!-- Hidden delete checkbox for formset -->
+                                    {{ form.DELETE }}
+                                    {{ form.id }}
+                                </div>
+                                {% endfor %}
+
+                                <!-- Management form (required for formset) -->
+                                {{ items_formset.management_form }}
+                                
+                                <!-- Formset errors -->
+                                {% if items_formset.non_form_errors %}
+                                <div class="alert alert-danger">
+                                    {{ items_formset.non_form_errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Add Material Button -->
+                            <button type="button" id="add-material-btn" class="btn btn-sm btn-outline-primary mt-3">
+                                <i class="fas fa-plus me-1"></i>Add Another Material
+                            </button>
+                        </div>
+
+                        <!-- Summary Card -->
+                        <div class="p-3 bg-light rounded-3 mb-4">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <p class="fs--1 text-600 mb-1">Total Items:</p>
+                                    <h5 class="mb-0" id="total-items">{{ items_formset|length }}</h5>
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="fs--1 text-600 mb-1">Estimated Total Cost:</p>
+                                    <h5 class="mb-0 text-success" id="total-cost">$0.00</h5>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- General Notes -->
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold" for="{{ form.notes.id_for_label }}">
+                                <i class="fas fa-comment me-1"></i>General Notes (Optional)
+                            </label>
+                            {{ form.notes }}
+                            {% if form.notes.errors %}
+                            <div class="text-danger fs--2 mt-1">
+                                {{ form.notes.errors }}
                             </div>
                             {% endif %}
                         </div>
-                </div>
 
-                <div class="row mb-3">
-                    <div class="col-md-8">
-                        <label class="form-label" for="{{ form.material.id_for_label }}">Select Material</label>
-                        {{ form.material }}
-                        {% if form.material.errors %}
-                        <div class="text-danger fs--2">
-                            {{ form.material.errors }}
+                        <!-- Action Buttons -->
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{% url 'materials:request_list' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-1"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-check me-1"></i>Submit Request
+                            </button>
                         </div>
-                        {% endif %}
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label" for="{{ form.quantity.id_for_label }}">Quantity
-                            Required</label>
-                        {{ form.quantity }}
-                        {% if form.quantity.errors %}
-                        <div class="text-danger fs--2">
-                            {{ form.quantity.errors }}
-                        </div>
-                        {% endif %}
-                    </div>
+                    </form>
                 </div>
-
-                <div class="col-12 d-flex justify-content-end gap-2">
-                    <a href="{% url 'materials:request_list' %}" class="btn btn-falcon-default">Cancel</a>
-                    <button type="submit" class="btn btn-primary">Submit Request</button>
-                </div>
-                </form>
             </div>
         </div>
+
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
     </div>
-    <!-- Footer -->
-    {% include 'includes/footer.html' %}
-</div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const inputs = document.querySelectorAll('input, select, textarea');
-        inputs.forEach(input => {
-            if (input.tagName === 'SELECT') {
-                input.classList.add('form-select');
-            } else {
-                input.classList.add('form-control');
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('material-request-form');
+    const container = document.getElementById('materials-container');
+    const addBtn = document.getElementById('add-material-btn');
+    const siteSelect = document.getElementById('id_site');
+    const totalItemsSpan = document.getElementById('total-items');
+    const totalCostSpan = document.getElementById('total-cost');
+    const itemCountBadge = document.querySelector('.badge.bg-info');
+
+    // Fetch material data cache
+    let materialData = {};
+
+    // Fetch material data (units and costs)
+    function fetchMaterialData() {
+        fetch('{% url "materials:materials_data" %}', {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            materialData = data;
+            updateAllUnits();
+            updateTotalCost();
+        })
+        .catch(err => console.error('Error fetching material data:', err));
+    }
+
+    // Update unit display for a specific material
+    function updateUnit(select) {
+        const idx = select.closest('.material-item').dataset.formIndex;
+        const materialId = select.value;
+        const unitSpan = document.getElementById(`unit-${idx}`);
+        
+        if (materialData[materialId]) {
+            unitSpan.textContent = materialData[materialId].unit;
+        }
+        updateTotalCost();
+    }
+
+    // Update all units
+    function updateAllUnits() {
+        document.querySelectorAll('.material-item').forEach((item, idx) => {
+            const select = item.querySelector('select[name*="material"]');
+            if (select && select.value) {
+                const materialId = select.value;
+                const unitSpan = document.getElementById(`unit-${idx}`);
+                if (materialData[materialId]) {
+                    unitSpan.textContent = materialData[materialId].unit;
+                }
             }
         });
+    }
+
+    // Calculate estimated cost
+    function calculateItemCost(item) {
+        const idx = item.dataset.formIndex;
+        const materialSelect = item.querySelector('select[name*="material"]');
+        const quantityInput = item.querySelector('input[name*="quantity"]');
+        const costSpan = document.getElementById(`cost-${idx}`);
+        
+        const materialId = materialSelect.value;
+        const quantity = parseFloat(quantityInput.value) || 0;
+        
+        if (materialData[materialId] && materialData[materialId].cost_per_unit) {
+            const cost = materialData[materialId].cost_per_unit * quantity;
+            costSpan.textContent = '$' + cost.toFixed(2);
+        } else {
+            costSpan.textContent = '$0.00';
+        }
+    }
+
+    // Update total cost
+    function updateTotalCost() {
+        let total = 0;
+        document.querySelectorAll('.material-item').forEach((item) => {
+            const costSpan = item.querySelector('[id^="cost-"]');
+            const costText = costSpan.textContent.replace('$', '');
+            total += parseFloat(costText) || 0;
+        });
+        totalCostSpan.textContent = '$' + total.toFixed(2);
+    }
+
+    // Toggle notes section
+    function setupNotesToggle(item) {
+        const btn = item.querySelector('.toggle-notes');
+        const notesSection = item.querySelector('.notes-section');
+        if (btn) {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                notesSection.style.display = notesSection.style.display === 'none' ? 'block' : 'none';
+                btn.classList.toggle('active');
+            });
+        }
+    }
+
+    // Setup remove button
+    function setupRemoveBtn(item) {
+        const btn = item.querySelector('.remove-material');
+        if (btn) {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                const deleteCheckbox = item.querySelector('input[name*="DELETE"]');
+                if (deleteCheckbox) {
+                    deleteCheckbox.checked = true;
+                    item.style.opacity = '0.5';
+                    item.style.pointerEvents = 'none';
+                    updateItemCount();
+                    updateTotalCost();
+                }
+            });
+        }
+    }
+
+    // Setup material select change handler
+    function setupMaterialSelect(item) {
+        const select = item.querySelector('select[name*="material"]');
+        const quantityInput = item.querySelector('input[name*="quantity"]');
+        
+        if (select) {
+            select.addEventListener('change', function () {
+                updateUnit(this);
+                calculateItemCost(item);
+            });
+        }
+        
+        if (quantityInput) {
+            quantityInput.addEventListener('input', function () {
+                calculateItemCost(item);
+            });
+        }
+    }
+
+    // Initialize a material item
+    function initializeItem(item) {
+        setupNotesToggle(item);
+        setupRemoveBtn(item);
+        setupMaterialSelect(item);
+        calculateItemCost(item);
+    }
+
+    // Add new material form
+    addBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        
+        const totalFormsInput = document.querySelector('input[name*="TOTAL_FORMS"]');
+        const currentCount = parseInt(totalFormsInput.value);
+        const newIndex = currentCount;
+
+        // Create new form HTML
+        const newForm = document.createElement('div');
+        newForm.className = 'material-item p-3 border rounded-3 border-200 mb-2';
+        newForm.dataset.formIndex = newIndex;
+        newForm.innerHTML = `
+            <div class="row g-2 align-items-end">
+                <div class="col-md-5">
+                    <label class="form-label fs--1 fw-semibold">Material</label>
+                    <select name="items-${newIndex}-material" class="form-select">
+                        <option value="">-- Select Material --</option>
+                        {% for material in materials %}
+                        <option value="${material.id}" data-unit="${material.unit}" data-cost="${material.estimated_cost_per_unit|default:0}">${material.name} (${material.unit})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fs--1 fw-semibold">Quantity</label>
+                    <div class="input-group">
+                        <input type="number" name="items-${newIndex}-quantity" step="0.01" placeholder="0.00" class="form-control">
+                        <span class="input-group-text material-unit" id="unit-${newIndex}">unit</span>
+                    </div>
+                </div>
+                <div class="col-md-4 d-flex gap-2 align-items-end">
+                    <button type="button" class="btn btn-sm btn-outline-danger remove-material" title="Remove this material">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary toggle-notes" title="Add notes">
+                        <i class="fas fa-sticky-note"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="notes-section mt-2" style="display: none;">
+                <label class="form-label fs--1 fw-semibold">Notes (Optional)</label>
+                <textarea name="items-${newIndex}-notes" class="form-control" placeholder="Notes for this item (optional)" rows="2"></textarea>
+            </div>
+            <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center">
+                <small class="text-600">Estimated Cost:</small>
+                <strong class="text-primary" id="cost-${newIndex}">$0.00</strong>
+            </div>
+            <input type="hidden" name="items-${newIndex}-id" id="id_items-${newIndex}-id">
+            <input type="hidden" name="items-${newIndex}-DELETE" id="id_items-${newIndex}-DELETE">
+        `;
+
+        container.appendChild(newForm);
+        totalFormsInput.value = currentCount + 1;
+        
+        initializeItem(newForm);
+        updateItemCount();
     });
+
+    // Update item count
+    function updateItemCount() {
+        const activeItems = container.querySelectorAll('.material-item').length;
+        const visibleItems = container.querySelectorAll('.material-item:not([style*="opacity"])').length;
+        totalItemsSpan.textContent = activeItems;
+        itemCountBadge.textContent = activeItems + ' item' + (activeItems !== 1 ? 's' : '');
+    }
+
+    // Apply Bootstrap classes to form inputs
+    document.querySelectorAll('input, select, textarea').forEach(input => {
+        if (input.tagName === 'SELECT') {
+            if (!input.classList.contains('form-select')) {
+                input.classList.add('form-select');
+            }
+        } else if (input.tagName === 'TEXTAREA') {
+            if (!input.classList.contains('form-control')) {
+                input.classList.add('form-control');
+            }
+        } else if (input.type !== 'hidden') {
+            if (!input.classList.contains('form-control')) {
+                input.classList.add('form-control');
+            }
+        }
+    });
+
+    // Initialize existing materials
+    document.querySelectorAll('.material-item').forEach(item => {
+        initializeItem(item);
+    });
+
+    // Fetch material data on page load
+    fetchMaterialData();
+});
 </script>
 {% endblock %}
