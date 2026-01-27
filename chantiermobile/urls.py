@@ -15,6 +15,9 @@ urlpatterns = [
     path('materials/', include('materials.urls'), name='materials'),
     path('revenue/', include('revenue.urls'), name='revenue'),
     
+    # User accounts
+    path('user/', include('accounts.urls')),
+    
     # Language switching
     path('i18n/', include('django.conf.urls.i18n')),
     path('set-language/', set_language, name='set_language'),

@@ -1,15 +1,17 @@
 from django import forms
+from django.utils.translation import gettext_lazy as _
 from .models import Personnel, SiteAssignment, Skill
+from chantiermobile.constants import FormPlaceholders, FormHelpTexts, DatePickerConfig
 
 class PersonnelForm(forms.ModelForm):
     class Meta:
         model = Personnel
         fields = ['first_name', 'last_name', 'skills', 'default_daily_rate', 'user']
         widgets = {
-            'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'First Name'}),
-            'last_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Last Name'}),
+            'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.FIRST_NAME}),
+            'last_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.LAST_NAME}),
             'skills': forms.SelectMultiple(attrs={'class': 'form-select js-choice', 'multiple': 'multiple'}),
-            'default_daily_rate': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0.00'}),
+            'default_daily_rate': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.AMOUNT}),
             'user': forms.Select(attrs={'class': 'form-select'}),
         }
 
@@ -20,16 +22,16 @@ class SiteAssignmentForm(forms.ModelForm):
         widgets = {
             'personnel': forms.Select(attrs={'class': 'form-select'}),
             'site': forms.Select(attrs={'class': 'form-select'}),
-            'role': forms.TextInput(attrs={'class': 'form-control', 'placeholder': "e.g. Chef d'équipe"}),
+            'role': forms.TextInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.ROLE_EXAMPLE}),
             'start_date': forms.DateInput(attrs={
                 'class': 'form-control datetimepicker',
-                'placeholder': 'YYYY-MM-DD',
-                'data-options': '{"dateFormat":"Y-m-d","disableMobile":true}'
+                'placeholder': DatePickerConfig.DATE_FORMAT,
+                'data-options': DatePickerConfig.OPTIONS
             }),
             'end_date': forms.DateInput(attrs={
                 'class': 'form-control datetimepicker',
-                'placeholder': 'YYYY-MM-DD',
-                'data-options': '{"dateFormat":"Y-m-d","disableMobile":true}'
+                'placeholder': DatePickerConfig.DATE_FORMAT,
+                'data-options': DatePickerConfig.OPTIONS
             }),
             'daily_rate': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0.00'}),
         }
@@ -39,6 +41,6 @@ class SkillForm(forms.ModelForm):
         model = Skill
         fields = ['name', 'description']
         widgets = {
-            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Skill Name'}),
-            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Description...'}),
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.SKILL_NAME}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': FormPlaceholders.DESCRIPTION}),
         }

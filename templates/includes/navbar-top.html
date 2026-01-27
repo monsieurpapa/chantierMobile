@@ -57,7 +57,8 @@
       </div>
     </li>
 
-    <!-- User Profile Dropdown -->
+    <!-- User Profile Dropdown (RBAC: Only for authenticated users) -->
+    {% if user.is_authenticated %}
     <li class="nav-item dropdown">
       <a class="nav-link pe-0 ps-2" id="navbarDropdownUser" role="button" data-bs-toggle="dropdown" aria-haspopup="true"
         aria-expanded="false">
@@ -72,15 +73,24 @@
             {{ request.user.username }}
           </div>
           <div class="dropdown-divider"></div>
-          <a class="dropdown-item" href="#">{% trans "Profile Settings" %}</a>
+          <!-- RBAC: Profile link - Users can edit their own profile -->
+          <a class="dropdown-item" href="{% url 'accounts:profile_update' %}" title="{% trans 'Manage your profile and view your projects' %}">
+            <span class="fas fa-cog me-1"></span>{% trans "Profile Settings" %}
+          </a>
+          <!-- RBAC: Admin link - Only for staff members -->
           {% if user.is_staff %}
-          <a class="dropdown-item" href="/admin/" target="_blank">Django Admin</a>
+          <a class="dropdown-item" href="/admin/" target="_blank" title="{% trans 'Staff administration area' %}">
+            <span class="fas fa-shield-alt me-1"></span>Django Admin
+          </a>
           {% endif %}
           <div class="dropdown-divider"></div>
-          <a class="dropdown-item" href="{% url 'account_logout' %}">{% trans "Logout" %}</a>
+          <a class="dropdown-item" href="{% url 'account_logout' %}">
+            <span class="fas fa-sign-out-alt me-1"></span>{% trans "Logout" %}
+          </a>
         </div>
       </div>
     </li>
+    {% endif %}
     
     <!-- Language Switcher -->
     <li class="nav-item ms-2">

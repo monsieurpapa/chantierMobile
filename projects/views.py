@@ -154,7 +154,7 @@ class SiteDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, De
                 'date': progress.report_date,
                 'timestamp': progress.created_at,
                 'title': f"Progress logged for {progress.phase.name}",
-                'content': f"Completed: {progress.percentage_complete}% - {progress.notes}",
+                'content': f"Completed: {progress.percentage_complete}% - {progress.description}",
                 'icon': 'fas fa-chart-line',
                 'color': 'primary'
             })

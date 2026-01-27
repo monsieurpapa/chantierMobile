@@ -1,0 +1,751 @@
+{% extends 'falcon_base.html' %}
+{% load static %}
+{% load static app_filters %}
+{{ redirect_to_login_immediately }}
+{% block rendered_variables %}
+<script>
+  var peer_path_bandwidth_data =  JSON.stringify([[0,0],[0,0]]);
+  var peer_path_packet_loss_data =  JSON.stringify([[0,0],[0,0]])
+  var peer_path_jitter_data = JSON.stringify([[0,0],[0,0]])
+  var peer_path_latency_data = JSON.stringify([[0,0],[0,0]])
+
+  var top_sources_dataset = '{{ top_sources_dataset | safe }}';
+  var selected_peers_geo_data = '{{ selected_peers_geo_data | safe }}';
+  var selected_node_geo_data = '{{ selected_node_geo_data | safe }}';
+  var node_geo_data = '{{ node_geo_data | safe }}';
+  var markers = [];
+  var mapsPlaceholder = [];
+</script>
+{% endblock %}
+
+{% block content %}
+      <div class="container" data-layout="container-fluid">
+        <script>
+          var isFluid = JSON.parse(localStorage.getItem('isFluid'));
+          if (isFluid) {
+            var container = document.querySelector('[data-layout]');
+            container.classList.remove('container');
+            container.classList.add('container-fluid');
+          }
+        </script>
+        <nav class="navbar navbar-light navbar-vertical navbar-expand-xl">
+          <script>
+            var navbarStyle = localStorage.getItem("navbarStyle");
+            if (navbarStyle && navbarStyle !== 'transparent') {
+              document.querySelector('.navbar-vertical').classList.add(`navbar-${navbarStyle}`);
+            }
+          </script>
+          <div class="d-flex align-items-center">
+            <div class="toggle-icon-wrapper">
+
+              <button class="btn navbar-toggler-humburger-icon navbar-vertical-toggle" data-bs-toggle="tooltip" data-bs-placement="left" title="Toggle Navigation"><span class="navbar-toggle-icon"><span class="toggle-line"></span></span></button>
+
+            </div><a class="navbar-brand" href="/">
+              <div class="d-flex align-items-center py-3" id="main-logo"> 
+              </div>
+            </a>
+          </div>
+          <div class="collapse navbar-collapse" id="navbarVerticalCollapse">
+            <div class="navbar-vertical-content scrollbar">
+              <ul class="navbar-nav flex-column mb-3" id="navbarVerticalNav">
+                <li class="nav-item">
+                  <!-- parent pages--><!-- <a class="nav-link dropdown-indicator" href="#dashboard" role="button" data-bs-toggle="collapse" aria-expanded="true" aria-controls="dashboard"> -->
+                 <a class="nav-link" href="{% url 'home' %}" role="button" aria-expanded="true" aria-controls="dashboard">
+                    <div class="d-flex align-items-center"><span class="nav-link-icon"><span class="fas fa-chart-pie"></span></span><span class="nav-link-text ps-1">Dashboard</span>
+                    </div>
+                  </a>
+                  <!-- parent pages--><a class="nav-link" href="{% url 'routers_page' %}" role="button" data-bs-toggle="" aria-expanded="false">
+                    <div class="d-flex align-items-center"><span class="nav-link-icon"><span class="fas fa-poll"></span></span><span class="nav-link-text ps-1">Routers</span>
+                    </div>
+                  </a>                  
+                  <!-- parent pages--><a class="nav-link" href="{% url 'topology_page' %}" role="button" data-bs-toggle="" aria-expanded="false" aria-controls="maps">
+                    <div class="d-flex align-items-center"><span class="nav-link-icon"><span class="fas fa-map"></span></span><span class="nav-link-text ps-1">Topology</span>
+                    </div>
+                  </a>
+                  <!-- parent pages--><a class="nav-link" href="{% url 'alarms:all' %}" role="button" data-bs-toggle="" aria-expanded="false" aria-controls="maps">
+                    <div class="d-flex align-items-center"><span class="nav-link-icon"><span class="fas fa-bell"></span></span><span class="nav-link-text ps-1">Alarms</span>
+                    </div>
+                  </a>                  
+                  <!-- parent pages--><a class="nav-link" href="{% url 'user_profile' %}" role="button" data-bs-toggle="" aria-expanded="false" aria-controls="user">
+                    <div class="d-flex align-items-center"><span class="nav-link-icon"><span class="fas fa-user"></span></span><span class="nav-link-text ps-1">Profile</span>
+                    </div>
+                  </a>
+                  {% if perms.app_auth.is_super_admin %}
+                  <!-- parent pages--><a class="nav-link dropdown-indicator active" href="#admin" role="button" data-bs-toggle="collapse" aria-expanded="true" aria-controls="admin">
+                    <div class="d-flex align-items-center"><span class="nav-link-icon"><span class="fas fa-wrench"></span></span><span class="nav-link-text ps-1">Admin</span>
+                    </div>
+                  </a>
+                  <ul class="nav" id="admin">
+                    <li class="nav-item"><a class="nav-link" href="{% url 'platform_list' %}" data-bs-toggle="" aria-expanded="false">
+                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Platforms</span>
+                        </div>
+                      </a>
+                      <!-- more inner pages-->
+                    </li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'account_detail_view' %}" data-bs-toggle="" aria-expanded="false">
+                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Customers</span>
+                        </div>
+                      </a>
+                      <!-- more inner pages-->
+                    </li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'influxdb:nodes_report' %}" data-bs-toggle="" aria-expanded="false">
+                      <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Reports</span>
+                      </div>
+                    </a>
+                    <!-- more inner pages-->
+                  </li>                    
+                    <li class="nav-item"><a class="nav-link active" href="{% url 'user_list' %}" data-bs-toggle="" aria-expanded="false">
+                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Users</span>
+                        </div>
+                      </a>
+                      <!-- more inner pages-->
+                    </li>
+                  </ul>
+                  {% endif %}
+
+                  {% comment %}
+                  <!-- parent pages--><a class="nav-link" href="#!" role="button" data-bs-toggle="" aria-expanded="false">
+                    <div class="d-flex align-items-center"><span class="nav-link-icon"><span class="fas fa-comments"></span></span><span class="nav-link-text ps-1">Tickets</span>
+                    </div>
+                  </a> 
+                  {% endcomment %}                    
+                </li>
+              </ul>
+              <div class="settings mb-3">
+                <div class="card alert p-0 shadow-none bg-transparent light" role="alert">
+                  <div class="card-body text-left">
+                    <!-- <img src="{% static 'falcon/assets/img/icons/spot-illustrations/navbar-vertical.png' %}" alt="" width="80" /> -->
+                    <img src="{% static 'falcon/assets/img/logos/cran/png/logo-with-grey.png' %}" alt="" width="150" />
+                  </div>                                 
+                </div>
+              </div>
+            </div>
+          </div>
+        </nav>
+        <div class="content">
+          <nav class="navbar navbar-light navbar-glass navbar-top navbar-expand">
+            <button class="btn navbar-toggler-humburger-icon navbar-toggler me-1 me-sm-3" type="button" data-bs-toggle="collapse" data-bs-target="#navbarVerticalCollapse" aria-controls="navbarVerticalCollapse" aria-expanded="false" aria-label="Toggle Navigation"><span class="navbar-toggle-icon"><span class="toggle-line"></span></span></button>
+            <a class="navbar-brand me-1 me-sm-3" href="/">
+              <div class="d-flex align-items-center py-3"><img class="me-2" src="{% static 'falcon/assets/img/icons/cmc-logo.png' %}" alt="" width="100" />
+                <!-- <span class="font-sans-serif">falcon</span> -->
+              </div>
+            </a>
+            <ul class="navbar-nav align-items-center d-none d-lg-block">
+              <li class="nav-item">
+                <!-- <div class="search-box" data-list='{"valueNames":["title"]}'> -->
+                  <div class="search-box">
+                  <form class="position-relative" data-bs-toggle="search" data-bs-display="static">
+                    <input class="form-control search-input fuzzy-search" type="search" placeholder="" aria-label="Search" disabled />
+                    <span class="fas fa-search search-box-icon"></span>
+                  </form>
+                  <div class="btn-close-falcon-container position-absolute end-0 top-50 translate-middle shadow-none" data-bs-dismiss="search">
+                    <div class="btn-close-falcon" aria-label="Close"></div>
+                  </div>
+                  <div class="dropdown-menu border font-base start-0 mt-2 py-0 overflow-hidden w-100">
+                  </div>
+                </div>
+              </li>
+            </ul>
+            <ul class="navbar-nav navbar-nav-icons ms-auto flex-row align-items-center">
+              <li class="nav-item">
+                <div class="theme-control-toggle fa-icon-wait px-2">
+                  <input class="form-check-input ms-0 theme-control-toggle-input" id="themeControlToggle" type="checkbox" data-theme-control="theme" value="dark" />
+                  <label class="mb-0 theme-control-toggle-label theme-control-toggle-light" for="themeControlToggle" data-bs-toggle="tooltip" data-bs-placement="left" title="Switch to light theme"><span class="fas fa-sun fs-0"></span></label>
+                  <label class="mb-0 theme-control-toggle-label theme-control-toggle-dark" for="themeControlToggle" data-bs-toggle="tooltip" data-bs-placement="left" title="Switch to dark theme"><span class="fas fa-moon fs-0"></span></label>
+                </div>
+              </li>
+              <li class="nav-item dropdown">
+                <a class="nav-link notification-indicator notification-indicator-primary px-0 fa-icon-wait" id="navbarDropdownNotification" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-hide-on-body-scroll="data-hide-on-body-scroll"><span class="fas fa-bell" data-fa-transform="shrink-6" style="font-size: 33px;"></span></a>
+                <div class="dropdown-menu dropdown-menu-end dropdown-menu-card dropdown-menu-notification dropdown-caret-bg" aria-labelledby="navbarDropdownNotification">
+                </div>
+              </li>
+              <li class="nav-item dropdown">
+                <a class="nav-link fa-icon-wait nine-dots p-1" id="navbarDropdownMenu" role="button" data-hide-on-body-scroll="data-hide-on-body-scroll" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="43" viewBox="0 0 16 16" fill="none">
+                    <circle cx="2" cy="2" r="2" fill="#6C6E71"></circle>
+                    <circle cx="2" cy="8" r="2" fill="#6C6E71"></circle>
+                    <circle cx="2" cy="14" r="2" fill="#6C6E71"></circle>
+                    <circle cx="8" cy="8" r="2" fill="#6C6E71"></circle>
+                    <circle cx="8" cy="14" r="2" fill="#6C6E71"></circle>
+                    <circle cx="14" cy="8" r="2" fill="#6C6E71"></circle>
+                    <circle cx="14" cy="14" r="2" fill="#6C6E71"></circle>
+                    <circle cx="8" cy="2" r="2" fill="#6C6E71"></circle>
+                    <circle cx="14" cy="2" r="2" fill="#6C6E71"></circle>
+                  </svg></a>
+              </li>
+              <li class="nav-item dropdown"><a class="nav-link pe-0 ps-2" id="navbarDropdownUser" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                  <div class="avatar avatar-xl">                    
+                    {% if user.avatar %}
+                    <img class="rounded-circle" src="{{ user.avatar.name | minio_presigned_get_url }}" alt="" />
+                    {% else %}                    
+                    <img class="rounded-circle" src="{% static 'falcon/assets/img/team/3-thumb.png' %}" alt="" />
+                    {% endif %}  
+                  </div>
+                </a>
+                <div class="dropdown-menu dropdown-menu-end py-0" aria-labelledby="navbarDropdownUser">
+                  <div class="bg-white dark__bg-1000 rounded-2 py-2">
+                    <a class="dropdown-item fw-bold text-warning" href="{% url 'user_profile' %}"><span class="fas fa-user me-1"></span><span>{{ user.display_name }}</span></a>
+
+                    <div class="dropdown-divider"></div>
+                    <a class="dropdown-item" href="{% url 'user_profile' %}">Profile</a>
+                    <div class="dropdown-divider"></div>
+                    {% if qty_accounts > 1 %}
+                      <a class="dropdown-item" href="{% url 'switch_account' %}">Switch Profile</a>
+                    {% endif %}
+                    <a class="dropdown-item" href="{% url 'account_logout' %}">Logout</a>
+                  </div>
+                </div>
+              </li>
+            </ul>
+          </nav>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6 col-xxl-4">
+              <div class="card h-md-100 ecommerce-card-min-width">
+              <!-- <div class="card overflow-hidden" style="min-width: 12rem"> -->
+                <div class="bg-holder bg-card" style="background-image:url({% static 'falcon/assets/img/icons/spot-illustrations/corner-1.png' %});">
+                </div>                
+                  <div class="card-header pb-0 position-relative">
+                    <h5 class="mb-0 text-nowrap py-2 py-xl-0">
+                      <div>
+                          <span class="ms-1 text-400" data-bs-toggle="tooltip" data-bs-placement="top" title="The total number of all users on the platform">                        
+                            <span class="text-warning">All Users</span>
+                          </span>
+                      </div>                                      
+                    </h5>                  
+                  </div>  
+                <div class="card-body d-flex flex-column justify-content-end position-relative">
+                  <div class="row">
+                    <div class="col">
+                      <p class="font-sans-serif lh-1 mb-1 fs-2 text-warning" id="total-user-count">
+                        {{ users.count }}
+                      </p>                                         
+                    </div>
+                    <div class="col-auto ps-0">             
+                      <!-- <div class="echart-bar-weekly-sales h-100 echart-bar-weekly-sales-smaller-width"></div> -->
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6 col-xxl-4">
+              <div class="card h-md-100 ecommerce-card-min-width">                
+                  <div class="bg-holder bg-card" style="background-image:url({% static 'falcon/assets/img/icons/spot-illustrations/corner-3.png'  %});">
+                  </div>                
+                  <div class="card-header pb-0 position-relative">
+                    <h5 class="mb-0 text-nowrap py-2 py-xl-0">
+                      <div>
+                          <span class="ms-1 text-400" data-bs-toggle="tooltip" data-bs-placement="top" title="The total number of CMC users on the platform">                        
+                            <span class="text-info">CMC Users</span>
+                          </span>
+                      </div>                                      
+                    </h5>                  
+                  </div>  
+                  <div class="card-body d-flex flex-column justify-content-end position-relative">
+                    <div class="row">
+                      <div class="col">
+                        <p class="font-sans-serif lh-1 mb-1 fs-2 text-info" id="cmc-user-count">
+                          {{ cmc_users.count }}
+                        </p>
+                        <div id="selected-router-status">
+                        </div>
+                      </div>
+                      <div class="col-auto ps-0">
+                        <!-- <div class="echart-bar-weekly-sales h-100 echart-bar-weekly-sales-smaller-width"></div> -->
+                      </div>                    
+                    </div>
+                  </div>                
+              </div>
+            </div>  
+            <div class="col-md-6 col-xxl-4">
+              <div class="card h-md-100 ecommerce-card-min-width">
+                <div class="bg-holder bg-card" style="background-image:url({% static 'falcon/assets/img/icons/spot-illustrations/corner-2.png' %});">
+                </div>
+                  <div class="card-header pb-0 position-relative">
+                    <h5 class="mb-0 text-nowrap py-2 py-xl-0">
+                      <div>
+                          <span class="ms-1 text-400" data-bs-toggle="tooltip" data-bs-placement="top" title="The total number of admin users">                        
+                            <span class="text-primary">Admins</span>
+                          </span>
+                      </div>                                      
+                    </h5>                  
+                  </div>  
+                <div class="card-body d-flex flex-column justify-content-end position-relative">
+                  <div class="row">                                   
+                    <div class="col">
+                      <p class="font-sans-serif lh-1 mb-1 fs-2 text-primary" id="super-admins-count">
+                        {{ super_admins.count }}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>  
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-12 col-xxl-12">
+              <div class="card h-100 " id="customers-page-customers-table" data-list='{"valueNames":["name","org","parent","type","menu","domains"],"page":10,"pagination":true,"fallback":"pages-table-fallback"}'>
+                <div class="card-header">
+                  <div class="row flex-between-center">
+                    <div class="col-auto col-sm-8 col-lg-8">                                           
+                      <h5 class="mb-0 text-nowrap py-2 py-xl-0">
+                        <span>Users &nbsp;</span>(<span>{{ users.count }}</span>)
+                      </h5>
+                    </div>
+                    <div class="col-auto col-sm-4 col-lg-4"> 
+                      <div class="col-auto d-flex">
+                        <h5 class="mb-0 text-nowrap py-2 py-xl-0">
+                        </h5>
+                      </div>
+                    </div>                    
+                  </div>
+                </div>
+                <div class="card-body px-0 py-0">
+                  <div class="table-responsive scrollbar">
+                    <table class="table fs--1 mb-0 overflow-hidden table-hover">
+                      <thead class="bg-200 text-900">
+                        <tr>
+                          <th class="sort pe-1 align-middle white-space-nowrap" data-sort="name">Name</th>
+                          <th class="sort pe-1 align-middle white-space-nowrap" data-sort="org">Surname</th>
+                          <th class="sort pe-1 align-middle white-space-nowrap" data-sort="parent">Email</th>
+                          <th class="sort pe-1 align-middle white-space-nowrap" data-sort="type">Company</th>
+                          <th class="sort pe-1 align-middle white-space-nowrap" data-sort="type">Status</th>
+                          <th class="sort pe-1 align-middle white-space-nowrap" data-sort="type">Permissions</th>
+                          <th class="sort pe-1 align-middle white-space-nowrap" data-sort="menu"></th>
+                        </tr>
+                      </thead>
+                      <tbody class="list" id='all-customers'>  
+                        {% for user in users %}
+                          <tr class="hover-actions-trigger">
+                            <td class="align-middle text-nowrap">
+                              <div class="d-flex align-items-center">
+                                <div class="ms-2">{{ user.first_name }}</div>
+                              </div>
+                            </td>
+                            <td class="align-middle text-nowrap">{{ user.last_name }}</td>
+                            <td class="align-middle text-nowrap">{{ user.email }}</td>
+                            <td class="align-middle text-nowrap">{{ user.user_account.first.account.name }}</td>
+
+                            {% if user.is_active %}
+                              <td class="align-middle text-nowrap">
+                                <span class="fs--2 mb-0 ms-2 text-success">
+                                  active <span class="fas fa-user-check text-success"></span>
+                                </span> 
+                              </td>                             
+                            {% else %}
+                              <td class="align-middle text-nowrap">
+                                <span class="fs--2 mb-0 ms-2 text-danger">
+                                  not-active <span class="fas fa-user-alt-slash text-danger"></span>
+                                </span> 
+                              </td>                                 
+                            {% endif %}
+
+                            {% if user.is_super_admin %}
+                              <td class="align-middle text-nowrap">
+                                <span class="fs--2 mb-0 ms-2 text-danger">
+                                  admin <span class="fas fa-user-secret text-danger"></span>
+                                </span> 
+                              </td>                             
+                            {% else %}
+                              <td class="align-middle text-nowrap">
+                                <span class="fs--2 mb-0 ms-2 text-success">
+                                  user <span class="fas fa-user text-success"></span>
+                                </span> 
+                              </td>                                 
+                            {% endif %}
+
+                            <td class="w-auto">
+                              <div class="btn-group btn-group hover-actions end-0 me-4">
+
+                            {% if user.user_account.first.account.organization_id == 'cmc' %}
+                                {% if user.is_super_admin %}
+                                  <a href="{% url 'administer_user' user.pk %}">
+                                    <button class="btn btn-light ps-2" type="button" data-bs-toggle="tooltip" data-bs-placement="top" title="Revoke Admin Rights" >
+                                        <span class="fas fa-id-badge"></span>
+                                    </button> 
+                                  </a>                            
+                              {% else %}  
+                                  <a href="{% url 'administer_user' user.pk %}">
+                                    <button class="btn btn-light ps-2" type="button" data-bs-toggle="tooltip" data-bs-placement="top" title="Add Admin Rights" >
+                                        <span class="fas fa-user-secret"></span>
+                                    </button> 
+                                  </a>                             
+                              {% endif %}
+                            {% endif %}                                                          
+
+                            {% if user.is_active %}
+                                <a href="{% url 'deactivate_user' user.pk %}">
+                                  <button class="btn btn-light ps-2" type="button" data-bs-toggle="tooltip" data-bs-placement="top" title="Deactivate User">
+                                    <span class="fas fa-user-alt-slash"></span>
+                                  </button>
+                                </a>                             
+                            {% else %}
+                                <a href="{% url 'reactivate_user' user.pk %}">
+                                  <button class="btn btn-light ps-2" type="button" data-bs-toggle="tooltip" data-bs-placement="top" title="Reactivate User">
+                                    <span class="fas fa-user-check"></span>
+                                  </button>
+                                </a>                                  
+                            {% endif %}
+
+                              </div>
+                            </td>
+                          </tr>
+                        {% endfor %}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div class="text-center d-none" id="pages-table-fallback">
+                    <p class="fw-bold fs-1 mt-3">No Page found</p>
+                  </div>
+                </div>
+                <div class="card-footer">
+                  <div class="row align-items-center">
+                    <div class="pagination d-none"></div>
+                    <div class="col">
+                      <p class="mb-0 fs--1"><span class="d-none d-sm-inline-block me-2" data-list-info="data-list-info"></span></p>
+                    </div>
+                    <div class="col-auto d-flex">
+                      <button class="btn btn-sm btn-primary" type="button" data-list-pagination="prev"><span>Previous</span></button>
+                      <button class="btn btn-sm btn-primary px-4 ms-2" type="button" data-list-pagination="next"><span>Next</span></button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>            
+            <!-- end peer paths section -->
+        </div>
+        {% include 'includes/footer.html' %}
+        </div>
+      </div>
+      <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#loading-modal" id="loading-button" hidden>
+      </button>
+      
+{% if deactivate_user %}
+  {% if selected_user %}
+    <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#modal-deactivate-user" id="button-form-deactivate-user" hidden>
+    </button>
+    <div class="modal fade" id="modal-deactivate-user" tabindex="-1" role="dialog">
+      <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 650px">
+        <div class="modal-content position-relative">
+          <div class="position-absolute top-0 end-0 mt-2 me-2 z-index-1">
+            <button class="btn-close btn btn-sm btn-circle d-flex flex-center transition-base" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+          <div class="rounded-top-lg py-3 ps-4 pe-6 bg-light">
+            <h4 class="mb-1" id="modalExampleDemoLabel">Deactivate User</h4>
+          </div>              
+            <div class="p-4 pb-0">
+              <form id="form-delete-conductor" method="post" action="{% url 'deactivate_user' selected_user.pk %}">
+                {% csrf_token %}
+                {% for error in form.non_field_errors %}
+                  {% if error %}<span style="color: red;" >{{ error }}</span>{% endif %}
+                {% endfor %}   
+                {% for field in form %}
+                    <div class="mb-3">                                                                
+                        {% for error in field.errors %}
+                          <span style="color: red;" >{{ error }}</span>
+                        {% endfor %}                   
+                    </div>
+                {% endfor %}                                   
+                  <br>
+                <h5 class="mb-1">
+                  Hey {{ user.first_name }}, are you sure you want to deactivate <b>{{ selected_user.email }}</b>?
+                </h5>                
+                  <br>       
+                  <div class="mb-3">
+                    <button type="submit" name="submit" class="btn btn-primary d-block w-100 mt-3">Deactivate</button>
+                    <button type="button" class="btn btn-warning d-block w-100 mt-3" data-bs-dismiss="modal">Cancel</button>                        
+                  </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div> 
+  {% endif %}
+{% endif %}
+{% if reactivate_user %}
+  {% if selected_user %}
+    <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#modal-reactivate-user" id="button-form-reactivate-user" hidden>
+    </button>
+    <div class="modal fade" id="modal-reactivate-user" tabindex="-1" role="dialog">
+      <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 650px">
+        <div class="modal-content position-relative">
+          <div class="position-absolute top-0 end-0 mt-2 me-2 z-index-1">
+            <button class="btn-close btn btn-sm btn-circle d-flex flex-center transition-base" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+          <div class="rounded-top-lg py-3 ps-4 pe-6 bg-light">
+            <h4 class="mb-1" id="modalExampleDemoLabel">Activate User</h4>
+          </div>              
+            <div class="p-4 pb-0">
+              <form id="form-delete-conductor" method="post" action="{% url 'reactivate_user' selected_user.pk %}">
+                {% csrf_token %}
+                {% for error in form.non_field_errors %}
+                  {% if error %}<span style="color: red;" >{{ error }}</span>{% endif %}
+                {% endfor %}    
+                {% for field in form %}
+                    <div class="mb-3">                                                                
+                        {% for error in field.errors %}
+                          <span style="color: red;" >{{ error }}</span>
+                        {% endfor %}                   
+                    </div>
+                {% endfor %}                                  
+                  <br>
+                <h5 class="mb-1">
+                  Hey {{ user.first_name }}, are you sure you want to activate <b>{{ selected_user.email }}</b>?
+                </h5>                
+                  <br>       
+                  <div class="mb-3">
+                    <button type="submit" name="submit" class="btn btn-primary d-block w-100 mt-3">Activate User</button>
+                    <button type="button" class="btn btn-warning d-block w-100 mt-3" data-bs-dismiss="modal">Cancel</button>                        
+                  </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div> 
+  {% endif %}
+{% endif %}
+{% if administer_user %}
+  {% if selected_user %}
+    <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#modal-administer-user" id="button-form-administer-user" hidden>
+    </button>
+    <div class="modal fade" id="modal-administer-user" tabindex="-1" role="dialog">
+      <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 650px">
+        <div class="modal-content position-relative">
+          <div class="position-absolute top-0 end-0 mt-2 me-2 z-index-1">
+            <button class="btn-close btn btn-sm btn-circle d-flex flex-center transition-base" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+          <div class="rounded-top-lg py-3 ps-4 pe-6 bg-light">            
+            {% if selected_user.is_super_admin %}
+              <h4 class="mb-1" id="modalExampleDemoLabel">Revoke Admin Rights</h4>
+            {% else %} 
+              <h4 class="mb-1" id="modalExampleDemoLabel">Grant Admin Rights</h4> 
+            {% endif %}          
+          </div>              
+            <div class="p-4 pb-0">
+              <form id="form-delete-conductor" method="post" action="{% url 'administer_user' selected_user.pk %}">
+                {% csrf_token %}
+                {% for error in form.non_field_errors %}
+                  {% if error %}<span style="color: red;" >{{ error }}</span>{% endif %}
+                {% endfor %}   
+                {% for field in form %}
+                    <div class="mb-3">                                                                  
+                        {% for error in field.errors %}
+                          <span style="color: red;" >{{ error }}</span>
+                        {% endfor %}                   
+                    </div>
+                {% endfor %}                                   
+                  <br>
+
+                {% if selected_user.is_super_admin %}
+                <h5 class="mb-1">
+                  Hey {{ user.first_name }}, are you sure you want to <b>REVOKE</b> Admin permissions for <b>{{ selected_user.email }}</b>?
+                </h5> 
+                {% else %}
+                <h5 class="mb-1">
+                  Hey {{ user.first_name }}, are you sure you want to <b>GRANT</b> Admin permissions to <b>{{ selected_user.email }}</b>?
+                </h5>                 
+                {% endif %}               
+                  <br>       
+                  <div class="mb-3">
+                    <button type="submit" name="submit" class="btn btn-primary d-block w-100 mt-3">Submit</button>
+                    <button type="button" class="btn btn-warning d-block w-100 mt-3" data-bs-dismiss="modal">Cancel</button>                        
+                  </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div> 
+  {% endif %}
+{% endif %}
+
+{% if form.errors %}
+  {% if form.selected_user.pk %}
+    {% if deactivate_user %}
+        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#modal-deactivate-user-error" id="button-form-deactivate-user-error" hidden>
+        </button>
+        <div class="modal fade" id="modal-deactivate-user-error" tabindex="-1" role="dialog">
+          <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 650px">
+            <div class="modal-content position-relative">
+              <div class="position-absolute top-0 end-0 mt-2 me-2 z-index-1">
+                <button class="btn-close btn btn-sm btn-circle d-flex flex-center transition-base" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+              <div class="rounded-top-lg py-3 ps-4 pe-6 bg-light">
+                <h4 class="mb-1" id="modalExampleDemoLabel">Deactivate User</h4>
+              </div>              
+                <div class="p-4 pb-0">
+                  <form id="form-delete-conductor" method="post" action="{% url 'deactivate_user' form.selected_user.pk %}">
+                    {% csrf_token %}
+                    {% for error in form.non_field_errors %}
+                      {% if error %}<span style="color: red;" >{{ error }}</span>{% endif %}
+                    {% endfor %}  
+                      {% for field in form %}
+                          <div class="mb-3">                                                                  
+                              {% for error in field.errors %}
+                                <span style="color: red;" >{{ error }}</span>
+                              {% endfor %}                   
+                          </div>
+                      {% endfor %}                                       
+                      <br>
+                    <h5 class="mb-1">
+                      Hey {{ user.first_name }}, are you sure you want to deactivate <b>{{ form.selected_user.email }}</b>?
+                    </h5>                
+                      <br>       
+                      <div class="mb-3">
+                        <button type="submit" name="submit" class="btn btn-primary d-block w-100 mt-3">Deactivate</button>
+                        <button type="button" class="btn btn-warning d-block w-100 mt-3" data-bs-dismiss="modal">Cancel</button>                        
+                      </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div> 
+    {% endif %}
+    {% if reactivate_user %}
+        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#modal-reactivate-user-error" id="button-form-reactivate-user-error" hidden>
+        </button>
+        <div class="modal fade" id="modal-reactivate-user-error" tabindex="-1" role="dialog">
+          <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 650px">
+            <div class="modal-content position-relative">
+              <div class="position-absolute top-0 end-0 mt-2 me-2 z-index-1">
+                <button class="btn-close btn btn-sm btn-circle d-flex flex-center transition-base" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+              <div class="rounded-top-lg py-3 ps-4 pe-6 bg-light">
+                <h4 class="mb-1" id="modalExampleDemoLabel">Activate User</h4>
+              </div>              
+                <div class="p-4 pb-0">
+                  <form id="form-delete-conductor" method="post" action="{% url 'reactivate_user' form.selected_user.pk %}">
+                    {% csrf_token %}
+                    {% for error in form.non_field_errors %}
+                      {% if error %}<span style="color: red;" >{{ error }}</span>{% endif %}
+                    {% endfor %}  
+                    {% for field in form %}
+                        <div class="mb-3">                                                                  
+                            {% for error in field.errors %}
+                              <span style="color: red;" >{{ error }}</span>
+                            {% endfor %}                   
+                        </div>
+                    {% endfor %}                                                                             
+                      <br>
+                    <h5 class="mb-1">
+                      Hey {{ user.first_name }}, are you sure you want to activate <b>{{ form.selected_user.email }}</b>?
+                    </h5>                
+                      <br>       
+                      <div class="mb-3">
+                        <button type="submit" name="submit" class="btn btn-primary d-block w-100 mt-3">Activate User</button>
+                        <button type="button" class="btn btn-warning d-block w-100 mt-3" data-bs-dismiss="modal">Cancel</button>                        
+                      </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div> 
+    {% endif %}
+    {% if administer_user %}
+        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#modal-administer-user-error" id="button-form-administer-user-error" hidden>
+        </button>
+        <div class="modal fade" id="modal-administer-user-error" tabindex="-1" role="dialog">
+          <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 650px">
+            <div class="modal-content position-relative">
+              <div class="position-absolute top-0 end-0 mt-2 me-2 z-index-1">
+                <button class="btn-close btn btn-sm btn-circle d-flex flex-center transition-base" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+              <div class="rounded-top-lg py-3 ps-4 pe-6 bg-light">            
+                {% if form.selected_user.is_super_admin %}                
+                  <h4 class="mb-1" id="modalExampleDemoLabel">Revoke Admin Rights</h4>
+                {% else %} 
+                  <h4 class="mb-1" id="modalExampleDemoLabel">Grant Admin Rights</h4> 
+                {% endif %}          
+              </div>              
+                <div class="p-4 pb-0">
+                  <form id="form-delete-conductor" method="post" action="{% url 'administer_user' form.selected_user.pk %}">
+                    {% csrf_token %}
+                    {% for error in form.non_field_errors %}
+                      {% if error %}<span style="color: red;" >{{ error }}</span>{% endif %}
+                    {% endfor %}  
+                    {% for field in form %}
+                        <div class="mb-3">                                                                  
+                            {% for error in field.errors %}
+                              <span style="color: red;" >{{ error }}</span>
+                            {% endfor %}                   
+                        </div>
+                    {% endfor %}                                                                             
+                      <br>
+
+                    {% if form.selected_user.is_super_admin %}
+                    <h5 class="mb-1">
+                      Hey {{ user.first_name }}, are you sure you want to <b>REVOKE</b> Admin permissions for <b>{{ form.selected_user.email }}</b>?
+                    </h5> 
+                    {% else %}
+                    <h5 class="mb-1">
+                      Hey {{ user.first_name }}, are you sure you want to <b>GRANT</b> Admin permissions to <b>{{ form.selected_user.email }}</b>?
+                    </h5>                 
+                    {% endif %}               
+                      <br>       
+                      <div class="mb-3">
+                        <button type="submit" name="submit" class="btn btn-primary d-block w-100 mt-3">Submit</button>
+                        <button type="button" class="btn btn-warning d-block w-100 mt-3" data-bs-dismiss="modal">Cancel</button>                        
+                      </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div> 
+      {% endif %}     
+    {% endif %}              
+  {% endif %}
+  
+{% endblock %}
+
+{% block extra_js %}
+                                           
+{% if form.errors %}
+  {% if reactivate_user %}
+    <script>
+      $('#button-form-reactivate-user-error').click();
+    </script>  
+  {% elif deactivate_user %}
+    <script>
+      $('#button-form-deactivate-user-error').click();
+    </script>
+  {% elif administer_user %}    
+    <script>
+      $('#button-form-administer-user-error').click();
+    </script>  
+  {% endif %}
+{% else %}
+  {% if deactivate_user %}
+      <script>
+        $('#button-form-deactivate-user').click();
+      </script> 
+  {% endif %}
+  {% if reactivate_user %} 
+      <script>
+        $('#button-form-reactivate-user').click();
+      </script> 
+  {% endif %}
+  {% if administer_user %} 
+      <script>
+        $('#button-form-administer-user').click();
+      </script> 
+  {% endif %}  
+{% endif %}
+
+
+{% endblock %}
+
+

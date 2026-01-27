@@ -1,0 +1,406 @@
+{% extends 'base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "User Details" %} - {{ object.username }} - ChantiérMobile{% endblock %}
+
+{% block subcontent %}
+<div class="row">
+    <div class="col-12">
+        <!-- Header -->
+        <div class="page-header mb-4">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h1 class="page-header-title">
+                        <span class="fas fa-user-circle me-2"></span>{{ object.username }}
+                    </h1>
+                    <p class="text-500">
+                        {{ object.get_full_name|default:object.email }}
+                    </p>
+                </div>
+                <div class="col-auto">
+                    <a href="{% url 'accounts:admin_users_list' %}" class="btn btn-falcon-default">
+                        <span class="fas fa-arrow-left me-2"></span>{% trans "Back to Users" %}
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Messages -->
+        {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        <div class="row g-3">
+            <!-- Left Column: Account Details -->
+            <div class="col-lg-8">
+                <!-- Basic Information -->
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">
+                            <span class="fas fa-id-card me-2"></span>{% trans "Account Information" %}
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <label class="col-sm-3 fw-semi-bold">{% trans "Username" %}</label>
+                            <div class="col-sm-9">
+                                <code>{{ object.username }}</code>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <label class="col-sm-3 fw-semi-bold">{% trans "First Name" %}</label>
+                            <div class="col-sm-9">
+                                {{ object.first_name|default:"—" }}
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <label class="col-sm-3 fw-semi-bold">{% trans "Last Name" %}</label>
+                            <div class="col-sm-9">
+                                {{ object.last_name|default:"—" }}
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <label class="col-sm-3 fw-semi-bold">{% trans "Email" %}</label>
+                            <div class="col-sm-9">
+                                <a href="mailto:{{ object.email }}">{{ object.email }}</a>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <label class="col-sm-3 fw-semi-bold">{% trans "Phone" %}</label>
+                            <div class="col-sm-9">
+                                {{ object.phone_number|default:"—" }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Account Status -->
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">
+                            <span class="fas fa-toggle-on me-2"></span>{% trans "Account Status" %}
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <label class="col-sm-3 fw-semi-bold">{% trans "Active" %}</label>
+                            <div class="col-sm-9">
+                                {% if object.is_active %}
+                                    <span class="badge bg-soft-success text-success">
+                                        <span class="fas fa-check-circle me-1"></span>{% trans "Active" %}
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-soft-danger text-danger">
+                                        <span class="fas fa-ban me-1"></span>{% trans "Inactive" %}
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <label class="col-sm-3 fw-semi-bold">{% trans "Staff" %}</label>
+                            <div class="col-sm-9">
+                                {% if object.is_staff %}
+                                    <span class="badge bg-soft-info text-info">
+                                        <span class="fas fa-briefcase me-1"></span>{% trans "Staff" %}
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-soft-secondary text-secondary">{% trans "Regular User" %}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <label class="col-sm-3 fw-semi-bold">{% trans "Superadmin" %}</label>
+                            <div class="col-sm-9">
+                                {% if object.is_superuser %}
+                                    <span class="badge bg-danger">
+                                        <span class="fas fa-crown me-1"></span>{% trans "Superadmin" %}
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-soft-secondary text-secondary">{% trans "Regular User" %}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dates -->
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">
+                            <span class="fas fa-calendar me-2"></span>{% trans "Timeline" %}
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <label class="col-sm-3 fw-semi-bold">{% trans "Member Since" %}</label>
+                            <div class="col-sm-9">
+                                {{ object.date_joined|date:"d F Y H:i" }}
+                                <br>
+                                <small class="text-muted">({{ object.date_joined|timesince }} {% trans "ago" %})</small>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <label class="col-sm-3 fw-semi-bold">{% trans "Last Login" %}</label>
+                            <div class="col-sm-9">
+                                {% if object.last_login %}
+                                    {{ object.last_login|date:"d F Y H:i" }}
+                                    <br>
+                                    <small class="text-muted">({{ object.last_login|timesince }} {% trans "ago" %})</small>
+                                {% else %}
+                                    <span class="text-muted">{% trans "Never" %}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cabinet Roles -->
+                {% if cabinet_roles %}
+                <div class="card mb-3">
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <span class="fas fa-building me-2"></span>{% trans "Cabinet Roles" %} ({{ cabinet_roles|length }})
+                        </h5>
+                        {% if request.user.is_superuser %}
+                        <a href="{% url 'accounts:assign_user_to_cabinet' object.pk %}" class="btn btn-sm btn-primary">
+                            <span class="fas fa-plus me-1"></span>{% trans "Add Cabinet" %}
+                        </a>
+                        {% endif %}
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered mb-0">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th>{% trans "Cabinet" %}</th>
+                                        <th>{% trans "Role" %}</th>
+                                        <th>{% trans "Status" %}</th>
+                                        {% if request.user.is_superuser %}<th>{% trans "Actions" %}</th>{% endif %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for role in cabinet_roles %}
+                                    <tr>
+                                        <td>{{ role.cabinet.name }}</td>
+                                        <td>{{ role.get_role_display }}</td>
+                                        <td>
+                                            {% if role.status == 'APPROVED' %}
+                                                <span class="badge bg-soft-success text-success">{{ role.get_status_display }}</span>
+                                            {% elif role.status == 'PENDING' %}
+                                                <span class="badge bg-soft-warning text-warning">{{ role.get_status_display }}</span>
+                                            {% else %}
+                                                <span class="badge bg-soft-danger text-danger">{{ role.get_status_display }}</span>
+                                            {% endif %}
+                                        </td>
+                                        {% if request.user.is_superuser %}
+                                        <td>
+                                            <a href="{% url 'admin:accounts_usercabinetrole_change' role.id %}" class="btn btn-sm btn-outline-primary">
+                                                <span class="fas fa-edit me-1"></span>{% trans "Edit" %}
+                                            </a>
+                                        </td>
+                                        {% endif %}
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                {% elif request.user.is_superuser %}
+                <!-- No Roles - Superadmin Prompt -->
+                <div class="card mb-3">
+                    <div class="card-body text-center py-4">
+                        <span class="fas fa-inbox fa-2x text-muted mb-2"></span>
+                        <p class="text-muted">{% trans "User has not been assigned to any cabinet yet" %}</p>
+                        <a href="{% url 'accounts:assign_user_to_cabinet' object.pk %}" class="btn btn-sm btn-primary">
+                            <span class="fas fa-plus me-1"></span>{% trans "Assign to Cabinet" %}
+                        </a>
+                    </div>
+                </div>
+                {% else %}
+                <div class="card mb-3">
+                    <div class="card-body text-center py-4">
+                        <span class="fas fa-inbox fa-2x text-muted mb-2"></span>
+                        <p class="text-muted">{% trans "No cabinet roles assigned" %}</p>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Projects -->
+                {% if projects %}
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">
+                            <span class="fas fa-project-diagram me-2"></span>{% trans "Projects" %} ({{ projects|length }})
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="list-group list-group-flush">
+                            {% for project in projects|slice:":10" %}
+                            <div class="list-group-item px-3 py-2 border-bottom">
+                                <div class="fw-semi-bold">{{ project.name }}</div>
+                                <small class="text-500">
+                                    {% trans "Status" %}: {{ project.get_status_display }}
+                                    {% if project.budget %}<br>{% trans "Budget" %}: {{ project.budget }} USD{% endif %}
+                                </small>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% if projects|length > 10 %}
+                        <div class="card-footer bg-light py-2 text-center">
+                            <small class="text-muted">+{{ projects|length|add:"-10" }} {% trans "more" %}</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Materials -->
+                {% if materials %}
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">
+                            <span class="fas fa-boxes me-2"></span>{% trans "Materials" %} ({{ materials|length }})
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="list-group list-group-flush">
+                            {% for material in materials|slice:":10" %}
+                            <div class="list-group-item px-3 py-2 border-bottom">
+                                <div class="fw-semi-bold">{{ material.name }}</div>
+                                <small class="text-500">
+                                    {% trans "Quantity" %}: {{ material.quantity }} 
+                                    {% if material.project %}<br>{% trans "Project" %}: {{ material.project.name }}{% endif %}
+                                </small>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% if materials|length > 10 %}
+                        <div class="card-footer bg-light py-2 text-center">
+                            <small class="text-muted">+{{ materials|length|add:"-10" }} {% trans "more" %}</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Expenses -->
+                {% if expenses %}
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">
+                            <span class="fas fa-money-bill-wave me-2"></span>{% trans "Expenses" %} ({{ expenses|length }})
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="list-group list-group-flush">
+                            {% for expense in expenses|slice:":10" %}
+                            <div class="list-group-item px-3 py-2 border-bottom">
+                                <div class="fw-semi-bold">{{ expense.description }}</div>
+                                <small class="text-500">
+                                    {% trans "Amount" %}: {{ expense.amount }} USD
+                                    {% if expense.category %}<br>{% trans "Category" %}: {{ expense.get_category_display }}{% endif %}
+                                </small>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% if expenses|length > 10 %}
+                        <div class="card-footer bg-light py-2 text-center">
+                            <small class="text-muted">+{{ expenses|length|add:"-10" }} {% trans "more" %}</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Right Column: Quick Actions -->
+            <div class="col-lg-4">
+                <div class="sticky-top" style="top: 80px;">
+                    <!-- Actions Card -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">{% trans "Actions" %}</h5>
+                        </div>
+                        <div class="card-body">
+                            <a href="{% url 'accounts:admin_user_edit' object.pk %}" class="btn btn-primary btn-sm w-100 mb-2">
+                                <span class="fas fa-edit me-2"></span>{% trans "Edit User" %}
+                            </a>
+                            {% if object.id != request.user.id %}
+                            <a href="{% url 'accounts:admin_user_delete' object.pk %}" 
+                               class="btn btn-danger btn-sm w-100"
+                               onclick="return confirm('{% trans 'Are you sure? This cannot be undone.' %}');">
+                                <span class="fas fa-trash me-2"></span>{% trans "Delete User" %}
+                            </a>
+                            {% else %}
+                            <button type="button" class="btn btn-danger btn-sm w-100" disabled>
+                                <span class="fas fa-lock me-2"></span>{% trans "Cannot Delete Own Account" %}
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Statistics -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">{% trans "Summary" %}</h5>
+                        </div>
+                        <div class="card-body text-center">
+                            <div class="mb-3 pb-3 border-bottom">
+                                <h3 class="mb-0">{{ cabinet_roles|length }}</h3>
+                                <p class="text-muted fs--2">{% trans "Cabinet Roles" %}</p>
+                            </div>
+                            {% if projects %}
+                            <div class="mb-3 pb-3 border-bottom">
+                                <h3 class="mb-0">{{ projects|length }}</h3>
+                                <p class="text-muted fs--2">{% trans "Projects" %}</p>
+                            </div>
+                            {% endif %}
+                            {% if materials %}
+                            <div class="mb-3 pb-3 border-bottom">
+                                <h3 class="mb-0">{{ materials|length }}</h3>
+                                <p class="text-muted fs--2">{% trans "Materials" %}</p>
+                            </div>
+                            {% endif %}
+                            {% if expenses %}
+                            <div>
+                                <h3 class="mb-0">{{ expenses|length }}</h3>
+                                <p class="text-muted fs--2">{% trans "Expenses" %}</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Permission Alert -->
+                    {% if object.is_superuser %}
+                    <div class="alert alert-danger" role="alert">
+                        <span class="fas fa-crown me-2"></span>
+                        <strong>{% trans "Superadmin" %}</strong>
+                        <p class="mb-0 mt-2 fs--2">{% trans "This user has full system control" %}</p>
+                    </div>
+                    {% elif object.is_staff %}
+                    <div class="alert alert-info" role="alert">
+                        <span class="fas fa-briefcase me-2"></span>
+                        <strong>{% trans "Staff Member" %}</strong>
+                        <p class="mb-0 mt-2 fs--2">{% trans "This user has admin panel access" %}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if not object.is_active %}
+                    <div class="alert alert-warning" role="alert">
+                        <span class="fas fa-exclamation-circle me-2"></span>
+                        <strong>{% trans "Inactive Account" %}</strong>
+                        <p class="mb-0 mt-2 fs--2">{% trans "This user cannot log in" %}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

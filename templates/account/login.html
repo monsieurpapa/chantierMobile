@@ -1,5 +1,5 @@
 {% extends 'falcon_base.html' %}
-{% load static %}
+{% load static i18n %}
 
 {% block content %}
 <!-- <section> -->
@@ -21,8 +21,7 @@
 
                 <div class="z-index-1 position-relative">
                   <img class="me-2" src="{% static 'app/img/TicTacFlow_Favicon.png' %}" alt="" width="200" />
-                  <p class="opacity-75 text-white">Welcome to Assistance Technique en Genie Civil's Self Service Portal
-                  </p>
+                  <p class="opacity-75 text-white">{% trans "Welcome to Assistance Technique en Genie Civil's Self Service Portal" %}</p>
                 </div>
               </div>
               <div class="mt-3 mb-4 mt-md-4 mb-md-5 light">
@@ -34,7 +33,7 @@
               <div class="p-4 p-md-5 flex-grow-1">
                 <div class="row flex-between-center">
                   <div class="col-auto">
-                    <h3>Login</h3>
+                    <h3>{% trans "Login" %}</h3>
                   </div>
                 </div>
                 <form method="POST" action="{% url 'account_login' %}">{% csrf_token %}

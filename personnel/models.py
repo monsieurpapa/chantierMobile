@@ -1,11 +1,12 @@
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 from core.models import BaseModel
 from accounts.models import Cabinet, User
 from projects.models import Site
 
 class Skill(BaseModel):
-    name = models.CharField(max_length=100) # e.g. Maçon, Ferrailleur
-    description = models.TextField(blank=True)
+    name = models.CharField(max_length=100, verbose_name=_('Skill Name')) # e.g. Maçon, Ferrailleur
+    description = models.TextField(blank=True, verbose_name=_('Description'))
     
     def __str__(self):
         return self.name
@@ -13,10 +14,10 @@ class Skill(BaseModel):
 class Personnel(BaseModel):
     cabinet = models.ForeignKey(Cabinet, on_delete=models.CASCADE, related_name='personnel')
     user = models.OneToOneField(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='personnel_profile', help_text="Link to system user if they have login access")
-    first_name = models.CharField(max_length=100)
-    last_name = models.CharField(max_length=100)
+    first_name = models.CharField(max_length=100, verbose_name=_('First Name'))
+    last_name = models.CharField(max_length=100, verbose_name=_('Last Name'))
     skills = models.ManyToManyField(Skill, blank=True)
-    default_daily_rate = models.DecimalField(max_digits=10, decimal_places=2, help_text="Default daily cost")
+    default_daily_rate = models.DecimalField(max_digits=10, decimal_places=2, help_text=_("Default daily cost"), verbose_name=_('Default Daily Rate'))
     
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
@@ -24,10 +25,10 @@ class Personnel(BaseModel):
 class SiteAssignment(BaseModel):
     personnel = models.ForeignKey(Personnel, on_delete=models.CASCADE, related_name='assignments')
     site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name='assignments')
-    role = models.CharField(max_length=100, help_text="Specific role on this site, e.g. Chef d'équipe")
+    role = models.CharField(max_length=100, help_text=_("Specific role on this site, e.g. Chef d'équipe"), verbose_name=_('Role'))
     start_date = models.DateField()
     end_date = models.DateField(null=True, blank=True)
-    daily_rate = models.DecimalField(max_digits=10, decimal_places=2, help_text="Agreed rate for this specific assignment")
+    daily_rate = models.DecimalField(max_digits=10, decimal_places=2, help_text=_("Agreed rate for this specific assignment"), verbose_name=_('Daily Rate'))
 
     def clean(self):
         # Validation logic for overlapping assignments could go here

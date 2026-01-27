@@ -1,0 +1,211 @@
+{% extends 'base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Edit Cabinet Assignment" %} - ChantiérMobile{% endblock %}
+
+{% block subcontent %}
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Header -->
+        <div class="page-header mb-4">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h1 class="page-header-title">
+                        <span class="fas fa-edit me-2"></span>{% trans "Edit Cabinet Assignment" %}
+                    </h1>
+                    <p class="text-500">
+                        {% trans "Update user role and approval status in" %} <strong>{{ cabinet.name }}</strong>
+                    </p>
+                </div>
+                <div class="col-auto">
+                    <a href="{% url 'accounts:admin_cabinet_detail' cabinet.pk %}" class="btn btn-falcon-default">
+                        <span class="fas fa-arrow-left me-2"></span>{% trans "Back to Cabinet" %}
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Messages -->
+        {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        <!-- User and Cabinet Info -->
+        <div class="card mb-3">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">
+                    <span class="fas fa-info-circle me-2"></span>{% trans "Assignment Details" %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <label class="col-sm-3 fw-semi-bold">{% trans "User" %}</label>
+                    <div class="col-sm-9">
+                        <strong>{{ user.get_full_name|default:user.username }}</strong>
+                        <br><small class="text-500">{{ user.email }}</small>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <label class="col-sm-3 fw-semi-bold">{% trans "Cabinet" %}</label>
+                    <div class="col-sm-9">
+                        <strong>{{ cabinet.name }}</strong>
+                    </div>
+                </div>
+                <div class="row">
+                    <label class="col-sm-3 fw-semi-bold">{% trans "Current Status" %}</label>
+                    <div class="col-sm-9">
+                        {% if object.status == 'APPROVED' %}
+                        <span class="badge bg-success">{{ object.get_status_display }}</span>
+                        {% elif object.status == 'PENDING' %}
+                        <span class="badge bg-warning">{{ object.get_status_display }}</span>
+                        {% else %}
+                        <span class="badge bg-danger">{{ object.get_status_display }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Form -->
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">
+                    <span class="fas fa-tasks me-2"></span>{% trans "Update Assignment" %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" class="needs-validation">
+                    {% csrf_token %}
+
+                    <!-- Role Selection -->
+                    <div class="mb-3">
+                        <label for="{{ form.role.id_for_label }}" class="form-label">
+                            <span class="fas fa-user-tag me-2"></span>{{ form.role.label }}
+                            <span class="text-danger">*</span>
+                        </label>
+                        {% if form.role.errors %}
+                            <div class="alert alert-danger mt-2">
+                                {{ form.role.errors.0 }}
+                            </div>
+                        {% endif %}
+                        {{ form.role }}
+                        {% if form.role.help_text %}
+                        <small class="form-text text-muted d-block mt-2">{{ form.role.help_text|safe }}</small>
+                        {% endif %}
+                    </div>
+
+                    <!-- Status Selection -->
+                    <div class="mb-3">
+                        <label for="{{ form.status.id_for_label }}" class="form-label">
+                            <span class="fas fa-check-circle me-2"></span>{{ form.status.label }}
+                            <span class="text-danger">*</span>
+                        </label>
+                        {% if form.status.errors %}
+                            <div class="alert alert-danger mt-2">
+                                {{ form.status.errors.0 }}
+                            </div>
+                        {% endif %}
+                        {{ form.status }}
+                        {% if form.status.help_text %}
+                        <small class="form-text text-muted d-block mt-2">{{ form.status.help_text|safe }}</small>
+                        {% endif %}
+                    </div>
+
+                    <!-- Non-field Errors -->
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                            <p class="mb-0">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Action Buttons -->
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <span class="fas fa-save me-2"></span>{% trans "Save Changes" %}
+                        </button>
+                        <a href="{% url 'accounts:admin_cabinet_user_role_delete' object.pk %}" 
+                           class="btn btn-danger float-end"
+                           onclick="return confirm('{% trans "Remove this user from cabinet?" %}');">
+                            <span class="fas fa-trash me-2"></span>{% trans "Remove User" %}
+                        </a>
+                        <a href="{% url 'accounts:admin_cabinet_detail' cabinet.pk %}" class="btn btn-secondary">
+                            {% trans "Cancel" %}
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Information -->
+    <div class="col-lg-4">
+        <div class="sticky-top" style="top: 80px;">
+            <!-- Info Card -->
+            <div class="card mb-3">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">{% trans "Role Definitions" %}</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="fs--2">
+                        <li class="mb-2">
+                            <strong>{% trans "Director" %}</strong>
+                            <p class="text-muted mb-0 fs--3">{% trans "Full cabinet control and authority" %}</p>
+                        </li>
+                        <li class="mb-2">
+                            <strong>{% trans "Chief Engineer" %}</strong>
+                            <p class="text-muted mb-0 fs--3">{% trans "Technical team leadership" %}</p>
+                        </li>
+                        <li class="mb-2">
+                            <strong>{% trans "Engineer" %}</strong>
+                            <p class="text-muted mb-0 fs--3">{% trans "Technical support and implementation" %}</p>
+                        </li>
+                        <li class="mb-2">
+                            <strong>{% trans "Accountant" %}</strong>
+                            <p class="text-muted mb-0 fs--3">{% trans "Financial management and reporting" %}</p>
+                        </li>
+                        <li class="mb-2">
+                            <strong>{% trans "Cashier" %}</strong>
+                            <p class="text-muted mb-0 fs--3">{% trans "Cash handling and receipts" %}</p>
+                        </li>
+                        <li>
+                            <strong>{% trans "Worker" %}</strong>
+                            <p class="text-muted mb-0 fs--3">{% trans "General operational tasks" %}</p>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Status Card -->
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">{% trans "Status Workflow" %}</h5>
+                </div>
+                <div class="card-body">
+                    <p class="fs--2 text-muted mb-3">{% trans "Manage the approval status of this user assignment:" %}</p>
+                    <ul class="fs--2">
+                        <li class="mb-2">
+                            <span class="badge bg-soft-warning text-warning">{% trans "Pending" %}</span>
+                            <p class="text-muted mb-0 fs--3">{% trans "Awaiting approval before user gains access" %}</p>
+                        </li>
+                        <li class="mb-2">
+                            <span class="badge bg-soft-success text-success">{% trans "Approved" %}</span>
+                            <p class="text-muted mb-0 fs--3">{% trans "User has full access to cabinet" %}</p>
+                        </li>
+                        <li>
+                            <span class="badge bg-soft-danger text-danger">{% trans "Rejected" %}</span>
+                            <p class="text-muted mb-0 fs--3">{% trans "Assignment denied; user cannot access" %}</p>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

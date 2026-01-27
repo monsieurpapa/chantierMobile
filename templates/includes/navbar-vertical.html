@@ -139,15 +139,50 @@
 
                 <li class="nav-divider">Administration</li>
 
-                <!-- Admin -->
-                {% if user.is_staff %}
+                <!-- Administration (Superadmin/Staff) -->
+                {% if user.is_superuser or user.is_staff %}
                 <li class="nav-item">
-                    <a class="nav-link" href="/admin/" target="_blank" role="button">
+                    <a class="nav-link dropdown-indicator" href="#administration" role="button" data-bs-toggle="collapse"
+                        aria-expanded="false" aria-controls="administration">
                         <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-user-shield fs-1"></span></span>
-                            <span class="nav-link-text ps-1">System Admin</span>
+                            <span class="nav-link-icon"><span class="fas fa-cogs fs-1"></span></span>
+                            <span class="nav-link-text ps-1">{% trans "Administration" %}</span>
                         </div>
                     </a>
+                    <ul class="nav collapse" id="administration">
+                        <!-- User Management (Superadmin Only) -->
+                        {% if user.is_superuser %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if on == 'admin_users' %}active{% endif %}"
+                                href="{% url 'accounts:admin_users_list' %}">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-text ps-1">{% trans "User Management" %}</span>
+                                </div>
+                            </a>
+                        </li>
+
+                        <!-- Cabinet Management (Superadmin Only) -->
+                        <li class="nav-item">
+                            <a class="nav-link {% if on == 'admin_cabinets' %}active{% endif %}"
+                                href="{% url 'accounts:admin_cabinets_list' %}">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-text ps-1">{% trans "Cabinet Management" %}</span>
+                                </div>
+                            </a>
+                        </li>
+                        {% endif %}
+
+                        <!-- System Admin (Staff Only) -->
+                        {% if user.is_staff %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="/admin/" target="_blank">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-text ps-1">{% trans "System Admin" %}</span>
+                                </div>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
                 </li>
                 {% endif %}
 

@@ -1,7 +1,7 @@
 {% extends 'falcon_base.html' %}
-{% load static %}
+{% load static i18n %}
 
-{% block title %}Invoice Form - ChantierMobile{% endblock %}
+{% block title %}{% trans "Invoice Form" %} - ChantierMobile{% endblock %}
 
 {% block content %}
 <div class="container" data-layout="container-fluid">
@@ -18,29 +18,27 @@
         <div class="container-fluid py-4">
             <div class="card mb-3">
                 <div class="card-header">
-                    <h5 class="mb-0">Invoice Information</h5>
+                    <h5 class="mb-0">{% trans "Invoice Information" %}</h5>
                 </div>
                 <div class="card-body bg-light">
                     <form method="post">
                         {% csrf_token %}
 
                         <div class="mb-3">
-                            <label class="form-label" for="{{ form.contract.id_for_label }}">Contract</label>
+                            <label class="form-label" for="{{ form.contract.id_for_label }}">{% trans "Contract" %}</label>
                             {{ form.contract }}
-                            {% if form.contract.errors %}<div class="text-danger fs--1">{{ form.contract.errors }}</div>
+                            {% if form.contract.errors %}<div class="text-danger fs--1">{% trans "Contract errors" %}: {{ form.contract.errors }}</div>
                             {% endif %}
                         </div>
 
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label class="form-label" for="{{ form.invoice_number.id_for_label }}">Invoice
-                                    ID</label>
+                                <label class="form-label" for="{{ form.invoice_number.id_for_label }}">{% trans "Invoice ID" %}</label>
                                 {{ form.invoice_number }}
-                                {% if form.invoice_number.errors %}<div class="text-danger fs--1">{{
-                                    form.invoice_number.errors }}</div>{% endif %}
+                                {% if form.invoice_number.errors %}<div class="text-danger fs--1">{% trans "Invoice ID errors" %}: {{ form.invoice_number.errors }}</div>{% endif %}
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label class="form-label" for="{{ form.amount.id_for_label }}">Invoice Amount</label>
+                                <label class="form-label" for="{{ form.amount.id_for_label }}">{% trans "Invoice Amount" %}</label>
                                 {{ form.amount }}
                                 {% if form.amount.errors %}<div class="text-danger fs--1">{{ form.amount.errors }}</div>
                                 {% endif %}
@@ -49,22 +47,22 @@
 
                         <div class="row">
                             <div class="col-md-4 mb-3">
-                                <label class="form-label" for="{{ form.issued_date.id_for_label }}">Issued Date</label>
+                                <label class="form-label" for="{{ form.issued_date.id_for_label }}">{% trans "Issued Date" %}</label>
                                 {{ form.issued_date }}
                             </div>
                             <div class="col-md-4 mb-3">
-                                <label class="form-label" for="{{ form.due_date.id_for_label }}">Due Date</label>
+                                <label class="form-label" for="{{ form.due_date.id_for_label }}">{% trans "Due Date" %}</label>
                                 {{ form.due_date }}
                             </div>
                             <div class="col-md-4 mb-3">
-                                <label class="form-label" for="{{ form.status.id_for_label }}">Status</label>
+                                <label class="form-label" for="{{ form.status.id_for_label }}">{% trans "Status" %}</label>
                                 {{ form.status }}
                             </div>
                         </div>
 
                         <div class="mt-4">
-                            <button class="btn btn-primary" type="submit">Generate Invoice</button>
-                            <a class="btn btn-link link-danger" href="javascript:history.back()">Cancel</a>
+                            <button class="btn btn-primary" type="submit">{% trans "Generate Invoice" %}</button>
+                            <a class="btn btn-link link-danger" href="javascript:history.back()">{% trans "Cancel" %}</a>
                         </div>
                     </form>
                 </div>

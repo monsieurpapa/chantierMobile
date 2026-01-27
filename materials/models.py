@@ -3,6 +3,7 @@ from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 from core.models import BaseModel
 from projects.models import Site
+from chantiermobile.constants import MaterialRequestStatus
 
 class Material(BaseModel):
     name = models.CharField(max_length=255)
@@ -13,16 +14,9 @@ class Material(BaseModel):
         return f"{self.name} ({self.unit})"
 
 class MaterialRequest(BaseModel):
-    class Status(models.TextChoices):
-        PENDING = 'PENDING', _('En attente')
-        APPROVED = 'APPROVED', _('Approuvé')
-        REJECTED = 'REJECTED', _('Rejeté')
-        ORDERED = 'ORDERED', _('Commandé')
-        DELIVERED = 'DELIVERED', _('Livré')
-
     site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name='material_requests')
     requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='material_requests')
-    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    status = models.CharField(max_length=20, choices=MaterialRequestStatus.choices, default=MaterialRequestStatus.PENDING)
     notes = models.TextField(blank=True, null=True, help_text="Additional notes or instructions for this request")
     
     # Optional link to an expense if approved and purchased (aggregated)

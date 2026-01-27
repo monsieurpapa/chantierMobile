@@ -1,15 +1,17 @@
 from django import forms
+from django.utils.translation import gettext_lazy as _
 from django.forms import inlineformset_factory
 from .models import Material, MaterialRequest, MaterialRequestItem
+from chantiermobile.constants import FormPlaceholders, FormHelpTexts
 
 class MaterialForm(forms.ModelForm):
     class Meta:
         model = Material
         fields = ['name', 'unit', 'estimated_cost_per_unit']
         widgets = {
-            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Material Name'}),
-            'unit': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. kg, m3, liters'}),
-            'estimated_cost_per_unit': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0.00'}),
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.MATERIAL_NAME}),
+            'unit': forms.TextInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.MATERIAL_UNIT}),
+            'estimated_cost_per_unit': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.AMOUNT}),
         }
 
 class MaterialRequestForm(forms.ModelForm):
@@ -20,7 +22,7 @@ class MaterialRequestForm(forms.ModelForm):
             'site': forms.Select(attrs={'class': 'form-select'}),
             'notes': forms.Textarea(attrs={
                 'class': 'form-control',
-                'placeholder': 'Additional notes or special instructions...',
+                'placeholder': FormHelpTexts.ADDITIONAL_NOTES,
                 'rows': 3
             }),
         }
@@ -39,7 +41,7 @@ class MaterialRequestItemForm(forms.ModelForm):
             }),
             'notes': forms.Textarea(attrs={
                 'class': 'form-control',
-                'placeholder': 'Notes for this item (optional)',
+                'placeholder': FormHelpTexts.ITEM_NOTES,
                 'rows': 2
             }),
         }

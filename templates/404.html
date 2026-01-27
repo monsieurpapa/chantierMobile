@@ -1,7 +1,7 @@
 {% extends 'falcon_base.html' %}
-{% load static %}
+{% load static i18n %}
 
-{% block title %}Page Not Found - Chantier Mobile{% endblock %}
+{% block title %}{% trans "Page Not Found" %} - Chantier Mobile{% endblock %}
 
 {% block content %}
 <div class="container" data-layout="container">
@@ -14,11 +14,11 @@
       <div class="card shadow-sm">
         <div class="card-body p-4 p-sm-5">
           <div class="display-1 fw-black text-200">404</div>
-          <p class="lead mt-4 text-800 font-sans-serif fw-semi-bold">The page you're looking for is not found.</p>
+          <p class="lead mt-4 text-800 font-sans-serif fw-semi-bold">{% trans "The page you're looking for is not found." %}</p>
           <hr />
-          <p>Make sure the address is correct and that the page hasn't moved.</p>
+          <p>{% trans "Make sure the address is correct and that the page hasn't moved." %}</p>
           <a class="btn btn-primary btn-sm mt-3" href="{% url 'home' %}">
-            <span class="fas fa-home me-2"></span>Return to Dashboard
+            <span class="fas fa-home me-2"></span>{% trans "Return to Dashboard" %}
           </a>
         </div>
       </div>

@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Remove User from Cabinet" %}{% endblock %}
+
+{% block subcontent %}
+<div class="row">
+    <div class="col-lg-8 offset-lg-2">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">{% trans "Confirm Removal" %}</h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-3">{% blocktrans %}You are about to remove {{ user.get_full_name|default:user.username }} from {{ cabinet.name }}.{% endblocktrans %}</p>
+                <form method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">{% trans "Yes, remove user" %}</button>
+                    <a href="{% url 'accounts:admin_cabinet_detail' cabinet.pk %}" class="btn btn-secondary">{% trans "Cancel" %}</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,5 +1,7 @@
 from django import forms
+from django.utils.translation import gettext_lazy as _
 from .models import Expense, Budget, ExpenseCategory
+from chantiermobile.constants import FormPlaceholders, DatePickerConfig, ValidationMessages
 
 class ExpenseForm(forms.ModelForm):
     class Meta:
@@ -8,8 +10,8 @@ class ExpenseForm(forms.ModelForm):
         widgets = {
             'site': forms.Select(attrs={'class': 'form-select'}),
             'category': forms.Select(attrs={'class': 'form-select'}),
-            'amount': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0.00'}),
-            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Expense details...'}),
+            'amount': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.AMOUNT}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': FormPlaceholders.EXPENSE_DETAILS}),
             'receipt_image': forms.FileInput(attrs={'class': 'form-control'}),
         }
 
@@ -19,16 +21,16 @@ class BudgetForm(forms.ModelForm):
         fields = ['site', 'total_amount', 'start_date', 'end_date']
         widgets = {
             'site': forms.Select(attrs={'class': 'form-select'}),
-            'total_amount': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0.00'}),
+            'total_amount': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.AMOUNT}),
             'start_date': forms.DateInput(attrs={
                 'class': 'form-control datetimepicker',
-                'placeholder': 'YYYY-MM-DD',
-                'data-options': '{"dateFormat":"Y-m-d","disableMobile":true}'
+                'placeholder': DatePickerConfig.DATE_FORMAT,
+                'data-options': DatePickerConfig.OPTIONS
             }),
             'end_date': forms.DateInput(attrs={
                 'class': 'form-control datetimepicker',
-                'placeholder': 'YYYY-MM-DD',
-                'data-options': '{"dateFormat":"Y-m-d","disableMobile":true}'
+                'placeholder': DatePickerConfig.DATE_FORMAT,
+                'data-options': DatePickerConfig.OPTIONS
             }),
         }
 
@@ -38,5 +40,5 @@ class BudgetForm(forms.ModelForm):
         end_date = cleaned_data.get('end_date')
 
         if start_date and end_date and end_date <= start_date:
-            raise forms.ValidationError(_("End date must be after start date."))
+            raise forms.ValidationError(ValidationMessages.END_DATE_AFTER_START)
         return cleaned_data

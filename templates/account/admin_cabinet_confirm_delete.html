@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Delete Cabinet" %} - ChantiérMobile{% endblock %}
+
+{% block subcontent %}
+<div class="row">
+    <div class="col-lg-8 offset-lg-2">
+        <!-- Header -->
+        <div class="page-header mb-4">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h1 class="page-header-title">
+                        <span class="fas fa-trash text-danger me-2"></span>{% trans "Delete Cabinet" %}
+                    </h1>
+                    <p class="text-500">{% trans "This action cannot be undone" %}</p>
+                </div>
+                <div class="col-auto">
+                    <a href="{% url 'accounts:admin_cabinet_detail' cabinet.pk %}" class="btn btn-falcon-default">
+                        <span class="fas fa-arrow-left me-2"></span>{% trans "Back to Cabinet" %}
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Warning Alert -->
+        <div class="alert alert-danger" role="alert">
+            <div class="d-flex">
+                <div>
+                    <span class="fas fa-exclamation-triangle me-3 fs-4"></span>
+                </div>
+                <div>
+                    <h5 class="alert-heading">{% trans "Warning: Permanent Deletion" %}</h5>
+                    <p class="mb-0">
+                        {% blocktrans %}
+                        You are about to permanently delete the cabinet <strong>{{ object.name }}</strong>. 
+                        This action cannot be undone and will remove all associated data.
+                        {% endblocktrans %}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cabinet Information Card -->
+        <div class="card mb-3">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">
+                    <span class="fas fa-info-circle me-2"></span>{% trans "Cabinet Information" %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <label class="col-sm-4 fw-semi-bold">{% trans "Cabinet Name" %}</label>
+                    <div class="col-sm-8">
+                        <strong>{{ object.name }}</strong>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <label class="col-sm-4 fw-semi-bold">{% trans "Address" %}</label>
+                    <div class="col-sm-8">
+                        {{ object.address|default:"—" }}
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <label class="col-sm-4 fw-semi-bold">{% trans "Tax ID" %}</label>
+                    <div class="col-sm-8">
+                        <code>{{ object.tax_id|default:"—" }}</code>
+                    </div>
+                </div>
+                <div class="row">
+                    <label class="col-sm-4 fw-semi-bold">{% trans "Created" %}</label>
+                    <div class="col-sm-8">
+                        <small class="text-500">{{ object.created_at|date:"SHORT_DATETIME_FORMAT" }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Assignment Stats -->
+        <div class="card mb-3">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">
+                    <span class="fas fa-users me-2"></span>{% trans "User Assignments" %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <h3 class="mb-0">{{ user_count }}</h3>
+                            <small class="text-500">{% trans "Total Users" %}</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <h3 class="text-success mb-0">{{ approved_count }}</h3>
+                            <small class="text-500">{% trans "Approved" %}</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <h3 class="text-warning mb-0">{{ pending_count }}</h3>
+                            <small class="text-500">{% trans "Pending" %}</small>
+                        </div>
+                    </div>
+                </div>
+                {% if user_count > 0 %}
+                <div class="alert alert-warning mt-3">
+                    <span class="fas fa-exclamation-triangle me-2"></span>
+                    {% blocktrans count counter=user_count %}
+                    This cabinet has {{ counter }} user assignment. It will also be deleted.
+                    {% plural %}
+                    This cabinet has {{ counter }} user assignments. They will also be deleted.
+                    {% endblocktrans %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Confirmation Form -->
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">
+                    <span class="fas fa-check-circle me-2"></span>{% trans "Confirm Deletion" %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-3">{% trans "To permanently delete this cabinet and all its data, click the button below:" %}</p>
+                
+                <form method="post" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">
+                        <span class="fas fa-trash me-2"></span>{% trans "Yes, Delete Cabinet" %}
+                    </button>
+                    <a href="{% url 'accounts:admin_cabinet_detail' cabinet.pk %}" class="btn btn-secondary">
+                        {% trans "Cancel" %}
+                    </a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

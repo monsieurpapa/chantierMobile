@@ -1,9 +1,12 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from django.views.generic import ListView, CreateView, UpdateView, DetailView
-from django.urls import reverse_lazy
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
+from django.db.models import Sum
+from django.views.generic import ListView, CreateView, UpdateView, DetailView
+from django.urls import reverse_lazy
 from .models import Contract, Invoice, Payment
+from chantiermobile.constants import InvoiceStatus
 from .forms import ContractForm, InvoiceForm, PaymentForm
 from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin
 from projects.models import Site
@@ -165,7 +168,7 @@ class InvoiceDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin,
 
     def get_header_actions(self):
         actions = []
-        if self.object.status != 'PAID':
+        if self.object.status != InvoiceStatus.PAID:
             actions.append({
                 'label': 'Record Payment',
                 'url': str(reverse_lazy('revenue:payment_create', kwargs={'invoice_id': self.object.id})),
@@ -200,7 +203,7 @@ class PaymentCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixi
         invoice = self.object.invoice
         total_paid = sum(p.amount for p in invoice.payments.all())
         if total_paid >= invoice.amount:
-            invoice.status = 'PAID'
+            invoice.status = InvoiceStatus.PAID
             invoice.save()
         return response
 

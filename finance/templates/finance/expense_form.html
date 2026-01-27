@@ -1,7 +1,7 @@
 {% extends 'falcon_base.html' %}
-{% load static %}
+{% load static i18n %}
 
-{% block title %}Expense Form - ChantierMobile{% endblock %}
+{% block title %}{% trans "Expense Form" %} - ChantierMobile{% endblock %}
 
 {% block content %}
 <div class="container" data-layout="container-fluid">
@@ -23,7 +23,7 @@
 
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label class="form-label" for="{{ form.site.id_for_label }}">Project / Site</label>
+                                <label class="form-label" for="{{ form.site.id_for_label }}">{% trans "Project / Site" %}</label>
                                 {{ form.site }}
                                 {% if form.site.errors %}
                                 <div class="text-danger fs--2">
@@ -33,7 +33,7 @@
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label" for="{{ form.category.id_for_label }}">Category</label>
+                            <label class="form-label" for="{{ form.category.id_for_label }}">{% trans "Category" %}</label>
                             {{ form.category }}
                             {% if form.category.errors %}
                             <div class="text-danger fs--2">
@@ -45,7 +45,7 @@
 
                 <div class="row mb-3">
                     <div class="col-md-6">
-                        <label class="form-label" for="{{ form.amount.id_for_label }}">Amount ($)</label>
+                        <label class="form-label" for="{{ form.amount.id_for_label }}">{% trans "Amount" %} ($)</label>
                         {{ form.amount }}
                         {% if form.amount.errors %}
                         <div class="text-danger fs--2">
@@ -54,8 +54,7 @@
                         {% endif %}
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label" for="{{ form.receipt_image.id_for_label }}">Receipt Image
-                            (Optional)</label>
+                        <label class="form-label" for="{{ form.receipt_image.id_for_label }}">{% trans "Receipt Image" %} ({% trans "Optional" %})</label>
                         {{ form.receipt_image }}
                         {% if form.receipt_image.errors %}
                         <div class="text-danger fs--2">
@@ -66,15 +65,15 @@
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label" for="{{ form.description.id_for_label }}">Description</label>
+                    <label class="form-label" for="{{ form.description.id_for_label }}">{% trans "Description" %}</label>
                     {{ form.description }}
                     {% if form.description.errors %}<div class="text-danger fs--2">{{ form.description.errors }}
                     </div>{% endif %}
                 </div>
 
                 <div class="col-12 d-flex justify-content-end gap-2">
-                    <a href="{% url 'finance:expense_list' %}" class="btn btn-falcon-default">Cancel</a>
-                    <button type="submit" class="btn btn-primary">Submit Request</button>
+                    <a href="{% url 'finance:expense_list' %}" class="btn btn-falcon-default">{% trans "Cancel" %}</a>
+                    <button type="submit" class="btn btn-primary">{% trans "Submit Request" %}</button>
                 </div>
                 </form>
             </div>

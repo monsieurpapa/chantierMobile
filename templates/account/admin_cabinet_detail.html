@@ -1,0 +1,356 @@
+{% extends 'base.html' %}
+{% load static i18n %}
+
+{% block title %}{{ object.name }} - {% trans "Cabinet Details" %} - ChantiérMobile{% endblock %}
+
+{% block subcontent %}
+<div class="row">
+    <div class="col-12">
+        <!-- Header -->
+        <div class="page-header mb-4">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h1 class="page-header-title">
+                        <span class="fas fa-building me-2"></span>{{ object.name }}
+                    </h1>
+                    <p class="text-500">{% trans "Cabinet Details and User Assignments" %}</p>
+                </div>
+                <div class="col-auto d-flex">
+                    {% if request.user.is_superuser %}
+                    <a href="{% url 'accounts:admin_cabinet_edit' object.pk %}" class="btn btn-outline-primary me-2">
+                        <span class="fas fa-edit me-2"></span>{% trans "Edit Cabinet" %}
+                    </a>
+                    <a href="{% url 'accounts:admin_assign_user_to_cabinet' object.pk %}" class="btn btn-outline-success me-2">
+                        <span class="fas fa-user-plus me-2"></span>{% trans "Add User" %}
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'accounts:admin_cabinets_list' %}" class="btn btn-falcon-default">
+                        <span class="fas fa-arrow-left me-2"></span>{% trans "Back to Cabinets" %}
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Messages -->
+        {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        <div class="row g-3">
+            <!-- Main Content -->
+            <div class="col-lg-9">
+                <!-- Cabinet Information -->
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">
+                            <span class="fas fa-info-circle me-2"></span>{% trans "Cabinet Information" %}
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <label class="col-sm-3 fw-semi-bold">{% trans "Name" %}</label>
+                            <div class="col-sm-9">{{ object.name }}</div>
+                        </div>
+                        <div class="row mb-3">
+                            <label class="col-sm-3 fw-semi-bold">{% trans "Address" %}</label>
+                            <div class="col-sm-9">
+                                {{ object.address|default:"<span class='text-muted'>—</span>"|safe }}
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <label class="col-sm-3 fw-semi-bold">{% trans "Tax ID" %}</label>
+                            <div class="col-sm-9">
+                                <code>{{ object.tax_id|default:"<span class='text-muted'>—</span>"|safe }}</code>
+                            </div>
+                        </div>
+                        {% if object.created_at %}
+                        <div class="row">
+                            <label class="col-sm-3 fw-semi-bold">{% trans "Created" %}</label>
+                            <div class="col-sm-9">
+                                <small class="text-500">{{ object.created_at|date:"SHORT_DATETIME_FORMAT" }}</small>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Statistics -->
+                <div class="row g-3 mb-3">
+                    <div class="col-md-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="text-center">
+                                    <h3 class="mb-0">{{ total_users }}</h3>
+                                    <small class="text-500">{% trans "Total Users" %}</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="text-center">
+                                    <h3 class="text-success mb-0">{{ approved_roles|length }}</h3>
+                                    <small class="text-500">{% trans "Approved" %}</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="text-center">
+                                    <h3 class="text-warning mb-0">{{ pending_roles|length }}</h3>
+                                    <small class="text-500">{% trans "Pending" %}</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="text-center">
+                                    <h3 class="text-danger mb-0">{{ rejected_roles|length }}</h3>
+                                    <small class="text-500">{% trans "Rejected" %}</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Approved Users -->
+                <div class="card mb-3">
+                    <div class="card-header bg-success bg-opacity-10">
+                        <h5 class="mb-0 text-success">
+                            <span class="fas fa-check-circle me-2"></span>{% trans "Approved Users" %} 
+                            <span class="badge bg-success">{{ approved_roles|length }}</span>
+                        </h5>
+                    </div>
+                    {% if approved_roles %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3">{% trans "User" %}</th>
+                                    <th>{% trans "Email" %}</th>
+                                    <th>{% trans "Role" %}</th>
+                                    <th class="text-center">{% trans "Status" %}</th>
+                                    <th class="text-center">{% trans "Actions" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for role in approved_roles %}
+                                <tr>
+                                    <td class="ps-3">
+                                        <strong>{{ role.user.get_full_name|default:role.user.username }}</strong>
+                                    </td>
+                                    <td>{{ role.user.email }}</td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ role.get_role_display }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-success">{{ role.get_status_display }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'accounts:admin_cabinet_user_role_edit' role.pk %}" 
+                                               class="btn btn-sm btn-falcon-default" title="{% trans 'Edit' %}">
+                                                <span class="fas fa-edit"></span>
+                                            </a>
+                                            {% if request.user.is_superuser %}
+                                            <a href="{% url 'accounts:admin_cabinet_user_role_delete' role.pk %}" 
+                                               class="btn btn-sm btn-outline-danger" title="{% trans 'Remove' %}"
+                                               onclick="return confirm('{% trans "Remove this user from the cabinet?" %}');">
+                                                <span class="fas fa-trash"></span>
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="card-body text-center text-muted py-3">
+                        <span class="fas fa-inbox me-2"></span>{% trans "No approved users" %}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Pending Users -->
+                <div class="card mb-3">
+                    <div class="card-header bg-warning bg-opacity-10">
+                        <h5 class="mb-0 text-warning">
+                            <span class="fas fa-clock me-2"></span>{% trans "Pending Users" %} 
+                            <span class="badge bg-warning">{{ pending_roles|length }}</span>
+                        </h5>
+                    </div>
+                    {% if pending_roles %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3">{% trans "User" %}</th>
+                                    <th>{% trans "Email" %}</th>
+                                    <th>{% trans "Role" %}</th>
+                                    <th class="text-center">{% trans "Status" %}</th>
+                                    <th class="text-center">{% trans "Actions" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for role in pending_roles %}
+                                <tr>
+                                    <td class="ps-3">
+                                        <strong>{{ role.user.get_full_name|default:role.user.username }}</strong>
+                                    </td>
+                                    <td>{{ role.user.email }}</td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ role.get_role_display }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-warning">{{ role.get_status_display }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'accounts:admin_cabinet_user_role_edit' role.pk %}" 
+                                               class="btn btn-sm btn-falcon-default" title="{% trans 'Edit' %}">
+                                                <span class="fas fa-edit"></span>
+                                            </a>
+                                            {% if request.user.is_superuser %}
+                                            <a href="{% url 'accounts:admin_cabinet_user_role_delete' role.pk %}" 
+                                               class="btn btn-sm btn-outline-danger" title="{% trans 'Remove' %}"
+                                               onclick="return confirm('{% trans "Remove this user from the cabinet?" %}');">
+                                                <span class="fas fa-trash"></span>
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="card-body text-center text-muted py-3">
+                        <span class="fas fa-inbox me-2"></span>{% trans "No pending users" %}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Rejected Users -->
+                <div class="card">
+                    <div class="card-header bg-danger bg-opacity-10">
+                        <h5 class="mb-0 text-danger">
+                            <span class="fas fa-times-circle me-2"></span>{% trans "Rejected Users" %} 
+                            <span class="badge bg-danger">{{ rejected_roles|length }}</span>
+                        </h5>
+                    </div>
+                    {% if rejected_roles %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3">{% trans "User" %}</th>
+                                    <th>{% trans "Email" %}</th>
+                                    <th>{% trans "Role" %}</th>
+                                    <th class="text-center">{% trans "Status" %}</th>
+                                    <th class="text-center">{% trans "Actions" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for role in rejected_roles %}
+                                <tr>
+                                    <td class="ps-3">
+                                        <strong>{{ role.user.get_full_name|default:role.user.username }}</strong>
+                                    </td>
+                                    <td>{{ role.user.email }}</td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ role.get_role_display }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-danger">{{ role.get_status_display }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'accounts:admin_cabinet_user_role_edit' role.pk %}" 
+                                               class="btn btn-sm btn-falcon-default" title="{% trans 'Edit' %}">
+                                                <span class="fas fa-edit"></span>
+                                            </a>
+                                            {% if request.user.is_superuser %}
+                                            <a href="{% url 'accounts:admin_cabinet_user_role_delete' role.pk %}" 
+                                               class="btn btn-sm btn-outline-danger" title="{% trans 'Remove' %}"
+                                               onclick="return confirm('{% trans "Remove this user from the cabinet?" %}');">
+                                                <span class="fas fa-trash"></span>
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="card-body text-center text-muted py-3">
+                        <span class="fas fa-inbox me-2"></span>{% trans "No rejected users" %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Right Sidebar -->
+            <div class="col-lg-3">
+                <div class="sticky-top" style="top: 80px;">
+                    <!-- Quick Actions -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">{% trans "Quick Actions" %}</h5>
+                        </div>
+                        <div class="card-body">
+                            <a href="{% url 'accounts:admin_users_list' %}" class="btn btn-sm btn-outline-primary w-100 mb-2">
+                                <span class="fas fa-users me-2"></span>{% trans "View All Users" %}
+                            </a>
+                            <a href="{% url 'accounts:admin_cabinets_list' %}" class="btn btn-sm btn-outline-secondary w-100">
+                                <span class="fas fa-list me-2"></span>{% trans "Cabinet List" %}
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Legend -->
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">{% trans "Role Legend" %}</h5>
+                        </div>
+                        <div class="card-body small">
+                            <div class="mb-2">
+                                <span class="badge bg-primary">{% trans "Director" %}</span> - {% trans "Full control" %}
+                            </div>
+                            <div class="mb-2">
+                                <span class="badge bg-primary">{% trans "Chief Eng." %}</span> - {% trans "Tech lead" %}
+                            </div>
+                            <div class="mb-2">
+                                <span class="badge bg-primary">{% trans "Engineer" %}</span> - {% trans "Technical staff" %}
+                            </div>
+                            <div class="mb-2">
+                                <span class="badge bg-primary">{% trans "Accountant" %}</span> - {% trans "Finance" %}
+                            </div>
+                            <div class="mb-2">
+                                <span class="badge bg-primary">{% trans "Cashier" %}</span> - {% trans "Cash mgmt" %}
+                            </div>
+                            <div>
+                                <span class="badge bg-primary">{% trans "Worker" %}</span> - {% trans "General staff" %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

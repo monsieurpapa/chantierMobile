@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Delete User" %} - {{ object.username }} - ChantiérMobile{% endblock %}
+
+{% block subcontent %}
+<div class="row">
+    <div class="col-12">
+        <!-- Header -->
+        <div class="page-header mb-4">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h1 class="page-header-title">
+                        <span class="fas fa-trash-alt me-2 text-danger"></span>{% trans "Delete User" %}
+                    </h1>
+                    <p class="text-500">
+                        {% trans "Confirm user deletion" %}
+                    </p>
+                </div>
+                <div class="col-auto">
+                    <a href="{% url 'accounts:admin_users_list' %}" class="btn btn-falcon-default">
+                        <span class="fas fa-arrow-left me-2"></span>{% trans "Back to Users" %}
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Messages -->
+        {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        <div class="row g-3">
+            <!-- Main Content -->
+            <div class="col-lg-8 offset-lg-2">
+                <!-- Warning Alert -->
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <div class="d-flex">
+                        <div class="me-3 pt-1">
+                            <span class="fas fa-exclamation-triangle fa-lg"></span>
+                        </div>
+                        <div>
+                            <h4 class="alert-heading">{% trans "Warning: This Action Cannot Be Undone" %}</h4>
+                            <p class="mb-0">
+                                {% trans "Once you delete this user account, all associated data will be permanently removed from the system. Please ensure this is the correct action." %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- User Info Card -->
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">{% trans "User Information" %}</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-sm-3">
+                                <strong>{% trans "Username" %}</strong>
+                            </div>
+                            <div class="col-sm-9">
+                                <code>{{ object.username }}</code>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-sm-3">
+                                <strong>{% trans "Full Name" %}</strong>
+                            </div>
+                            <div class="col-sm-9">
+                                {{ object.get_full_name|default:object.email }}
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-sm-3">
+                                <strong>{% trans "Email" %}</strong>
+                            </div>
+                            <div class="col-sm-9">
+                                {{ object.email }}
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-sm-3">
+                                <strong>{% trans "Phone" %}</strong>
+                            </div>
+                            <div class="col-sm-9">
+                                {{ object.phone_number|default:"N/A" }}
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-sm-3">
+                                <strong>{% trans "Member Since" %}</strong>
+                            </div>
+                            <div class="col-sm-9">
+                                {{ object.date_joined|date:"d F Y" }}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-3">
+                                <strong>{% trans "Status" %}</strong>
+                            </div>
+                            <div class="col-sm-9">
+                                {% if object.is_active %}
+                                    <span class="badge bg-soft-success text-success">{% trans "Active" %}</span>
+                                {% else %}
+                                    <span class="badge bg-soft-danger text-danger">{% trans "Inactive" %}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Impact Information -->
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">
+                            <span class="fas fa-info-circle me-2"></span>{% trans "What Will Happen" %}
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <ul class="mb-0">
+                            <li>{% trans "User account will be permanently deleted" %}</li>
+                            <li>{% trans "All cabinet role assignments will be removed" %}</li>
+                            <li>{% trans "User will no longer be able to log in" %}</li>
+                            <li>{% trans "User data cannot be recovered after deletion" %}</li>
+                            <li>{% trans "Audit logs may retain historical records" %}</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Confirmation Form -->
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">{% trans "Confirm Deletion" %}</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-3">
+                            {% trans "Type the username to confirm deletion:" %}
+                        </p>
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <input type="text" class="form-control" id="confirm-username" 
+                                       placeholder="{{ object.username }}"
+                                       required>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-danger" onclick="
+                                    var input = document.getElementById('confirm-username').value;
+                                    if(input === '{{ object.username }}') {
+                                        if(confirm('{% trans 'Are you absolutely sure? This cannot be undone.' %}')) {
+                                            return true;
+                                        }
+                                    } else {
+                                        alert('{% trans 'Username does not match. Please type the exact username.' %}');
+                                    }
+                                    return false;
+                                ">
+                                    <span class="fas fa-trash-alt me-2"></span>{% trans "Delete User Permanently" %}
+                                </button>
+                                <a href="{% url 'accounts:admin_users_list' %}" class="btn btn-secondary">
+                                    {% trans "Cancel" %}
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Enable/disable submit button based on username match
+    const confirmInput = document.getElementById('confirm-username');
+    const submitBtn = document.querySelector('button[type="submit"]');
+    
+    confirmInput.addEventListener('input', function() {
+        if(this.value === '{{ object.username }}') {
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('disabled');
+        } else {
+            submitBtn.disabled = true;
+            submitBtn.classList.add('disabled');
+        }
+    });
+    
+    // Initialize button state
+    confirmInput.dispatchEvent(new Event('input'));
+});
+</script>
+{% endblock %}

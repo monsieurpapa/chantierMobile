@@ -1,0 +1,899 @@
+{% extends 'falcon_base.html' %}
+{% load static %}
+{% load static app_filters %}
+{{ redirect_to_login_immediately }}
+
+{% block extra_css %}
+<style>
+
+  .css-icon {
+
+  }  
+  .gps_ring_green { 
+    border: 3px solid green;
+     -webkit-border-radius: 20px;
+     height: 40px;
+     width: 40px;   
+      -webkit-animation: pulsate 3s ease-out;
+      -webkit-animation-iteration-count: infinite; 
+      /*opacity: 0.0*/
+  }
+
+  .gps_ring_amber { 
+    border: 3px solid orange;
+     -webkit-border-radius: 20px;
+     height: 40px;
+     width: 40px;   
+      -webkit-animation: pulsate 3s ease-out;
+      -webkit-animation-iteration-count: infinite; 
+      /*opacity: 0.0*/
+  } 
+
+  .gps_ring_red { 
+    border: 3px solid red;
+     -webkit-border-radius: 20px;
+     height: 40px;
+     width: 40px;   
+      -webkit-animation: pulsate 3s ease-out;
+      -webkit-animation-iteration-count: infinite; 
+      /*opacity: 0.0*/
+  }    
+  
+  @-webkit-keyframes pulsate {
+        0% {-webkit-transform: scale(0.1, 0.1); opacity: 0.0;}
+        50% {opacity: 1.0;}
+        100% {-webkit-transform: scale(1.2, 1.2); opacity: 0.0;}
+  }
+</style>
+{% endblock %}
+
+{% block rendered_variables %}
+<script>
+  var peer_path_bandwidth_data =  JSON.stringify([[0,0],[0,0]]);
+  var peer_path_packet_loss_data =  JSON.stringify([[0,0],[0,0]])
+  var peer_path_jitter_data = JSON.stringify([[0,0],[0,0]])
+  var peer_path_latency_data = JSON.stringify([[0,0],[0,0]]) 
+
+  var top_sources_dataset = '{{ top_sources_dataset | safe }}';
+  var selected_peers_geo_data = '{{ selected_peers_geo_data | safe }}';
+  var selected_node_geo_data = '{{ selected_node_geo_data | safe }}';
+  var node_geo_data = '{{ node_geo_data | safe }}';
+  var markers = [];
+  var mapsPlaceholder = [];
+</script>
+{% endblock %}
+
+{% block content %}
+      <div class="container" data-layout="container-fluid">
+        <script>
+          var isFluid = JSON.parse(localStorage.getItem('isFluid'));
+          if (isFluid) {
+            var container = document.querySelector('[data-layout]');
+            container.classList.remove('container');
+            container.classList.add('container-fluid');
+          }
+        </script>
+        <nav class="navbar navbar-light navbar-vertical navbar-expand-xl">
+          <script>
+            var navbarStyle = localStorage.getItem("navbarStyle");
+            if (navbarStyle && navbarStyle !== 'transparent') {
+              document.querySelector('.navbar-vertical').classList.add(`navbar-${navbarStyle}`);
+            }
+          </script>
+          <div class="d-flex align-items-center">
+            <div class="toggle-icon-wrapper">
+
+              <button class="btn navbar-toggler-humburger-icon navbar-vertical-toggle" data-bs-toggle="tooltip" data-bs-placement="left" title="Toggle Navigation"><span class="navbar-toggle-icon"><span class="toggle-line"></span></span></button>
+
+            </div><a class="navbar-brand" href="/">
+              <div class="d-flex align-items-center py-3" id="main-logo"> 
+              </div>
+            </a>
+          </div>
+          <div class="collapse navbar-collapse" id="navbarVerticalCollapse">
+            <div class="navbar-vertical-content scrollbar">
+              <ul class="navbar-nav flex-column mb-3" id="navbarVerticalNav">
+                <li class="nav-item">
+                  <!-- parent pages--><!-- <a class="nav-link dropdown-indicator" href="#dashboard" role="button" data-bs-toggle="collapse" aria-expanded="true" aria-controls="dashboard"> -->
+                 <a class="nav-link" href="{% url 'home' %}" role="button" aria-expanded="true" aria-controls="dashboard">
+                    <div class="d-flex align-items-center"><span class="nav-link-icon"><span class="fas fa-chart-pie"></span></span><span class="nav-link-text ps-1">Dashboard</span>
+                    </div>
+                  </a>
+                  <!-- parent pages--><a class="nav-link" href="{% url 'routers_page' %}" role="button" data-bs-toggle="" aria-expanded="false">
+                    <div class="d-flex align-items-center"><span class="nav-link-icon"><span class="fas fa-poll"></span></span><span class="nav-link-text ps-1">Routers</span>
+                    </div>
+                  </a>                  
+                  <!-- parent pages--><a class="nav-link" href="{% url 'topology_page' %}" role="button" data-bs-toggle="" aria-expanded="false" aria-controls="maps">
+                    <div class="d-flex align-items-center"><span class="nav-link-icon"><span class="fas fa-map"></span></span><span class="nav-link-text ps-1">Topology</span>
+                    </div>
+                  </a>
+                  <!-- parent pages--><a class="nav-link" href="{% url 'alarms:all' %}" role="button" data-bs-toggle="" aria-expanded="false" aria-controls="maps">
+                    <div class="d-flex align-items-center"><span class="nav-link-icon"><span class="fas fa-bell"></span></span><span class="nav-link-text ps-1">Alarms</span>
+                    </div>
+                  </a>                  
+                  <!-- parent pages--><a class="nav-link" href="{% url 'user_profile' %}" role="button" data-bs-toggle="" aria-expanded="false" aria-controls="user">
+                    <div class="d-flex align-items-center"><span class="nav-link-icon"><span class="fas fa-user"></span></span><span class="nav-link-text ps-1">Profile</span>
+                    </div>
+                  </a>
+                  {% if perms.app_auth.is_super_admin %}
+                  <!-- parent pages--><a class="nav-link dropdown-indicator active" href="#admin" role="button" data-bs-toggle="collapse" aria-expanded="true" aria-controls="admin">
+                    <div class="d-flex align-items-center"><span class="nav-link-icon"><span class="fas fa-wrench"></span></span><span class="nav-link-text ps-1">Admin</span>
+                    </div>
+                  </a>
+                  <ul class="nav" id="admin">
+                    <li class="nav-item"><a class="nav-link" href="{% url 'platform_list' %}" data-bs-toggle="" aria-expanded="true">
+                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Platforms</span>
+                        </div>
+                      </a>
+                      <!-- more inner pages-->
+                    </li>
+                    <li class="nav-item"><a class="nav-link active" href="{% url 'account_detail_view' %}" data-bs-toggle="" aria-expanded="true">
+                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Customers</span>
+                        </div>
+                      </a>
+                      <!-- more inner pages-->
+                    </li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'influxdb:nodes_report' %}" data-bs-toggle="" aria-expanded="false">
+                      <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Reports</span>
+                      </div>
+                    </a>
+                    <!-- more inner pages-->
+                  </li>                    
+                    <li class="nav-item"><a class="nav-link" href="{% url 'user_list' %}" data-bs-toggle="" aria-expanded="true">
+                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Users</span>
+                        </div>
+                      </a>
+                      <!-- more inner pages-->
+                    </li>
+                  </ul>
+                  {% endif %}
+
+                  {% comment %}
+                  <!-- parent pages--><a class="nav-link" href="#!" role="button" data-bs-toggle="" aria-expanded="false">
+                    <div class="d-flex align-items-center"><span class="nav-link-icon"><span class="fas fa-comments"></span></span><span class="nav-link-text ps-1">Tickets</span>
+                    </div>
+                  </a>    
+                  {% endcomment %}
+
+                </li>
+              </ul>
+              <div class="settings mb-3">
+                <div class="card alert p-0 shadow-none bg-transparent light" role="alert">
+                  <div class="card-body text-left">
+                    <!-- <img src="{% static 'falcon/assets/img/icons/spot-illustrations/navbar-vertical.png' %}" alt="" width="80" /> -->
+                    <img src="{% static 'falcon/assets/img/logos/cran/png/logo-with-grey.png' %}" alt="" width="150" />
+                  </div>                                  
+                </div>
+              </div>
+            </div>
+          </div>
+        </nav>
+        <div class="content">
+          <nav class="navbar navbar-light navbar-glass navbar-top navbar-expand">
+            <button class="btn navbar-toggler-humburger-icon navbar-toggler me-1 me-sm-3" type="button" data-bs-toggle="collapse" data-bs-target="#navbarVerticalCollapse" aria-controls="navbarVerticalCollapse" aria-expanded="false" aria-label="Toggle Navigation"><span class="navbar-toggle-icon"><span class="toggle-line"></span></span></button>
+            <a class="navbar-brand me-1 me-sm-3" href="/">
+              <div class="d-flex align-items-center py-3"><img class="me-2" src="{% static 'falcon/assets/img/icons/cmc-logo.png' %}" alt="" width="100" />
+                <!-- <span class="font-sans-serif">falcon</span> -->
+              </div>
+            </a>
+            <ul class="navbar-nav align-items-center d-none d-lg-block">
+              <li class="nav-item">
+                <!-- <div class="search-box" data-list='{"valueNames":["title"]}'> -->
+                  <div class="search-box">
+                  <form class="position-relative" data-bs-toggle="search" data-bs-display="static">
+                    <input class="form-control search-input fuzzy-search" type="search" placeholder="" aria-label="Search" disabled />
+                    <span class="fas fa-search search-box-icon"></span>
+                  </form>
+                  <div class="btn-close-falcon-container position-absolute end-0 top-50 translate-middle shadow-none" data-bs-dismiss="search">
+                    <div class="btn-close-falcon" aria-label="Close"></div>
+                  </div>
+                  <div class="dropdown-menu border font-base start-0 mt-2 py-0 overflow-hidden w-100">
+                  </div>
+                </div>
+              </li>
+            </ul>
+            <ul class="navbar-nav navbar-nav-icons ms-auto flex-row align-items-center">
+              <li class="nav-item">
+                <div class="theme-control-toggle fa-icon-wait px-2">
+                  <input class="form-check-input ms-0 theme-control-toggle-input" id="themeControlToggle" type="checkbox" data-theme-control="theme" value="dark" />
+                  <label class="mb-0 theme-control-toggle-label theme-control-toggle-light" for="themeControlToggle" data-bs-toggle="tooltip" data-bs-placement="left" title="Switch to light theme"><span class="fas fa-sun fs-0"></span></label>
+                  <label class="mb-0 theme-control-toggle-label theme-control-toggle-dark" for="themeControlToggle" data-bs-toggle="tooltip" data-bs-placement="left" title="Switch to dark theme"><span class="fas fa-moon fs-0"></span></label>
+                </div>
+              </li>
+              <li class="nav-item dropdown">
+                <a class="nav-link notification-indicator notification-indicator-primary px-0 fa-icon-wait" id="navbarDropdownNotification" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-hide-on-body-scroll="data-hide-on-body-scroll"><span class="fas fa-bell" data-fa-transform="shrink-6" style="font-size: 33px;"></span></a>
+                <div class="dropdown-menu dropdown-menu-end dropdown-menu-card dropdown-menu-notification dropdown-caret-bg" aria-labelledby="navbarDropdownNotification">
+                </div>
+              </li>
+              <li class="nav-item dropdown">
+                <a class="nav-link fa-icon-wait nine-dots p-1" id="navbarDropdownMenu" role="button" data-hide-on-body-scroll="data-hide-on-body-scroll" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="43" viewBox="0 0 16 16" fill="none">
+                    <circle cx="2" cy="2" r="2" fill="#6C6E71"></circle>
+                    <circle cx="2" cy="8" r="2" fill="#6C6E71"></circle>
+                    <circle cx="2" cy="14" r="2" fill="#6C6E71"></circle>
+                    <circle cx="8" cy="8" r="2" fill="#6C6E71"></circle>
+                    <circle cx="8" cy="14" r="2" fill="#6C6E71"></circle>
+                    <circle cx="14" cy="8" r="2" fill="#6C6E71"></circle>
+                    <circle cx="14" cy="14" r="2" fill="#6C6E71"></circle>
+                    <circle cx="8" cy="2" r="2" fill="#6C6E71"></circle>
+                    <circle cx="14" cy="2" r="2" fill="#6C6E71"></circle>
+                  </svg></a>
+              </li>
+              <li class="nav-item dropdown"><a class="nav-link pe-0 ps-2" id="navbarDropdownUser" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                  <div class="avatar avatar-xl">                    
+                    {% if user.avatar %}
+                    <img class="rounded-circle" src="{{ user.avatar.name | minio_presigned_get_url }}" alt="" />
+                    {% else %}                    
+                    <img class="rounded-circle" src="{% static 'falcon/assets/img/team/3-thumb.png' %}" alt="" />
+                    {% endif %}  
+                  </div>
+                </a>
+                <div class="dropdown-menu dropdown-menu-end py-0" aria-labelledby="navbarDropdownUser">
+                  <div class="bg-white dark__bg-1000 rounded-2 py-2">
+                    <a class="dropdown-item fw-bold text-warning" href="{% url 'user_profile' %}"><span class="fas fa-user me-1"></span><span>{{ user.display_name }}</span></a>
+
+                    <div class="dropdown-divider"></div>
+                    <a class="dropdown-item" href="{% url 'user_profile' %}">Profile</a>
+                    <div class="dropdown-divider"></div>
+                    {% if qty_accounts > 1 %}
+                      <a class="dropdown-item" href="{% url 'switch_account' %}">Switch Profile</a>
+                    {% endif %}
+                    <a class="dropdown-item" href="{% url 'account_logout' %}">Logout</a>
+                  </div>
+                </div>
+              </li>
+            </ul>
+          </nav>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6 col-xxl-4">
+              <div class="card h-md-100 ecommerce-card-min-width">
+              <!-- <div class="card overflow-hidden" style="min-width: 12rem"> -->
+                <div class="bg-holder bg-card" style="background-image:url({% static 'falcon/assets/img/icons/spot-illustrations/corner-1.png' %});">
+                </div>                
+                  <div class="card-header pb-0 position-relative">
+                    <h5 class="mb-0 text-nowrap py-2 py-xl-0">
+                      <div>
+                          <span class="ms-1 text-400" data-bs-toggle="tooltip" data-bs-placement="top" title="The total number of all organizations and CMC customers on the platform">                        
+                            <span class="text-warning">All Organizations</span>
+                          </span>
+                      </div>                                      
+                    </h5>                  
+                  </div>  
+                <div class="card-body d-flex flex-column justify-content-end position-relative">
+                  <div class="row">
+                    <div class="col">
+                      <p class="font-sans-serif lh-1 mb-1 fs-2 text-warning" id="total-customer-count">
+                        {{ all_customers.count }}
+                      </p>                                         
+                    </div>
+                    <div class="col-auto ps-0">             
+                      <!-- <div class="echart-bar-weekly-sales h-100 echart-bar-weekly-sales-smaller-width"></div> -->
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6 col-xxl-4">
+              <div class="card h-md-100 ecommerce-card-min-width">                
+                  <div class="bg-holder bg-card" style="background-image:url({% static 'falcon/assets/img/icons/spot-illustrations/corner-3.png'  %});">
+                  </div>                
+                  <div class="card-header pb-0 position-relative">
+                    <h5 class="mb-0 text-nowrap py-2 py-xl-0">
+                      <div>
+                          <span class="ms-1 text-400" data-bs-toggle="tooltip" data-bs-placement="top" title="The total number of CMC partners on the platform">                        
+                            <span class="text-info">CMC Partners</span>
+                          </span>
+                      </div>                                      
+                    </h5>                  
+                  </div>  
+                  <div class="card-body d-flex flex-column justify-content-end position-relative">
+                    <div class="row">
+                      <div class="col">
+                        <p class="font-sans-serif lh-1 mb-1 fs-2 text-info" id="cmc-partner-count">
+                          {{ cmc_partners.count }}
+                        </p>
+                        <div id="selected-router-status">
+                        </div>
+                      </div>
+                      <div class="col-auto ps-0">
+                        <!-- <div class="echart-bar-weekly-sales h-100 echart-bar-weekly-sales-smaller-width"></div> -->
+                      </div>                    
+                    </div>
+                  </div>                
+              </div>
+            </div>  
+            <div class="col-md-6 col-xxl-4">
+              <div class="card h-md-100 ecommerce-card-min-width">
+                <div class="bg-holder bg-card" style="background-image:url({% static 'falcon/assets/img/icons/spot-illustrations/corner-2.png' %});">
+                </div>
+                  <div class="card-header pb-0 position-relative">
+                    <h5 class="mb-0 text-nowrap py-2 py-xl-0">
+                      <div>
+                          <span class="ms-1 text-400" data-bs-toggle="tooltip" data-bs-placement="top" title="The total number of end customers on the platform">                        
+                            <span class="text-primary">End Customers</span>
+                          </span>
+                      </div>                                      
+                    </h5>                  
+                  </div>  
+                <div class="card-body d-flex flex-column justify-content-end position-relative">
+                  <div class="row">                                   
+                    <div class="col">
+                      <p class="font-sans-serif lh-1 mb-1 fs-2 text-primary" id="end-customer-count">
+                        {{ end_customers.count }}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Superadmin Cabinet Management Section -->
+          {% if user.is_superuser %}
+          <div class="row g-3 mb-3">
+            <div class="col-12">
+              <div class="card">
+                <div class="card-header bg-light">
+                  <div class="row align-items-center">
+                    <div class="col">
+                      <h5 class="mb-0">
+                        <span class="fas fa-shield-alt me-2"></span>{% trans "Superadmin: Cabinet Management" %}
+                      </h5>
+                    </div>
+                    <div class="col-auto">
+                      <a href="{% url 'accounts:admin_cabinets_list' %}" class="btn btn-sm btn-primary">
+                        <span class="fas fa-cogs me-2"></span>{% trans "Manage Cabinets" %}
+                      </a>
+                      <a href="{% url 'accounts:admin_users_list' %}" class="btn btn-sm btn-secondary">
+                        <span class="fas fa-users-cog me-2"></span>{% trans "Manage Users" %}
+                      </a>
+                    </div>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <p class="mb-3">{% trans "As a superadmin, you have access to comprehensive cabinet management tools:" %}</p>
+                  <div class="row g-3">
+                    <div class="col-md-4">
+                      <div class="d-flex">
+                        <div class="flex-shrink-0">
+                          <span class="fas fa-building fa-2x text-primary"></span>
+                        </div>
+                        <div class="ms-3">
+                          <h6>{% trans "Cabinet Assignments" %}</h6>
+                          <p class="small text-muted mb-0">{% trans "Assign users to cabinets with specific roles and approval workflows" %}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-4">
+                      <div class="d-flex">
+                        <div class="flex-shrink-0">
+                          <span class="fas fa-user-tag fa-2x text-success"></span>
+                        </div>
+                        <div class="ms-3">
+                          <h6>{% trans "Role Management" %}</h6>
+                          <p class="small text-muted mb-0">{% trans "Define roles: Director, Chief Engineer, Engineer, Accountant, Cashier, Worker" %}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-4">
+                      <div class="d-flex">
+                        <div class="flex-shrink-0">
+                          <span class="fas fa-check-double fa-2x text-warning"></span>
+                        </div>
+                        <div class="ms-3">
+                          <h6>{% trans "Approval Workflow" %}</h6>
+                          <p class="small text-muted mb-0">{% trans "Control assignment status: Pending, Approved, Rejected" %}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          {% endif %}
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-12 col-xxl-12">
+              <div class="card h-100 " id="customers-page-customers-table" data-list='{"valueNames":["name","org","parent","type","menu","domains"],"page":10,"pagination":true,"fallback":"pages-table-fallback"}'>
+                <div class="card-header">
+                  <div class="row flex-between-center">
+                    <div class="col-auto col-sm-8 col-lg-8">                                           
+                      <h5 class="mb-0 text-nowrap py-2 py-xl-0">
+                        <span>Organizations &nbsp;</span>(<span>{{ all_customers.count }}</span>)
+                      </h5>
+                    </div>
+                    <div class="col-auto col-sm-4 col-lg-4"> 
+                      <div class="col-auto d-flex">
+                        <h5 class="mb-0 text-nowrap py-2 py-xl-0">
+                          <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#modal-create-customer" id="button-form-create-customer">Add a new Customer</button>
+                        </h5>
+                      </div>
+                    </div>                    
+                  </div>
+                </div>
+                <div class="card-body px-0 py-0">
+                  <div class="table-responsive scrollbar">
+                    <table class="table fs--1 mb-0 overflow-hidden table-hover">
+                      <thead class="bg-200 text-900">
+                        <tr>
+                          <th class="sort pe-1 align-middle white-space-nowrap" data-sort="name">Name</th>
+                          <th class="sort pe-1 align-middle white-space-nowrap" data-sort="org">Organization ID</th>
+                          <th class="sort pe-1 align-middle white-space-nowrap" data-sort="parent">Parent</th>
+                          <th class="sort pe-1 align-middle white-space-nowrap" data-sort="type">Customer Type</th>
+                          <th class="sort pe-1 align-middle white-space-nowrap" data-sort="menu"></th>
+                          <th class="sort pe-1 align-middle white-space-nowrap" data-sort="domains">Domains</th>
+                        </tr>
+                      </thead>
+                      <tbody class="list" id='all-customers'>  
+                        {% for customer in all_customers %}
+                          <tr class="hover-actions-trigger">
+                            <td class="align-middle text-nowrap">
+                              <div class="d-flex align-items-center">
+                                <div class="ms-2">{{ customer.name }}</div>
+                              </div>
+                            </td>
+                            <td class="align-middle text-nowrap">{{ customer.organization_id }}</td>
+                            <td class="align-middle text-nowrap">{{ customer.parent.name }}</td>
+                            <td class="align-middle text-nowrap">{{ customer.customer_type }}</td>                            
+                            <td class="w-auto">
+                              <div class="btn-group btn-group hover-actions end-0 me-4">
+
+                                <a href="{% url 'create_domain' customer.customer_key %}">
+                                  <button class="btn btn-light ps-2" type="button" data-bs-toggle="tooltip" data-bs-placement="top" title="Add a Domain">
+                                    <span class="fas fa-at"></span>
+                                  </button>
+                                </a> 
+                                                            
+                                <a href="#" data-bs-toggle="modal" data-bs-target="#modal-customer-profile-{{ forloop.counter }}">
+                                  <button class="btn btn-light ps-2" type="button" data-bs-toggle="tooltip" data-bs-placement="top" title="Edit Customer" >
+                                      <span class="fas fa-edit"></span>
+                                  </button> 
+                                </a> 
+                                                              
+                                <a href="{% url 'delete_customer' customer.customer_key %}">
+                                  <button class="btn btn-light ps-2" type="button" data-bs-toggle="tooltip" data-bs-placement="top" title="Delete Customer">
+                                    <span class="fas fa-trash-alt"></span>
+                                  </button>
+                                </a>                                  
+                              </div>
+                            </td>
+                            <td class="align-middle text-nowrap">
+                              {% for each_domain in customer.company_domain.all %}
+                                {% if each_domain %}
+                                <a class="text-primary fw-semi-bold" href="{% url 'delete_domain' each_domain.unique_id %}" data-bs-toggle="tooltip" data-bs-placement="top" title="Delete This Domain">
+                                 {{ each_domain.name}} 
+                                </a>
+                                {% endif %}
+                              {% endfor %}
+                            </td>
+                          </tr>
+                        {% endfor %}
+                      </tbody>
+                    </table>
+                    <div class="text-center d-none spinner-grow" role="status" id='peer-paths-loading'></div>
+                  </div>
+
+                  <div class="text-center d-none" id="pages-table-fallback">
+                    <p class="fw-bold fs-1 mt-3">No Page found</p>
+                  </div>
+                </div>
+                <div class="card-footer">
+                  <div class="row align-items-center">
+                    <div class="pagination d-none"></div>
+                    <div class="col">
+                      <p class="mb-0 fs--1"><span class="d-none d-sm-inline-block me-2" data-list-info="data-list-info"></span></p>
+                    </div>
+                    <div class="col-auto d-flex">
+                      <button class="btn btn-sm btn-primary" type="button" data-list-pagination="prev"><span>Previous</span></button>
+                      <button class="btn btn-sm btn-primary px-4 ms-2" type="button" data-list-pagination="next"><span>Next</span></button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>            
+            <!-- end peer paths section -->
+        </div>
+        {% include 'includes/footer.html' %}
+        </div>
+      </div>
+      <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#loading-modal" id="loading-button" hidden>
+      </button>
+      
+{% if customer_forms %}
+{% for business_profile_form in customer_forms %}
+      <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#modal-customer-profile-{{ forloop.counter }}" id="button-form-customer-profile-{{ forloop.counter }}" hidden>
+      </button>
+      <div class="modal fade" id="modal-customer-profile-{{ forloop.counter }}" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 650px">
+          <div class="modal-content position-relative">
+            <div class="position-absolute top-0 end-0 mt-2 me-2 z-index-1">
+              <button class="btn-close btn btn-sm btn-circle d-flex flex-center transition-base" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+            <div class="rounded-top-lg py-3 ps-4 pe-6 bg-light">
+              <h4 class="mb-1" id="modalExampleDemoLabel">Edit customer information </h4>
+            </div>              
+              <div class="p-4 pb-0">
+                <form id="form-customer-profile" method="post" action="{% url 'update_business_profile' business_profile_form.profile_form.customer.customer_key %}">
+                  {% csrf_token %}                  
+                      <div class="mb-3">
+                        <label for="id_customer_name">Customer Name</label>
+                        {{ business_profile_form.profile_form.name }}
+                        {{ business_profile_form.profile_form.name.errors }}
+                      </div>
+                      <div class="mb-3">
+                        <label for="id_business_profile">Unique Organization ID</label>
+                        {{ business_profile_form.profile_form.organization_id }}
+                        {{ business_profile_form.profile_form.organization_id.errors }}
+                      </div>
+                      <div class="mb-3">
+                        <label for="erp_code">Parent</label>
+                        {{ business_profile_form.profile_form.parent }}
+                        {{ business_profile_form.profile_form.parent.errors }}
+                      </div>                      
+                      <div class="mb-3">
+                        <label for="customer_type">Customer Type</label>
+                        {{ business_profile_form.profile_form.customer_type }}
+                        {{ business_profile_form.profile_form.customer_type.errors }}
+                      </div>       
+                      <br>
+                      <br>       
+                      <div class="mb-3">
+                        <button type="submit" name="submit" class="btn btn-primary d-block w-100 mt-3">Save Changes</button>
+                        <button type="button" class="btn btn-warning d-block w-100 mt-3" data-bs-dismiss="modal">Cancel</button>                        
+                      </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>  
+  {% endfor %}    
+{% endif %}
+  <div class="modal fade" id="modal-create-customer" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 650px">
+      <div class="modal-content position-relative">
+        <div class="position-absolute top-0 end-0 mt-2 me-2 z-index-1">
+          <button class="btn-close btn btn-sm btn-circle d-flex flex-center transition-base" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+        <div class="rounded-top-lg py-3 ps-4 pe-6 bg-light">
+          <h4 class="mb-1" id="modalExampleDemoLabel">Add a new customer</h4>
+        </div>              
+          <div class="p-4 pb-0">
+            <form id="form-create-customer" method="post" action="{% url 'create_customer' %}">
+              {% csrf_token %}
+              {% for field in create_customer_form %}
+                  <div class="mb-3">                                                              
+                      {{ field.label_tag}}                        
+                      {{ field }}     
+                      {% for error in field.errors %}
+                        <span style="color: red;" >{{ error }}</span>
+                      {% endfor %}                   
+                  </div>
+              {% endfor %}        
+                <br>
+                <br>       
+                <div class="mb-3">
+                  <button type="submit" name="submit" class="btn btn-primary d-block w-100 mt-3">Create Customer</button>
+                  <button type="button" class="btn btn-warning d-block w-100 mt-3" data-bs-dismiss="modal">Cancel</button>                        
+                </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div> 
+
+{% if delete_customer %}
+  <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#modal-delete-customer" id="button-form-delete-customer" hidden>
+  </button>
+  <div class="modal fade" id="modal-delete-customer" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 650px">
+      <div class="modal-content position-relative">
+        <div class="position-absolute top-0 end-0 mt-2 me-2 z-index-1">
+          <button class="btn-close btn btn-sm btn-circle d-flex flex-center transition-base" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+        <div class="rounded-top-lg py-3 ps-4 pe-6 bg-light">
+          <h4 class="mb-1" id="modalExampleDemoLabel">Delete customer</h4>
+        </div>              
+          <div class="p-4 pb-0">
+            <form id="form-delete-customer" method="post" action="{% url 'delete_customer' customer.customer_key %}">
+              {% csrf_token %}
+              {% for error in form.non_field_errors %}
+                {% if error %}<span style="color: red;" >{{ error }}</span>{% endif %}
+              {% endfor %}                    
+                <br>
+              <h5 class="mb-1">
+                Hey {{ user.first_name }}, are you sure you want to delete <b>{{ customer.name }}</b>?
+              </h5>                
+                <br>       
+                <div class="mb-3">
+                  <button type="submit" name="submit" class="btn btn-primary d-block w-100 mt-3">Delete Customer</button>
+                  <button type="button" class="btn btn-warning d-block w-100 mt-3" data-bs-dismiss="modal">Cancel</button>                        
+                </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div> 
+{% endif %}
+{% if create_domain %}
+  <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#modal-create-domain" id="button-form-create-domain" hidden>
+  </button>
+  <div class="modal fade" id="modal-create-domain" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 650px">
+      <div class="modal-content position-relative">
+        <div class="position-absolute top-0 end-0 mt-2 me-2 z-index-1">
+          <button class="btn-close btn btn-sm btn-circle d-flex flex-center transition-base" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+        <div class="rounded-top-lg py-3 ps-4 pe-6 bg-light">
+          <h4 class="mb-1" id="modalExampleDemoLabel">Associate A Domain Name to <b>{{ create_domain_form.customer.name }}</b> </h4>
+        </div>              
+          <div class="p-4 pb-0">
+            <p>Example: If users for this company login as <b>user@companydomain.com</b>, please enter <b>companydomain.com</b></p>
+            <form id="form-create-domain" method="post" action="{% url 'create_domain' create_domain_form.customer.customer_key %}">
+              {% csrf_token %}
+              {% for field in create_domain_form %}
+                  <div class="mb-3">                                                              
+                      {{ field.label_tag}}                        
+                      {{ field }}     
+                      {% for error in field.errors %}
+                        <span style="color: red;" >{{ error }}</span>
+                      {% endfor %}                   
+                  </div>
+              {% endfor %}                  
+                <br>       
+                <div class="mb-3">
+                  <button type="submit" name="submit" class="btn btn-primary d-block w-100 mt-3">Create Domain</button>
+                  <button type="button" class="btn btn-warning d-block w-100 mt-3" data-bs-dismiss="modal">Cancel</button>                        
+                </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div> 
+{% endif %}
+{% if delete_domain %}
+  {% if domain.unique_id %}
+  <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#modal-delete-domain" id="button-form-delete-domain" hidden>
+  </button>
+  <div class="modal fade" id="modal-delete-domain" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 650px">
+      <div class="modal-content position-relative">
+        <div class="position-absolute top-0 end-0 mt-2 me-2 z-index-1">
+          <button class="btn-close btn btn-sm btn-circle d-flex flex-center transition-base" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+        <div class="rounded-top-lg py-3 ps-4 pe-6 bg-light">
+          <h4 class="mb-1" id="modalExampleDemoLabel">Delete Domain Name</h4>
+        </div>              
+          <div class="p-4 pb-0">
+            <form id="form-delete-customer" method="post" action="{% url 'delete_domain' domain.unique_id %}">
+              {% csrf_token %}
+              {% for error in form.non_field_errors %}
+                {% if error %}<span style="color: red;" >{{ error }}</span>{% endif %}
+              {% endfor %}                    
+                <br>
+              <h5 class="mb-1">
+                Hey {{ user.first_name }}, are you sure you want to delete the domain <b>{{ domain.name }}</b>?
+              </h5>                
+                <br>       
+                <div class="mb-3">
+                  <button type="submit" name="submit" class="btn btn-primary d-block w-100 mt-3">Delete Domain</button>
+                  <button type="button" class="btn btn-warning d-block w-100 mt-3" data-bs-dismiss="modal">Cancel</button>                        
+                </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div> 
+  {% endif %}
+{% endif %}
+{% if form.errors %}
+  {% if form.customer.customer_key %}
+      <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#modal-customer-profile-error" id="button-form-customer-profile-error" hidden>
+      </button>
+      <div class="modal fade" id="modal-customer-profile-error" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 650px">
+          <div class="modal-content position-relative">
+            <div class="position-absolute top-0 end-0 mt-2 me-2 z-index-1">
+              <button class="btn-close btn btn-sm btn-circle d-flex flex-center transition-base" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+            <div class="rounded-top-lg py-3 ps-4 pe-6 bg-light">
+              <h4 class="mb-1" id="modalExampleDemoLabel">Edit customer information</h4>
+            </div>              
+              <div class="p-4 pb-0">
+                <form id="form-customer-profile" method="post" action="{% url 'update_business_profile' form.customer.customer_key %}">
+                  {% csrf_token %}
+                  {% for error in form.non_field_errors %}
+                    {% if error %}<span style="color: red;" >{{ error }}</span>{% endif %}
+                  {% endfor %}                   
+                  {% for field in form %}
+                      <div class="mb-3">                                                              
+                          {{ field.label_tag}}                        
+                          {{ field }}     
+                          {% for error in field.errors %}
+                            <span style="color: red;" >{{ error }}</span>
+                          {% endfor %}                   
+                      </div>
+                  {% endfor %}        
+                    <br>
+                    <br>       
+                    <div class="mb-3">
+                      <button type="submit" name="submit" class="btn btn-primary d-block w-100 mt-3">Save Changes</button>
+                      <button type="button" class="btn btn-warning d-block w-100 mt-3" data-bs-dismiss="modal">Cancel</button>                        
+                    </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div> 
+    <!--  create domain error form -->
+      <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#modal-create-domain-error" id="button-form-create-domain-error" hidden>
+      </button>
+      <div class="modal fade" id="modal-create-domain-error" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 650px">
+          <div class="modal-content position-relative">
+            <div class="position-absolute top-0 end-0 mt-2 me-2 z-index-1">
+              <button class="btn-close btn btn-sm btn-circle d-flex flex-center transition-base" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+            <div class="rounded-top-lg py-3 ps-4 pe-6 bg-light">
+              <h4 class="mb-1" id="modalExampleDemoLabel">Error: Associate A Domain Name to <b>{{ form.customer.name }}</b> </h4>
+            </div>              
+              <div class="p-4 pb-0">
+                <p>Example: If users for this company login as <b>user@companydomain.com</b>, please enter <b>companydomain.com</b></p>
+                <form id="form-create-domain" method="post" action="{% url 'create_domain' form.customer.customer_key %}">
+                  {% csrf_token %}
+                  {% for error in form.non_field_errors %}
+                    {% if error %}<span style="color: red;" >{{ error }}</span>{% endif %}
+                  {% endfor %}                   
+                  {% for field in form %}
+                      <div class="mb-3">                                                              
+                          {{ field.label_tag}}                        
+                          {{ field }}     
+                          {% for error in field.errors %}
+                            <span style="color: red;" >{{ error }}</span>
+                          {% endfor %}                   
+                      </div>
+                  {% endfor %}                  
+                    <br>       
+                    <div class="mb-3">
+                      <button type="submit" name="submit" class="btn btn-primary d-block w-100 mt-3">Create Domain</button>
+                      <button type="button" class="btn btn-warning d-block w-100 mt-3" data-bs-dismiss="modal">Cancel</button>                        
+                    </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>      
+    {% endif %}      
+      <!-- create customer error form -->
+      <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#modal-create-customer-error" id="button-form-create-customer-error" hidden>
+      </button>
+      <div class="modal fade" id="modal-create-customer-error" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 650px">
+          <div class="modal-content position-relative">
+            <div class="position-absolute top-0 end-0 mt-2 me-2 z-index-1">
+              <button class="btn-close btn btn-sm btn-circle d-flex flex-center transition-base" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+            <div class="rounded-top-lg py-3 ps-4 pe-6 bg-light">
+              <h4 class="mb-1" id="modalExampleDemoLabel">Add a new customer</h4>
+            </div>              
+              <div class="p-4 pb-0">
+                <form id="form-create-customer" method="post" action="{% url 'create_customer' %}">
+                  {% csrf_token %}
+                  {% for error in form.non_field_errors %}
+                    {% if error %}<span style="color: red;" >{{ error }}</span>{% endif %}
+                  {% endfor %}                   
+                  {% for field in form %}
+                      <div class="mb-3">                                                              
+                          {{ field.label_tag}}                        
+                          {{ field }}     
+                          {% for error in field.errors %}
+                            <span style="color: red;" >{{ error }}</span>
+                          {% endfor %}                   
+                      </div>
+                  {% endfor %}        
+                    <br>
+                    <br>       
+                    <div class="mb-3">
+                      <button type="submit" name="submit" class="btn btn-primary d-block w-100 mt-3">Create Customer</button>
+                      <button type="button" class="btn btn-warning d-block w-100 mt-3" data-bs-dismiss="modal">Cancel</button>                        
+                    </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>     
+   
+  {% endif %}
+  
+{% endblock %}
+
+{% block extra_js %}
+                                           
+{% if form.errors %}
+  {% if create_customer %}
+    <script>
+      $('#button-form-create-customer-error').click();
+    </script>
+  {% elif create_domain %}
+    <script>
+      $('#button-form-create-domain-error').click();
+    </script>     
+  {% else %} 
+    <script>
+      $('#button-form-customer-profile-error').click();
+    </script>
+  {% endif %}
+{% else %}
+  {% if create_domain %}
+      <script>
+        $('#button-form-create-domain').click();
+      </script> 
+  {% endif %}
+  {% if delete_customer %} 
+      <script>
+        $('#button-form-delete-customer').click();
+      </script> 
+  {% endif %}
+  {% if delete_domain%}
+      <script>
+        $('#button-form-delete-domain').click();
+      </script>   
+  {% endif %}
+{% endif %}
+
+
+{% comment %}
+<!-- <script>  
+  $(function() {
+    $('#form-customer-profile').each(function() {
+      $(this).data('serialized', $(this).serialize())
+      })
+      .on('change input', function() {
+        $(this).find('input:submit, button:submit').prop('disabled',
+        $(this).serialize() == $(this).data('serialized'));
+       })
+      .find('input:submit, button:submit')
+      .prop('disabled', true)
+    ;
+  });
+</script> -->
+<!--   <script>
+    $(document).on("submit", "form", function(event) {
+      event.preventDefault();
+
+      $.ajax({
+        type: $(this).attr("method"),
+        data: new FormData(this),
+        url: $(this).attr("action"),
+      })
+      .always(function(data) {
+        console.log('#button-'+$(this).attr("id"));
+        $('#button-'+$(this).attr("id")).click();   
+        console.log($(this).attr("action"));                 
+      }); 
+
+    });
+
+  </script> -->
+  {% endcomment %}
+{% endblock %}
+
+

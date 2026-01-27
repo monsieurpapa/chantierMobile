@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils.translation import gettext_lazy as _
 from core.models import BaseModel
+from chantiermobile.constants import UserRoles, ApprovalStatus
 
 class User(AbstractUser):
     # Extension of standard user
@@ -20,26 +21,13 @@ class Cabinet(BaseModel):
         return self.name
 
 class UserCabinetRole(BaseModel):
-    class Role(models.TextChoices):
-        DIRECTOR = 'DIRECTOR', _('Directeur de Cabinet')
-        CHIEF_ENGINEER = 'CHIEF_ENGINEER', _('Chef des Ingénieurs')
-        ENGINEER = 'ENGINEER', _('Ingénieur')
-        ACCOUNTANT = 'ACCOUNTANT', _('Comptable')
-        CASHIER = 'CASHIER', _('Caissier')
-        WORKER = 'WORKER', _('Ouvrier')
-
-    class Status(models.TextChoices):
-        PENDING = 'PENDING', _('En attente d\'approbation')
-        APPROVED = 'APPROVED', _('Approuvé')
-        REJECTED = 'REJECTED', _('Rejeté')
-
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='cabinet_roles')
     cabinet = models.ForeignKey(Cabinet, on_delete=models.CASCADE, related_name='user_roles')
-    role = models.CharField(max_length=50, choices=Role.choices)
+    role = models.CharField(max_length=50, choices=UserRoles.choices)
     status = models.CharField(
         max_length=20, 
-        choices=Status.choices, 
-        default=Status.PENDING
+        choices=ApprovalStatus.choices, 
+        default=ApprovalStatus.PENDING
     )
     
     class Meta:

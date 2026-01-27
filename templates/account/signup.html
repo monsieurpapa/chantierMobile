@@ -1,5 +1,5 @@
 {% extends 'falcon_base.html' %}
-{% load static %}
+{% load static i18n %}
 {% block content %}
       <div class="container" data-layout="container">
         <script>
@@ -23,9 +23,9 @@
               <div class="card-body p-4 p-sm-5">
                 <div class="row flex-between-center mb-2">
                   <div class="col-auto">
-                    <h5>Sign up</h5>
+                    <h5>{% trans "Sign up" %}</h5>
                   </div>
-                  <div class="col-auto fs--1 text-600"><span class="mb-0 undefined">Have an account?</span> <span><a href="{% url 'account_login' %}">Login</a></span></div>
+                  <div class="col-auto fs--1 text-600"><span class="mb-0 undefined">{% trans "Have an account?" %}</span> <span><a href="{% url 'account_login' %}">{% trans "Login" %}</a></span></div>
                 </div>
                 <form id="frmAccountRegistration" method="POST" action="{% url 'account_signup' %}" class="row g-3 needs-validation" novalidate="">{% csrf_token %}
                   <p>                                                                                    

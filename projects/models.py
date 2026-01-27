@@ -2,19 +2,13 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from core.models import BaseModel
 from accounts.models import Cabinet
+from chantiermobile.constants import SiteStatus, ProjectConfig
 
 class Site(BaseModel):
-    class Status(models.TextChoices):
-        PLANNING = 'PLANNING', _('En planification')
-        ACTIVE = 'ACTIVE', _('Actif')
-        PAUSED = 'PAUSED', _('En pause')
-        COMPLETED = 'COMPLETED', _('Complété')
-        CANCELLED = 'CANCELLED', _('Annulé')
-
     cabinet = models.ForeignKey(Cabinet, on_delete=models.CASCADE, related_name='sites')
     name = models.CharField(max_length=255)
     location = models.CharField(max_length=255)
-    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PLANNING)
+    status = models.CharField(max_length=20, choices=SiteStatus.choices, default=SiteStatus.PLANNING)
     start_date = models.DateField(null=True, blank=True)
     expected_end_date = models.DateField(null=True, blank=True)
     
@@ -76,6 +70,11 @@ class SiteProgress(BaseModel):
     report_date = models.DateField()
     percentage_complete = models.PositiveIntegerField(help_text="0-100")
     description = models.TextField()
+    
+    def clean(self):
+        if self.percentage_complete < ProjectConfig.MIN_PROGRESS or self.percentage_complete > ProjectConfig.MAX_PROGRESS:
+            from django.core.exceptions import ValidationError
+            raise ValidationError(f'Progress must be between {ProjectConfig.MIN_PROGRESS} and {ProjectConfig.MAX_PROGRESS}.')
     
     def __str__(self):
         return f"{self.phase.name} - {self.percentage_complete}% on {self.report_date}"
