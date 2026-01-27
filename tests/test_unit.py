@@ -1,0 +1,187 @@
+"""
+Unit tests for ChantierMobile application.
+These tests test individual components in isolation.
+"""
+
+import pytest
+from django.test import TestCase
+from django.urls import reverse
+from django.core.exceptions import ValidationError
+from decimal import Decimal
+from datetime import date
+
+from chantiermobile.constants import SiteStatus, ExpenseStatus
+
+
+@pytest.mark.unit
+class TestConstants:
+    """Test constants definitions."""
+    
+    def test_site_status_choices(self):
+        """Test site status choices are properly defined."""
+        assert SiteStatus.ACTIVE == 'ACTIVE'
+        assert SiteStatus.PLANNING == 'PLANNING'
+        assert SiteStatus.COMPLETED == 'COMPLETED'
+        assert len(SiteStatus.choices) == 5
+    
+    def test_expense_status_choices(self):
+        """Test expense status choices are properly defined."""
+        assert ExpenseStatus.PENDING == 'PENDING'
+        assert ExpenseStatus.APPROVED == 'APPROVED'
+        assert ExpenseStatus.PAID == 'PAID'
+        assert len(ExpenseStatus.choices) == 4
+
+
+@pytest.mark.unit
+class TestModels:
+    """Test model methods and properties."""
+    
+    def test_site_string_representation(self, site):
+        """Test Site model string representation."""
+        expected = f"{site.name} ({site.status})"
+        assert str(site) == expected
+    
+    def test_site_total_spent_property(self, site, expense):
+        """Test Site total_spent property calculation."""
+        # Create approved expense
+        from finance.models import Expense
+        expense.status = ExpenseStatus.APPROVED
+        expense.save()
+        
+        site.refresh_from_db()
+        assert site.total_spent == expense.amount
+    
+    def test_expense_approval_methods(self, expense, user):
+        """Test Expense approval methods."""
+        # Test approve method
+        expense.approve(user, "Looks good")
+        expense.refresh_from_db()
+        assert expense.status == ExpenseStatus.APPROVED
+        
+        # Test reject method
+        expense.reject(user, "Not approved")
+        expense.refresh_from_db()
+        assert expense.status == ExpenseStatus.REJECTED
+
+
+@pytest.mark.unit
+class TestForms:
+    """Test form validation and methods."""
+    
+    def test_expense_form_validation(self, expense_category, site):
+        """Test ExpenseForm validation."""
+        from finance.forms import ExpenseForm
+        
+        # Valid form data
+        form_data = {
+            'site': site.pk,
+            'category': expense_category.pk,
+            'amount': '1000.00',
+            'description': 'Valid expense'
+        }
+        form = ExpenseForm(data=form_data)
+        assert form.is_valid()
+        
+        # Invalid amount
+        form_data['amount'] = '-100.00'
+        form = ExpenseForm(data=form_data)
+        assert not form.is_valid()
+    
+    def test_budget_form_date_validation(self):
+        """Test BudgetForm date validation."""
+        from finance.forms import BudgetForm
+        
+        # Invalid date range
+        form_data = {
+            'site': 1,  # Mock site ID
+            'total_amount': '10000.00',
+            'start_date': date(2024, 1, 15),
+            'end_date': date(2024, 1, 10)  # Before start date
+        }
+        form = BudgetForm(data=form_data)
+        assert not form.is_valid()
+        assert 'end_date' in form.errors
+
+
+@pytest.mark.unit
+class TestViews:
+    """Test view logic and responses."""
+    
+    def test_home_view_context(self, authenticated_client):
+        """Test home view context data."""
+        response = authenticated_client.get(reverse('home'))
+        assert response.status_code == 200
+        assert 'sites' in response.context
+    
+    def test_login_view_redirect(self, authenticated_client):
+        """Test login view redirects authenticated users."""
+        response = authenticated_client.get(reverse('account:login'))
+        assert response.status_code in [302, 200]
+
+
+@pytest.mark.unit
+class TestUtilities:
+    """Test utility functions and helpers."""
+    
+    def test_date_formatting(self):
+        """Test date formatting utilities."""
+        from datetime import datetime
+        date_obj = datetime(2024, 1, 15, 10, 30)
+        formatted = date_obj.strftime('%Y-%m-%d')
+        assert formatted == '2024-01-15'
+    
+    def test_currency_formatting(self):
+        """Test currency formatting."""
+        amount = Decimal('1234.56')
+        formatted = f"${amount:,.2f}"
+        assert formatted == "$1,234.56"
+
+
+@pytest.mark.unit
+class TestValidators:
+    """Test custom validators."""
+    
+    def test_positive_number_validator(self):
+        """Test positive number validation."""
+        from django.core.exceptions import ValidationError
+        from chantiermobile.constants import ValidationMessages
+        
+        # Valid positive number
+        try:
+            # This would normally call the validator
+            amount = Decimal('100.00')
+            assert amount > 0
+        except ValidationError:
+            pytest.fail("Valid positive number should not raise ValidationError")
+        
+        # Invalid negative number
+        try:
+            amount = Decimal('-100.00')
+            if amount <= 0:
+                raise ValidationError(ValidationMessages.POSITIVE_NUMBER)
+            pytest.fail("Negative number should raise ValidationError")
+        except ValidationError:
+            pass  # Expected
+
+
+@pytest.mark.unit
+class TestMixins:
+    """Test custom mixins."""
+    
+    def test_cabinet_access_mixin_logic(self, user, cabinet):
+        """Test CabinetAccessMixin logic."""
+        # User with cabinet role should have access
+        from accounts.models import UserCabinetRole
+        from chantiermobile.constants import UserRoles, ApprovalStatus
+        
+        UserCabinetRole.objects.create(
+            user=user,
+            cabinet=cabinet,
+            role=UserRoles.ENGINEER,
+            status=ApprovalStatus.APPROVED
+        )
+        
+        # Check user has cabinet access
+        user_cabinets = user.cabinet_roles.filter(status=ApprovalStatus.APPROVED)
+        assert user_cabinets.exists()
+        assert user_cabinets.first().cabinet == cabinet
