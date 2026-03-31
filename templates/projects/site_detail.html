@@ -355,13 +355,13 @@
                                             {% if not contract %}
                                                 {% if request.user|has_role:'DIRECTOR,ACCOUNTANT' %}
                                                 <a class="btn btn-sm btn-outline-success"
-                                                    href="{% url 'revenue:contract_create' site_id=site.unique_id %}">
+                                                    href="{% url 'revenue:contract_create_from_site' site_id=site.unique_id %}">
                                                     <span class="fas fa-plus me-1"></span>Create Contract
                                                 </a>
                                                 {% endif %}
                                             {% else %}
                                                 <a class="btn btn-sm btn-outline-success"
-                                                    href="{% url 'revenue:invoice_create' contract_id=contract.id %}">
+                                                    href="{% url 'revenue:invoice_create_from_contract' contract_id=contract.id %}">
                                                     <span class="fas fa-file-invoice me-1"></span>New Invoice
                                                 </a>
                                             {% endif %}

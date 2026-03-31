@@ -6,7 +6,7 @@
 {% block content %}
 <div class="container" data-layout="container-fluid">
     <!-- vertical nav -->
-    {% include 'includes/navbar-vertical.html' with on="revenue" %}
+    {% include 'includes/navbar-vertical.html' with on="contract_list" %}
     <!-- /vertical nav -->
 
     <div class="content">
@@ -41,7 +41,7 @@
                                     <td>{{ contract.signed_date }}</td>
                                     <td class="text-end">
                                         <a class="btn btn-falcon-default btn-sm"
-                                            href="{% url 'revenue:invoice_create' contract_id=contract.id %}">
+                                            href="{% url 'revenue:invoice_create_from_contract' contract_id=contract.id %}">
                                             <span class="fas fa-file-invoice me-1"></span>Invoice
                                         </a>
                                         <a class="btn btn-falcon-default btn-sm"
