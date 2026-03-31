@@ -45,13 +45,13 @@
                         <table class="table table-sm table-striped fs--1 mb-0">
                             <thead class="bg-200 text-900">
                                 <tr>
-                                    <th>Invoice Number</th>
-                                    <th>Site / Client</th>
-                                    <th>Amount</th>
-                                    <th>Payment Date</th>
-                                    <th>Payment Method</th>
-                                    <th>Reference</th>
-                                    <th class="text-end">Actions</th>
+                                    <th scope="col">Invoice Number</th>
+                                    <th scope="col">Site / Client</th>
+                                    <th scope="col">Amount</th>
+                                    <th scope="col">Payment Date</th>
+                                    <th scope="col">Payment Method</th>
+                                    <th scope="col">Reference</th>
+                                    <th scope="col" class="text-end">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -83,8 +83,12 @@
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="7" class="text-center py-4 text-500">
-                                        No payments recorded yet.
+                                    <td colspan="7" class="text-center py-5">
+                                        <span class="fas fa-credit-card fa-2x text-300 d-block mb-2"></span>
+                                        <p class="text-600 mb-2">No payments recorded yet.</p>
+                                        <a href="{% url 'revenue:payment_create_standalone' %}" class="btn btn-falcon-primary btn-sm">
+                                            <span class="fas fa-plus me-1"></span>Record Payment
+                                        </a>
                                     </td>
                                 </tr>
                                 {% endfor %}

@@ -98,6 +98,7 @@
   <!-- ===============================================-->
   <!--    End of Main Content-->
   <!-- ===============================================-->
+  {% if debug %}
   <div class="offcanvas offcanvas-end settings-panel border-0" id="settings-offcanvas" tabindex="-1"
     aria-labelledby="settings-offcanvas">
     <div class="offcanvas-header settings-panel-header bg-shape">
@@ -241,7 +242,8 @@
       </div>
       {% endcomment %}
     </div>
-  </div><a class="card setting-toggle" href="#settings-offcanvas" data-bs-toggle="offcanvas">
+  </div>
+  <a class="card setting-toggle" href="#settings-offcanvas" data-bs-toggle="offcanvas">
     <div class="card-body d-flex align-items-center py-md-2 px-2 py-1">
       <div class="bg-soft-primary position-relative rounded-start" style="height:34px;width:28px">
         <div class="settings-popover"><span class="ripple"><span
@@ -256,6 +258,7 @@
         class="text-uppercase text-primary fw-bold bg-soft-primary py-2 pe-2 ps-1 rounded-end">customize</small>
     </div>
   </a>
+  {% endif %}
 
 
   <!-- ===============================================-->

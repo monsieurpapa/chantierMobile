@@ -39,16 +39,12 @@
                         <table class="table table-sm table-striped fs--1 mb-0 overflow-hidden">
                             <thead class="bg-200 text-900">
                                 <tr>
-                                    <th class="sort pe-1 align-middle white-space-nowrap" data-sort="name">Site Name
-                                    </th>
-                                    <th class="sort pe-1 align-middle white-space-nowrap" data-sort="location">Location
-                                    </th>
-                                    <th class="sort pe-1 align-middle white-space-nowrap" data-sort="status">Status</th>
-                                    <th class="sort pe-1 align-middle white-space-nowrap" data-sort="start">Start Date
-                                    </th>
-                                    <th class="sort pe-1 align-middle white-space-nowrap" data-sort="end">Expected End
-                                    </th>
-                                    <th class="no-sort pe-1 align-middle data-table-row-action"></th>
+                                    <th scope="col" class="sort pe-1 align-middle white-space-nowrap" data-sort="name">Site Name</th>
+                                    <th scope="col" class="sort pe-1 align-middle white-space-nowrap" data-sort="location">Location</th>
+                                    <th scope="col" class="sort pe-1 align-middle white-space-nowrap" data-sort="status">Status</th>
+                                    <th scope="col" class="sort pe-1 align-middle white-space-nowrap" data-sort="start">Start Date</th>
+                                    <th scope="col" class="sort pe-1 align-middle white-space-nowrap" data-sort="end">Expected End</th>
+                                    <th scope="col" class="no-sort pe-1 align-middle data-table-row-action"></th>
                                 </tr>
                             </thead>
                             <tbody class="list" id="table-orders-body">
@@ -102,7 +98,12 @@
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="6" class="text-center py-4">No sites found. Add your first project!
+                                    <td colspan="6" class="text-center py-5">
+                                        <span class="fas fa-hard-hat fa-2x text-300 d-block mb-2"></span>
+                                        <p class="text-600 mb-2">No construction sites yet.</p>
+                                        <a href="{% url 'projects:site_create' %}" class="btn btn-falcon-primary btn-sm">
+                                            <span class="fas fa-plus me-1"></span>Create New Site
+                                        </a>
                                     </td>
                                 </tr>
                                 {% endfor %}
