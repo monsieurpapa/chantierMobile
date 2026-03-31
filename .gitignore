@@ -71,3 +71,4 @@ package-lock.json
 build/
 dist/
 *.egg-info/
+.gstack/
