@@ -1,108 +1,260 @@
-# Chantier Mobile ERP
+# ChantierMobile
 
-[![Django](https://img.shields.io/badge/Django-4.2+-092E20?style=for-the-badge&logo=django)](https://www.djangoproject.com/)
-[![Docker](https://img.shields.io/badge/Docker-Enabled-2496ED?style=for-the-badge&logo=docker)](https://www.docker.com/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-336791?style=for-the-badge&logo=postgresql)](https://www.postgresql.org/)
+**Construction site ERP** — project tracking, personnel management, financial control, material logistics, and revenue handling in one platform.
 
-**Chantier Mobile** is a comprehensive Enterprise Resource Planning (ERP) solution designed specifically for construction site management. It streamlines operations by integrating project tracking, personnel management, financial control, material logistics, and revenue handling into a unified platform.
+[![Django](https://img.shields.io/badge/Django-4.2+-092E20?logo=django&logoColor=white)](https://www.djangoproject.com/)
+[![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Docker](https://img.shields.io/badge/Docker-required-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
+[![Celery](https://img.shields.io/badge/Celery-Redis-37814A?logo=celery&logoColor=white)](https://docs.celeryq.dev/)
 
-## 🚀 Key Features
+---
 
-### 🏗️ Project Management (`projects`)
-- **Site Tracking**: Manage multiple construction sites with status tracking (Planning, Active, Paused, Completed).
-- **Phasing**: Break down projects into distinct phases with timeline management.
-- **Progress Reporting**: Track real-time progress percentages and reporting per phase.
+## Table of Contents
 
-### 👥 Personnel & HR (`personnel`)
-- **Skill Management**: Catalog personnel skills and expertise.
-- **Site Assignments**: Assign staff to specific sites with role definitions and daily rates.
-- **Profiles**: Detailed personnel profiles linked to system users.
+- [Overview](#overview)
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Quick Start](#quick-start)
+- [Configuration](#configuration)
+- [Development](#development)
+- [Testing](#testing)
+- [Architecture](#architecture)
+- [Contributing](#contributing)
 
-### 💰 Finance & Budgeting (`finance`)
-- **Budget Control**: Set and monitor total budgets per site.
-- **Expense Management**: diverse expense categories and approval workflows (Pending -> Approved/Rejected -> Paid).
-- **Receipt Archiving**: Digital storage for expense receipts.
+---
 
-### 🧱 Material & Logistics (`materials`)
-- **Inventory Definitions**: Standardize material units and estimated costs.
-- **Request Workflow**: Streamlined material request process linking site needs to procurement.
-- **Order Tracking**: Monitor status from Request to Delivery.
+## Overview
 
-### 📈 Revenue & Contracts (`revenue`)
-- **Contract Management**: Track client contracts, total values, and signing dates.
-- **Invoicing**: Generate and track invoices with status updates (Draft, Sent, Paid, Overdue).
-- **Payment Reconciliation**: Record payments via various methods (Bank Transfer, Check, Mobile Money).
+ChantierMobile is a multi-tenant ERP built for construction firms. Each firm operates under a **Cabinet** — an isolated organizational unit that owns all its sites, budgets, contracts, and personnel data. Role-based access control (Director, Chief Engineer, Engineer, Accountant, Cashier, Worker) is enforced at the view layer.
 
-## 🛠️ Tech Stack
+---
 
-- **Backend Framework**: Django 4.2+ (Python)
+## Features
+
+| Module | What it does |
+|--------|-------------|
+| **Projects** | Manage construction sites through a lifecycle (Planning → Active → Paused → Completed), broken into phases with progress tracking |
+| **Finance** | Per-site budget caps, expense submission with an approval workflow (Pending → Approved → Paid), receipt archiving |
+| **Personnel** | Worker profiles, per-site assignments with negotiated daily rates, skill cataloguing |
+| **Materials** | Material catalog, request/order workflow (Pending → Approved → Ordered → Delivered) |
+| **Revenue** | Client contracts, invoice generation with status tracking (Draft → Sent → Paid/Overdue), payment reconciliation |
+| **Async tasks** | Celery beat job marks overdue invoices daily; Flower dashboard for task monitoring |
+| **i18n** | French (default) and English, switchable via UI; all strings use `gettext_lazy` |
+
+---
+
+## Tech Stack
+
+- **Runtime**: Python 3.12 / Django 4.2+
 - **Database**: PostgreSQL 15
-- **Task Queue**: Celery with Redis
-- **Containerization**: Docker & Docker Compose
-- **Authentication**: `django-allauth`
+- **Cache & broker**: Redis 7
+- **Task queue**: Celery + django-celery-beat + django-celery-results
+- **Auth**: django-allauth (username or email login)
+- **Containerization**: Docker + Docker Compose
+- **Task runner**: [just](https://github.com/casey/just)
 
-## ⚙️ Getting Started
+---
+
+## Quick Start
 
 ### Prerequisites
 
-- [Docker Desktop](https://www.docker.com/products/docker-desktop) installed and running.
+- [Docker Desktop](https://www.docker.com/products/docker-desktop) running
+- [just](https://github.com/casey/just#installation) installed
 
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd chantierMobile
-   ```
-
-2. **Environment Setup**
-   Ensure you have a `.env` file in the root directory. A basic configuration is provided in `docker-compose.yml`, but for production or custom local settings, create a `.env` file:
-   ```bash
-   SECRET_KEY=your-secret-key
-   DEBUG=1
-   ALLOWED_HOSTS=127.0.0.1,localhost
-   # Database settings are handled by docker-compose for local dev
-   ```
-
-3. **Build and Run**
-   Start the application and all dependent services (Postgres, Redis, Celery) using Docker Compose:
-   ```bash
-   docker-compose up --build
-   ```
-
-4. **Access the Application**
-   - Web App: [http://localhost:8001](http://localhost:8001)
-   - Flower (Celery Monitoring): [http://localhost:5555](http://localhost:5555)
-
-### Initial Setup
-
-Once the container is running, you may need to apply migrations and create a superuser:
+### 1. Clone and configure
 
 ```bash
-# Open a shell in the running container
-docker-compose exec chantiermobile-service sh
-
-# Run migrations
-python manage.py migrate
-
-# Create superuser
-python manage.py createsuperuser
+git clone https://github.com/monsieurpapa/chantierMobile.git
+cd chantierMobile
+cp .env.example .env   # then edit with your values
 ```
 
-## 📂 Project Structure
+Minimum `.env` for local development:
+
+```env
+SECRET_KEY=change-me-to-a-long-random-string
+DEBUG=1
+ALLOWED_HOSTS=127.0.0.1,localhost
+```
+
+Database and Redis connection strings are already set for the Docker Compose network — you only need to override them for an external database.
+
+### 2. Start services
+
+```bash
+just dev-up
+```
+
+This starts Django (`:8001`), PostgreSQL (`:5432`), Redis (`:6379`), Celery worker, Celery beat, and Flower (`:5555`).
+
+### 3. Initialize the database
+
+```bash
+just migrate
+just createsuperuser
+```
+
+### 4. Open the app
+
+| Service | URL |
+|---------|-----|
+| Application | http://localhost:8001 |
+| Celery monitor (Flower) | http://localhost:5555 |
+
+---
+
+## Configuration
+
+All configuration is driven by environment variables. The defaults in `docker-compose.yml` work for local development out of the box.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SECRET_KEY` | *(insecure dev key)* | Django secret key — **always override in production** |
+| `DEBUG` | `0` | Set to `1` for development |
+| `ALLOWED_HOSTS` | `` | Comma-separated list of allowed hostnames |
+| `DB_ENGINE` | `django.db.backends.sqlite3` | Switch to `django.db.backends.postgresql` for Postgres |
+| `DB_NAME` | `db.sqlite3` | Database name |
+| `DB_USER` | `` | Database user |
+| `DB_PASSWORD` | `` | Database password |
+| `DB_HOST` | `` | Database host |
+| `DB_PORT` | `` | Database port |
+| `REDIS_URL` | `redis://localhost:6379/0` | Redis connection URL (used by Celery) |
+
+---
+
+## Development
+
+All commands run inside Docker via `just`. Run `just` with no arguments to list everything.
+
+```bash
+# Services
+just dev-up          # Start all services
+just dev-down        # Stop all services
+just dev-logs        # Tail Django logs
+just status          # Show container status and URLs
+
+# Django
+just migrate         # Apply migrations
+just makemigrations  # Create new migrations
+just shell           # Django shell
+just createsuperuser
+
+# Code quality (runs inside container)
+just format          # black
+just sort-imports    # isort
+just lint            # flake8
+just quality         # all three together
+
+# i18n
+just i18n-extract    # makemessages (fr + en)
+just i18n-compile    # compilemessages
+
+# Database
+just db-backup       # Dump to timestamped .sql file
+just db-restore <file>
+```
+
+### First-time setup shortcut
+
+```bash
+just setup   # dev-up + migrate + createsuperuser
+```
+
+---
+
+## Testing
+
+Tests live in `tests/` and run inside Docker. The suite requires Docker Desktop to be running.
+
+```bash
+just test                              # All tests (≥80% coverage enforced)
+just test-file tests/test_finance.py   # Single file
+just test-app finance                  # Filter by keyword
+just test-unit                         # @pytest.mark.unit only
+just test-fast                         # Stop on first failure (-x)
+just test-debug                        # Drop into pdb on failure
+just test-coverage                     # HTML report in htmlcov/
+```
+
+**Pytest configuration** (`setup.cfg`):
+- `--reuse-db` — test database is preserved between runs; use `--create-db` after schema changes
+- `--nomigrations` — uses direct schema creation for speed
+- `--cov-fail-under=80` — build fails below 80% coverage
+
+**Test markers**: `unit`, `integration`, `e2e`, `api`, `performance`, `finance`, `materials`, `personnel`, `projects`, `revenue`, `auth`, `i18n`
+
+---
+
+## Architecture
+
+### Multi-tenancy: Cabinet
+
+Every business entity belongs to a **Cabinet**. The two key mixins in `core/mixins.py`:
+
+- `CabinetAccessMixin` — automatically filters querysets to the current user's cabinets
+- `RoleRequiredMixin` — gates views to specific roles (set `allowed_roles` on the view class)
+
+### Data relationships
 
 ```
-chantierMobile/
-├── chantiermobile/      # Project configuration (settings, urls, wsgi)
-├── core/                # Shared utilities and base models
-├── accounts/            # User authentication and Cabinet management
-├── projects/            # Site and phase management
-├── personnel/           # Worker profiles and assignments
-├── finance/             # Budgets and expenses
-├── materials/           # Inventory and requests
-├── revenue/             # Contracts and invoices
-├── static/              # Static assets (CSS, JS, Images)
-├── templates/           # HTML Templates
-├── Dockerfile           # App container definition
-└── docker-compose.yml   # Orchard service orchestration
+Cabinet
+  └── Site (projects)
+        ├── Budget          (finance)   — OneToOne
+        ├── Expense[]       (finance)   — FK
+        ├── Assignment[]    (personnel) — FK
+        ├── MaterialRequest[] (materials) — FK
+        └── Contract        (revenue)  — OneToOne
+              ├── Invoice[] — FK
+              └── Payment[] — FK (via Invoice)
 ```
+
+`Site` exposes computed properties (`total_spent`, `total_revenue`, `net_profit`, `budget_usage_percentage`) that aggregate across modules — not stored in the DB.
+
+### Status machines
+
+Transitions are validated in `model.clean()` and enforced via `full_clean()` in all write paths — server-side validation cannot be bypassed.
+
+```
+Expense:  PENDING → APPROVED → PAID       (terminal)
+                  → REJECTED              (terminal)
+
+Invoice:  DRAFT → SENT → PAID             (terminal)
+                       → OVERDUE → PAID   (terminal)
+               → CANCELLED               (terminal)
+
+Site: PLANNING → ACTIVE ↔ PAUSED → COMPLETED  (terminal)
+             ↘ CANCELLED (from any non-terminal) (terminal)
+
+MaterialRequest: PENDING → APPROVED → ORDERED → DELIVERED (terminal)
+                         → REJECTED                        (terminal)
+```
+
+### Base models (`core/models.py`)
+
+All business models inherit from `BaseModel`, which provides:
+
+- **Soft delete** — `delete()` sets `is_deleted=True`; use `Model.objects` for active records, `Model.all_objects` to include deleted
+- **Audit trail** — `created_by` / `updated_by` FK to `AUTH_USER_MODEL`
+- **Timestamps** — `created_at` / `updated_at`
+- **UUID** — `unique_id` non-editable UUID field for public-safe identifiers
+
+### Shared constants
+
+`chantiermobile/constants.py` is the single source of truth for all `TextChoices` enums (`UserRoles`, `SiteStatus`, `ExpenseStatus`, `InvoiceStatus`, `PaymentMethod`, etc.). Import from there — never define inline string literals.
+
+### Async tasks
+
+`revenue/tasks.py` — `mark_overdue_invoices` runs daily at **01:00 Africa/Kigali** via Celery beat. It bulk-updates SENT invoices whose `due_date` has passed to OVERDUE.
+
+---
+
+## Contributing
+
+1. Fork the repo and create a branch: `git checkout -b feat/your-feature`
+2. Run `just quality` before committing
+3. Ensure `just test` passes with coverage ≥80%
+4. Open a pull request against `main`
+
+See `TODOS.md` for known deferred work and `CLAUDE.md` for guidance on working with this codebase using Claude Code.
