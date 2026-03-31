@@ -14,6 +14,28 @@ class Site(BaseModel):
     
     def __str__(self):
         return f"{self.name} ({self.status})"
+    
+    def clean(self):
+        """Validate site status transitions."""
+        from django.core.exceptions import ValidationError
+        
+        if self.pk:  # Only validate transitions for existing sites
+            original = Site.objects.get(pk=self.pk)
+            
+            # Define valid transitions
+            valid_transitions = {
+                SiteStatus.PLANNING: [SiteStatus.ACTIVE, SiteStatus.CANCELLED],
+                SiteStatus.ACTIVE: [SiteStatus.PAUSED, SiteStatus.COMPLETED, SiteStatus.CANCELLED],
+                SiteStatus.PAUSED: [SiteStatus.ACTIVE, SiteStatus.COMPLETED, SiteStatus.CANCELLED],
+                SiteStatus.COMPLETED: [],  # Final state
+                SiteStatus.CANCELLED: [],  # Final state
+            }
+            
+            if original.status in valid_transitions:
+                if self.status not in valid_transitions[original.status]:
+                    raise ValidationError({
+                        'status': f'Cannot transition site from {original.status} to {self.status}.'
+                    })
 
     @property
     def active_assignments(self):

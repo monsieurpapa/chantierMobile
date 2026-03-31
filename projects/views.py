@@ -64,6 +64,15 @@ class SiteUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, 
     slug_url_kwarg = 'unique_id'
     allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER']
     
+    def form_valid(self, form):
+        from django.core.exceptions import ValidationError
+        try:
+            form.instance.full_clean()
+            return super().form_valid(form)
+        except ValidationError as e:
+            messages.error(self.request, str(e))
+            return self.form_invalid(form)
+    
     def get_success_url(self):
         messages.success(self.request, "Site updated successfully!")
         return reverse_lazy('projects:site_detail', kwargs={'unique_id': self.object.unique_id})

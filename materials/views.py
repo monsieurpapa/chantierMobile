@@ -94,7 +94,7 @@ class MaterialRequestListView(LoginRequiredMixin, PageHeaderMixin, ListView):
 
     def get_queryset(self):
         qs = super().get_queryset().prefetch_related('items__material').select_related('site', 'requested_by')
-        if not self.request.user.is_staff:
+        if not self.request.user.is_superuser:
             user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
             qs = qs.filter(site__cabinet__id__in=user_cabinet_ids)
         return qs.order_by('-created_at')
@@ -123,8 +123,11 @@ class MaterialRequestCreateView(LoginRequiredMixin, PageHeaderMixin, CreateView)
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
-        form.fields['site'].queryset = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
+        if self.request.user.is_superuser:
+            form.fields['site'].queryset = Site.objects.all()
+        else:
+            user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+            form.fields['site'].queryset = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
         return form
     
     def get_context_data(self, **kwargs):

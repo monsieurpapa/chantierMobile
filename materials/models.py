@@ -26,6 +26,14 @@ class MaterialRequest(BaseModel):
         item_count = self.items.count()
         return f"Request #{self.id} - {item_count} item{'s' if item_count != 1 else ''} for {self.site.name}"
     
+    def clean(self):
+        """Validate material request data."""
+        from django.core.exceptions import ValidationError
+        
+        # Validate that request has items
+        if self.pk and self.items.count() == 0:
+            raise ValidationError('Material request must have at least one item.')
+    
     @property
     def total_items(self):
         """Get total number of material items in this request"""
@@ -56,6 +64,16 @@ class MaterialRequestItem(BaseModel):
 
     def __str__(self):
         return f"{self.quantity} {self.material.unit} of {self.material.name}"
+    
+    def clean(self):
+        """Validate material request item."""
+        from django.core.exceptions import ValidationError
+        
+        # Validate quantity is positive
+        if self.quantity <= 0:
+            raise ValidationError({
+                'quantity': 'Quantity must be a positive number.'
+            })
     
     @property
     def estimated_cost(self):

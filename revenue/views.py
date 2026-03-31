@@ -59,8 +59,11 @@ class ContractCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMix
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
-        form.fields['site'].queryset = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
+        if self.request.user.is_superuser:
+            form.fields['site'].queryset = Site.objects.all()
+        else:
+            user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+            form.fields['site'].queryset = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
         return form
 
     def get_success_url(self):
@@ -87,8 +90,11 @@ class ContractUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMix
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
-        form.fields['site'].queryset = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
+        if self.request.user.is_superuser:
+            form.fields['site'].queryset = Site.objects.all()
+        else:
+            user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+            form.fields['site'].queryset = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
         return form
 
     def get_success_url(self):
@@ -138,8 +144,11 @@ class InvoiceCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixi
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
-        form.fields['contract'].queryset = Contract.objects.filter(site__cabinet__id__in=user_cabinet_ids)
+        if self.request.user.is_superuser:
+            form.fields['contract'].queryset = Contract.objects.all()
+        else:
+            user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+            form.fields['contract'].queryset = Contract.objects.filter(site__cabinet__id__in=user_cabinet_ids)
         return form
 
     def get_success_url(self):
@@ -177,6 +186,37 @@ class InvoiceDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin,
             })
         return actions
 
+class PaymentListView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
+    model = Payment
+    template_name = 'revenue/payment_list.html'
+    context_object_name = 'payments'
+    paginate_by = 50
+    allowed_roles = ['DIRECTOR', 'ACCOUNTANT']
+    header_title = "Payment Records"
+    header_subtitle = "Track all payments received from invoices"
+    
+    def get_header_actions(self):
+        return [{
+            'label': 'New Payment',
+            'url': str(reverse_lazy('revenue:payment_create')),
+            'icon': 'plus',
+            'class': 'btn-falcon-primary'
+        }]
+
+    def get_queryset(self):
+        qs = Payment.objects.select_related('invoice__contract__site').order_by('-payment_date')
+        if self.request.user.is_superuser:
+            return qs
+        user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+        return qs.filter(invoice__contract__site__cabinet__id__in=user_cabinet_ids)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        qs = self.object_list  # already evaluated by BaseListView.get()
+        context['total_amount'] = qs.aggregate(total=Sum('amount'))['total'] or 0
+        context['total_count'] = qs.count()
+        return context
+
 class PaymentCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, CreateView):
     model = Payment
     form_class = PaymentForm
@@ -192,18 +232,26 @@ class PaymentCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixi
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
-        form.fields['invoice'].queryset = Invoice.objects.filter(contract__site__cabinet__id__in=user_cabinet_ids)
+        payable_statuses = [InvoiceStatus.SENT, InvoiceStatus.OVERDUE]
+        if self.request.user.is_superuser:
+            form.fields['invoice'].queryset = Invoice.objects.filter(status__in=payable_statuses)
+        else:
+            user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+            form.fields['invoice'].queryset = Invoice.objects.filter(
+                contract__site__cabinet__id__in=user_cabinet_ids,
+                status__in=payable_statuses,
+            )
         return form
 
     def form_valid(self, form):
         response = super().form_valid(form)
-        # Update invoice status if amount paid >= invoice amount
-        # This is a simple logic, could be more robust
+        # Auto-mark invoice as PAID when total payments cover the full amount.
+        # Only transitions SENT/OVERDUE → PAID (valid per state machine).
         invoice = self.object.invoice
-        total_paid = sum(p.amount for p in invoice.payments.all())
-        if total_paid >= invoice.amount:
+        total_paid = invoice.payments.aggregate(total=Sum('amount'))['total'] or 0
+        if total_paid >= invoice.amount and invoice.status in [InvoiceStatus.SENT, InvoiceStatus.OVERDUE]:
             invoice.status = InvoiceStatus.PAID
+            invoice.full_clean()
             invoice.save()
         return response
 
