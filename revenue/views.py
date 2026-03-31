@@ -198,7 +198,7 @@ class PaymentListView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin,
     def get_header_actions(self):
         return [{
             'label': 'New Payment',
-            'url': str(reverse_lazy('revenue:payment_create')),
+            'url': str(reverse_lazy('revenue:payment_create_standalone')),
             'icon': 'plus',
             'class': 'btn-falcon-primary'
         }]
