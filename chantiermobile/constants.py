@@ -57,6 +57,7 @@ class InvoiceStatus(models.TextChoices):
     SENT = 'SENT', _('Envoyé')
     PAID = 'PAID', _('Payé')
     OVERDUE = 'OVERDUE', _('En retard')
+    CANCELLED = 'CANCELLED', _('Annulé')
 
 
 class PaymentMethod(models.TextChoices):
@@ -154,6 +155,7 @@ class StatusBadgeClasses:
         InvoiceStatus.SENT: 'bg-info',
         InvoiceStatus.OVERDUE: 'bg-danger',
         InvoiceStatus.DRAFT: 'bg-warning',
+        InvoiceStatus.CANCELLED: 'bg-secondary',
     }
 
 

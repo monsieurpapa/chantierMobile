@@ -218,7 +218,7 @@ class TestUserRolesIntegration:
     def test_accountant_permissions_integration(self, accountant_client, contract):
         """Test accountant has appropriate permissions."""
         # Can access revenue management
-        response = accountant_client.get(reverse('revenue:invoice_create', kwargs={'contract_id': contract.pk}))
+        response = accountant_client.get(reverse('revenue:invoice_create_from_contract', kwargs={'contract_id': contract.pk}))
         assert response.status_code == 200
         
         # Can access expense approval

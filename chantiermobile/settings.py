@@ -159,3 +159,12 @@ CELERY_RESULT_BACKEND = "django-db"
 CELERY_ACCEPT_CONTENT = ["application/json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
+
+from celery.schedules import crontab
+CELERY_TIMEZONE = TIME_ZONE  # Ensure beat schedule uses Africa/Kigali, not UTC
+CELERY_BEAT_SCHEDULE = {
+    'mark-overdue-invoices-daily': {
+        'task': 'revenue.tasks.mark_overdue_invoices',
+        'schedule': crontab(hour=1, minute=0),  # Runs at 01:00 Africa/Kigali daily
+    },
+}

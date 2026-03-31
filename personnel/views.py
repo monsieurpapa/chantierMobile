@@ -133,6 +133,12 @@ class PersonnelDeleteView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMi
     success_url = reverse_lazy('personnel:personnel_list')
     allowed_roles = ['DIRECTOR']
 
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        personnel_name = self.object.get_full_name() or self.object.username
+        messages.success(request, f"Personnel '{personnel_name}' deleted successfully.")
+        return super().delete(request, *args, **kwargs)
+
 class SkillListView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, ListView):
     model = Skill
     template_name = 'personnel/skill_list.html'

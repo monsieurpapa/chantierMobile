@@ -1,5 +1,6 @@
 from django.views.generic import ListView, CreateView, DetailView, UpdateView
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import ValidationError
 from django.urls import reverse_lazy
 from django.shortcuts import redirect, get_object_or_404
 from django.contrib import messages
@@ -7,6 +8,7 @@ from .models import Expense, ExpenseApproval, Budget
 from .forms import ExpenseForm, BudgetForm
 from projects.models import Site
 from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin
+from chantiermobile.constants import ExpenseStatus
 
 class ExpenseListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
     model = Expense
@@ -41,8 +43,11 @@ class ExpenseCreateView(LoginRequiredMixin, PageHeaderMixin, CreateView):
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
-        form.fields['site'].queryset = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
+        if self.request.user.is_superuser:
+            form.fields['site'].queryset = Site.objects.all()
+        else:
+            user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+            form.fields['site'].queryset = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
         return form
 
     def form_valid(self, form):
@@ -73,7 +78,7 @@ class ExpenseDetailView(LoginRequiredMixin, PageHeaderMixin, DetailView):
 
     def get_queryset(self):
         qs = super().get_queryset()
-        if not self.request.user.is_staff:
+        if not self.request.user.is_superuser:
             user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
             qs = qs.filter(site__cabinet__id__in=user_cabinet_ids)
         return qs
@@ -82,8 +87,11 @@ def approve_expense(request, pk):
     if request.method == 'POST':
         expense = get_object_or_404(Expense, pk=pk)
         if request.user.is_superuser or request.user.cabinet_roles.filter(cabinet=expense.site.cabinet, role__in=['DIRECTOR', 'ACCOUNTANT']).exists():
-            expense.approve(request.user, comments=request.POST.get('comments', ''))
-            messages.success(request, "Expense approved.")
+            try:
+                expense.approve(request.user, comments=request.POST.get('comments', ''))
+                messages.success(request, "Expense approved.")
+            except ValidationError as e:
+                messages.error(request, f"Could not approve expense: {e}")
         else:
             messages.error(request, "Unauthorized.")
         return redirect('finance:expense_detail', pk=pk)
@@ -93,12 +101,17 @@ def mark_expense_paid(request, pk):
     if request.method == 'POST':
         expense = get_object_or_404(Expense, pk=pk)
         if request.user.is_superuser or request.user.cabinet_roles.filter(cabinet=expense.site.cabinet, role__in=['DIRECTOR', 'CASHIER']).exists():
-            if expense.status == Expense.Status.APPROVED:
-                expense.status = Expense.Status.PAID
-                expense.save()
-                messages.success(request, "Expense marked as PAID.")
+            # Validate expense can be paid
+            if not expense.can_be_paid():
+                messages.error(request, f"Only approved expenses can be paid. Current status: {expense.status}.")
             else:
-                messages.error(request, "Only approved expenses can be paid.")
+                try:
+                    expense.status = ExpenseStatus.PAID
+                    expense.full_clean()
+                    expense.save()
+                    messages.success(request, "Expense marked as PAID.")
+                except ValidationError as e:
+                    messages.error(request, f"Error marking expense as paid: {str(e)}")
         else:
             messages.error(request, "Unauthorized.")
         return redirect('finance:expense_detail', pk=pk)
@@ -139,9 +152,16 @@ class BudgetCreateView(LoginRequiredMixin, RoleRequiredMixin, CreateView):
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
-        form.fields['site'].queryset = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
+        if self.request.user.is_superuser:
+            form.fields['site'].queryset = Site.objects.all()
+        else:
+            user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+            form.fields['site'].queryset = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
         return form
+
+    def form_valid(self, form):
+        messages.success(self.request, f"Budget created for {form.instance.site.name} successfully!")
+        return super().form_valid(form)
 
 class BudgetUpdateView(LoginRequiredMixin, RoleRequiredMixin, UpdateView):
     model = Budget
@@ -150,8 +170,15 @@ class BudgetUpdateView(LoginRequiredMixin, RoleRequiredMixin, UpdateView):
     success_url = reverse_lazy('finance:budget_list')
     allowed_roles = ['DIRECTOR', 'ACCOUNTANT']
 
+    def form_valid(self, form):
+        messages.success(self.request, f"Budget for {form.instance.site.name} updated successfully!")
+        return super().form_valid(form)
+
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
-        form.fields['site'].queryset = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
+        if self.request.user.is_superuser:
+            form.fields['site'].queryset = Site.objects.all()
+        else:
+            user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+            form.fields['site'].queryset = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
         return form
