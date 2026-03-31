@@ -1,5 +1,5 @@
 {% extends 'falcon_base.html' %}
-{% load static %}
+{% load static i18n %}
 
 {% block title %}Log Progress - {{ phase.name }} - ChantierMobile{% endblock %}
 
@@ -34,14 +34,14 @@
                         {% csrf_token %}
 
                         <div class="mb-3">
-                            <label class="form-label" for="id_report_date">Report Date</label>
+                            <label class="form-label" for="id_report_date">{% trans "Report Date" %}</label>
                             <input class="form-control datetimepicker" id="id_report_date" name="report_date"
                                 type="text" placeholder="YYYY-MM-DD" value="{% now 'Y-m-d' %}"
                                 data-options='{"dateFormat":"Y-m-d","disableMobile":true}' required />
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label" for="id_percentage_complete">Percentage Complete (0-100%)</label>
+                            <label class="form-label" for="id_percentage_complete">{% trans "Percentage Complete (0-100%)" %}</label>
                             <div class="range-slider-style">
                                 <input class="form-range" id="id_percentage_complete" name="percentage_complete"
                                     type="range" min="0" max="100" value="0"
@@ -51,13 +51,13 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label" for="id_description">Description / Notes</label>
+                            <label class="form-label" for="id_description">{% trans "Description / Notes" %}</label>
                             <textarea class="form-control" id="id_description" name="description" rows="4"
                                 required></textarea>
                         </div>
 
                         <div class="col-12 d-flex justify-content-end">
-                            <button class="btn btn-primary" type="submit">Log Progress</button>
+                            <button class="btn btn-primary" type="submit">{% trans "Log Progress" %}</button>
                         </div>
                     </form>
                 </div>

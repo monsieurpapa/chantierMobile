@@ -1,5 +1,5 @@
 {% extends 'falcon_base.html' %}
-{% load static rbac_tags %}
+{% load static i18n rbac_tags %}
 
 {% block title %}Personnel - ChantierMobile{% endblock %}
 
@@ -24,9 +24,9 @@
                         <table class="table table-sm table-striped fs--1 mb-0 overflow-hidden">
                             <thead class="bg-200 text-900">
                                 <tr>
-                                    <th scope="col" class="sort pe-1 align-middle white-space-nowrap">Name</th>
-                                    <th scope="col" class="sort pe-1 align-middle white-space-nowrap">Skills</th>
-                                    <th scope="col" class="sort pe-1 align-middle white-space-nowrap text-end">Default Rate</th>
+                                    <th scope="col" class="sort pe-1 align-middle white-space-nowrap">{% trans "Name" %}</th>
+                                    <th scope="col" class="sort pe-1 align-middle white-space-nowrap">{% trans "Skills" %}</th>
+                                    <th scope="col" class="sort pe-1 align-middle white-space-nowrap text-end">{% trans "Default Rate" %}</th>
                                     <th scope="col" class="no-sort pe-1 align-middle data-table-row-action"></th>
                                 </tr>
                             </thead>
@@ -42,14 +42,14 @@
                                         {% for skill in person.skills.all %}
                                         <span class="badge badge-soft-primary rounded-pill">{{ skill.name }}</span>
                                         {% empty %}
-                                        <span class="text-300 fs--2">No skills listed</span>
+                                        <span class="text-300 fs--2">{% trans "No skills listed" %}</span>
                                         {% endfor %}
                                     </td>
                                     <td class="rate py-2 align-middle text-end">
                                         {% if request.user|has_role:'DIRECTOR,ACCOUNTANT' %}
                                         ${{ person.default_daily_rate }}
                                         {% else %}
-                                        <span class="text-400">Restricted</span>
+                                        <span class="text-400">{% trans "Restricted" %}</span>
                                         {% endif %}
                                     </td>
                                     <td class="align-middle white-space-nowrap text-end">
@@ -61,16 +61,15 @@
                                             <div class="dropdown-menu dropdown-menu-end border py-0">
                                                 <div class="bg-white py-2">
                                                     <a class="dropdown-item"
-                                                        href="{% url 'personnel:personnel_detail' unique_id=person.unique_id %}">View
-                                                        Profile</a>
+                                                        href="{% url 'personnel:personnel_detail' unique_id=person.unique_id %}">{% trans "View Profile" %}</a>
                                                     {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER' %}
                                                     <a class="dropdown-item"
-                                                        href="{% url 'personnel:personnel_update' unique_id=person.unique_id %}">Edit</a>
+                                                        href="{% url 'personnel:personnel_update' unique_id=person.unique_id %}">{% trans "Edit" %}</a>
                                                     {% endif %}
                                                     {% if request.user|has_role:'DIRECTOR' %}
                                                     <div class="dropdown-divider"></div>
                                                     <a class="dropdown-item text-danger"
-                                                        href="{% url 'personnel:personnel_delete' unique_id=person.unique_id %}">Delete</a>
+                                                        href="{% url 'personnel:personnel_delete' unique_id=person.unique_id %}">{% trans "Delete" %}</a>
                                                     {% endif %}
                                                 </div>
                                             </div>
@@ -81,9 +80,9 @@
                                 <tr>
                                     <td colspan="4" class="text-center py-5">
                                         <span class="fas fa-users fa-2x text-300 d-block mb-2"></span>
-                                        <p class="text-600 mb-2">No personnel registered yet.</p>
+                                        <p class="text-600 mb-2">{% trans "No personnel registered yet." %}</p>
                                         <a href="{% url 'personnel:personnel_create' %}" class="btn btn-falcon-primary btn-sm">
-                                            <span class="fas fa-plus me-1"></span>Register Personnel
+                                            <span class="fas fa-plus me-1"></span>{% trans "Register Personnel" %}
                                         </a>
                                     </td>
                                 </tr>

@@ -1,5 +1,5 @@
 {% extends 'falcon_base.html' %}
-{% load static %}
+{% load static i18n %}
 
 {% block title %}Invoices - ChantierMobile{% endblock %}
 
@@ -24,12 +24,12 @@
                         <table class="table table-sm table-striped fs--1 mb-0">
                             <thead class="bg-200 text-900">
                                 <tr>
-                                    <th scope="col">Invoice #</th>
-                                    <th scope="col">Site / Client</th>
-                                    <th scope="col">Amount</th>
-                                    <th scope="col" class="text-center">Status</th>
-                                    <th scope="col">Due Date</th>
-                                    <th scope="col" class="text-end">Actions</th>
+                                    <th scope="col">{% trans "Invoice #" %}</th>
+                                    <th scope="col">{% trans "Site / Client" %}</th>
+                                    <th scope="col">{% trans "Amount" %}</th>
+                                    <th scope="col" class="text-center">{% trans "Status" %}</th>
+                                    <th scope="col">{% trans "Due Date" %}</th>
+                                    <th scope="col" class="text-end">{% trans "Actions" %}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -56,7 +56,7 @@
                                     <td class="text-end">
                                         <a class="btn btn-falcon-default btn-sm"
                                             href="{% url 'revenue:payment_create' invoice_id=invoice.id %}">
-                                            <span class="fas fa-plus me-1"></span>Payment
+                                            <span class="fas fa-plus me-1"></span>{% trans "Payment" %}
                                         </a>
                                     </td>
                                 </tr>
@@ -64,9 +64,9 @@
                                 <tr>
                                     <td colspan="6" class="text-center py-5">
                                         <span class="fas fa-file-invoice-dollar fa-2x text-300 d-block mb-2"></span>
-                                        <p class="text-600 mb-2">No invoices generated yet.</p>
+                                        <p class="text-600 mb-2">{% trans "No invoices generated yet." %}</p>
                                         <a href="{% url 'revenue:invoice_create' %}" class="btn btn-falcon-primary btn-sm">
-                                            <span class="fas fa-plus me-1"></span>New Invoice
+                                            <span class="fas fa-plus me-1"></span>{% trans "New Invoice" %}
                                         </a>
                                     </td>
                                 </tr>

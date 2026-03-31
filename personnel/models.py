@@ -13,7 +13,7 @@ class Skill(BaseModel):
 
 class Personnel(BaseModel):
     cabinet = models.ForeignKey(Cabinet, on_delete=models.CASCADE, related_name='personnel')
-    user = models.OneToOneField(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='personnel_profile', help_text="Link to system user if they have login access")
+    user = models.OneToOneField(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='personnel_profile', help_text=_("Link to system user if they have login access"))
     first_name = models.CharField(max_length=100, verbose_name=_('First Name'))
     last_name = models.CharField(max_length=100, verbose_name=_('Last Name'))
     skills = models.ManyToManyField(Skill, blank=True)

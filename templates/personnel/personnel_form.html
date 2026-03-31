@@ -1,5 +1,5 @@
 {% extends 'falcon_base.html' %}
-{% load static %}
+{% load static i18n %}
 
 {% block title %}Personnel Profile Form - ChantierMobile{% endblock %}
 
@@ -23,7 +23,7 @@
 
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label class="form-label">First Name</label>
+                                <label class="form-label">{% trans "First Name" %}</label>
                                 {{ form.first_name }}
                                 {% if form.first_name.errors %}
                                 <div class="text-danger fs--2">
@@ -32,7 +32,7 @@
                                 {% endif %}
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Last Name</label>
+                                <label class="form-label">{% trans "Last Name" %}</label>
                                 {{ form.last_name }}
                                 {% if form.last_name.errors %}
                                 <div class="text-danger fs--2">
@@ -43,9 +43,9 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label" for="{{ form.skills.id_for_label }}">Skills</label>
+                            <label class="form-label" for="{{ form.skills.id_for_label }}">{% trans "Skills" %}</label>
                             {{ form.skills }}
-                            <p class="fs--2 text-500">Select skills for this profile.</p>
+                            <p class="fs--2 text-500">{% trans "Select skills for this profile." %}</p>
                             {% if form.skills.errors %}
                             <div class="text-danger fs--2">
                                 {{ form.skills.errors }}
@@ -55,8 +55,7 @@
 
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label class="form-label" for="{{ form.default_daily_rate.id_for_label }}">Default Daily
-                                    Rate ($)</label>
+                                <label class="form-label" for="{{ form.default_daily_rate.id_for_label }}">{% trans "Default Daily Rate ($)" %}</label>
                                 {{ form.default_daily_rate }}
                                 {% if form.default_daily_rate.errors %}
                                 <div class="text-danger fs--2">
@@ -65,8 +64,7 @@
                                 {% endif %}
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label" for="{{ form.user.id_for_label }}">System User (Link for
-                                    Login)</label>
+                                <label class="form-label" for="{{ form.user.id_for_label }}">{% trans "System User (Link for Login)" %}</label>
                                 {{ form.user }}
                                 {% if form.user.errors %}
                                 <div class="text-danger fs--2">
@@ -77,8 +75,8 @@
                         </div>
 
                         <div class="col-12 d-flex justify-content-end gap-2">
-                            <a class="btn btn-falcon-default" href="{{ request.META.HTTP_REFERER }}">Cancel</a>
-                            <button class="btn btn-primary" type="submit">Save Profile</button>
+                            <a class="btn btn-falcon-default" href="{{ request.META.HTTP_REFERER }}">{% trans "Cancel" %}</a>
+                            <button class="btn btn-primary" type="submit">{% trans "Save Profile" %}</button>
                         </div>
                     </form>
                 </div>

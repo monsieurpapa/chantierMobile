@@ -7,7 +7,7 @@ from chantiermobile.constants import InvoiceStatus, PaymentMethod
 class Contract(BaseModel):
     site = models.OneToOneField(Site, on_delete=models.CASCADE, related_name='contract')
     client_name = models.CharField(max_length=255)
-    total_value = models.DecimalField(max_digits=14, decimal_places=2, help_text="Total contract value")
+    total_value = models.DecimalField(max_digits=14, decimal_places=2, help_text=_("Total contract value"))
     signed_date = models.DateField()
     
     def __str__(self):
@@ -64,7 +64,7 @@ class Payment(BaseModel):
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     payment_date = models.DateField()
     method = models.CharField(max_length=50, choices=PaymentMethod.choices)
-    reference = models.CharField(max_length=100, blank=True, help_text="Transaction ID or Check Number")
+    reference = models.CharField(max_length=100, blank=True, help_text=_("Transaction ID or Check Number"))
     
     def __str__(self):
         return f"Payment of {self.amount} for {self.invoice.invoice_number}"

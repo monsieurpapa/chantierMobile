@@ -1,19 +1,19 @@
 {% extends 'base.html' %}
-{% load static rbac_tags %}
+{% load static i18n rbac_tags %}
 
 {% block subcontent %}
 <div class="row g-3">
     <div class="col-lg-6">
         <div class="card">
             <div class="card-header bg-light">
-                <h5 class="mb-0">Skills Catalog</h5>
+                <h5 class="mb-0">{% trans "Skills Catalog" %}</h5>
             </div>
             <div class="card-body p-0">
                 <table class="table table-sm table-striped mb-0">
                     <thead>
                         <tr>
-                            <th>Skill Name</th>
-                            <th>Description</th>
+                            <th>{% trans "Skill Name" %}</th>
+                            <th>{% trans "Description" %}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -24,7 +24,7 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="2" class="text-center">No skills defined.</td>
+                            <td colspan="2" class="text-center">{% trans "No skills defined." %}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -37,23 +37,23 @@
     <div class="col-lg-6">
         <div class="card">
             <div class="card-header bg-light">
-                <h5 class="mb-0">Add New Skill</h5>
+                <h5 class="mb-0">{% trans "Add New Skill" %}</h5>
             </div>
             <div class="card-body">
                 <form method="post">
                     {% csrf_token %}
                     <div class="mb-3">
-                        <label class="form-label" for="{{ form.name.id_for_label }}">Skill Name</label>
+                        <label class="form-label" for="{{ form.name.id_for_label }}">{% trans "Skill Name" %}</label>
                         {{ form.name }}
                         {% if form.name.errors %}<div class="text-danger fs--2">{{ form.name.errors }}</div>{% endif %}
                     </div>
                     <div class="mb-3">
-                        <label class="form-label" for="{{ form.description.id_for_label }}">Description</label>
+                        <label class="form-label" for="{{ form.description.id_for_label }}">{% trans "Description" %}</label>
                         {{ form.description }}
                         {% if form.description.errors %}<div class="text-danger fs--2">{{ form.description.errors }}
                         </div>{% endif %}
                     </div>
-                    <button type="submit" class="btn btn-primary btn-sm">Save Skill</button>
+                    <button type="submit" class="btn btn-primary btn-sm">{% trans "Save Skill" %}</button>
                 </form>
             </div>
         </div>

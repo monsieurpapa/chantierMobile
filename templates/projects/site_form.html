@@ -1,5 +1,5 @@
 {% extends 'falcon_base.html' %}
-{% load static %}
+{% load static i18n %}
 
 {% block title %}Site Form - ChantierMobile{% endblock %}
 
@@ -30,15 +30,14 @@
 
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label class="form-label" for="{{ form.name.id_for_label }}">Site Name</label>
+                                <label class="form-label" for="{{ form.name.id_for_label }}">{% trans "Site Name" %}</label>
                                 {{ form.name }}
                                 {% if form.name.errors %}
                                 <div class="invalid-feedback d-block">{{ form.name.errors }}</div>
                                 {% endif %}
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label" for="{{ form.location.id_for_label }}">Location /
-                                    Address</label>
+                                <label class="form-label" for="{{ form.location.id_for_label }}">{% trans "Location / Address" %}</label>
                                 {{ form.location }}
                                 {% if form.location.errors %}
                                 <div class="invalid-feedback d-block">{{ form.location.errors }}</div>
@@ -48,22 +47,21 @@
 
                         <div class="row mb-3">
                             <div class="col-md-4">
-                                <label class="form-label" for="{{ form.status.id_for_label }}">Status</label>
+                                <label class="form-label" for="{{ form.status.id_for_label }}">{% trans "Status" %}</label>
                                 {{ form.status }}
                                 {% if form.status.errors %}
                                 <div class="invalid-feedback d-block">{{ form.status.errors }}</div>
                                 {% endif %}
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label" for="{{ form.start_date.id_for_label }}">Start Date</label>
+                                <label class="form-label" for="{{ form.start_date.id_for_label }}">{% trans "Start Date" %}</label>
                                 {{ form.start_date }}
                                 {% if form.start_date.errors %}
                                 <div class="invalid-feedback d-block">{{ form.start_date.errors }}</div>
                                 {% endif %}
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label" for="{{ form.expected_end_date.id_for_label }}">Expected End
-                                    Date</label>
+                                <label class="form-label" for="{{ form.expected_end_date.id_for_label }}">{% trans "Expected End Date" %}</label>
                                 {{ form.expected_end_date }}
                                 {% if form.expected_end_date.errors %}
                                 <div class="invalid-feedback d-block">{{ form.expected_end_date.errors }}</div>
@@ -72,7 +70,7 @@
                         </div>
 
                         <div class="col-12 d-flex justify-content-end">
-                            <button class="btn btn-primary" type="submit">Save Site</button>
+                            <button class="btn btn-primary" type="submit">{% trans "Save Site" %}</button>
                         </div>
                     </form>
                 </div>

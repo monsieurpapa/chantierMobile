@@ -1,5 +1,5 @@
 {% extends 'falcon_base.html' %}
-{% load rbac_tags %}
+{% load i18n rbac_tags %}
 
 {% block title %}Material Catalog - ChantierMobile{% endblock %}
 
@@ -24,10 +24,10 @@
                         <table class="table table-sm table-striped fs--1 mb-0 overflow-hidden">
                             <thead class="bg-200 text-900">
                                 <tr>
-                                    <th class="sort pe-1 align-middle white-space-nowrap">Material Name</th>
-                                    <th class="sort pe-1 align-middle white-space-nowrap">Unit</th>
-                                    <th class="sort pe-1 align-middle white-space-nowrap text-end">Est. Cost / Unit</th>
-                                    <th class="no-sort pe-1 align-middle data-table-row-action text-end">Actions</th>
+                                    <th class="sort pe-1 align-middle white-space-nowrap">{% trans "Material Name" %}</th>
+                                    <th class="sort pe-1 align-middle white-space-nowrap">{% trans "Unit" %}</th>
+                                    <th class="sort pe-1 align-middle white-space-nowrap text-end">{% trans "Est. Cost / Unit" %}</th>
+                                    <th class="no-sort pe-1 align-middle data-table-row-action text-end">{% trans "Actions" %}</th>
                                 </tr>
                             </thead>
                             <tbody class="list">
@@ -55,7 +55,10 @@
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="4" class="text-center py-4">No materials in catalog.</td>
+                                    <td colspan="4" class="text-center py-5">
+                                        <span class="fas fa-boxes fa-2x text-300 d-block mb-2"></span>
+                                        <p class="text-600 mb-0">{% trans "No materials in catalog." %}</p>
+                                    </td>
                                 </tr>
                                 {% endfor %}
                             </tbody>

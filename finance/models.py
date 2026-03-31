@@ -63,7 +63,7 @@ class Expense(BaseModel):
     requester = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='requested_expenses')
     category = models.ForeignKey(ExpenseCategory, on_delete=models.PROTECT, related_name='expenses')
     amount = models.DecimalField(max_digits=12, decimal_places=2)
-    expense_date = models.DateField(help_text="Date the expense was incurred (used for budget period matching)")
+    expense_date = models.DateField(help_text=_("Date the expense was incurred (used for budget period matching)"))
     description = models.TextField()
     status = models.CharField(max_length=20, choices=ExpenseStatus.choices, default=ExpenseStatus.PENDING)
     receipt_image = models.ImageField(upload_to=FileUploadConfig.EXPENSE_RECEIPT_PATH, blank=True, null=True)

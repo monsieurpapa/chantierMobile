@@ -1,7 +1,7 @@
 {% extends 'falcon_base.html' %}
-{% load static %}
+{% load static i18n %}
 
-{% block title %}Budget Form - ChantierMobile{% endblock %}
+{% block title %}{% trans "Budget Form" %} - ChantierMobile{% endblock %}
 
 {% block content %}
 <div class="container" data-layout="container-fluid">
@@ -22,7 +22,7 @@
                         {% csrf_token %}
 
                         <div class="mb-3">
-                            <label class="form-label" for="{{ form.site.id_for_label }}">Project / Site</label>
+                            <label class="form-label" for="{{ form.site.id_for_label }}">{% trans "Project / Site" %}</label>
                             {{ form.site }}
                             {% if form.site.errors %}
                             <div class="text-danger fs--2">
@@ -33,8 +33,7 @@
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label" for="{{ form.total_amount.id_for_label }}">Total Budget Amount
-                        ($)</label>
+                    <label class="form-label" for="{{ form.total_amount.id_for_label }}">{% trans "Total Budget Amount" %} ($)</label>
                     {{ form.total_amount }}
                     {% if form.total_amount.errors %}
                     <div class="text-danger fs--2">
@@ -45,7 +44,7 @@
 
                 <div class="row mb-3">
                     <div class="col-md-6">
-                        <label class="form-label" for="{{ form.start_date.id_for_label }}">Start Date</label>
+                        <label class="form-label" for="{{ form.start_date.id_for_label }}">{% trans "Start Date" %}</label>
                         {{ form.start_date }}
                         {% if form.start_date.errors %}
                         <div class="text-danger fs--2">
@@ -54,7 +53,7 @@
                         {% endif %}
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label" for="{{ form.end_date.id_for_label }}">End Date</label>
+                        <label class="form-label" for="{{ form.end_date.id_for_label }}">{% trans "End Date" %}</label>
                         {{ form.end_date }}
                         {% if form.end_date.errors %}
                         <div class="text-danger fs--2">
@@ -65,8 +64,8 @@
                 </div>
 
                 <div class="col-12 d-flex justify-content-end gap-2">
-                    <a href="{% url 'finance:budget_list' %}" class="btn btn-falcon-default">Cancel</a>
-                    <button type="submit" class="btn btn-primary">Save Budget</button>
+                    <a href="{% url 'finance:budget_list' %}" class="btn btn-falcon-default">{% trans "Cancel" %}</a>
+                    <button type="submit" class="btn btn-primary">{% trans "Save Budget" %}</button>
                 </div>
                 </form>
             </div>

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ChantiérMobile 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-27 17:41+0200\n"
+"POT-Creation-Date: 2026-04-01 01:08+0200\n"
 "PO-Revision-Date: 2026-01-26 17:00+0000\n"
 "Last-Translator: ChantiérMobile Team\n"
 "Language-Team: French\n"
@@ -17,62 +17,58 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
-#: accounts/forms.py:221 templates/account/admin_cabinet_confirm_delete.html:53
+#: accounts/forms.py:96 templates/account/admin_user_edit.html:102
+msgid "Uncheck to deactivate user account"
+msgstr "Décocher pour désactiver le compte utilisateur"
+
+#: accounts/forms.py:104
+msgid "Check to grant staff access"
+msgstr "Cocher pour accorder l'accès au personnel administratif"
+
+#: accounts/forms.py:112
+msgid "Check to grant superadmin access"
+msgstr "Cocher pour accorder l'accès superadministrateur"
+
+#: accounts/forms.py:169
+#, fuzzy
+#| msgid "Select the user's role in this cabinet"
+msgid "Select the cabinet to assign this user to"
+msgstr "Sélectionnez le rôle de l'utilisateur dans ce cabinet"
+
+#: accounts/forms.py:179
+#, fuzzy
+#| msgid "Select the user's role in this cabinet"
+msgid "Select the user role in this cabinet"
+msgstr "Sélectionnez le rôle de l'utilisateur dans ce cabinet"
+
+#: accounts/forms.py:189
+msgid "Set initial approval status"
+msgstr "Définir le statut d'approbation initial"
+
+#: accounts/forms.py:222 templates/account/admin_cabinet_confirm_delete.html:53
 #: templates/account/admin_cabinets_list.html:130
 msgid "Cabinet Name"
 msgstr "Nom du Cabinet"
 
-#: accounts/forms.py:226
+#: accounts/forms.py:227
 msgid "Full Address"
 msgstr "Adresse Complète"
 
-#: accounts/forms.py:230
+#: accounts/forms.py:231
 msgid "Tax ID / Registration Number"
 msgstr "ID Fiscal / Numéro d'Enregistrement"
 
-#: accounts/forms.py:258
+#: accounts/forms.py:259
 msgid "Select the user's role in this cabinet"
 msgstr "Sélectionnez le rôle de l'utilisateur dans ce cabinet"
 
-#: accounts/forms.py:262
+#: accounts/forms.py:263
 msgid "Select assignment status"
 msgstr "Sélectionnez le statut d'affectation"
 
-#: accounts/models.py:24
-msgid "Directeur de Cabinet"
-msgstr "Directeur de Cabinet"
-
-#: accounts/models.py:25
-msgid "Chef des Ingénieurs"
-msgstr "Chef des Ingénieurs"
-
-#: accounts/models.py:26
-msgid "Ingénieur"
-msgstr "Ingénieur"
-
-#: accounts/models.py:27
-msgid "Comptable"
-msgstr "Comptable"
-
-#: accounts/models.py:28
-msgid "Caissier"
-msgstr "Caissier"
-
-#: accounts/models.py:29
-msgid "Ouvrier"
-msgstr "Ouvrier"
-
-#: accounts/models.py:32 finance/models.py:28
-msgid "En attente d'approbation"
-msgstr "En attente d'approbation"
-
-#: accounts/models.py:33 finance/models.py:29 materials/models.py:18
-msgid "Approuvé"
-msgstr "Approuvé"
-
-#: accounts/models.py:34 finance/models.py:30 materials/models.py:19
-msgid "Rejeté"
-msgstr "Rejeté"
+#: accounts/models.py:17
+msgid "NIF/TIN"
+msgstr "NIF/NIN"
 
 #: accounts/views.py:146 templates/account/user_profile_update.html:134
 msgid "You do not have permission to edit this profile."
@@ -84,7 +80,9 @@ msgstr "Votre profil a été mis à jour avec succès."
 
 #: accounts/views.py:155
 msgid "There was an error updating your profile. Please check the form."
-msgstr "Une erreur est survenue lors de la mise à jour de votre profil. Veuillez vérifier le formulaire."
+msgstr ""
+"Une erreur est survenue lors de la mise à jour de votre profil. Veuillez "
+"vérifier le formulaire."
 
 #: accounts/views.py:170 accounts/views.py:375
 msgid "You do not have permission to access this page."
@@ -100,7 +98,7 @@ msgstr "Vous ne pouvez pas supprimer votre propre compte."
 
 #: accounts/views.py:300
 msgid "User {} has been deleted."
-msgstr ""
+msgstr "L'utilisateur {} a été supprimé."
 
 #: accounts/views.py:406 accounts/views.py:612
 #: templates/account/admin_assign_user_to_cabinet.html:4
@@ -108,11 +106,11 @@ msgstr ""
 #: templates/account/assign_user_to_cabinet.html:4
 #: templates/account/assign_user_to_cabinet.html:14
 msgid "Assign User to Cabinet"
-msgstr ""
+msgstr "Affecter un utilisateur à un cabinet"
 
 #: accounts/views.py:416 accounts/views.py:621
 msgid "User assigned to cabinet successfully."
-msgstr ""
+msgstr "L'utilisateur a été affecté au cabinet avec succès."
 
 #: accounts/views.py:520
 #, fuzzy
@@ -122,7 +120,7 @@ msgstr "Directeur de Cabinet"
 
 #: accounts/views.py:521
 msgid "Add a new project cabinet to the system"
-msgstr ""
+msgstr "Ajouter un nouveau cabinet de projet au système"
 
 #: accounts/views.py:522
 #, fuzzy
@@ -132,7 +130,7 @@ msgstr "Directeur de Cabinet"
 
 #: accounts/views.py:528
 msgid "Cabinet created successfully."
-msgstr ""
+msgstr "Cabinet créé avec succès."
 
 #: accounts/views.py:548 templates/account/admin_cabinet_detail.html:21
 #, fuzzy
@@ -142,36 +140,291 @@ msgstr "Directeur de Cabinet"
 
 #: accounts/views.py:549
 msgid "Update cabinet information"
-msgstr ""
+msgstr "Mettre à jour les informations du cabinet"
 
 #: accounts/views.py:550
 msgid "Update Cabinet"
-msgstr ""
+msgstr "Mettre à jour le cabinet"
 
 #: accounts/views.py:556
 msgid "Cabinet updated successfully."
-msgstr ""
+msgstr "Cabinet mis à jour avec succès."
 
 #: accounts/views.py:585
 msgid "Cabinet deleted successfully."
-msgstr ""
+msgstr "Cabinet supprimé avec succès."
 
 #: accounts/views.py:646 templates/account/admin_cabinet_user_role_form.html:4
 #: templates/account/admin_cabinet_user_role_form.html:14
 msgid "Edit Cabinet Assignment"
-msgstr ""
+msgstr "Modifier l'affectation au cabinet"
 
 #: accounts/views.py:649
 msgid "Modify user role and approval status"
-msgstr ""
+msgstr "Modifier le rôle et le statut d'approbation de l'utilisateur"
 
 #: accounts/views.py:656
 msgid "User role updated successfully."
-msgstr ""
+msgstr "Rôle de l'utilisateur mis à jour avec succès."
 
 #: accounts/views.py:685
 msgid "User removed from cabinet successfully."
-msgstr ""
+msgstr "Utilisateur retiré du cabinet avec succès."
+
+#: chantiermobile/constants.py:13
+msgid "Directeur de Cabinet"
+msgstr "Directeur de Cabinet"
+
+#: chantiermobile/constants.py:14
+msgid "Chef des Ingénieurs"
+msgstr "Chef des Ingénieurs"
+
+#: chantiermobile/constants.py:15
+msgid "Ingénieur"
+msgstr "Ingénieur"
+
+#: chantiermobile/constants.py:16
+msgid "Comptable"
+msgstr "Comptable"
+
+#: chantiermobile/constants.py:17
+msgid "Caissier"
+msgstr "Caissier"
+
+#: chantiermobile/constants.py:18
+msgid "Ouvrier"
+msgstr "Ouvrier"
+
+#: chantiermobile/constants.py:23 chantiermobile/constants.py:30
+msgid "En attente d'approbation"
+msgstr "En attente d'approbation"
+
+#: chantiermobile/constants.py:24 chantiermobile/constants.py:31
+#: chantiermobile/constants.py:39
+msgid "Approuvé"
+msgstr "Approuvé"
+
+#: chantiermobile/constants.py:25 chantiermobile/constants.py:32
+#: chantiermobile/constants.py:40
+msgid "Rejeté"
+msgstr "Rejeté"
+
+#: chantiermobile/constants.py:33 chantiermobile/constants.py:58
+msgid "Payé"
+msgstr "Payé"
+
+#: chantiermobile/constants.py:38
+msgid "En attente"
+msgstr "En attente"
+
+#: chantiermobile/constants.py:41
+msgid "Commandé"
+msgstr "Commandé"
+
+#: chantiermobile/constants.py:42
+msgid "Livré"
+msgstr "Livré"
+
+#: chantiermobile/constants.py:47
+msgid "En planification"
+msgstr "En planification"
+
+#: chantiermobile/constants.py:48
+msgid "Actif"
+msgstr "Actif"
+
+#: chantiermobile/constants.py:49
+msgid "En pause"
+msgstr "En pause"
+
+#: chantiermobile/constants.py:50
+msgid "Complété"
+msgstr "Complété"
+
+#: chantiermobile/constants.py:51 chantiermobile/constants.py:60
+msgid "Annulé"
+msgstr "Annulé"
+
+#: chantiermobile/constants.py:56
+msgid "Brouillon"
+msgstr "Brouillon"
+
+#: chantiermobile/constants.py:57
+msgid "Envoyé"
+msgstr "Envoyé"
+
+#: chantiermobile/constants.py:59
+msgid "En retard"
+msgstr "En retard"
+
+#: chantiermobile/constants.py:65
+msgid "Virement bancaire"
+msgstr "Virement bancaire"
+
+#: chantiermobile/constants.py:66
+msgid "Chèque"
+msgstr "Chèque"
+
+#: chantiermobile/constants.py:67
+msgid "Espèces"
+msgstr "Espèces"
+
+#: chantiermobile/constants.py:68
+msgid "Mobile Money"
+msgstr "Mobile Money"
+
+#: chantiermobile/constants.py:76
+#: materials/templates/materials/material_form.html:25
+#: materials/templates/materials/material_list.html:27
+msgid "Material Name"
+msgstr "Nom du matériau"
+
+#: chantiermobile/constants.py:77 personnel/models.py:17
+#: templates/account/admin_user_detail.html:56
+#: templates/account/admin_user_edit.html:54
+#: templates/account/user_profile_update.html:89
+#: templates/personnel/personnel_form.html:26
+msgid "First Name"
+msgstr "Prénom"
+
+#: chantiermobile/constants.py:78 personnel/models.py:18
+#: templates/account/admin_user_detail.html:62
+#: templates/account/admin_user_edit.html:63
+#: templates/account/user_profile_update.html:98
+#: templates/personnel/personnel_form.html:35
+msgid "Last Name"
+msgstr "Nom"
+
+#: chantiermobile/constants.py:79
+#: finance/templates/finance/expense_detail.html:54
+#: finance/templates/finance/expense_form.html:68 personnel/models.py:9
+#: templates/personnel/skill_list.html:16
+#: templates/personnel/skill_list.html:51
+msgid "Description"
+msgstr "Description"
+
+#: chantiermobile/constants.py:84 chantiermobile/constants.py:105
+#: materials/models.py:10
+msgid "e.g. kg, m3, liters"
+msgstr "ex. kg, m3, litres"
+
+#: chantiermobile/constants.py:85
+msgid "Expense details..."
+msgstr "Détails de la dépense..."
+
+#: chantiermobile/constants.py:86 finance/templates/finance/budget_form.html:25
+#: finance/templates/finance/expense_form.html:26
+#: materials/templates/materials/request_form.html:32
+#: templates/personnel/assignment_form.html:39
+msgid "Project / Site"
+msgstr "Projet / Site"
+
+#: chantiermobile/constants.py:87
+#: revenue/templates/revenue/contract_form.html:44
+msgid "Client Name"
+msgstr "Nom du client"
+
+#: chantiermobile/constants.py:88
+msgid "INV-000"
+msgstr "FAC-000"
+
+#: chantiermobile/constants.py:89
+msgid "Transaction Reference"
+msgstr "Référence de transaction"
+
+#: chantiermobile/constants.py:92
+msgid "e.g. Chef d'équipe"
+msgstr "ex. Chef d'équipe"
+
+#: chantiermobile/constants.py:93 personnel/models.py:8
+#: templates/personnel/skill_list.html:15
+#: templates/personnel/skill_list.html:46
+msgid "Skill Name"
+msgstr "Nom de la compétence"
+
+#: chantiermobile/constants.py:96
+#: templates/account/user_profile_update.html:216
+#: templates/projects/site_form.html:33 templates/projects/site_list.html:42
+msgid "Site Name"
+msgstr "Nom du chantier"
+
+#: chantiermobile/constants.py:97 templates/projects/site_form.html:40
+msgid "Location / Address"
+msgstr "Localisation / Adresse"
+
+#: chantiermobile/constants.py:98
+msgid "Phase Name (e.g. Foundation)"
+msgstr "Nom de la phase (ex. Fondation)"
+
+#: chantiermobile/constants.py:99
+msgid "What was accomplished today?"
+msgstr "Qu'est-ce qui a été accompli aujourd'hui ?"
+
+#: chantiermobile/constants.py:106 personnel/models.py:20
+msgid "Default daily cost"
+msgstr "Coût journalier par défaut"
+
+#: chantiermobile/constants.py:107 personnel/models.py:28
+msgid "Specific role on this site, e.g. Chef d'équipe"
+msgstr "Rôle spécifique sur ce chantier, ex. Chef d'équipe"
+
+#: chantiermobile/constants.py:108 personnel/models.py:31
+msgid "Agreed rate for this specific assignment"
+msgstr "Tarif convenu pour cette affectation spécifique"
+
+#: chantiermobile/constants.py:109 revenue/models.py:10
+msgid "Total contract value"
+msgstr "Valeur totale du contrat"
+
+#: chantiermobile/constants.py:110 revenue/models.py:67
+msgid "Transaction ID or Check Number"
+msgstr "Identifiant de transaction ou numéro de chèque"
+
+#: chantiermobile/constants.py:111
+msgid "Additional notes or special instructions..."
+msgstr "Notes supplémentaires ou instructions particulières..."
+
+#: chantiermobile/constants.py:112
+msgid "Notes for this item (optional)"
+msgstr "Notes pour cet article (optionnel)"
+
+#: chantiermobile/constants.py:165
+msgid "This field is required."
+msgstr "Ce champ est obligatoire."
+
+#: chantiermobile/constants.py:166
+msgid "Enter a valid email address."
+msgstr "Saisissez une adresse e-mail valide."
+
+#: chantiermobile/constants.py:167
+msgid "Enter a valid date."
+msgstr "Saisissez une date valide."
+
+#: chantiermobile/constants.py:168
+msgid "Enter a positive number."
+msgstr "Saisissez un nombre positif."
+
+#: chantiermobile/constants.py:169
+msgid "Date must be in the future."
+msgstr "La date doit être dans le futur."
+
+#: chantiermobile/constants.py:170
+msgid "Date must be in the past."
+msgstr "La date doit être dans le passé."
+
+#: chantiermobile/constants.py:173
+msgid "End date must be after start date."
+msgstr "La date de fin doit être postérieure à la date de début."
+
+#: chantiermobile/constants.py:174
+msgid "Budget limit exceeded."
+msgstr "Limite budgétaire dépassée."
+
+#: chantiermobile/constants.py:175
+#, fuzzy
+#| msgid "You do not have permission to access this page."
+msgid "You do not have permission to perform this action."
+msgstr "Vous n'avez pas la permission d'accéder à cette page."
 
 #: chantiermobile/settings.py:126
 msgid "Français"
@@ -181,19 +434,12 @@ msgstr "Français"
 msgid "English"
 msgstr "English"
 
-#: finance/forms.py:13
-msgid "Expense details..."
-msgstr ""
+#: finance/models.py:66
+msgid "Date the expense was incurred (used for budget period matching)"
+msgstr "Date à laquelle la dépense a été engagée (utilisée pour le rapprochement avec la période budgétaire)"
 
-#: finance/forms.py:42
-msgid "End date must be after start date."
-msgstr ""
-
-#: finance/models.py:31 revenue/models.py:19
-msgid "Payé"
-msgstr "Payé"
-
-#: finance/models.py:66 templates/account/admin_assign_user_to_cabinet.html:170
+#: finance/models.py:155
+#: templates/account/admin_assign_user_to_cabinet.html:170
 #: templates/account/admin_cabinet_confirm_delete.html:97
 #: templates/account/admin_cabinet_detail.html:99
 #: templates/account/admin_cabinet_user_role_form.html:198
@@ -203,7 +449,8 @@ msgstr "Payé"
 msgid "Approved"
 msgstr "Approuvé"
 
-#: finance/models.py:67 templates/account/admin_assign_user_to_cabinet.html:171
+#: finance/models.py:156
+#: templates/account/admin_assign_user_to_cabinet.html:171
 #: templates/account/admin_cabinet_detail.html:119
 #: templates/account/admin_cabinet_user_role_form.html:202
 #: templates/account/assign_user_to_cabinet.html:176
@@ -212,42 +459,32 @@ msgstr "Approuvé"
 msgid "Rejected"
 msgstr "Rejeté"
 
-#: finance/templates/finance/expense_form.html:4
-msgid "Expense Form"
-msgstr ""
+#: finance/templates/finance/budget_form.html:4
+msgid "Budget Form"
+msgstr "Formulaire de budget"
 
-#: finance/templates/finance/expense_form.html:26
-#: materials/templates/materials/request_form.html:32
-msgid "Project / Site"
-msgstr "Projet / Site"
+#: finance/templates/finance/budget_form.html:36
+msgid "Total Budget Amount"
+msgstr "Montant total du budget"
 
-#: finance/templates/finance/expense_form.html:36
-#: templates/account/admin_user_detail.html:307
-#: templates/account/user_profile_update.html:338
-msgid "Category"
-msgstr ""
+#: finance/templates/finance/budget_form.html:47
+#: templates/personnel/assignment_form.html:61
+#: templates/projects/phase_form.html:43 templates/projects/site_form.html:57
+#: templates/projects/site_list.html:45
+msgid "Start Date"
+msgstr "Date de début"
 
-#: finance/templates/finance/expense_form.html:48
-#: templates/account/admin_user_detail.html:306
-#: templates/account/user_profile_update.html:339
-#: templates/account/user_profile_update.html:400
-msgid "Amount"
-msgstr "Montant"
+#: finance/templates/finance/budget_form.html:56
+#: templates/projects/phase_form.html:49
+msgid "End Date"
+msgstr "Date de fin"
 
-#: finance/templates/finance/expense_form.html:57
-msgid "Receipt Image"
-msgstr "Image du Reçu"
-
-#: finance/templates/finance/expense_form.html:57
-msgid "Optional"
-msgstr ""
-
-#: finance/templates/finance/expense_form.html:68 personnel/models.py:9
-msgid "Description"
-msgstr "Description"
-
+#: finance/templates/finance/budget_form.html:67
 #: finance/templates/finance/expense_form.html:75
+#: materials/templates/materials/material_form.html:57
+#: revenue/templates/revenue/contract_form.html:76
 #: revenue/templates/revenue/invoice_form.html:65
+#: revenue/templates/revenue/payment_form.html:53
 #: templates/account/admin_assign_user_to_cabinet.html:138
 #: templates/account/admin_cabinet_confirm_delete.html:136
 #: templates/account/admin_cabinet_form.html:133
@@ -256,40 +493,370 @@ msgstr "Description"
 #: templates/account/admin_user_delete.html:166
 #: templates/account/admin_user_edit.html:143
 #: templates/account/assign_user_to_cabinet.html:143
+#: templates/personnel/assignment_form.html:92
+#: templates/personnel/personnel_form.html:78
+#: templates/projects/confirm_delete.html:20
 msgid "Cancel"
 msgstr "Annuler"
+
+#: finance/templates/finance/budget_form.html:68
+msgid "Save Budget"
+msgstr "Enregistrer le budget"
+
+#: finance/templates/finance/budget_list.html:27
+#: finance/templates/finance/expense_detail.html:27
+#: finance/templates/finance/expense_list.html:27
+#: materials/templates/materials/request_detail.html:32
+#: materials/templates/materials/request_list.html:27
+#: revenue/templates/revenue/contract_list.html:27
+#: revenue/templates/revenue/invoice_detail.html:27
+#: revenue/templates/revenue/invoice_detail.html:118
+msgid "Site"
+msgstr "Chantier"
+
+#: finance/templates/finance/budget_list.html:28
+#, fuzzy
+#| msgid "Amount"
+msgid "Total Amount"
+msgstr "Montant"
+
+#: finance/templates/finance/budget_list.html:29
+msgid "Period"
+msgstr "Période"
+
+#: finance/templates/finance/budget_list.html:30
+#: materials/templates/materials/material_list.html:30
+#: materials/templates/materials/request_list.html:33
+#: revenue/templates/revenue/contract_list.html:31
+#: revenue/templates/revenue/invoice_detail.html:97
+#: revenue/templates/revenue/invoice_list.html:32
+#: revenue/templates/revenue/payment_list.html:54
+#: templates/account/admin_cabinet_detail.html:143
+#: templates/account/admin_cabinet_detail.html:203
+#: templates/account/admin_cabinet_detail.html:263
+#: templates/account/admin_cabinets_list.html:135
+#: templates/account/admin_user_detail.html:183
+#: templates/account/admin_user_detail.html:328
+#: templates/account/admin_user_edit.html:212
+#: templates/account/admin_users_list.html:171
+#, fuzzy
+#| msgid "Actif"
+msgid "Actions"
+msgstr "Actif"
+
+#: finance/templates/finance/budget_list.html:56
+msgid "No budgets defined yet."
+msgstr "Aucun budget défini pour l'instant."
+
+#: finance/templates/finance/budget_list.html:58
+#, fuzzy
+#| msgid "Directeur de Cabinet"
+msgid "Create Budget"
+msgstr "Directeur de Cabinet"
+
+#: finance/templates/finance/expense_detail.html:4
+msgid "Expense Detail"
+msgstr "Détail de la dépense"
+
+#: finance/templates/finance/expense_detail.html:33
+#: finance/templates/finance/expense_form.html:36
+#: finance/templates/finance/expense_list.html:28
+#: templates/account/admin_user_detail.html:307
+#: templates/account/user_profile_update.html:338
+#: templates/projects/site_detail.html:433
+msgid "Category"
+msgstr "Catégorie"
+
+#: finance/templates/finance/expense_detail.html:37
+#: finance/templates/finance/expense_form.html:48
+#: finance/templates/finance/expense_list.html:29
+#: revenue/templates/revenue/invoice_detail.html:67
+#: revenue/templates/revenue/invoice_list.html:29
+#: revenue/templates/revenue/payment_list.html:50
+#: templates/account/admin_user_detail.html:306
+#: templates/account/user_profile_update.html:339
+#: templates/account/user_profile_update.html:400
+#: templates/projects/site_detail.html:376
+#: templates/projects/site_detail.html:434
+msgid "Amount"
+msgstr "Montant"
+
+#: finance/templates/finance/expense_detail.html:41
+#: finance/templates/finance/expense_list.html:31
+#: materials/templates/materials/request_detail.html:42
+#: materials/templates/materials/request_list.html:31
+#: revenue/templates/revenue/invoice_form.html:58
+#: revenue/templates/revenue/invoice_list.html:30
+#: templates/account/admin_cabinet_detail.html:142
+#: templates/account/admin_cabinet_detail.html:202
+#: templates/account/admin_cabinet_detail.html:262
+#: templates/account/admin_user_delete.html:104
+#: templates/account/admin_user_detail.html:182
+#: templates/account/admin_user_detail.html:248
+#: templates/account/admin_users_list.html:168
+#: templates/account/user_profile_update.html:159
+#: templates/account/user_profile_update.html:218
+#: templates/account/user_profile_update.html:279
+#: templates/account/user_profile_update.html:340
+#: templates/account/user_profile_update.html:401
+#: templates/projects/site_detail.html:299
+#: templates/projects/site_detail.html:377
+#: templates/projects/site_detail.html:435
+#: templates/projects/site_detail.html:653 templates/projects/site_form.html:50
+#: templates/projects/site_list.html:44
+msgid "Status"
+msgstr "Statut"
+
+#: finance/templates/finance/expense_detail.html:59
+#: finance/templates/finance/expense_form.html:57
+msgid "Receipt Image"
+msgstr "Image du Reçu"
+
+#: finance/templates/finance/expense_detail.html:61
+#, fuzzy
+#| msgid "Receipt Image"
+msgid "Receipt"
+msgstr "Image du Reçu"
+
+#: finance/templates/finance/expense_detail.html:71
+msgid "Approval History"
+msgstr "Historique des approbations"
+
+#: finance/templates/finance/expense_detail.html:78
+msgid "by"
+msgstr "par"
+
+#: finance/templates/finance/expense_detail.html:87
+msgid "No approval history yet."
+msgstr "Aucun historique d'approbation pour l'instant."
+
+#: finance/templates/finance/expense_detail.html:97
+#, fuzzy
+#| msgid "Actif"
+msgid "Approval Actions"
+msgstr "Actif"
+
+#: finance/templates/finance/expense_detail.html:103
+msgid "Review Comments"
+msgstr "Commentaires de révision"
+
+#: finance/templates/finance/expense_detail.html:105
+msgid "Optional notes..."
+msgstr "Notes optionnelles..."
+
+#: finance/templates/finance/expense_detail.html:108
+#, fuzzy
+#| msgid "Approuvé"
+msgid "Approve Request"
+msgstr "Approuvé"
+
+#: finance/templates/finance/expense_detail.html:118
+msgid "Cashier Payment"
+msgstr "Paiement par le caissier"
+
+#: finance/templates/finance/expense_detail.html:121
+msgid "Mark this expense as PAID once funds are disbursed."
+msgstr "Marquer cette dépense comme PAYÉE une fois les fonds décaissés."
+
+#: finance/templates/finance/expense_detail.html:125
+msgid "Confirm Disbursement"
+msgstr "Confirmer le décaissement"
+
+#: finance/templates/finance/expense_detail.html:134
+msgid "Metadata"
+msgstr "Métadonnées"
+
+#: finance/templates/finance/expense_detail.html:138
+#: finance/templates/finance/expense_list.html:30
+#, fuzzy
+#| msgid "Submit Request"
+msgid "Requester"
+msgstr "Soumettre la Demande"
+
+#: finance/templates/finance/expense_detail.html:140
+#, fuzzy
+#| msgid "Submit Request"
+msgid "Submitted"
+msgstr "Soumettre la Demande"
+
+#: finance/templates/finance/expense_form.html:4
+msgid "Expense Form"
+msgstr "Formulaire de dépense"
+
+#: finance/templates/finance/expense_form.html:57
+msgid "Optional"
+msgstr "Optionnel"
 
 #: finance/templates/finance/expense_form.html:76
 msgid "Submit Request"
 msgstr "Soumettre la Demande"
 
-#: materials/forms.py:11
-msgid "Material Name"
-msgstr ""
+#: finance/templates/finance/expense_list.html:32
+#: materials/templates/materials/request_list.html:32
+#: revenue/templates/revenue/invoice_detail.html:64
+#: templates/account/user_profile_update.html:219
+#: templates/account/user_profile_update.html:280
+#: templates/account/user_profile_update.html:341
+#: templates/account/user_profile_update.html:402
+msgid "Date"
+msgstr "Date"
 
-#: materials/forms.py:12
-msgid "e.g. kg, m3, liters"
-msgstr ""
+#: finance/templates/finance/expense_list.html:58
+#: materials/templates/materials/request_list.html:79
+#: templates/account/admin_cabinets_list.html:167
+#: templates/projects/site_list.html:84
+msgid "View"
+msgstr "Voir"
 
-#: materials/forms.py:24
-msgid "Additional notes or special instructions..."
-msgstr ""
+#: finance/templates/finance/expense_list.html:65
+msgid "No expenses found."
+msgstr "Aucune dépense trouvée."
 
-#: materials/forms.py:43
-msgid "Notes for this item (optional)"
-msgstr ""
-
-#: materials/models.py:17
-msgid "En attente"
-msgstr "En attente"
+#: finance/templates/finance/expense_list.html:67
+msgid "Request Expense"
+msgstr "Demander une dépense"
 
 #: materials/models.py:20
-msgid "Commandé"
-msgstr "Commandé"
+msgid "Additional notes or instructions for this request"
+msgstr "Notes supplémentaires ou instructions pour cette demande"
 
-#: materials/models.py:21
-msgid "Livré"
-msgstr "Livré"
+#: materials/models.py:58
+msgid "Notes specific to this material item"
+msgstr "Notes spécifiques à cet article de matériau"
+
+#: materials/templates/materials/material_form.html:4
+#, fuzzy
+#| msgid "Material Request"
+msgid "Material Form"
+msgstr "Demande de Matériel"
+
+#: materials/templates/materials/material_form.html:37
+msgid "Unit (e.g. kg, L, m3)"
+msgstr "Unité (ex. kg, L, m3)"
+
+#: materials/templates/materials/material_form.html:46
+msgid "Est. Cost / Unit ($)"
+msgstr "Coût est. / Unité ($)"
+
+#: materials/templates/materials/material_form.html:58
+#, fuzzy
+#| msgid "Create Material Request"
+msgid "Save Material"
+msgstr "Créer une Demande de Matériel"
+
+#: materials/templates/materials/material_list.html:28
+msgid "Unit"
+msgstr "Unité"
+
+#: materials/templates/materials/material_list.html:29
+msgid "Est. Cost / Unit"
+msgstr "Coût est. / Unité"
+
+#: materials/templates/materials/material_list.html:60
+msgid "No materials in catalog."
+msgstr "Aucun matériau dans le catalogue."
+
+#: materials/templates/materials/request_detail.html:26
+msgid "Request Details"
+msgstr "Détails de la demande"
+
+#: materials/templates/materials/request_detail.html:59
+#, fuzzy
+#| msgid "Generate Invoice"
+msgid "General Notes"
+msgstr "Générer la Facture"
+
+#: materials/templates/materials/request_detail.html:71
+#: materials/templates/materials/request_list.html:28
+#: templates/account/admin_user_detail.html:268
+#: templates/account/admin_user_detail.html:367
+#: templates/projects/site_detail.html:108
+msgid "Materials"
+msgstr "Matériaux"
+
+#: materials/templates/materials/request_detail.html:80
+#: templates/projects/site_detail.html:297
+#, fuzzy
+#| msgid "Material Request"
+msgid "Material"
+msgstr "Demande de Matériel"
+
+#: materials/templates/materials/request_detail.html:81
+#: templates/account/admin_user_detail.html:277
+#: templates/projects/site_detail.html:298
+msgid "Quantity"
+msgstr "Quantité"
+
+#: materials/templates/materials/request_detail.html:82
+#: materials/templates/materials/request_list.html:30
+msgid "Est. Cost"
+msgstr "Coût estimé"
+
+#: materials/templates/materials/request_detail.html:107
+msgid "Total Estimated Cost:"
+msgstr "Coût total estimé :"
+
+#: materials/templates/materials/request_detail.html:119
+#, fuzzy
+#| msgid "Invoice Information"
+msgid "Request Information"
+msgstr "Informations de Facture"
+
+#: materials/templates/materials/request_detail.html:123
+msgid "Request ID:"
+msgstr "ID de demande :"
+
+#: materials/templates/materials/request_detail.html:129
+msgid "Requested By:"
+msgstr "Demandé par :"
+
+#: materials/templates/materials/request_detail.html:133
+#, fuzzy
+#| msgid "Material Request"
+msgid "Date Requested:"
+msgstr "Demande de Matériel"
+
+#: materials/templates/materials/request_detail.html:137
+#, fuzzy
+#| msgid "Last Name"
+msgid "Last Updated:"
+msgstr "Nom"
+
+#: materials/templates/materials/request_detail.html:150
+msgid "Review"
+msgstr "Révision"
+
+#: materials/templates/materials/request_detail.html:157
+#, fuzzy
+#| msgid "Approuvé"
+msgid "Approve"
+msgstr "Approuvé"
+
+#: materials/templates/materials/request_detail.html:160
+#, fuzzy
+#| msgid "Rejeté"
+msgid "Reject"
+msgstr "Rejeté"
+
+#: materials/templates/materials/request_detail.html:173
+#, fuzzy
+#| msgid "Submit Request"
+msgid "Edit Request"
+msgstr "Soumettre la Demande"
+
+#: materials/templates/materials/request_detail.html:182
+#: templates/account/admin_user_detail.html:351
+msgid "Summary"
+msgstr "Résumé"
+
+#: materials/templates/materials/request_detail.html:187
+#: materials/templates/materials/request_list.html:29
+msgid "Total Items"
+msgstr "Total d'articles"
+
+#: materials/templates/materials/request_detail.html:191
+msgid "Est. Total"
+msgstr "Coût total estimé"
 
 #: materials/templates/materials/request_form.html:4
 msgid "Material Request"
@@ -307,50 +874,30 @@ msgstr "Ajouter un ou plusieurs matériaux pour ce site"
 msgid "Materials to Request"
 msgstr "Matériaux à Demander"
 
-#: personnel/forms.py:10 personnel/models.py:17
-#: templates/account/admin_user_detail.html:56
-#: templates/account/admin_user_edit.html:54
-#: templates/account/user_profile_update.html:89
-msgid "First Name"
-msgstr "Prénom"
+#: materials/templates/materials/request_list.html:84
+#: templates/account/admin_cabinet_detail.html:162
+#: templates/account/admin_cabinet_detail.html:222
+#: templates/account/admin_cabinet_detail.html:282
+#: templates/account/admin_cabinets_list.html:172
+#: templates/account/admin_user_detail.html:203
+#: templates/personnel/personnel_list.html:67
+#: templates/projects/site_detail.html:161 templates/projects/site_list.html:87
+msgid "Edit"
+msgstr "Modifier"
 
-#: personnel/forms.py:11 personnel/models.py:18
-#: templates/account/admin_user_detail.html:62
-#: templates/account/admin_user_edit.html:63
-#: templates/account/user_profile_update.html:98
-msgid "Last Name"
-msgstr "Nom"
+#: materials/templates/materials/request_list.html:95
+#, fuzzy
+#| msgid "Material Request"
+msgid "No material requests found."
+msgstr "Demande de Matériel"
 
-#: personnel/forms.py:24
-msgid "e.g. Chef d'équipe"
-msgstr ""
-
-#: personnel/forms.py:27 personnel/forms.py:32 projects/forms.py:15
-#: projects/forms.py:20 projects/forms.py:33 projects/forms.py:38
-#: projects/forms.py:50 revenue/forms.py:15 revenue/forms.py:30
-#: revenue/forms.py:35 revenue/forms.py:50
-msgid "YYYY-MM-DD"
-msgstr ""
-
-#: personnel/forms.py:43 personnel/models.py:8
-msgid "Skill Name"
-msgstr ""
-
-#: personnel/forms.py:44
-msgid "Description..."
-msgstr "Description..."
-
-#: personnel/models.py:20
-msgid "Default daily cost"
-msgstr ""
+#: personnel/models.py:16
+msgid "Link to system user if they have login access"
+msgstr "Lien vers l'utilisateur système s'il dispose d'un accès de connexion"
 
 #: personnel/models.py:20
 msgid "Default Daily Rate"
-msgstr ""
-
-#: personnel/models.py:28
-msgid "Specific role on this site, e.g. Chef d'équipe"
-msgstr ""
+msgstr "Tarif journalier par défaut"
 
 #: personnel/models.py:28 templates/account/admin_cabinet_detail.html:141
 #: templates/account/admin_cabinet_detail.html:201
@@ -359,91 +906,129 @@ msgstr ""
 #: templates/account/admin_users_list.html:169
 #: templates/account/user_profile_update.html:158
 msgid "Role"
-msgstr ""
+msgstr "Rôle"
 
-#: personnel/models.py:31
-msgid "Agreed rate for this specific assignment"
-msgstr ""
-
-#: personnel/models.py:31
+#: personnel/models.py:31 templates/projects/site_detail.html:226
 msgid "Daily Rate"
-msgstr ""
+msgstr "Tarif journalier"
 
-#: projects/forms.py:10 templates/account/user_profile_update.html:216
-msgid "Site Name"
-msgstr ""
+#: projects/models.py:93
+msgid "0-100"
+msgstr "0-100"
 
-#: projects/forms.py:11
-msgid "Location / Address"
-msgstr ""
+#: revenue/templates/revenue/contract_form.html:4
+#, fuzzy
+#| msgid "Contract"
+msgid "Contract Form"
+msgstr "Contrat"
 
-#: projects/forms.py:30
-msgid "Phase Name (e.g. Foundation)"
-msgstr ""
+#: revenue/templates/revenue/contract_form.html:21
+#, fuzzy
+#| msgid "Invoice Information"
+msgid "Contract Information"
+msgstr "Informations de Facture"
 
-#: projects/forms.py:54
-msgid "What was accomplished today?"
-msgstr ""
+#: revenue/templates/revenue/contract_form.html:33
+#, fuzzy
+#| msgid "Project / Site"
+msgid "Project Site"
+msgstr "Projet / Site"
 
-#: projects/models.py:8
-msgid "En planification"
-msgstr "En planification"
+#: revenue/templates/revenue/contract_form.html:55
+#, fuzzy
+#| msgid "Contract"
+msgid "Contract Value"
+msgstr "Contrat"
 
-#: projects/models.py:9
-msgid "Actif"
-msgstr "Actif"
+#: revenue/templates/revenue/contract_form.html:64
+#: revenue/templates/revenue/contract_list.html:30
+msgid "Signed Date"
+msgstr "Date de signature"
 
-#: projects/models.py:10
-msgid "En pause"
-msgstr "En pause"
+#: revenue/templates/revenue/contract_form.html:75
+#, fuzzy
+#| msgid "Contract"
+msgid "Save Contract"
+msgstr "Contrat"
 
-#: projects/models.py:11
-msgid "Complété"
-msgstr "Complété"
+#: revenue/templates/revenue/contract_list.html:28
+#: revenue/templates/revenue/invoice_detail.html:33
+msgid "Client"
+msgstr "Client"
 
-#: projects/models.py:12
-msgid "Annulé"
-msgstr "Annulé"
+#: revenue/templates/revenue/contract_list.html:29
+msgid "Total Value"
+msgstr "Valeur totale"
 
-#: revenue/forms.py:11
-msgid "Client Name"
-msgstr ""
+#: revenue/templates/revenue/contract_list.html:57
+msgid "No contracts found."
+msgstr "Aucun contrat trouvé."
 
-#: revenue/forms.py:26
-msgid "INV-000"
-msgstr ""
+#: revenue/templates/revenue/contract_list.html:59
+#, fuzzy
+#| msgid "Contract"
+msgid "New Contract"
+msgstr "Contrat"
 
-#: revenue/forms.py:54
-msgid "Transaction Reference"
-msgstr ""
+#: revenue/templates/revenue/invoice_detail.html:4
+#, fuzzy
+#| msgid "Invoice Amount"
+msgid "Invoice Details"
+msgstr "Montant de la Facture"
 
-#: revenue/models.py:17
-msgid "Brouillon"
-msgstr "Brouillon"
+#: revenue/templates/revenue/invoice_detail.html:40
+#, fuzzy
+#| msgid "Amount"
+msgid "Amount Due"
+msgstr "Montant"
 
-#: revenue/models.py:18
-msgid "Envoyé"
-msgstr "Envoyé"
+#: revenue/templates/revenue/invoice_detail.html:44
+#: revenue/templates/revenue/invoice_form.html:50
+msgid "Issued Date"
+msgstr "Date d'émission"
 
-#: revenue/models.py:20
-msgid "En retard"
-msgstr "En retard"
+#: revenue/templates/revenue/invoice_detail.html:48
+#: revenue/templates/revenue/invoice_form.html:54
+#: revenue/templates/revenue/invoice_list.html:31
+#: templates/projects/site_detail.html:378
+msgid "Due Date"
+msgstr "Date d'échéance"
 
-#: revenue/models.py:34
-msgid "Virement bancaire"
-msgstr "Virement bancaire"
+#: revenue/templates/revenue/invoice_detail.html:57
+msgid "Payment Records"
+msgstr "Historique des paiements"
 
-#: revenue/models.py:35
-msgid "Chèque"
-msgstr "Chèque"
+#: revenue/templates/revenue/invoice_detail.html:65
+msgid "Method"
+msgstr "Mode de paiement"
 
-#: revenue/models.py:36
-msgid "Espèces"
-msgstr "Espèces"
+#: revenue/templates/revenue/invoice_detail.html:66
+#: revenue/templates/revenue/payment_list.html:53
+#: templates/account/user_profile_update.html:277
+msgid "Reference"
+msgstr "Référence"
 
-#: revenue/models.py:37
-msgid "Mobile Money"
-msgstr "Mobile Money"
+#: revenue/templates/revenue/invoice_detail.html:82
+msgid "No payments recorded for this invoice."
+msgstr "Aucun paiement enregistré pour cette facture."
+
+#: revenue/templates/revenue/invoice_detail.html:102
+#: revenue/templates/revenue/payment_form.html:52
+#: revenue/templates/revenue/payment_list.html:90
+msgid "Record Payment"
+msgstr "Enregistrer un paiement"
+
+#: revenue/templates/revenue/invoice_detail.html:110
+#, fuzzy
+#| msgid "Contract"
+msgid "Contract Summary"
+msgstr "Contrat"
+
+#: revenue/templates/revenue/invoice_detail.html:114
+#, fuzzy
+#| msgid "Contract"
+msgid "Total Contract"
+msgstr "Contrat"
 
 #: revenue/templates/revenue/invoice_form.html:4
 msgid "Invoice Form"
@@ -459,47 +1044,93 @@ msgstr "Contrat"
 
 #: revenue/templates/revenue/invoice_form.html:30
 msgid "Contract errors"
-msgstr ""
+msgstr "Erreurs du contrat"
 
 #: revenue/templates/revenue/invoice_form.html:36
 msgid "Invoice ID"
-msgstr ""
+msgstr "Identifiant de facture"
 
 #: revenue/templates/revenue/invoice_form.html:38
 msgid "Invoice ID errors"
-msgstr ""
+msgstr "Erreurs de l'identifiant de facture"
 
 #: revenue/templates/revenue/invoice_form.html:41
 msgid "Invoice Amount"
 msgstr "Montant de la Facture"
 
-#: revenue/templates/revenue/invoice_form.html:50
-msgid "Issued Date"
-msgstr ""
-
-#: revenue/templates/revenue/invoice_form.html:54
-msgid "Due Date"
-msgstr ""
-
-#: revenue/templates/revenue/invoice_form.html:58
-#: templates/account/admin_cabinet_detail.html:142
-#: templates/account/admin_cabinet_detail.html:202
-#: templates/account/admin_cabinet_detail.html:262
-#: templates/account/admin_user_delete.html:104
-#: templates/account/admin_user_detail.html:182
-#: templates/account/admin_user_detail.html:248
-#: templates/account/admin_users_list.html:168
-#: templates/account/user_profile_update.html:159
-#: templates/account/user_profile_update.html:218
-#: templates/account/user_profile_update.html:279
-#: templates/account/user_profile_update.html:340
-#: templates/account/user_profile_update.html:401
-msgid "Status"
-msgstr "Statut"
-
 #: revenue/templates/revenue/invoice_form.html:64
 msgid "Generate Invoice"
 msgstr "Générer la Facture"
+
+#: revenue/templates/revenue/invoice_list.html:27
+#: templates/projects/site_detail.html:375
+#, fuzzy
+#| msgid "Invoice Form"
+msgid "Invoice #"
+msgstr "Formulaire de Facture"
+
+#: revenue/templates/revenue/invoice_list.html:28
+#: revenue/templates/revenue/payment_list.html:49
+msgid "Site / Client"
+msgstr "Chantier / Client"
+
+#: revenue/templates/revenue/invoice_list.html:59
+msgid "Payment"
+msgstr "Paiement"
+
+#: revenue/templates/revenue/invoice_list.html:67
+msgid "No invoices generated yet."
+msgstr "Aucune facture générée."
+
+#: revenue/templates/revenue/invoice_list.html:69
+#: templates/projects/site_detail.html:365
+#, fuzzy
+#| msgid "Generate Invoice"
+msgid "New Invoice"
+msgstr "Générer la Facture"
+
+#: revenue/templates/revenue/payment_form.html:30
+#, fuzzy
+#| msgid "Generate Invoice"
+msgid "Selected Invoice"
+msgstr "Générer la Facture"
+
+#: revenue/templates/revenue/payment_form.html:35
+#, fuzzy
+#| msgid "Amount"
+msgid "Amount Paid"
+msgstr "Montant"
+
+#: revenue/templates/revenue/payment_form.html:39
+#: revenue/templates/revenue/payment_list.html:51
+msgid "Payment Date"
+msgstr "Date de paiement"
+
+#: revenue/templates/revenue/payment_form.html:44
+#: revenue/templates/revenue/payment_list.html:52
+msgid "Payment Method"
+msgstr "Mode de paiement"
+
+#: revenue/templates/revenue/payment_form.html:48
+msgid "Transaction Reference(s)"
+msgstr "Référence(s) de transaction"
+
+#: revenue/templates/revenue/payment_list.html:26
+msgid "Total Payments"
+msgstr "Total des paiements"
+
+#: revenue/templates/revenue/payment_list.html:34
+msgid "Total Transactions"
+msgstr "Nombre de transactions"
+
+#: revenue/templates/revenue/payment_list.html:48
+#: templates/account/user_profile_update.html:399
+msgid "Invoice Number"
+msgstr "Numéro de facture"
+
+#: revenue/templates/revenue/payment_list.html:88
+msgid "No payments recorded yet."
+msgstr "Aucun paiement enregistré."
 
 #: templates/404.html:4
 msgid "Page Not Found"
@@ -511,7 +1142,8 @@ msgstr "La page que vous cherchez n'est pas trouvée."
 
 #: templates/404.html:19
 msgid "Make sure the address is correct and that the page hasn't moved."
-msgstr "Assurez-vous que l'adresse est correcte et que la page n'a pas été déplacée."
+msgstr ""
+"Assurez-vous que l'adresse est correcte et que la page n'a pas été déplacée."
 
 #: templates/404.html:21
 msgid "Return to Dashboard"
@@ -519,13 +1151,13 @@ msgstr "Retour au Tableau de Bord"
 
 #: templates/account/admin_assign_user_to_cabinet.html:17
 msgid "Add a user to"
-msgstr ""
+msgstr "Ajouter un utilisateur à"
 
 #: templates/account/admin_assign_user_to_cabinet.html:22
 #: templates/account/admin_cabinet_confirm_delete.html:20
 #: templates/account/admin_cabinet_user_role_form.html:22
 msgid "Back to Cabinet"
-msgstr ""
+msgstr "Retour au cabinet"
 
 #: templates/account/admin_assign_user_to_cabinet.html:42
 #: templates/account/admin_cabinet_confirm_delete.html:48
@@ -533,45 +1165,46 @@ msgstr ""
 #: templates/account/admin_cabinet_form.html:40
 #: templates/account/admin_cabinet_form.html:146
 msgid "Cabinet Information"
-msgstr ""
+msgstr "Informations du cabinet"
 
 #: templates/account/admin_assign_user_to_cabinet.html:47
 #: templates/account/admin_cabinet_detail.html:56
 #: templates/account/admin_users_list.html:167
+#: templates/personnel/personnel_list.html:27
 msgid "Name"
-msgstr ""
+msgstr "Nom"
 
 #: templates/account/admin_assign_user_to_cabinet.html:51
 #: templates/account/admin_cabinet_confirm_delete.html:59
 #: templates/account/admin_cabinet_detail.html:60
 msgid "Address"
-msgstr ""
+msgstr "Adresse"
 
 #: templates/account/admin_assign_user_to_cabinet.html:55
 #: templates/account/admin_cabinet_confirm_delete.html:65
 #: templates/account/admin_cabinet_detail.html:66
 msgid "Tax ID"
-msgstr ""
+msgstr "Identifiant fiscal"
 
 #: templates/account/admin_assign_user_to_cabinet.html:65
 msgid "User Assignment"
-msgstr ""
+msgstr "Affectation de l'utilisateur"
 
 #: templates/account/admin_assign_user_to_cabinet.html:135
 #: templates/account/admin_cabinets_list.html:176
 #: templates/account/assign_user_to_cabinet.html:140
 msgid "Assign User"
-msgstr ""
+msgstr "Affecter l'utilisateur"
 
 #: templates/account/admin_assign_user_to_cabinet.html:152
 msgid "About This Assignment"
-msgstr ""
+msgstr "À propos de cette affectation"
 
 #: templates/account/admin_assign_user_to_cabinet.html:155
 #: templates/account/admin_cabinet_user_role_form.html:153
 #: templates/account/assign_user_to_cabinet.html:160
 msgid "Role Definitions"
-msgstr ""
+msgstr "Définitions des rôles"
 
 #: templates/account/admin_assign_user_to_cabinet.html:157
 #: templates/account/admin_cabinet_detail.html:332
@@ -579,23 +1212,23 @@ msgstr ""
 #: templates/account/assign_user_to_cabinet.html:162
 #: templates/account/user_profile_update.html:47
 msgid "Director"
-msgstr ""
+msgstr "Directeur"
 
 #: templates/account/admin_assign_user_to_cabinet.html:157
 #: templates/account/assign_user_to_cabinet.html:162
 msgid "Full cabinet control"
-msgstr ""
+msgstr "Contrôle total du cabinet"
 
 #: templates/account/admin_assign_user_to_cabinet.html:158
 #: templates/account/admin_cabinet_user_role_form.html:162
 #: templates/account/assign_user_to_cabinet.html:163
 msgid "Chief Engineer"
-msgstr ""
+msgstr "Chef des ingénieurs"
 
 #: templates/account/admin_assign_user_to_cabinet.html:158
 #: templates/account/assign_user_to_cabinet.html:163
 msgid "Technical team lead"
-msgstr ""
+msgstr "Responsable technique de l'équipe"
 
 #: templates/account/admin_assign_user_to_cabinet.html:159
 #: templates/account/admin_cabinet_detail.html:338
@@ -603,12 +1236,12 @@ msgstr ""
 #: templates/account/assign_user_to_cabinet.html:164
 #: templates/account/user_profile_update.html:50
 msgid "Engineer"
-msgstr ""
+msgstr "Ingénieur"
 
 #: templates/account/admin_assign_user_to_cabinet.html:159
 #: templates/account/assign_user_to_cabinet.html:164
 msgid "Technical staff member"
-msgstr ""
+msgstr "Membre du personnel technique"
 
 #: templates/account/admin_assign_user_to_cabinet.html:160
 #: templates/account/admin_cabinet_detail.html:341
@@ -616,12 +1249,12 @@ msgstr ""
 #: templates/account/assign_user_to_cabinet.html:165
 #: templates/account/user_profile_update.html:53
 msgid "Accountant"
-msgstr ""
+msgstr "Comptable"
 
 #: templates/account/admin_assign_user_to_cabinet.html:160
 #: templates/account/assign_user_to_cabinet.html:165
 msgid "Financial operations"
-msgstr ""
+msgstr "Opérations financières"
 
 #: templates/account/admin_assign_user_to_cabinet.html:161
 #: templates/account/admin_cabinet_detail.html:344
@@ -629,30 +1262,30 @@ msgstr ""
 #: templates/account/assign_user_to_cabinet.html:166
 #: templates/account/user_profile_update.html:56
 msgid "Cashier"
-msgstr ""
+msgstr "Caissier"
 
 #: templates/account/admin_assign_user_to_cabinet.html:161
 #: templates/account/assign_user_to_cabinet.html:166
 msgid "Cash management"
-msgstr ""
+msgstr "Gestion de la caisse"
 
 #: templates/account/admin_assign_user_to_cabinet.html:162
 #: templates/account/admin_cabinet_detail.html:347
 #: templates/account/admin_cabinet_user_role_form.html:178
 #: templates/account/assign_user_to_cabinet.html:167
 msgid "Worker"
-msgstr ""
+msgstr "Ouvrier"
 
 #: templates/account/admin_assign_user_to_cabinet.html:162
 #: templates/account/admin_cabinet_detail.html:347
 #: templates/account/assign_user_to_cabinet.html:167
 msgid "General staff"
-msgstr ""
+msgstr "Personnel général"
 
 #: templates/account/admin_assign_user_to_cabinet.html:167
 #: templates/account/assign_user_to_cabinet.html:172
 msgid "Status Definitions"
-msgstr ""
+msgstr "Définitions des statuts"
 
 #: templates/account/admin_assign_user_to_cabinet.html:169
 #: templates/account/admin_cabinet_confirm_delete.html:103
@@ -661,32 +1294,32 @@ msgstr ""
 #: templates/account/admin_cabinets_list.html:134
 #: templates/account/assign_user_to_cabinet.html:174
 msgid "Pending"
-msgstr ""
+msgstr "En attente"
 
 #: templates/account/admin_assign_user_to_cabinet.html:169
 #: templates/account/assign_user_to_cabinet.html:174
 msgid "Awaiting approval"
-msgstr ""
+msgstr "En attente d'approbation"
 
 #: templates/account/admin_assign_user_to_cabinet.html:170
 #: templates/account/assign_user_to_cabinet.html:175
 msgid "Active assignment"
-msgstr ""
+msgstr "Affectation active"
 
 #: templates/account/admin_assign_user_to_cabinet.html:171
 #: templates/account/assign_user_to_cabinet.html:176
 msgid "Denied assignment"
-msgstr ""
+msgstr "Affectation refusée"
 
 #: templates/account/admin_assign_user_to_cabinet.html:179
 #: templates/account/assign_user_to_cabinet.html:184
 msgid "Superadmin Only"
-msgstr ""
+msgstr "Superadministrateur uniquement"
 
 #: templates/account/admin_assign_user_to_cabinet.html:180
 #: templates/account/assign_user_to_cabinet.html:185
 msgid "Only superadmins can assign users to cabinets and manage their roles."
-msgstr ""
+msgstr "Seuls les superadministrateurs peuvent affecter des utilisateurs aux cabinets et gérer leurs rôles."
 
 #: templates/account/admin_cabinet_confirm_delete.html:4
 #: templates/account/admin_cabinet_confirm_delete.html:14
@@ -697,11 +1330,11 @@ msgstr "Directeur de Cabinet"
 
 #: templates/account/admin_cabinet_confirm_delete.html:16
 msgid "This action cannot be undone"
-msgstr ""
+msgstr "Cette action est irréversible"
 
 #: templates/account/admin_cabinet_confirm_delete.html:33
 msgid "Warning: Permanent Deletion"
-msgstr ""
+msgstr "Avertissement : Suppression définitive"
 
 #: templates/account/admin_cabinet_confirm_delete.html:35
 #, python-format
@@ -713,21 +1346,27 @@ msgid ""
 "associated data.\n"
 "                        "
 msgstr ""
+"\n"
+"                        Vous êtes sur le point de supprimer définitivement le cabinet "
+"<strong>%(object.name)s</strong>. \n"
+"                        Cette action est irréversible et supprimera toutes "
+"les données associées.\n"
+"                        "
 
 #: templates/account/admin_cabinet_confirm_delete.html:71
 #: templates/account/admin_cabinet_detail.html:73
 msgid "Created"
-msgstr ""
+msgstr "Créé"
 
 #: templates/account/admin_cabinet_confirm_delete.html:83
 msgid "User Assignments"
-msgstr ""
+msgstr "Affectations des utilisateurs"
 
 #: templates/account/admin_cabinet_confirm_delete.html:91
 #: templates/account/admin_cabinet_detail.html:89
 #: templates/account/admin_users_list.html:48
 msgid "Total Users"
-msgstr ""
+msgstr "Nombre total d'utilisateurs"
 
 #: templates/account/admin_cabinet_confirm_delete.html:110
 #, python-format
@@ -742,17 +1381,26 @@ msgid_plural ""
 "also be deleted.\n"
 "                    "
 msgstr[0] ""
+"\n"
+"                    Ce cabinet a %(counter)s affectation d'utilisateur. Elle sera "
+"également supprimée.\n"
+"                    "
 msgstr[1] ""
+"\n"
+"                    Ce cabinet a %(counter)s affectations d'utilisateurs. Elles seront "
+"également supprimées.\n"
+"                    "
 
 #: templates/account/admin_cabinet_confirm_delete.html:124
 #: templates/account/admin_user_delete.html:138
+#: templates/projects/confirm_delete.html:7
 msgid "Confirm Deletion"
-msgstr ""
+msgstr "Confirmer la suppression"
 
 #: templates/account/admin_cabinet_confirm_delete.html:128
 msgid ""
 "To permanently delete this cabinet and all its data, click the button below:"
-msgstr ""
+msgstr "Pour supprimer définitivement ce cabinet et toutes ses données, cliquez sur le bouton ci-dessous :"
 
 #: templates/account/admin_cabinet_confirm_delete.html:133
 #, fuzzy
@@ -762,24 +1410,24 @@ msgstr "Directeur de Cabinet"
 
 #: templates/account/admin_cabinet_detail.html:4
 msgid "Cabinet Details"
-msgstr ""
+msgstr "Détails du cabinet"
 
 #: templates/account/admin_cabinet_detail.html:16
 msgid "Cabinet Details and User Assignments"
-msgstr ""
+msgstr "Détails du cabinet et affectations des utilisateurs"
 
 #: templates/account/admin_cabinet_detail.html:24
 msgid "Add User"
-msgstr ""
+msgstr "Ajouter un utilisateur"
 
 #: templates/account/admin_cabinet_detail.html:28
 #: templates/account/admin_cabinet_form.html:20
 msgid "Back to Cabinets"
-msgstr ""
+msgstr "Retour aux cabinets"
 
 #: templates/account/admin_cabinet_detail.html:130
 msgid "Approved Users"
-msgstr ""
+msgstr "Utilisateurs approuvés"
 
 #: templates/account/admin_cabinet_detail.html:139
 #: templates/account/admin_cabinet_detail.html:199
@@ -787,7 +1435,7 @@ msgstr ""
 #: templates/account/admin_cabinet_user_role_form.html:47
 #: templates/account/admin_users_list.html:210
 msgid "User"
-msgstr ""
+msgstr "Utilisateur"
 
 #: templates/account/admin_cabinet_detail.html:140
 #: templates/account/admin_cabinet_detail.html:200
@@ -797,140 +1445,120 @@ msgstr ""
 #: templates/account/admin_users_list.html:166
 #: templates/account/assign_user_to_cabinet.html:61
 msgid "Email"
-msgstr ""
-
-#: templates/account/admin_cabinet_detail.html:143
-#: templates/account/admin_cabinet_detail.html:203
-#: templates/account/admin_cabinet_detail.html:263
-#: templates/account/admin_cabinets_list.html:135
-#: templates/account/admin_user_detail.html:183
-#: templates/account/admin_user_detail.html:328
-#: templates/account/admin_user_edit.html:212
-#: templates/account/admin_users_list.html:171
-#, fuzzy
-#| msgid "Actif"
-msgid "Actions"
-msgstr "Actif"
-
-#: templates/account/admin_cabinet_detail.html:162
-#: templates/account/admin_cabinet_detail.html:222
-#: templates/account/admin_cabinet_detail.html:282
-#: templates/account/admin_cabinets_list.html:172
-#: templates/account/admin_user_detail.html:203
-msgid "Edit"
-msgstr ""
+msgstr "E-mail"
 
 #: templates/account/admin_cabinet_detail.html:167
 #: templates/account/admin_cabinet_detail.html:227
 #: templates/account/admin_cabinet_detail.html:287
 msgid "Remove"
-msgstr ""
+msgstr "Supprimer"
 
 #: templates/account/admin_cabinet_detail.html:168
 #: templates/account/admin_cabinet_detail.html:228
 #: templates/account/admin_cabinet_detail.html:288
 msgid "Remove this user from the cabinet?"
-msgstr ""
+msgstr "Retirer cet utilisateur du cabinet ?"
 
 #: templates/account/admin_cabinet_detail.html:181
 msgid "No approved users"
-msgstr ""
+msgstr "Aucun utilisateur approuvé"
 
 #: templates/account/admin_cabinet_detail.html:190
 msgid "Pending Users"
-msgstr ""
+msgstr "Utilisateurs en attente"
 
 #: templates/account/admin_cabinet_detail.html:241
 msgid "No pending users"
-msgstr ""
+msgstr "Aucun utilisateur en attente"
 
 #: templates/account/admin_cabinet_detail.html:250
 msgid "Rejected Users"
-msgstr ""
+msgstr "Utilisateurs rejetés"
 
 #: templates/account/admin_cabinet_detail.html:301
 msgid "No rejected users"
-msgstr ""
+msgstr "Aucun utilisateur rejeté"
 
 #: templates/account/admin_cabinet_detail.html:313
 msgid "Quick Actions"
-msgstr ""
+msgstr "Actions rapides"
 
 #: templates/account/admin_cabinet_detail.html:317
 msgid "View All Users"
-msgstr ""
+msgstr "Voir tous les utilisateurs"
 
 #: templates/account/admin_cabinet_detail.html:320
 msgid "Cabinet List"
-msgstr ""
+msgstr "Liste des cabinets"
 
 #: templates/account/admin_cabinet_detail.html:328
 msgid "Role Legend"
-msgstr ""
+msgstr "Légende des rôles"
 
 #: templates/account/admin_cabinet_detail.html:332
 msgid "Full control"
-msgstr ""
+msgstr "Contrôle total"
 
 #: templates/account/admin_cabinet_detail.html:335
 msgid "Chief Eng."
-msgstr ""
+msgstr "Chef Ing."
 
 #: templates/account/admin_cabinet_detail.html:335
 msgid "Tech lead"
-msgstr ""
+msgstr "Responsable technique"
 
 #: templates/account/admin_cabinet_detail.html:338
 msgid "Technical staff"
-msgstr ""
+msgstr "Personnel technique"
 
 #: templates/account/admin_cabinet_detail.html:341
+#: templates/projects/site_detail.html:112
 msgid "Finance"
-msgstr ""
+msgstr "Finance"
 
 #: templates/account/admin_cabinet_detail.html:344
 msgid "Cash mgmt"
-msgstr ""
+msgstr "Gestion de caisse"
 
 #: templates/account/admin_cabinet_form.html:109
 msgid "Current Logo:"
-msgstr ""
+msgstr "Logo actuel :"
 
 #: templates/account/admin_cabinet_form.html:149
 msgid "Complete all required fields to create or update a cabinet."
-msgstr ""
+msgstr "Remplissez tous les champs obligatoires pour créer ou mettre à jour un cabinet."
 
 #: templates/account/admin_cabinet_form.html:151
 msgid "Required Fields"
-msgstr ""
+msgstr "Champs obligatoires"
 
 #: templates/account/admin_cabinet_form.html:153
 msgid "Cabinet Name - Unique identifier for the cabinet"
-msgstr ""
+msgstr "Nom du cabinet - Identifiant unique du cabinet"
 
 #: templates/account/admin_cabinet_form.html:156
 msgid "Optional Fields"
-msgstr ""
+msgstr "Champs optionnels"
 
 #: templates/account/admin_cabinet_form.html:158
 msgid "Address - Physical location of the cabinet"
-msgstr ""
+msgstr "Adresse - Localisation physique du cabinet"
 
 #: templates/account/admin_cabinet_form.html:159
 msgid "Tax ID - Registration or tax identification number"
-msgstr ""
+msgstr "Identifiant fiscal - Numéro d'enregistrement ou d'identification fiscale"
 
 #: templates/account/admin_cabinet_form.html:160
 msgid "Logo - Visual identifier (image file)"
-msgstr ""
+msgstr "Logo - Identifiant visuel (fichier image)"
 
 #: templates/account/admin_cabinet_user_role_confirm_delete.html:4
 msgid "Remove User from Cabinet"
-msgstr ""
+msgstr "Retirer un utilisateur du cabinet"
 
 #: templates/account/admin_cabinet_user_role_confirm_delete.html:11
 msgid "Confirm Removal"
-msgstr ""
+msgstr "Confirmer le retrait"
 
 #: templates/account/admin_cabinet_user_role_confirm_delete.html:14
 #, python-format
@@ -938,194 +1566,195 @@ msgid ""
 "You are about to remove %(user.get_full_name|default:user.username)s from "
 "%(cabinet.name)s."
 msgstr ""
+"Vous êtes sur le point de retirer %(user.get_full_name|default:user.username)s du "
+"cabinet %(cabinet.name)s."
 
 #: templates/account/admin_cabinet_user_role_confirm_delete.html:17
 msgid "Yes, remove user"
-msgstr ""
+msgstr "Oui, retirer l'utilisateur"
 
 #: templates/account/admin_cabinet_user_role_form.html:17
 msgid "Update user role and approval status in"
-msgstr ""
+msgstr "Mettre à jour le rôle et le statut d'approbation dans"
 
 #: templates/account/admin_cabinet_user_role_form.html:42
 msgid "Assignment Details"
-msgstr ""
+msgstr "Détails de l'affectation"
 
 #: templates/account/admin_cabinet_user_role_form.html:54
 #: templates/account/admin_user_detail.html:180
 #: templates/account/user_profile_update.html:157
 #: templates/account/user_profile_update.html:217
 msgid "Cabinet"
-msgstr ""
+msgstr "Cabinet"
 
 #: templates/account/admin_cabinet_user_role_form.html:60
 msgid "Current Status"
-msgstr ""
+msgstr "Statut actuel"
 
 #: templates/account/admin_cabinet_user_role_form.html:78
 msgid "Update Assignment"
-msgstr ""
+msgstr "Mettre à jour l'affectation"
 
 #: templates/account/admin_cabinet_user_role_form.html:131
 #: templates/account/admin_user_edit.html:140
 #: templates/account/user_profile_update.html:126
 msgid "Save Changes"
-msgstr ""
+msgstr "Enregistrer les modifications"
 
 #: templates/account/admin_cabinet_user_role_form.html:135
 msgid "Remove this user from cabinet?"
-msgstr ""
+msgstr "Retirer cet utilisateur du cabinet ?"
 
 #: templates/account/admin_cabinet_user_role_form.html:136
 msgid "Remove User"
-msgstr ""
+msgstr "Retirer l'utilisateur"
 
 #: templates/account/admin_cabinet_user_role_form.html:159
 msgid "Full cabinet control and authority"
-msgstr ""
+msgstr "Contrôle et autorité totaux sur le cabinet"
 
 #: templates/account/admin_cabinet_user_role_form.html:163
 msgid "Technical team leadership"
-msgstr ""
+msgstr "Direction de l'équipe technique"
 
 #: templates/account/admin_cabinet_user_role_form.html:167
 msgid "Technical support and implementation"
-msgstr ""
+msgstr "Support technique et mise en œuvre"
 
 #: templates/account/admin_cabinet_user_role_form.html:171
 msgid "Financial management and reporting"
-msgstr ""
+msgstr "Gestion financière et reporting"
 
 #: templates/account/admin_cabinet_user_role_form.html:175
 msgid "Cash handling and receipts"
-msgstr ""
+msgstr "Gestion des espèces et des reçus"
 
 #: templates/account/admin_cabinet_user_role_form.html:179
 msgid "General operational tasks"
-msgstr ""
+msgstr "Tâches opérationnelles générales"
 
 #: templates/account/admin_cabinet_user_role_form.html:188
 msgid "Status Workflow"
-msgstr ""
+msgstr "Flux de statut"
 
 #: templates/account/admin_cabinet_user_role_form.html:191
 msgid "Manage the approval status of this user assignment:"
-msgstr ""
+msgstr "Gérer le statut d'approbation de cette affectation d'utilisateur :"
 
 #: templates/account/admin_cabinet_user_role_form.html:195
 msgid "Awaiting approval before user gains access"
-msgstr ""
+msgstr "En attente d'approbation avant que l'utilisateur obtienne l'accès"
 
 #: templates/account/admin_cabinet_user_role_form.html:199
 msgid "User has full access to cabinet"
-msgstr ""
+msgstr "L'utilisateur a un accès complet au cabinet"
 
 #: templates/account/admin_cabinet_user_role_form.html:203
 msgid "Assignment denied; user cannot access"
-msgstr ""
+msgstr "Affectation refusée ; l'utilisateur ne peut pas accéder"
 
 #: templates/account/admin_cabinets_list.html:4
 #: templates/account/admin_cabinets_list.html:14
-#: templates/includes/navbar-vertical.html:169
+#: templates/includes/navbar-vertical.html:196
 msgid "Cabinet Management"
-msgstr ""
+msgstr "Gestion des cabinets"
 
 #: templates/account/admin_cabinets_list.html:16
 msgid "Manage all project cabinets and their user assignments"
-msgstr ""
+msgstr "Gérer tous les cabinets de projets et leurs affectations d'utilisateurs"
 
 #: templates/account/admin_cabinets_list.html:21
 #: templates/account/admin_user_detail.html:171
 msgid "Add Cabinet"
-msgstr ""
+msgstr "Ajouter un cabinet"
 
 #: templates/account/admin_cabinets_list.html:25
 #: templates/account/admin_user_delete.html:22
 #: templates/account/admin_user_detail.html:22
 #: templates/account/admin_user_edit.html:22
 msgid "Back to Users"
-msgstr ""
+msgstr "Retour aux utilisateurs"
 
 #: templates/account/admin_cabinets_list.html:38
 msgid "Total Cabinets"
-msgstr ""
+msgstr "Nombre total de cabinets"
 
 #: templates/account/admin_cabinets_list.html:56
 msgid "Total Users Assigned"
-msgstr ""
+msgstr "Total d'utilisateurs affectés"
 
 #: templates/account/admin_cabinets_list.html:74
 msgid "Pending Assignments"
-msgstr ""
+msgstr "Affectations en attente"
 
 #: templates/account/admin_cabinets_list.html:104
 msgid "Search cabinets by name..."
-msgstr ""
+msgstr "Rechercher des cabinets par nom..."
 
 #: templates/account/admin_cabinets_list.html:108
 #: templates/account/admin_users_list.html:137
 msgid "Search"
-msgstr ""
+msgstr "Rechercher"
 
 #: templates/account/admin_cabinets_list.html:114
 msgid "Clear"
-msgstr ""
+msgstr "Effacer"
 
 #: templates/account/admin_cabinets_list.html:132
+#: templates/projects/site_detail.html:645 templates/projects/site_list.html:43
 msgid "Location"
-msgstr ""
+msgstr "Localisation"
 
 #: templates/account/admin_cabinets_list.html:133
 msgid "Users"
-msgstr ""
+msgstr "Utilisateurs"
 
 #: templates/account/admin_cabinets_list.html:144
 msgid "Tax ID:"
-msgstr ""
-
-#: templates/account/admin_cabinets_list.html:167
-msgid "View"
-msgstr ""
+msgstr "Identifiant fiscal :"
 
 #: templates/account/admin_cabinets_list.html:180
+#: templates/personnel/personnel_list.html:72
+#: templates/projects/site_detail.html:164 templates/projects/site_list.html:92
 msgid "Delete"
-msgstr ""
+msgstr "Supprimer"
 
 #: templates/account/admin_cabinets_list.html:181
 msgid "Are you sure you want to delete this cabinet?"
-msgstr ""
+msgstr "Êtes-vous sûr de vouloir supprimer ce cabinet ?"
 
 #: templates/account/admin_cabinets_list.html:201
 #: templates/account/admin_users_list.html:260
 msgid "First"
-msgstr ""
+msgstr "Premier"
 
 #: templates/account/admin_cabinets_list.html:206
 #: templates/account/admin_users_list.html:265
 msgid "Previous"
-msgstr ""
+msgstr "Précédent"
 
 #: templates/account/admin_cabinets_list.html:228
 #: templates/account/admin_users_list.html:279
 msgid "Next"
-msgstr ""
+msgstr "Suivant"
 
 #: templates/account/admin_cabinets_list.html:233
 #: templates/account/admin_users_list.html:284
 msgid "Last"
-msgstr ""
+msgstr "Dernier"
 
 #: templates/account/admin_cabinets_list.html:246
 msgid "No cabinets found"
-msgstr ""
+msgstr "Aucun cabinet trouvé"
 
 #: templates/account/admin_cabinets_list.html:249
 msgid "No cabinets match your search criteria."
-msgstr ""
+msgstr "Aucun cabinet ne correspond à vos critères de recherche."
 
 #: templates/account/admin_cabinets_list.html:251
 msgid "There are currently no cabinets in the system."
-msgstr ""
+msgstr "Il n'y a actuellement aucun cabinet dans le système."
 
 #: templates/account/admin_user_delete.html:4
 #: templates/account/admin_user_delete.html:14
@@ -1133,26 +1762,28 @@ msgstr ""
 #: templates/account/admin_user_edit.html:222
 #: templates/account/admin_users_list.html:232
 msgid "Delete User"
-msgstr ""
+msgstr "Supprimer l'utilisateur"
 
 #: templates/account/admin_user_delete.html:17
 msgid "Confirm user deletion"
-msgstr ""
+msgstr "Confirmer la suppression de l'utilisateur"
 
 #: templates/account/admin_user_delete.html:48
 msgid "Warning: This Action Cannot Be Undone"
-msgstr ""
+msgstr "Avertissement : Cette action est irréversible"
 
 #: templates/account/admin_user_delete.html:50
 msgid ""
 "Once you delete this user account, all associated data will be permanently "
 "removed from the system. Please ensure this is the correct action."
 msgstr ""
+"Une fois ce compte utilisateur supprimé, toutes les données associées seront "
+"définitivement supprimées du système. Veuillez vous assurer que cette action est correcte."
 
 #: templates/account/admin_user_delete.html:59
 #: templates/account/assign_user_to_cabinet.html:44
 msgid "User Information"
-msgstr ""
+msgstr "Informations de l'utilisateur"
 
 #: templates/account/admin_user_delete.html:64
 #: templates/account/admin_user_detail.html:50
@@ -1161,29 +1792,30 @@ msgstr ""
 #: templates/account/assign_user_to_cabinet.html:49
 #: templates/account/user_profile_update.html:526
 msgid "Username"
-msgstr ""
+msgstr "Nom d'utilisateur"
 
 #: templates/account/admin_user_delete.html:72
 #: templates/account/assign_user_to_cabinet.html:55
 msgid "Full Name"
-msgstr ""
+msgstr "Nom complet"
 
 #: templates/account/admin_user_delete.html:88
 #: templates/account/admin_user_detail.html:74
 msgid "Phone"
-msgstr ""
+msgstr "Téléphone"
 
 #: templates/account/admin_user_delete.html:96
 #: templates/account/admin_user_detail.html:140
 #: templates/account/admin_user_edit.html:165
 #: templates/account/user_profile_update.html:530
 msgid "Member Since"
-msgstr ""
+msgstr "Membre depuis"
 
 #: templates/account/admin_user_delete.html:108
 #: templates/account/admin_user_detail.html:91
 #: templates/account/admin_user_detail.html:95
 #: templates/account/admin_users_list.html:191
+#: templates/projects/site_detail.html:257 templates/projects/site_list.html:61
 #, fuzzy
 #| msgid "Actif"
 msgid "Active"
@@ -1193,308 +1825,292 @@ msgstr "Actif"
 #: templates/account/admin_user_detail.html:99
 #: templates/account/admin_users_list.html:195
 msgid "Inactive"
-msgstr ""
+msgstr "Inactif"
 
 #: templates/account/admin_user_delete.html:121
 msgid "What Will Happen"
-msgstr ""
+msgstr "Ce qui va se passer"
 
 #: templates/account/admin_user_delete.html:126
 msgid "User account will be permanently deleted"
-msgstr ""
+msgstr "Le compte utilisateur sera définitivement supprimé"
 
 #: templates/account/admin_user_delete.html:127
 msgid "All cabinet role assignments will be removed"
-msgstr ""
+msgstr "Toutes les affectations de rôles dans les cabinets seront supprimées"
 
 #: templates/account/admin_user_delete.html:128
 msgid "User will no longer be able to log in"
-msgstr ""
+msgstr "L'utilisateur ne pourra plus se connecter"
 
 #: templates/account/admin_user_delete.html:129
 msgid "User data cannot be recovered after deletion"
-msgstr ""
+msgstr "Les données de l'utilisateur ne pourront pas être récupérées après la suppression"
 
 #: templates/account/admin_user_delete.html:130
 msgid "Audit logs may retain historical records"
-msgstr ""
+msgstr "Les journaux d'audit peuvent conserver les enregistrements historiques"
 
 #: templates/account/admin_user_delete.html:142
 msgid "Type the username to confirm deletion:"
-msgstr ""
+msgstr "Saisissez le nom d'utilisateur pour confirmer la suppression :"
 
 #: templates/account/admin_user_delete.html:155
 msgid "Are you absolutely sure? This cannot be undone."
-msgstr ""
+msgstr "Êtes-vous absolument sûr ? Cette action est irréversible."
 
 #: templates/account/admin_user_delete.html:159
 msgid "Username does not match. Please type the exact username."
-msgstr ""
+msgstr "Le nom d'utilisateur ne correspond pas. Veuillez saisir le nom d'utilisateur exact."
 
 #: templates/account/admin_user_delete.html:163
 msgid "Delete User Permanently"
-msgstr ""
+msgstr "Supprimer l'utilisateur définitivement"
 
 #: templates/account/admin_user_detail.html:4
 msgid "User Details"
-msgstr ""
+msgstr "Détails de l'utilisateur"
 
 #: templates/account/admin_user_detail.html:45
 #: templates/account/admin_user_edit.html:157
 #: templates/account/user_profile_update.html:522
 msgid "Account Information"
-msgstr ""
+msgstr "Informations du compte"
 
 #: templates/account/admin_user_detail.html:86
 msgid "Account Status"
-msgstr ""
+msgstr "Statut du compte"
 
 #: templates/account/admin_user_detail.html:105
 #: templates/account/admin_user_detail.html:109
 #: templates/account/admin_users_list.html:206
 msgid "Staff"
-msgstr ""
+msgstr "Personnel administratif"
 
 #: templates/account/admin_user_detail.html:112
 #: templates/account/admin_user_detail.html:124
 msgid "Regular User"
-msgstr ""
+msgstr "Utilisateur standard"
 
 #: templates/account/admin_user_detail.html:117
 #: templates/account/admin_user_detail.html:121
 #: templates/account/admin_user_detail.html:383
 #: templates/account/admin_users_list.html:202
 msgid "Superadmin"
-msgstr ""
+msgstr "Superadministrateur"
 
 #: templates/account/admin_user_detail.html:135
 msgid "Timeline"
-msgstr ""
+msgstr "Chronologie"
 
 #: templates/account/admin_user_detail.html:144
 #: templates/account/admin_user_detail.html:153
 msgid "ago"
-msgstr ""
+msgstr "il y a"
 
 #: templates/account/admin_user_detail.html:148
 #: templates/account/admin_user_edit.html:169
 msgid "Last Login"
-msgstr ""
+msgstr "Dernière connexion"
 
 #: templates/account/admin_user_detail.html:155
 #: templates/account/admin_user_edit.html:173
 msgid "Never"
-msgstr ""
+msgstr "Jamais"
 
 #: templates/account/admin_user_detail.html:167
 #: templates/account/admin_user_detail.html:356
 #: templates/account/admin_user_edit.html:184
 msgid "Cabinet Roles"
-msgstr ""
+msgstr "Rôles dans les cabinets"
 
 #: templates/account/admin_user_detail.html:219
 msgid "User has not been assigned to any cabinet yet"
-msgstr ""
+msgstr "L'utilisateur n'a pas encore été affecté à un cabinet"
 
 #: templates/account/admin_user_detail.html:221
 msgid "Assign to Cabinet"
-msgstr ""
+msgstr "Affecter à un cabinet"
 
 #: templates/account/admin_user_detail.html:229
 msgid "No cabinet roles assigned"
-msgstr ""
+msgstr "Aucun rôle dans un cabinet attribué"
 
 #: templates/account/admin_user_detail.html:239
 #: templates/account/admin_user_detail.html:361
 #: templates/account/user_profile_update.html:460
 msgid "Projects"
-msgstr ""
+msgstr "Projets"
 
 #: templates/account/admin_user_detail.html:249
 msgid "Budget"
-msgstr ""
+msgstr "Budget"
 
 #: templates/account/admin_user_detail.html:256
 #: templates/account/admin_user_detail.html:285
 #: templates/account/admin_user_detail.html:314
 msgid "more"
-msgstr ""
-
-#: templates/account/admin_user_detail.html:268
-#: templates/account/admin_user_detail.html:367
-msgid "Materials"
-msgstr ""
-
-#: templates/account/admin_user_detail.html:277
-msgid "Quantity"
-msgstr ""
+msgstr "de plus"
 
 #: templates/account/admin_user_detail.html:278
 #: templates/account/user_profile_update.html:278
 msgid "Project"
-msgstr ""
+msgstr "Projet"
 
 #: templates/account/admin_user_detail.html:297
 #: templates/account/admin_user_detail.html:373
 #: templates/account/user_profile_update.html:472
+#: templates/projects/site_detail.html:421
 msgid "Expenses"
-msgstr ""
+msgstr "Dépenses"
 
 #: templates/account/admin_user_detail.html:332
 #: templates/account/admin_user_edit.html:4
 #: templates/account/admin_user_edit.html:14
 #: templates/account/admin_users_list.html:226
 msgid "Edit User"
-msgstr ""
+msgstr "Modifier l'utilisateur"
 
 #: templates/account/admin_user_detail.html:337
 #: templates/account/admin_user_edit.html:221
 msgid "Are you sure? This cannot be undone."
-msgstr ""
+msgstr "Êtes-vous sûr ? Cette action est irréversible."
 
 #: templates/account/admin_user_detail.html:342
 #: templates/account/admin_user_edit.html:226
 msgid "Cannot Delete Own Account"
-msgstr ""
-
-#: templates/account/admin_user_detail.html:351
-msgid "Summary"
-msgstr ""
+msgstr "Impossible de supprimer son propre compte"
 
 #: templates/account/admin_user_detail.html:384
 msgid "This user has full system control"
-msgstr ""
+msgstr "Cet utilisateur a le contrôle total du système"
 
 #: templates/account/admin_user_detail.html:389
 msgid "Staff Member"
-msgstr ""
+msgstr "Membre du personnel administratif"
 
 #: templates/account/admin_user_detail.html:390
 msgid "This user has admin panel access"
-msgstr ""
+msgstr "Cet utilisateur a accès au panneau d'administration"
 
 #: templates/account/admin_user_detail.html:397
 msgid "Inactive Account"
-msgstr ""
+msgstr "Compte inactif"
 
 #: templates/account/admin_user_detail.html:398
 msgid "This user cannot log in"
-msgstr ""
+msgstr "Cet utilisateur ne peut pas se connecter"
 
 #: templates/account/admin_user_edit.html:17
 msgid "Manage user information and permissions"
-msgstr ""
+msgstr "Gérer les informations et les permissions de l'utilisateur"
 
 #: templates/account/admin_user_edit.html:45
 #: templates/account/user_profile_update.html:78
 msgid "Personal Information"
-msgstr ""
+msgstr "Informations personnelles"
 
 #: templates/account/admin_user_edit.html:72
 #: templates/account/user_profile_update.html:107
 msgid "Email Address"
-msgstr ""
+msgstr "Adresse e-mail"
 
 #: templates/account/admin_user_edit.html:81
 #: templates/account/user_profile_update.html:116
 msgid "Phone Number"
-msgstr ""
+msgstr "Numéro de téléphone"
 
 #: templates/account/admin_user_edit.html:91
 msgid "Account Permissions"
-msgstr ""
+msgstr "Permissions du compte"
 
 #: templates/account/admin_user_edit.html:99
 msgid "Account Active"
-msgstr ""
-
-#: templates/account/admin_user_edit.html:102
-msgid "Uncheck to deactivate user account"
-msgstr ""
+msgstr "Compte actif"
 
 #: templates/account/admin_user_edit.html:113
 msgid "Staff Access"
-msgstr ""
+msgstr "Accès administratif"
 
 #: templates/account/admin_user_edit.html:116
 msgid "Check to grant staff access to admin functions"
-msgstr ""
+msgstr "Cocher pour accorder l'accès aux fonctions d'administration"
 
 #: templates/account/admin_user_edit.html:127
 #: templates/account/admin_users_list.html:33
 msgid "Superadmin Access"
-msgstr ""
+msgstr "Accès superadministrateur"
 
 #: templates/account/admin_user_edit.html:131
 msgid "Check to grant superadmin access (full system control)"
-msgstr ""
+msgstr "Cocher pour accorder l'accès superadministrateur (contrôle total du système)"
 
 #: templates/account/admin_user_edit.html:216
 #: templates/account/admin_users_list.html:221
 msgid "View Details"
-msgstr ""
+msgstr "Voir les détails"
 
 #: templates/account/admin_users_list.html:4
 #: templates/account/admin_users_list.html:14
-#: templates/includes/navbar-vertical.html:159
+#: templates/includes/navbar-vertical.html:186
 msgid "User Management"
-msgstr ""
+msgstr "Gestion des utilisateurs"
 
 #: templates/account/admin_users_list.html:17
 msgid "Manage all system users, permissions, and access levels"
-msgstr ""
+msgstr "Gérer tous les utilisateurs du système, leurs permissions et niveaux d'accès"
 
 #: templates/account/admin_users_list.html:22
 #: templates/account/user_profile_update.html:514
 msgid "Back to Dashboard"
-msgstr ""
+msgstr "Retour au tableau de bord"
 
 #: templates/account/admin_users_list.html:35
 msgid "You are viewing restricted admin tools. All actions are logged."
-msgstr ""
+msgstr "Vous consultez des outils d'administration restreints. Toutes les actions sont enregistrées."
 
 #: templates/account/admin_users_list.html:61
 #: templates/account/admin_users_list.html:122
 msgid "Active Users"
-msgstr ""
+msgstr "Utilisateurs actifs"
 
 #: templates/account/admin_users_list.html:74
 #: templates/account/admin_users_list.html:128
 msgid "Staff Members"
-msgstr ""
+msgstr "Membres du personnel administratif"
 
 #: templates/account/admin_users_list.html:87
 #: templates/account/admin_users_list.html:131
 msgid "Superadmins"
-msgstr ""
+msgstr "Superadministrateurs"
 
 #: templates/account/admin_users_list.html:101
 msgid "Search & Filter"
-msgstr ""
+msgstr "Rechercher et filtrer"
 
 #: templates/account/admin_users_list.html:107
 msgid "Search Users"
-msgstr ""
+msgstr "Rechercher des utilisateurs"
 
 #: templates/account/admin_users_list.html:113
 msgid "Username, email, or name"
-msgstr ""
+msgstr "Nom d'utilisateur, e-mail ou nom"
 
 #: templates/account/admin_users_list.html:118
 msgid "Filter by Status"
-msgstr ""
+msgstr "Filtrer par statut"
 
 #: templates/account/admin_users_list.html:120
 msgid "All Users"
-msgstr ""
+msgstr "Tous les utilisateurs"
 
 #: templates/account/admin_users_list.html:125
 msgid "Inactive Users"
-msgstr ""
+msgstr "Utilisateurs inactifs"
 
 #: templates/account/admin_users_list.html:140
 msgid "Clear Filters"
-msgstr ""
+msgstr "Effacer les filtres"
 
 #: templates/account/admin_users_list.html:152
 #, python-format
@@ -1507,89 +2123,97 @@ msgid_plural ""
 "                        %(counter)s users\n"
 "                    "
 msgstr[0] ""
+"\n"
+"                        %(counter)s utilisateur\n"
+"                    "
 msgstr[1] ""
+"\n"
+"                        %(counter)s utilisateurs\n"
+"                    "
 
 #: templates/account/admin_users_list.html:170
 msgid "Joined"
-msgstr ""
+msgstr "Inscrit"
 
 #: templates/account/admin_users_list.html:233
 msgid "Are you sure?"
-msgstr ""
+msgstr "Êtes-vous sûr ?"
 
 #: templates/account/admin_users_list.html:247
 msgid "No users found matching your criteria."
-msgstr ""
+msgstr "Aucun utilisateur trouvé correspondant à vos critères."
 
 #: templates/account/admin_users_list.html:272
 msgid "Page"
-msgstr ""
+msgstr "Page"
 
 #: templates/account/admin_users_list.html:272
 msgid "of"
-msgstr ""
+msgstr "sur"
 
 #: templates/account/assign_user_to_cabinet.html:17
 msgid "Assign"
-msgstr ""
+msgstr "Affecter"
 
 #: templates/account/assign_user_to_cabinet.html:17
 msgid "to a cabinet with specific role"
-msgstr ""
+msgstr "à un cabinet avec un rôle spécifique"
 
 #: templates/account/assign_user_to_cabinet.html:22
 msgid "Back to User"
-msgstr ""
+msgstr "Retour à l'utilisateur"
 
 #: templates/account/assign_user_to_cabinet.html:73
 msgid "Cabinet Assignment"
-msgstr ""
+msgstr "Affectation au cabinet"
 
 #: templates/account/assign_user_to_cabinet.html:157
 msgid "About Cabinet Assignment"
-msgstr ""
+msgstr "À propos de l'affectation au cabinet"
 
 #: templates/account/cabinets.html:343
 msgid "Superadmin: Cabinet Management"
-msgstr ""
+msgstr "Superadministrateur : Gestion des cabinets"
 
 #: templates/account/cabinets.html:348
 msgid "Manage Cabinets"
-msgstr ""
+msgstr "Gérer les cabinets"
 
 #: templates/account/cabinets.html:351
 msgid "Manage Users"
-msgstr ""
+msgstr "Gérer les utilisateurs"
 
 #: templates/account/cabinets.html:357
 msgid ""
 "As a superadmin, you have access to comprehensive cabinet management tools:"
 msgstr ""
+"En tant que superadministrateur, vous avez accès à des outils complets de gestion des cabinets :"
 
 #: templates/account/cabinets.html:365
 msgid "Cabinet Assignments"
-msgstr ""
+msgstr "Affectations aux cabinets"
 
 #: templates/account/cabinets.html:366
 msgid "Assign users to cabinets with specific roles and approval workflows"
-msgstr ""
+msgstr "Affecter des utilisateurs aux cabinets avec des rôles spécifiques et des flux d'approbation"
 
 #: templates/account/cabinets.html:376
 msgid "Role Management"
-msgstr ""
+msgstr "Gestion des rôles"
 
 #: templates/account/cabinets.html:377
 msgid ""
 "Define roles: Director, Chief Engineer, Engineer, Accountant, Cashier, Worker"
 msgstr ""
+"Définir les rôles : Directeur, Chef des ingénieurs, Ingénieur, Comptable, Caissier, Ouvrier"
 
 #: templates/account/cabinets.html:387
 msgid "Approval Workflow"
-msgstr ""
+msgstr "Flux d'approbation"
 
 #: templates/account/cabinets.html:388
 msgid "Control assignment status: Pending, Approved, Rejected"
-msgstr ""
+msgstr "Contrôler le statut d'affectation : En attente, Approuvé, Rejeté"
 
 #: templates/account/email/email_confirmation_message.html:7
 #, python-format
@@ -1618,6 +2242,29 @@ msgid ""
 "a> \n"
 "\n"
 msgstr ""
+"Bonjour de la part de <b>%(site_name)s</b> !\n"
+"</p>\n"
+"\n"
+"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-"
+"serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: "
+"1.6;color: #999999;\">\n"
+"    Vous recevez cet e-mail parce que <b>%(user_display)s</b> a été "
+"enregistré sur %(site_domain)s.\n"
+"</p>\n"
+"\n"
+"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-"
+"serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: "
+"1.6;color: #999999;\">\n"
+"Pour confirmer que c'est bien correct, veuillez cliquer sur le bouton « Confirmer » "
+"ci-dessous. \n"
+"<br/>\n"
+"<a href=\"%(activate_url)s\" target=\"_blank\" style=\"display: inline-"
+"block; color: #ffffff; background-color: #3498db; border: solid 1px #3498db; "
+"border-radius: 5px; box-sizing: border-box; cursor: pointer; text-"
+"decoration: none; font-size: 14px; font-weight: bold; margin: 0; padding: "
+"12px 25px; text-transform: capitalize; border-color: #3498db;\">Confirmer</"
+"a> \n"
+"\n"
 
 #: templates/account/email/email_confirmation_message.txt:5
 #, python-format
@@ -1630,6 +2277,13 @@ msgid ""
 "\n"
 "To confirm this is correct, go to %(activate_url)s\n"
 msgstr ""
+"Bonjour de la part de %(site_name)s !\n"
+"\n"
+"Vous recevez cet e-mail parce que l'utilisateur %(user_display)s sur "
+"%(site_domain)s a fourni votre adresse e-mail pour connecter son "
+"compte.\n"
+"\n"
+"Pour confirmer que c'est bien correct, rendez-vous sur %(activate_url)s\n"
 
 #: templates/account/email/email_confirmation_message.txt:11
 #, python-format
@@ -1637,10 +2291,12 @@ msgid ""
 "Thank you from %(site_name)s!\n"
 "%(site_domain)s"
 msgstr ""
+"Merci de la part de %(site_name)s !\n"
+"%(site_domain)s"
 
 #: templates/account/email/email_confirmation_subject.txt:3
 msgid "Confirm E-mail Address"
-msgstr ""
+msgstr "Confirmer l'adresse e-mail"
 
 #: templates/account/email/password_reset_key_message.html:6
 #, python-format
@@ -1677,6 +2333,37 @@ msgid ""
 "1.6;color: #999999;\">\n"
 "    It can be safely ignored if you did not request a password reset."
 msgstr ""
+"\n"
+"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-"
+"serif;margin-bottom: 30px;font-weight: normal;font-size: 13px;line-height: "
+"1.6;color: #999999;\">\n"
+"    Bonjour de la part de <b>%(site_name)s</b> !\n"
+"</p>\n"
+"\n"
+"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-"
+"serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: "
+"1.6;color: #999999;\">\n"
+"    Vous recevez cet e-mail parce que vous ou quelqu'un d'autre a demandé un "
+"mot de passe pour votre compte utilisateur sur %(site_domain)s. \n"
+"</p>\n"
+"\n"
+"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-"
+"serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: "
+"1.6;color: #999999;\">\n"
+"    Pour confirmer, veuillez cliquer sur le bouton de réinitialisation ci-dessous pour "
+"réinitialiser votre mot de passe.\n"
+"</p>\n"
+"\n"
+"<a href=\"%(password_reset_url)s\" target=\"_blank\" style=\"display: inline-"
+"block; color: #ffffff; background-color: #3498db; border: solid 1px #3498db; "
+"border-radius: 5px; box-sizing: border-box; cursor: pointer; text-"
+"decoration: none; font-size: 14px; font-weight: bold; margin: 0; padding: "
+"12px 25px; text-transform: capitalize; border-color: #3498db;\">Réinitialiser</a> \n"
+"\n"
+"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-"
+"serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: "
+"1.6;color: #999999;\">\n"
+"    Vous pouvez ignorer cet e-mail en toute sécurité si vous n'avez pas demandé de réinitialisation de mot de passe."
 
 #: templates/account/email/password_reset_key_message.txt:1
 #, python-format
@@ -1688,11 +2375,17 @@ msgid ""
 "It can be safely ignored if you did not request a password reset. Click the "
 "link below to reset your password."
 msgstr ""
+"Bonjour de la part de %(site_name)s !\n"
+"\n"
+"Vous recevez cet e-mail parce que vous ou quelqu'un d'autre a demandé un "
+"mot de passe pour votre compte utilisateur sur %(site_domain)s.\n"
+"Vous pouvez l'ignorer en toute sécurité si vous n'avez pas demandé de réinitialisation de mot de passe. Cliquez sur le "
+"lien ci-dessous pour réinitialiser votre mot de passe."
 
 #: templates/account/email/password_reset_key_message.txt:8
 #, python-format
 msgid "In case you forgot, your username is %(username)s."
-msgstr ""
+msgstr "Au cas où vous l'auriez oublié, votre nom d'utilisateur est %(username)s."
 
 #: templates/account/email/password_reset_key_message.txt:10
 #, python-format
@@ -1700,14 +2393,17 @@ msgid ""
 "Thank you for using %(site_name)s!\n"
 "%(site_domain)s"
 msgstr ""
+"Merci d'utiliser %(site_name)s !\n"
+"%(site_domain)s"
 
 #: templates/account/email/password_reset_key_subject.txt:3
 msgid "Password Reset E-mail"
-msgstr ""
+msgstr "E-mail de réinitialisation de mot de passe"
 
 #: templates/account/login.html:24
 msgid "Welcome to Assistance Technique en Genie Civil's Self Service Portal"
-msgstr "Bienvenue sur le Portail Libre-Service d'Assistance Technique en Génie Civil"
+msgstr ""
+"Bienvenue sur le Portail Libre-Service d'Assistance Technique en Génie Civil"
 
 #: templates/account/login.html:36 templates/account/signup.html:28
 msgid "Login"
@@ -1729,35 +2425,38 @@ msgstr "Paramètres du profil"
 
 #: templates/account/user_profile_update.html:17
 msgid "Manage your account information and view your project details"
-msgstr ""
+msgstr "Gérez vos informations de compte et consultez les détails de vos projets"
 
 #: templates/account/user_profile_update.html:22
 msgid "Back to Home"
-msgstr ""
+msgstr "Retour à l'accueil"
 
 #: templates/account/user_profile_update.html:44
 #: templates/account/user_profile_update.html:538
 msgid "Access Level"
-msgstr ""
+msgstr "Niveau d'accès"
 
 #: templates/account/user_profile_update.html:58
 msgid "Viewing data from your assigned cabinets only"
-msgstr ""
+msgstr "Affichage des données de vos cabinets assignés uniquement"
 
 #: templates/account/user_profile_update.html:66
 msgid ""
 "You have not been assigned to any cabinet yet. Contact your administrator."
 msgstr ""
+"Vous n'avez pas encore été affecté à un cabinet. Contactez votre administrateur."
 
 #: templates/account/user_profile_update.html:145
 msgid "Cabinet Roles & Permissions"
-msgstr ""
+msgstr "Rôles et permissions dans les cabinets"
 
 #: templates/account/user_profile_update.html:151
 msgid ""
 "Your access to projects, materials, expenses, and invoices is controlled by "
 "your assigned roles."
 msgstr ""
+"Votre accès aux projets, matériaux, dépenses et factures est contrôlé par "
+"vos rôles attribués."
 
 #: templates/account/user_profile_update.html:203
 #, fuzzy
@@ -1767,94 +2466,81 @@ msgstr "Directeur de Cabinet"
 
 #: templates/account/user_profile_update.html:210
 msgid "Showing projects from cabinets where you have an active role."
-msgstr ""
-
-#: templates/account/user_profile_update.html:219
-#: templates/account/user_profile_update.html:280
-#: templates/account/user_profile_update.html:341
-#: templates/account/user_profile_update.html:402
-msgid "Date"
-msgstr ""
+msgstr "Affichage des projets des cabinets dans lesquels vous avez un rôle actif."
 
 #: templates/account/user_profile_update.html:241
 msgid "No projects assigned yet"
-msgstr ""
+msgstr "Aucun projet assigné pour l'instant"
 
 #: templates/account/user_profile_update.html:252
 msgid "View All Projects"
-msgstr ""
+msgstr "Voir tous les projets"
 
 #: templates/account/user_profile_update.html:264
 msgid "Material Requests (Authorized Cabinets)"
-msgstr ""
+msgstr "Demandes de matériel (Cabinets autorisés)"
 
 #: templates/account/user_profile_update.html:271
 msgid "Showing requests from your authorized projects only."
-msgstr ""
-
-#: templates/account/user_profile_update.html:277
-msgid "Reference"
-msgstr ""
+msgstr "Affichage des demandes de vos projets autorisés uniquement."
 
 #: templates/account/user_profile_update.html:302
 msgid "No material requests yet"
-msgstr ""
+msgstr "Aucune demande de matériel pour l'instant"
 
 #: templates/account/user_profile_update.html:313
 msgid "View All Requests"
-msgstr ""
+msgstr "Voir toutes les demandes"
 
 #: templates/account/user_profile_update.html:325
 msgid "Expenses (Authorized Cabinets)"
-msgstr ""
+msgstr "Dépenses (Cabinets autorisés)"
 
 #: templates/account/user_profile_update.html:332
 msgid "Showing expenses from your authorized cabinets only."
-msgstr ""
+msgstr "Affichage des dépenses de vos cabinets autorisés uniquement."
 
 #: templates/account/user_profile_update.html:363
 msgid "No expenses yet"
-msgstr ""
+msgstr "Aucune dépense pour l'instant"
 
 #: templates/account/user_profile_update.html:374
 msgid "View All Expenses"
-msgstr ""
+msgstr "Voir toutes les dépenses"
 
 #: templates/account/user_profile_update.html:386
 msgid "Invoices (Authorized Cabinets)"
-msgstr ""
+msgstr "Factures (Cabinets autorisés)"
 
 #: templates/account/user_profile_update.html:393
 msgid "Showing invoices from your authorized cabinets only."
-msgstr ""
-
-#: templates/account/user_profile_update.html:399
-msgid "Invoice Number"
-msgstr ""
+msgstr "Affichage des factures de vos cabinets autorisés uniquement."
 
 #: templates/account/user_profile_update.html:426
 msgid "No invoices yet"
-msgstr ""
+msgstr "Aucune facture pour l'instant"
 
 #: templates/account/user_profile_update.html:437
 msgid "View All Invoices"
-msgstr ""
+msgstr "Voir toutes les factures"
 
 #: templates/account/user_profile_update.html:452
+#: templates/projects/site_detail.html:596
 msgid "Quick Stats"
-msgstr ""
+msgstr "Statistiques rapides"
 
 #: templates/account/user_profile_update.html:466
 msgid "Requests"
-msgstr ""
+msgstr "Demandes"
 
 #: templates/account/user_profile_update.html:478
+#: templates/projects/site_detail.html:354
 msgid "Invoices"
-msgstr ""
+msgstr "Factures"
 
 #: templates/account/user_profile_update.html:491
 msgid "Pending Approvals"
-msgstr ""
+msgstr "Approbations en attente"
 
 #: templates/account/user_profile_update.html:493
 #, python-format
@@ -1869,15 +2555,23 @@ msgid_plural ""
 "approval\n"
 "                                    "
 msgstr[0] ""
+"\n"
+"                                        Vous avez %(counter)s élément en attente "
+"d'approbation\n"
+"                                    "
 msgstr[1] ""
+"\n"
+"                                        Vous avez %(counter)s éléments en attente "
+"d'approbation\n"
+"                                    "
 
 #: templates/account/user_profile_update.html:507
 msgid "Account Actions"
-msgstr ""
+msgstr "Actions du compte"
 
 #: templates/account/user_profile_update.html:511
 msgid "Change Password"
-msgstr ""
+msgstr "Changer le mot de passe"
 
 #: templates/account/user_profile_update.html:534
 #, fuzzy
@@ -1898,8 +2592,9 @@ msgid ""
 "Enterprise Resource Planning for Construction Sites. Monitor progress, "
 "manage personnel, and track finances in real-time."
 msgstr ""
-"Planification des Ressources d'Entreprise pour les Chantiers de Construction. Surveillez les progrès, "
-"gérez le personnel et suivez les finances en temps réel."
+"Planification des Ressources d'Entreprise pour les Chantiers de "
+"Construction. Surveillez les progrès, gérez le personnel et suivez les "
+"finances en temps réel."
 
 #: templates/home.html:25
 msgid "View Projects"
@@ -1915,20 +2610,414 @@ msgstr "Changer de langue"
 
 #: templates/includes/navbar-top.html:77
 msgid "Manage your profile and view your projects"
-msgstr ""
+msgstr "Gérez votre profil et consultez vos projets"
 
 #: templates/includes/navbar-top.html:82
 msgid "Staff administration area"
-msgstr ""
+msgstr "Espace d'administration du personnel"
 
 #: templates/includes/navbar-top.html:88
 msgid "Logout"
 msgstr "Déconnexion"
 
-#: templates/includes/navbar-vertical.html:149
+#: templates/includes/navbar-vertical.html:176
 msgid "Administration"
-msgstr ""
+msgstr "Administration"
 
-#: templates/includes/navbar-vertical.html:180
+#: templates/includes/navbar-vertical.html:207
 msgid "System Admin"
+msgstr "Administrateur système"
+
+#: templates/personnel/assignment_form.html:25
+msgid "Assign Personnel to Site"
+msgstr "Affecter un personnel à un chantier"
+
+#: templates/personnel/assignment_form.html:32
+#: templates/projects/site_detail.html:103
+msgid "Personnel"
+msgstr "Personnel"
+
+#: templates/personnel/assignment_form.html:49
+#, fuzzy
+#| msgid "Project / Site"
+msgid "Role on Site"
+msgstr "Projet / Site"
+
+#: templates/personnel/assignment_form.html:51
+msgid "e.g. Site Supervisor, Master Mason, General Laborer"
+msgstr "ex. Chef de chantier, Maître maçon, Manœuvre"
+
+#: templates/personnel/assignment_form.html:70
+msgid "End Date (Optional)"
+msgstr "Date de fin (Optionnel)"
+
+#: templates/personnel/assignment_form.html:81
+msgid "Daily Rate ($)"
+msgstr "Tarif journalier ($)"
+
+#: templates/personnel/assignment_form.html:83
+msgid ""
+"This overrides the worker's default daily rate for this specific project."
 msgstr ""
+"Ceci remplace le tarif journalier par défaut du travailleur pour ce chantier spécifique."
+
+#: templates/personnel/assignment_form.html:93
+#, fuzzy
+#| msgid "Select assignment status"
+msgid "Complete Assignment"
+msgstr "Sélectionnez le statut d'affectation"
+
+#: templates/personnel/personnel_form.html:46
+#: templates/personnel/personnel_list.html:28
+msgid "Skills"
+msgstr "Compétences"
+
+#: templates/personnel/personnel_form.html:48
+msgid "Select skills for this profile."
+msgstr "Sélectionner les compétences pour ce profil."
+
+#: templates/personnel/personnel_form.html:58
+msgid "Default Daily Rate ($)"
+msgstr "Tarif journalier par défaut ($)"
+
+#: templates/personnel/personnel_form.html:67
+msgid "System User (Link for Login)"
+msgstr "Utilisateur système (Lien de connexion)"
+
+#: templates/personnel/personnel_form.html:79
+msgid "Save Profile"
+msgstr "Enregistrer le profil"
+
+#: templates/personnel/personnel_list.html:29
+msgid "Default Rate"
+msgstr "Tarif par défaut"
+
+#: templates/personnel/personnel_list.html:45
+msgid "No skills listed"
+msgstr "Aucune compétence listée"
+
+#: templates/personnel/personnel_list.html:52
+#, fuzzy
+#| msgid "Rejeté"
+msgid "Restricted"
+msgstr "Rejeté"
+
+#: templates/personnel/personnel_list.html:64
+#, fuzzy
+#| msgid "View Projects"
+msgid "View Profile"
+msgstr "Voir les Projets"
+
+#: templates/personnel/personnel_list.html:83
+msgid "No personnel registered yet."
+msgstr "Aucun personnel enregistré."
+
+#: templates/personnel/personnel_list.html:85
+msgid "Register Personnel"
+msgstr "Enregistrer un personnel"
+
+#: templates/personnel/skill_list.html:9
+msgid "Skills Catalog"
+msgstr "Catalogue des compétences"
+
+#: templates/personnel/skill_list.html:27
+msgid "No skills defined."
+msgstr "Aucune compétence définie."
+
+#: templates/personnel/skill_list.html:40
+msgid "Add New Skill"
+msgstr "Ajouter une nouvelle compétence"
+
+#: templates/personnel/skill_list.html:56
+msgid "Save Skill"
+msgstr "Enregistrer la compétence"
+
+#: templates/projects/confirm_delete.html:14
+msgid "Warning:"
+msgstr "Avertissement :"
+
+#: templates/projects/confirm_delete.html:14
+msgid "This action cannot be undone. All related data will also be deleted."
+msgstr "Cette action est irréversible. Toutes les données associées seront également supprimées."
+
+#: templates/projects/confirm_delete.html:21
+msgid "Confirm Delete"
+msgstr "Confirmer la suppression"
+
+#: templates/projects/phase_form.html:36
+#, fuzzy
+#| msgid "Last Name"
+msgid "Phase Name"
+msgstr "Nom"
+
+#: templates/projects/phase_form.html:57
+#: templates/projects/site_detail.html:132
+msgid "Add Phase"
+msgstr "Ajouter une phase"
+
+#: templates/projects/progress_form.html:37
+msgid "Report Date"
+msgstr "Date du rapport"
+
+#: templates/projects/progress_form.html:44
+#, python-format
+msgid "Percentage Complete (0-100%%)"
+msgstr "Pourcentage d'avancement (0-100%%)"
+
+#: templates/projects/progress_form.html:54
+#, fuzzy
+#| msgid "Description"
+msgid "Description / Notes"
+msgstr "Description"
+
+#: templates/projects/progress_form.html:60
+msgid "Log Progress"
+msgstr "Saisir l'avancement"
+
+#: templates/projects/site_detail.html:62
+msgid "Total Staff"
+msgstr "Effectif total"
+
+#: templates/projects/site_detail.html:68
+#: templates/projects/site_detail.html:613
+#, fuzzy
+#| msgid "Material Request"
+msgid "Material Requests"
+msgstr "Demande de Matériel"
+
+#: templates/projects/site_detail.html:74
+#: templates/projects/site_detail.html:538
+msgid "Budget Usage"
+msgstr "Utilisation du budget"
+
+#: templates/projects/site_detail.html:80
+#: templates/projects/site_detail.html:582
+#, fuzzy
+#| msgid "New Project"
+msgid "Net Profit"
+msgstr "Nouveau Projet"
+
+#: templates/projects/site_detail.html:98
+msgid "Overview"
+msgstr "Vue d'ensemble"
+
+#: templates/projects/site_detail.html:116
+#, fuzzy
+#| msgid "Actif"
+msgid "Activity"
+msgstr "Actif"
+
+#: templates/projects/site_detail.html:128
+msgid "Project Phases & Progress"
+msgstr "Phases et avancement du projet"
+
+#: templates/projects/site_detail.html:150
+msgid "Ongoing"
+msgstr "En cours"
+
+#: templates/projects/site_detail.html:174
+msgid "Progress"
+msgstr "Avancement"
+
+#: templates/projects/site_detail.html:184
+msgid "Updated:"
+msgstr "Mis à jour :"
+
+#: templates/projects/site_detail.html:187
+msgid "Log Update"
+msgstr "Saisir une mise à jour"
+
+#: templates/projects/site_detail.html:199
+msgid "No project phases defined yet. Start by creating the first phase."
+msgstr "Aucune phase de projet définie pour l'instant. Commencez par créer la première phase."
+
+#: templates/projects/site_detail.html:209
+msgid "Assigned Personnel"
+msgstr "Personnel affecté"
+
+#: templates/projects/site_detail.html:213
+msgid "Assign Staff"
+msgstr "Affecter du personnel"
+
+#: templates/projects/site_detail.html:223
+msgid "Name & Role"
+msgstr "Nom et rôle"
+
+#: templates/projects/site_detail.html:224
+msgid "Assignment Period"
+msgstr "Période d'affectation"
+
+#: templates/projects/site_detail.html:274
+msgid "No personnel assigned"
+msgstr "Aucun personnel affecté"
+
+#: templates/projects/site_detail.html:275
+msgid "Start by assigning staff members to this site"
+msgstr "Commencez par affecter des membres du personnel à ce chantier"
+
+#: templates/projects/site_detail.html:285
+#, fuzzy
+#| msgid "Material Request"
+msgid "Material Logistics"
+msgstr "Demande de Matériel"
+
+#: templates/projects/site_detail.html:288
+#, fuzzy
+#| msgid "Material Request"
+msgid "New Request"
+msgstr "Demande de Matériel"
+
+#: templates/projects/site_detail.html:300
+msgid "Requested On"
+msgstr "Demandé le"
+
+#: templates/projects/site_detail.html:339
+#, fuzzy
+#| msgid "Material Request"
+msgid "No material requests"
+msgstr "Demande de Matériel"
+
+#: templates/projects/site_detail.html:340
+msgid "Create your first material request to track supplies"
+msgstr "Créez votre première demande de matériel pour suivre les approvisionnements"
+
+#: templates/projects/site_detail.html:349
+msgid "Revenue & Invoicing"
+msgstr "Revenu et facturation"
+
+#: templates/projects/site_detail.html:359
+#, fuzzy
+#| msgid "Contract"
+msgid "Create Contract"
+msgstr "Contrat"
+
+#: templates/projects/site_detail.html:409
+msgid "No invoices"
+msgstr "Aucune facture"
+
+#: templates/projects/site_detail.html:410
+msgid "Create a contract first to generate invoices"
+msgstr "Créez d'abord un contrat pour générer des factures"
+
+#: templates/projects/site_detail.html:424
+msgid "Log Expense"
+msgstr "Saisir une dépense"
+
+#: templates/projects/site_detail.html:436
+msgid "Submitted By"
+msgstr "Soumis par"
+
+#: templates/projects/site_detail.html:473
+msgid "No expenses logged"
+msgstr "Aucune dépense saisie"
+
+#: templates/projects/site_detail.html:474
+msgid "Log your first expense to track site spending"
+msgstr "Saisissez votre première dépense pour suivre les dépenses du chantier"
+
+#: templates/projects/site_detail.html:484
+msgid "Recent Activity Timeline"
+msgstr "Chronologie des activités récentes"
+
+#: templates/projects/site_detail.html:515
+msgid "No activity yet"
+msgstr "Aucune activité pour l'instant"
+
+#: templates/projects/site_detail.html:516
+msgid "Activity will appear here as you work on this site"
+msgstr "L'activité apparaîtra ici au fur et à mesure de votre travail sur ce chantier"
+
+#: templates/projects/site_detail.html:531
+msgid "Financial Pulse"
+msgstr "Santé financière"
+
+#: templates/projects/site_detail.html:551
+msgid "Budgeted"
+msgstr "Budget alloué"
+
+#: templates/projects/site_detail.html:555
+msgid "Spent"
+msgstr "Dépensé"
+
+#: templates/projects/site_detail.html:564
+msgid "No budget assigned to this site"
+msgstr "Aucun budget assigné à ce chantier"
+
+#: templates/projects/site_detail.html:572
+msgid "Revenue Performance"
+msgstr "Performance des revenus"
+
+#: templates/projects/site_detail.html:576
+msgid "Income"
+msgstr "Revenu"
+
+#: templates/projects/site_detail.html:604
+#, fuzzy
+#| msgid "Actif"
+msgid "Active Staff"
+msgstr "Actif"
+
+#: templates/projects/site_detail.html:622
+#, fuzzy
+#| msgid "Project / Site"
+msgid "Project Phases"
+msgstr "Projet / Site"
+
+#: templates/projects/site_detail.html:632
+#, fuzzy
+#| msgid "Project / Site"
+msgid "Project Details"
+msgstr "Projet / Site"
+
+#: templates/projects/site_detail.html:637
+msgid "Site ID"
+msgstr "ID du chantier"
+
+#: templates/projects/site_detail.html:663
+msgid "Entity"
+msgstr "Entité"
+
+#: templates/projects/site_form.html:64
+msgid "Expected End Date"
+msgstr "Date de fin prévue"
+
+#: templates/projects/site_form.html:73
+msgid "Save Site"
+msgstr "Enregistrer le chantier"
+
+#: templates/projects/site_list.html:25
+#, fuzzy
+#| msgid "Directeur de Cabinet"
+msgid "Active Sites"
+msgstr "Directeur de Cabinet"
+
+#: templates/projects/site_list.html:46
+msgid "Expected End"
+msgstr "Fin prévue"
+
+#: templates/projects/site_list.html:63
+msgid "Planning"
+msgstr "Planification"
+
+#: templates/projects/site_list.html:65
+msgid "Paused"
+msgstr "Suspendu"
+
+#: templates/projects/site_list.html:67
+#, fuzzy
+#| msgid "Comptable"
+msgid "Completed"
+msgstr "Comptable"
+
+#: templates/projects/site_list.html:103
+msgid "No construction sites yet."
+msgstr "Aucun chantier pour l'instant."
+
+#: templates/projects/site_list.html:105
+#, fuzzy
+#| msgid "Directeur de Cabinet"
+msgid "Create New Site"
+msgstr "Directeur de Cabinet"
+
+#~ msgid "Description..."
+#~ msgstr "Description..."

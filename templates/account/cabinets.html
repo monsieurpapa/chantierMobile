@@ -111,7 +111,7 @@
                     <div class="d-flex align-items-center"><span class="nav-link-icon"><span class="fas fa-bell"></span></span><span class="nav-link-text ps-1">Alarms</span>
                     </div>
                   </a>                  
-                  <!-- parent pages--><a class="nav-link" href="{% url 'user_profile' %}" role="button" data-bs-toggle="" aria-expanded="false" aria-controls="user">
+                  <!-- parent pages--><a class="nav-link" href="{% url 'accounts:profile_update' %}" role="button" data-bs-toggle="" aria-expanded="false" aria-controls="user">
                     <div class="d-flex align-items-center"><span class="nav-link-icon"><span class="fas fa-user"></span></span><span class="nav-link-text ps-1">Profile</span>
                     </div>
                   </a>
@@ -230,10 +230,10 @@
                 </a>
                 <div class="dropdown-menu dropdown-menu-end py-0" aria-labelledby="navbarDropdownUser">
                   <div class="bg-white dark__bg-1000 rounded-2 py-2">
-                    <a class="dropdown-item fw-bold text-warning" href="{% url 'user_profile' %}"><span class="fas fa-user me-1"></span><span>{{ user.display_name }}</span></a>
+                    <a class="dropdown-item fw-bold text-warning" href="{% url 'accounts:profile_update' %}"><span class="fas fa-user me-1"></span><span>{{ user.display_name }}</span></a>
 
                     <div class="dropdown-divider"></div>
-                    <a class="dropdown-item" href="{% url 'user_profile' %}">Profile</a>
+                    <a class="dropdown-item" href="{% url 'accounts:profile_update' %}">Profile</a>
                     <div class="dropdown-divider"></div>
                     {% if qty_accounts > 1 %}
                       <a class="dropdown-item" href="{% url 'switch_account' %}">Switch Profile</a>

@@ -1,5 +1,5 @@
 {% extends 'falcon_base.html' %}
-{% load static %}
+{% load static i18n %}
 
 {% block title %}Expenses - ChantierMobile{% endblock %}
 
@@ -24,12 +24,12 @@
                         <table class="table table-sm table-striped fs--1 mb-0 overflow-hidden">
                             <thead class="bg-200 text-900">
                                 <tr>
-                                    <th scope="col" class="sort pe-1 align-middle white-space-nowrap">Site</th>
-                                    <th scope="col" class="sort pe-1 align-middle white-space-nowrap">Category</th>
-                                    <th scope="col" class="sort pe-1 align-middle white-space-nowrap">Amount</th>
-                                    <th scope="col" class="sort pe-1 align-middle white-space-nowrap">Requester</th>
-                                    <th scope="col" class="sort pe-1 align-middle white-space-nowrap">Status</th>
-                                    <th scope="col" class="sort pe-1 align-middle white-space-nowrap">Date</th>
+                                    <th scope="col" class="sort pe-1 align-middle white-space-nowrap">{% trans "Site" %}</th>
+                                    <th scope="col" class="sort pe-1 align-middle white-space-nowrap">{% trans "Category" %}</th>
+                                    <th scope="col" class="sort pe-1 align-middle white-space-nowrap">{% trans "Amount" %}</th>
+                                    <th scope="col" class="sort pe-1 align-middle white-space-nowrap">{% trans "Requester" %}</th>
+                                    <th scope="col" class="sort pe-1 align-middle white-space-nowrap">{% trans "Status" %}</th>
+                                    <th scope="col" class="sort pe-1 align-middle white-space-nowrap">{% trans "Date" %}</th>
                                     <th scope="col" class="no-sort pe-1 align-middle data-table-row-action"></th>
                                 </tr>
                             </thead>
@@ -55,16 +55,16 @@
                                     </td>
                                     <td class="align-middle white-space-nowrap text-end">
                                         <a href="{% url 'finance:expense_detail' expense.pk %}"
-                                            class="btn btn-falcon-default btn-sm">View</a>
+                                            class="btn btn-falcon-default btn-sm">{% trans "View" %}</a>
                                     </td>
                                 </tr>
                                 {% empty %}
                                 <tr>
                                     <td colspan="7" class="text-center py-5">
                                         <span class="fas fa-receipt fa-2x text-300 d-block mb-2"></span>
-                                        <p class="text-600 mb-2">No expenses found.</p>
+                                        <p class="text-600 mb-2">{% trans "No expenses found." %}</p>
                                         <a href="{% url 'finance:expense_create' %}" class="btn btn-falcon-primary btn-sm">
-                                            <span class="fas fa-plus me-1"></span>Request Expense
+                                            <span class="fas fa-plus me-1"></span>{% trans "Request Expense" %}
                                         </a>
                                     </td>
                                 </tr>

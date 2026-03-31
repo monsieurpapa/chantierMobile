@@ -1,7 +1,7 @@
 {% extends 'falcon_base.html' %}
-{% load static rbac_tags %}
+{% load static i18n rbac_tags %}
 
-{% block title %}Expense Detail - ChantierMobile{% endblock %}
+{% block title %}{% trans "Expense Detail" %} - ChantierMobile{% endblock %}
 
 {% block content %}
 <div class="container" data-layout="container-fluid">
@@ -24,23 +24,23 @@
                         <div class="card-body">
                             <div class="row g-0">
                                 <div class="col-sm-6 mb-3">
-                                    <label class="form-label text-600">Site</label>
+                                    <label class="form-label text-600">{% trans "Site" %}</label>
                                     <p class="fs-0"><a
                                             href="{% url 'projects:site_detail' unique_id=expense.site.unique_id %}">{{
                                             expense.site.name }}</a></p>
                                 </div>
                                 <div class="col-sm-6 mb-3">
-                                    <label class="form-label text-600">Category</label>
+                                    <label class="form-label text-600">{% trans "Category" %}</label>
                                     <p class="fs-0">{{ expense.category.name }}</p>
                                 </div>
                                 <div class="col-sm-6 mb-3">
-                                    <label class="form-label text-600">Amount</label>
+                                    <label class="form-label text-600">{% trans "Amount" %}</label>
                                     <p class="fs-2 fw-bold text-primary">${{ expense.amount }}</p>
                                 </div>
                                 <div class="col-sm-6 mb-3">
-                                    <label class="form-label text-600">Status</label>
+                                    <label class="form-label text-600">{% trans "Status" %}</label>
                                     <div>
-                                        <span class="badge rounded-pill 
+                                        <span class="badge rounded-pill
                                                     {% if expense.status == 'APPROVED' %}badge-soft-success
                                                     {% elif expense.status == 'PAID' %}badge-soft-info
                                                     {% elif expense.status == 'REJECTED' %}badge-soft-danger
@@ -51,14 +51,14 @@
                                 </div>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label text-600">Description</label>
+                                <label class="form-label text-600">{% trans "Description" %}</label>
                                 <p class="fs-0">{{ expense.description }}</p>
                             </div>
                             {% if expense.receipt_image %}
                             <div class="mb-3">
-                                <label class="form-label text-600">Receipt Image</label>
+                                <label class="form-label text-600">{% trans "Receipt Image" %}</label>
                                 <div class="img-thumbnail">
-                                    <img src="{{ expense.receipt_image.url }}" alt="Receipt" class="img-fluid"
+                                    <img src="{{ expense.receipt_image.url }}" alt="{% trans "Receipt" %}" class="img-fluid"
                                         style="max-height: 400px;">
                                 </div>
                             </div>
@@ -68,14 +68,14 @@
 
                     <div class="card mb-3">
                         <div class="card-header bg-light">
-                            <h5 class="mb-0">Approval History</h5>
+                            <h5 class="mb-0">{% trans "Approval History" %}</h5>
                         </div>
                         <div class="card-body fs--1">
                             {% if expense.approvals.exists %}
                             {% for approval in expense.approvals.all %}
                             <div class="d-flex mb-3">
                                 <div class="flex-1 ms-2">
-                                    <h6 class="mb-0">{{ approval.get_status_display }} by {{ approval.approver }}</h6>
+                                    <h6 class="mb-0">{{ approval.get_status_display }} {% trans "by" %} {{ approval.approver }}</h6>
                                     <p class="text-500 mb-0">{{ approval.approval_date|date:"M d, Y H:i" }}</p>
                                     {% if approval.comments %}
                                     <p class="text-1000 bg-100 p-2 rounded mt-1">{{ approval.comments }}</p>
@@ -84,7 +84,7 @@
                             </div>
                             {% endfor %}
                             {% else %}
-                            <p class="text-center py-3 text-500">No approval history yet.</p>
+                            <p class="text-center py-3 text-500">{% trans "No approval history yet." %}</p>
                             {% endif %}
                         </div>
                     </div>
@@ -94,18 +94,18 @@
                     {% if expense.status == 'PENDING' and request.user|has_role:'DIRECTOR,ACCOUNTANT' %}
                     <div class="card mb-3">
                         <div class="card-header bg-light">
-                            <h5 class="mb-0">Approval Actions</h5>
+                            <h5 class="mb-0">{% trans "Approval Actions" %}</h5>
                         </div>
                         <div class="card-body">
                             <form action="{% url 'finance:expense_approve' pk=expense.pk %}" method="post">
                                 {% csrf_token %}
                                 <div class="mb-3">
-                                    <label class="form-label">Review Comments</label>
+                                    <label class="form-label">{% trans "Review Comments" %}</label>
                                     <textarea name="comments" class="form-control" rows="3"
-                                        placeholder="Optional notes..."></textarea>
+                                        placeholder="{% trans "Optional notes..." %}"></textarea>
                                 </div>
                                 <div class="d-grid gap-2">
-                                    <button type="submit" class="btn btn-primary">Approve Request</button>
+                                    <button type="submit" class="btn btn-primary">{% trans "Approve Request" %}</button>
                                 </div>
                             </form>
                         </div>
@@ -115,14 +115,14 @@
                     {% if expense.status == 'APPROVED' and request.user|has_role:'DIRECTOR,CASHIER' %}
                     <div class="card mb-3">
                         <div class="card-header bg-light text-white bg-primary">
-                            <h5 class="mb-0">Cashier Payment</h5>
+                            <h5 class="mb-0">{% trans "Cashier Payment" %}</h5>
                         </div>
                         <div class="card-body">
-                            <p class="fs--1">Mark this expense as PAID once funds are disbursed.</p>
+                            <p class="fs--1">{% trans "Mark this expense as PAID once funds are disbursed." %}</p>
                             <form action="{% url 'finance:expense_pay' pk=expense.pk %}" method="post">
                                 {% csrf_token %}
                                 <div class="d-grid">
-                                    <button type="submit" class="btn btn-success">Confirm Disbursement (PAID)</button>
+                                    <button type="submit" class="btn btn-success">{% trans "Confirm Disbursement" %}</button>
                                 </div>
                             </form>
                         </div>
@@ -131,13 +131,13 @@
 
                     <div class="card mb-3">
                         <div class="card-header bg-light">
-                            <h5 class="mb-0">Metadata</h5>
+                            <h5 class="mb-0">{% trans "Metadata" %}</h5>
                         </div>
                         <div class="card-body fs--1">
                             <div class="row">
-                                <div class="col-5">Requester:</div>
+                                <div class="col-5">{% trans "Requester" %}:</div>
                                 <div class="col-7 fw-semi-bold">{{ expense.requester }}</div>
-                                <div class="col-5">Submitted:</div>
+                                <div class="col-5">{% trans "Submitted" %}:</div>
                                 <div class="col-7">{{ expense.created_at|date }}</div>
                             </div>
                         </div>

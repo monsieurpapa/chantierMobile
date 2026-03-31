@@ -1,5 +1,5 @@
 {% extends 'falcon_base.html' %}
-{% load static %}
+{% load static i18n %}
 
 {% block title %}Payment Form - ChantierMobile{% endblock %}
 
@@ -27,32 +27,30 @@
                     <form method="post">
                         {% csrf_token %}
                         <div class="mb-3">
-                            <label class="form-label" for="{{ form.invoice.id_for_label }}">Selected Invoice</label>
+                            <label class="form-label" for="{{ form.invoice.id_for_label }}">{% trans "Selected Invoice" %}</label>
                             {{ form.invoice }}
                         </div>
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label class="form-label" for="{{ form.amount.id_for_label }}">Amount Paid</label>
+                                <label class="form-label" for="{{ form.amount.id_for_label }}">{% trans "Amount Paid" %}</label>
                                 {{ form.amount }}
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label class="form-label" for="{{ form.payment_date.id_for_label }}">Payment
-                                    Date</label>
+                                <label class="form-label" for="{{ form.payment_date.id_for_label }}">{% trans "Payment Date" %}</label>
                                 {{ form.payment_date }}
                             </div>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label" for="{{ form.method.id_for_label }}">Payment Method</label>
+                            <label class="form-label" for="{{ form.method.id_for_label }}">{% trans "Payment Method" %}</label>
                             {{ form.method }}
                         </div>
                         <div class="mb-3">
-                            <label class="form-label" for="{{ form.reference.id_for_label }}">Transaction
-                                Reference(s)</label>
+                            <label class="form-label" for="{{ form.reference.id_for_label }}">{% trans "Transaction Reference(s)" %}</label>
                             {{ form.reference }}
                         </div>
                         <div class="mt-4">
-                            <button class="btn btn-success" type="submit">Record Payment</button>
-                            <a class="btn btn-link link-danger" href="javascript:history.back()">Cancel</a>
+                            <button class="btn btn-success" type="submit">{% trans "Record Payment" %}</button>
+                            <a class="btn btn-link link-danger" href="javascript:history.back()">{% trans "Cancel" %}</a>
                         </div>
                     </form>
                 </div>

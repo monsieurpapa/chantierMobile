@@ -1,5 +1,5 @@
 {% extends 'falcon_base.html' %}
-{% load static %}
+{% load static i18n %}
 
 {% block title %}Add Phase - {{ site.name }} - ChantierMobile{% endblock %}
 
@@ -33,20 +33,20 @@
                         {% csrf_token %}
 
                         <div class="mb-3">
-                            <label class="form-label" for="id_name">Phase Name</label>
+                            <label class="form-label" for="id_name">{% trans "Phase Name" %}</label>
                             <input class="form-control" id="id_name" name="name" type="text"
                                 placeholder="e.g. Foundation, Roofing, electrical" required />
                         </div>
 
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label class="form-label" for="id_start_date">Start Date</label>
+                                <label class="form-label" for="id_start_date">{% trans "Start Date" %}</label>
                                 <input class="form-control datetimepicker" id="id_start_date" name="start_date"
                                     type="text" placeholder="YYYY-MM-DD"
                                     data-options='{"dateFormat":"Y-m-d","disableMobile":true}' />
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label" for="id_end_date">End Date</label>
+                                <label class="form-label" for="id_end_date">{% trans "End Date" %}</label>
                                 <input class="form-control datetimepicker" id="id_end_date" name="end_date" type="text"
                                     placeholder="YYYY-MM-DD"
                                     data-options='{"dateFormat":"Y-m-d","disableMobile":true}' />
@@ -54,7 +54,7 @@
                         </div>
 
                         <div class="col-12 d-flex justify-content-end">
-                            <button class="btn btn-primary" type="submit">Add Phase</button>
+                            <button class="btn btn-primary" type="submit">{% trans "Add Phase" %}</button>
                         </div>
                     </form>
                 </div>

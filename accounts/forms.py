@@ -93,7 +93,7 @@ class UserAdminForm(forms.ModelForm):
         widget=forms.CheckboxInput(attrs={
             'class': 'form-check-input'
         }),
-        help_text='Uncheck to deactivate user account'
+        help_text=_('Uncheck to deactivate user account')
     )
     
     is_staff = forms.BooleanField(
@@ -101,7 +101,7 @@ class UserAdminForm(forms.ModelForm):
         widget=forms.CheckboxInput(attrs={
             'class': 'form-check-input'
         }),
-        help_text='Check to grant staff access'
+        help_text=_('Check to grant staff access')
     )
     
     is_superuser = forms.BooleanField(
@@ -109,7 +109,7 @@ class UserAdminForm(forms.ModelForm):
         widget=forms.CheckboxInput(attrs={
             'class': 'form-check-input'
         }),
-        help_text='Check to grant superadmin access'
+        help_text=_('Check to grant superadmin access')
     )
     
     class Meta:
@@ -166,7 +166,7 @@ class AssignUserToCabinetForm(forms.ModelForm):
             'data-placeholder': 'Select Cabinet'
         }),
         label='Cabinet',
-        help_text='Select the cabinet to assign this user to'
+        help_text=_('Select the cabinet to assign this user to')
     )
     
     role = forms.ChoiceField(
@@ -176,7 +176,7 @@ class AssignUserToCabinetForm(forms.ModelForm):
             'data-placeholder': 'Select Role'
         }),
         label='Role',
-        help_text='Select the user role in this cabinet'
+        help_text=_('Select the user role in this cabinet')
     )
     
     status = forms.ChoiceField(
@@ -186,7 +186,7 @@ class AssignUserToCabinetForm(forms.ModelForm):
             'class': 'form-select'
         }),
         label='Status',
-        help_text='Set initial approval status'
+        help_text=_('Set initial approval status')
     )
     
     class Meta:

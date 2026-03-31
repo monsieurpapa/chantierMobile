@@ -14,7 +14,7 @@ class User(AbstractUser):
 class Cabinet(BaseModel):
     name = models.CharField(max_length=255)
     address = models.TextField(blank=True)
-    tax_id = models.CharField(max_length=50, blank=True, help_text="NIF/TIN")
+    tax_id = models.CharField(max_length=50, blank=True, help_text=_("NIF/TIN"))
     logo = models.ImageField(upload_to='cabinets/logos/', blank=True, null=True)
     
     def __str__(self):

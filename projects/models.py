@@ -90,7 +90,7 @@ class ProjectPhase(BaseModel):
 class SiteProgress(BaseModel):
     phase = models.ForeignKey(ProjectPhase, on_delete=models.CASCADE, related_name='progress_reports')
     report_date = models.DateField()
-    percentage_complete = models.PositiveIntegerField(help_text="0-100")
+    percentage_complete = models.PositiveIntegerField(help_text=_("0-100"))
     description = models.TextField()
     
     def clean(self):

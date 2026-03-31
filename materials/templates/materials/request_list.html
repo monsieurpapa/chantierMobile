@@ -1,5 +1,5 @@
 {% extends 'falcon_base.html' %}
-{% load rbac_tags %}
+{% load i18n rbac_tags %}
 
 {% block title %}Material Requests - ChantierMobile{% endblock %}
 
@@ -24,13 +24,13 @@
                         <table class="table table-hover table-sm mb-0 overflow-hidden">
                             <thead class="bg-light border-bottom">
                                 <tr>
-                                    <th scope="col" class="ps-3 fw-semibold text-600">Site</th>
-                                    <th scope="col" class="fw-semibold text-600">Materials</th>
-                                    <th scope="col" class="text-center fw-semibold text-600">Total Items</th>
-                                    <th scope="col" class="text-center fw-semibold text-600">Est. Cost</th>
-                                    <th scope="col" class="text-center fw-semibold text-600">Status</th>
-                                    <th scope="col" class="text-end pe-3 fw-semibold text-600">Date</th>
-                                    <th scope="col" class="text-end pe-3 fw-semibold text-600">Actions</th>
+                                    <th scope="col" class="ps-3 fw-semibold text-600">{% trans "Site" %}</th>
+                                    <th scope="col" class="fw-semibold text-600">{% trans "Materials" %}</th>
+                                    <th scope="col" class="text-center fw-semibold text-600">{% trans "Total Items" %}</th>
+                                    <th scope="col" class="text-center fw-semibold text-600">{% trans "Est. Cost" %}</th>
+                                    <th scope="col" class="text-center fw-semibold text-600">{% trans "Status" %}</th>
+                                    <th scope="col" class="text-end pe-3 fw-semibold text-600">{% trans "Date" %}</th>
+                                    <th scope="col" class="text-end pe-3 fw-semibold text-600">{% trans "Actions" %}</th>
                                 </tr>
                             </thead>
                             <tbody class="list">
@@ -76,12 +76,12 @@
                                         <div class="btn-group btn-group-sm" role="group">
                                             <a class="btn btn-outline-primary btn-sm"
                                                 href="{% url 'materials:request_detail' pk=req.pk %}">
-                                                <i class="fas fa-eye me-1"></i>View
+                                                <i class="fas fa-eye me-1"></i>{% trans "View" %}
                                             </a>
                                             {% if req.status == 'PENDING' %}
                                             <a class="btn btn-outline-warning btn-sm"
                                                 href="{% url 'materials:request_update' pk=req.pk %}">
-                                                <i class="fas fa-edit me-1"></i>Edit
+                                                <i class="fas fa-edit me-1"></i>{% trans "Edit" %}
                                             </a>
                                             {% endif %}
                                         </div>
@@ -92,7 +92,7 @@
                                     <td colspan="7" class="text-center py-5">
                                         <p class="text-muted mb-0">
                                             <i class="fas fa-inbox fa-2x mb-2 d-block opacity-50"></i>
-                                            No material requests found.
+                                            {% trans "No material requests found." %}
                                         </p>
                                     </td>
                                 </tr>

@@ -1,5 +1,5 @@
 {% extends 'falcon_base.html' %}
-{% load static rbac_tags %}
+{% load static i18n rbac_tags %}
 
 {% block title %}{{ site.name }} - Site Details - ChantierMobile{% endblock %}
 
@@ -59,25 +59,25 @@
                             <div class="row g-3 mt-2">
                                 <div class="col-6 col-md-3">
                                     <div class="p-3 bg-light rounded-3">
-                                        <p class="fs--2 text-500 text-uppercase fw-bold mb-1">Total Staff</p>
+                                        <p class="fs--2 text-500 text-uppercase fw-bold mb-1">{% trans "Total Staff" %}</p>
                                         <h5 class="mb-0">{{ site.assignments.count }}</h5>
                                     </div>
                                 </div>
                                 <div class="col-6 col-md-3">
                                     <div class="p-3 bg-light rounded-3">
-                                        <p class="fs--2 text-500 text-uppercase fw-bold mb-1">Material Requests</p>
+                                        <p class="fs--2 text-500 text-uppercase fw-bold mb-1">{% trans "Material Requests" %}</p>
                                         <h5 class="mb-0">{{ site.material_requests.count }}</h5>
                                     </div>
                                 </div>
                                 <div class="col-6 col-md-3">
                                     <div class="p-3 bg-light rounded-3">
-                                        <p class="fs--2 text-500 text-uppercase fw-bold mb-1">Budget Usage</p>
+                                        <p class="fs--2 text-500 text-uppercase fw-bold mb-1">{% trans "Budget Usage" %}</p>
                                         <h5 class="mb-0">{% if site.budget %}{{ site.budget_usage_percentage }}%{% else %}-{% endif %}</h5>
                                     </div>
                                 </div>
                                 <div class="col-6 col-md-3">
                                     <div class="p-3 bg-light rounded-3">
-                                        <p class="fs--2 text-500 text-uppercase fw-bold mb-1">Net Profit</p>
+                                        <p class="fs--2 text-500 text-uppercase fw-bold mb-1">{% trans "Net Profit" %}</p>
                                         <h5 class="mb-0 {% if site.net_profit < 0 %}text-danger{% else %}text-success{% endif %}">${{ site.net_profit|floatformat:0 }}</h5>
                                     </div>
                                 </div>
@@ -95,25 +95,25 @@
                                 <li class="nav-item">
                                     <a class="nav-link active fw-semibold py-3" id="overview-tab" data-bs-toggle="tab"
                                         href="#tab-overview" role="tab" aria-controls="tab-overview"
-                                        aria-selected="true"><i class="fas fa-chart-line me-2"></i>Overview</a>
+                                        aria-selected="true"><i class="fas fa-chart-line me-2"></i>{% trans "Overview" %}</a>
                                 </li>
                                 <li class="nav-item">
                                     <a class="nav-link fw-semibold py-3" id="personnel-tab" data-bs-toggle="tab"
                                         href="#tab-personnel" role="tab" aria-controls="tab-personnel"
-                                        aria-selected="false"><i class="fas fa-users me-2"></i>Personnel</a>
+                                        aria-selected="false"><i class="fas fa-users me-2"></i>{% trans "Personnel" %}</a>
                                 </li>
                                 <li class="nav-item">
                                     <a class="nav-link fw-semibold py-3" id="materials-tab" data-bs-toggle="tab"
                                         href="#tab-materials" role="tab" aria-controls="tab-materials"
-                                        aria-selected="false"><i class="fas fa-boxes me-2"></i>Materials</a>
+                                        aria-selected="false"><i class="fas fa-boxes me-2"></i>{% trans "Materials" %}</a>
                                 </li>
                                 <li class="nav-item">
                                     <a class="nav-link fw-semibold py-3" id="finance-tab" data-bs-toggle="tab" href="#tab-finance"
-                                        role="tab" aria-controls="tab-finance" aria-selected="false"><i class="fas fa-dollar-sign me-2"></i>Finance</a>
+                                        role="tab" aria-controls="tab-finance" aria-selected="false"><i class="fas fa-dollar-sign me-2"></i>{% trans "Finance" %}</a>
                                 </li>
                                 <li class="nav-item">
                                     <a class="nav-link fw-semibold py-3" id="history-tab" data-bs-toggle="tab" href="#tab-history"
-                                        role="tab" aria-controls="tab-history" aria-selected="false"><i class="fas fa-history me-2"></i>Activity</a>
+                                        role="tab" aria-controls="tab-history" aria-selected="false"><i class="fas fa-history me-2"></i>{% trans "Activity" %}</a>
                                 </li>
                             </ul>
                         </div>
@@ -125,11 +125,11 @@
                                     aria-labelledby="overview-tab">
                                     <div class="mb-4">
                                         <div class="d-flex justify-content-between align-items-center mb-3">
-                                            <h5 class="mb-0"><i class="fas fa-tasks text-primary me-2"></i>Project Phases & Progress</h5>
+                                            <h5 class="mb-0"><i class="fas fa-tasks text-primary me-2"></i>{% trans "Project Phases & Progress" %}</h5>
                                             {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER' %}
                                             <a class="btn btn-primary btn-sm"
                                                 href="{% url 'projects:phase_create' site_id=site.unique_id %}">
-                                                <span class="fas fa-plus me-1"></span>Add Phase
+                                                <span class="fas fa-plus me-1"></span>{% trans "Add Phase" %}
                                             </a>
                                             {% endif %}
                                         </div>
@@ -147,7 +147,7 @@
                                                             {% if phase.end_date %}
                                                                 - {{ phase.end_date|date:"M d, Y" }}
                                                             {% else %}
-                                                                <span class="badge bg-info ms-1">Ongoing</span>
+                                                                <span class="badge bg-info ms-1">{% trans "Ongoing" %}</span>
                                                             {% endif %}
                                                         </p>
                                                     </div>
@@ -158,10 +158,10 @@
                                                         </button>
                                                         <div class="dropdown-menu dropdown-menu-end">
                                                             <a class="dropdown-item" href="{% url 'projects:phase_update' unique_id=phase.unique_id %}">
-                                                                <i class="fas fa-edit me-2"></i>Edit
+                                                                <i class="fas fa-edit me-2"></i>{% trans "Edit" %}
                                                             </a>
                                                             <a class="dropdown-item text-danger" href="{% url 'projects:phase_delete' unique_id=phase.unique_id %}">
-                                                                <i class="fas fa-trash me-2"></i>Delete
+                                                                <i class="fas fa-trash me-2"></i>{% trans "Delete" %}
                                                             </a>
                                                         </div>
                                                     </div>
@@ -171,7 +171,7 @@
                                                 {% with last_progress=phase.progress_reports.last %}
                                                 <div>
                                                     <div class="d-flex justify-content-between align-items-center mb-2">
-                                                        <span class="fs--1 text-600">Progress</span>
+                                                        <span class="fs--1 text-600">{% trans "Progress" %}</span>
                                                         <span class="badge bg-primary">{{ last_progress.percentage_complete|default:0 }}%</span>
                                                     </div>
                                                     <div class="progress" style="height: 8px;">
@@ -181,10 +181,10 @@
                                                             aria-valuemin="0" aria-valuemax="100"></div>
                                                     </div>
                                                     <div class="d-flex justify-content-between mt-2">
-                                                        <small class="text-500">Updated: {{ last_progress.report_date|default:"Never" }}</small>
+                                                        <small class="text-500">{% trans "Updated:" %} {{ last_progress.report_date|default:"—" }}</small>
                                                         {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER,ENGINEER' %}
                                                         <a class="btn btn-link btn-sm p-0" href="{% url 'projects:progress_create' phase_id=phase.unique_id %}">
-                                                            <span class="fas fa-plus me-1"></span>Log Update
+                                                            <span class="fas fa-plus me-1"></span>{% trans "Log Update" %}
                                                         </a>
                                                         {% endif %}
                                                     </div>
@@ -196,7 +196,7 @@
                                         {% else %}
                                         <div class="alert alert-info d-flex align-items-center p-3 mb-0" role="alert">
                                             <i class="fas fa-info-circle me-2"></i>
-                                            <span>No project phases defined yet. Start by creating the first phase.</span>
+                                            <span>{% trans "No project phases defined yet. Start by creating the first phase." %}</span>
                                         </div>
                                         {% endif %}
                                     </div>
@@ -206,11 +206,11 @@
                                 <div class="tab-pane fade" id="tab-personnel" role="tabpanel"
                                     aria-labelledby="personnel-tab">
                                     <div class="d-flex justify-content-between align-items-center mb-4">
-                                        <h5 class="mb-0"><i class="fas fa-users text-info me-2"></i>Assigned Personnel</h5>
+                                        <h5 class="mb-0"><i class="fas fa-users text-info me-2"></i>{% trans "Assigned Personnel" %}</h5>
                                         {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER' %}
                                         <a class="btn btn-info btn-sm"
                                             href="{% url 'personnel:assignment_create' %}?site={{ site.pk }}">
-                                            <span class="fas fa-user-plus me-1"></span>Assign Staff
+                                            <span class="fas fa-user-plus me-1"></span>{% trans "Assign Staff" %}
                                         </a>
                                         {% endif %}
                                     </div>
@@ -220,10 +220,10 @@
                                         <table class="table table-hover table-sm mb-0">
                                             <thead class="bg-light">
                                                 <tr>
-                                                    <th class="white-space-nowrap fs--1">Name & Role</th>
-                                                    <th class="fs--1">Assignment Period</th>
+                                                    <th class="white-space-nowrap fs--1">{% trans "Name & Role" %}</th>
+                                                    <th class="fs--1">{% trans "Assignment Period" %}</th>
                                                     {% if request.user|has_role:'DIRECTOR,ACCOUNTANT' %}
-                                                    <th class="text-end fs--1">Daily Rate</th>
+                                                    <th class="text-end fs--1">{% trans "Daily Rate" %}</th>
                                                     {% endif %}
                                                 </tr>
                                             </thead>
@@ -254,7 +254,7 @@
                                                         {% if assignment.end_date %}
                                                             <span class="text-600">{{ assignment.end_date|date:"M d, y" }}</span>
                                                         {% else %}
-                                                            <span class="badge bg-success">Active</span>
+                                                            <span class="badge bg-success">{% trans "Active" %}</span>
                                                         {% endif %}
                                                     </td>
                                                     {% if request.user|has_role:'DIRECTOR,ACCOUNTANT' %}
@@ -271,8 +271,8 @@
                                     <div class="alert alert-light d-flex align-items-center p-3 mb-0" role="alert">
                                         <i class="fas fa-users text-muted me-2" style="font-size: 1.5rem;"></i>
                                         <div>
-                                            <strong>No personnel assigned</strong>
-                                            <p class="fs--1 mb-0 text-600">Start by assigning staff members to this site</p>
+                                            <strong>{% trans "No personnel assigned" %}</strong>
+                                            <p class="fs--1 mb-0 text-600">{% trans "Start by assigning staff members to this site" %}</p>
                                         </div>
                                     </div>
                                     {% endif %}
@@ -282,10 +282,10 @@
                                 <div class="tab-pane fade" id="tab-materials" role="tabpanel"
                                     aria-labelledby="materials-tab">
                                     <div class="d-flex justify-content-between align-items-center mb-4">
-                                        <h5 class="mb-0"><i class="fas fa-boxes text-warning me-2"></i>Material Logistics</h5>
+                                        <h5 class="mb-0"><i class="fas fa-boxes text-warning me-2"></i>{% trans "Material Logistics" %}</h5>
                                         <a class="btn btn-warning btn-sm"
                                             href="{% url 'materials:request_create' %}?site={{ site.id }}">
-                                            <span class="fas fa-plus me-1"></span>New Request
+                                            <span class="fas fa-plus me-1"></span>{% trans "New Request" %}
                                         </a>
                                     </div>
                                     
@@ -294,10 +294,10 @@
                                         <table class="table table-hover table-sm mb-0">
                                             <thead class="bg-light">
                                                 <tr>
-                                                    <th class="fs--1">Material</th>
-                                                    <th class="text-center fs--1">Quantity</th>
-                                                    <th class="text-center fs--1">Status</th>
-                                                    <th class="text-end fs--1">Requested On</th>
+                                                    <th class="fs--1">{% trans "Material" %}</th>
+                                                    <th class="text-center fs--1">{% trans "Quantity" %}</th>
+                                                    <th class="text-center fs--1">{% trans "Status" %}</th>
+                                                    <th class="text-end fs--1">{% trans "Requested On" %}</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -336,8 +336,8 @@
                                     <div class="alert alert-light d-flex align-items-center p-3 mb-0" role="alert">
                                         <i class="fas fa-box text-muted me-2" style="font-size: 1.5rem;"></i>
                                         <div>
-                                            <strong>No material requests</strong>
-                                            <p class="fs--1 mb-0 text-600">Create your first material request to track supplies</p>
+                                            <strong>{% trans "No material requests" %}</strong>
+                                            <p class="fs--1 mb-0 text-600">{% trans "Create your first material request to track supplies" %}</p>
                                         </div>
                                     </div>
                                     {% endif %}
@@ -346,23 +346,23 @@
                                 <!-- FINANCE TAB -->
                                 <div class="tab-pane fade" id="tab-finance" role="tabpanel"
                                     aria-labelledby="finance-tab">
-                                    <h5 class="mb-4"><i class="fas fa-dollar-sign text-success me-2"></i>Revenue & Invoicing</h5>
+                                    <h5 class="mb-4"><i class="fas fa-dollar-sign text-success me-2"></i>{% trans "Revenue & Invoicing" %}</h5>
                                     
                                     <!-- Revenue/Contract Section -->
                                     <div class="mb-4">
                                         <div class="d-flex justify-content-between align-items-center mb-3">
-                                            <h6 class="mb-0 text-700">Invoices</h6>
+                                            <h6 class="mb-0 text-700">{% trans "Invoices" %}</h6>
                                             {% if not contract %}
                                                 {% if request.user|has_role:'DIRECTOR,ACCOUNTANT' %}
                                                 <a class="btn btn-sm btn-outline-success"
                                                     href="{% url 'revenue:contract_create_from_site' site_id=site.unique_id %}">
-                                                    <span class="fas fa-plus me-1"></span>Create Contract
+                                                    <span class="fas fa-plus me-1"></span>{% trans "Create Contract" %}
                                                 </a>
                                                 {% endif %}
                                             {% else %}
                                                 <a class="btn btn-sm btn-outline-success"
                                                     href="{% url 'revenue:invoice_create_from_contract' contract_id=contract.id %}">
-                                                    <span class="fas fa-file-invoice me-1"></span>New Invoice
+                                                    <span class="fas fa-file-invoice me-1"></span>{% trans "New Invoice" %}
                                                 </a>
                                             {% endif %}
                                         </div>
@@ -372,10 +372,10 @@
                                             <table class="table table-hover table-sm mb-0">
                                                 <thead class="bg-light">
                                                     <tr>
-                                                        <th class="fs--1">Invoice #</th>
-                                                        <th class="fs--1">Amount</th>
-                                                        <th class="text-center fs--1">Status</th>
-                                                        <th class="text-end fs--1">Due Date</th>
+                                                        <th class="fs--1">{% trans "Invoice #" %}</th>
+                                                        <th class="fs--1">{% trans "Amount" %}</th>
+                                                        <th class="text-center fs--1">{% trans "Status" %}</th>
+                                                        <th class="text-end fs--1">{% trans "Due Date" %}</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -406,8 +406,8 @@
                                         <div class="alert alert-light d-flex align-items-center p-3" role="alert">
                                             <i class="fas fa-file-invoice text-muted me-2" style="font-size: 1.5rem;"></i>
                                             <div>
-                                                <strong>No invoices</strong>
-                                                <p class="fs--1 mb-0 text-600">Create a contract first to generate invoices</p>
+                                                <strong>{% trans "No invoices" %}</strong>
+                                                <p class="fs--1 mb-0 text-600">{% trans "Create a contract first to generate invoices" %}</p>
                                             </div>
                                         </div>
                                         {% endif %}
@@ -418,10 +418,10 @@
                                     <!-- Expenses Section -->
                                     <div>
                                         <div class="d-flex justify-content-between align-items-center mb-3">
-                                            <h6 class="mb-0 text-700">Expenses</h6>
+                                            <h6 class="mb-0 text-700">{% trans "Expenses" %}</h6>
                                             <a class="btn btn-sm btn-outline-danger"
                                                 href="{% url 'finance:expense_create' %}?site={{ site.id }}">
-                                                <span class="fas fa-file-invoice-dollar me-1"></span>Log Expense
+                                                <span class="fas fa-file-invoice-dollar me-1"></span>{% trans "Log Expense" %}
                                             </a>
                                         </div>
                                         
@@ -430,10 +430,10 @@
                                             <table class="table table-hover table-sm mb-0">
                                                 <thead class="bg-light">
                                                     <tr>
-                                                        <th class="fs--1">Category</th>
-                                                        <th class="fs--1">Amount</th>
-                                                        <th class="text-center fs--1">Status</th>
-                                                        <th class="text-end fs--1">Submitted By</th>
+                                                        <th class="fs--1">{% trans "Category" %}</th>
+                                                        <th class="fs--1">{% trans "Amount" %}</th>
+                                                        <th class="text-center fs--1">{% trans "Status" %}</th>
+                                                        <th class="text-end fs--1">{% trans "Submitted By" %}</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -470,8 +470,8 @@
                                         <div class="alert alert-light d-flex align-items-center p-3 mb-0" role="alert">
                                             <i class="fas fa-receipt text-muted me-2" style="font-size: 1.5rem;"></i>
                                             <div>
-                                                <strong>No expenses logged</strong>
-                                                <p class="fs--1 mb-0 text-600">Log your first expense to track site spending</p>
+                                                <strong>{% trans "No expenses logged" %}</strong>
+                                                <p class="fs--1 mb-0 text-600">{% trans "Log your first expense to track site spending" %}</p>
                                             </div>
                                         </div>
                                         {% endif %}
@@ -481,7 +481,7 @@
                                 <!-- HISTORY TAB (TIMELINE) -->
                                 <div class="tab-pane fade" id="tab-history" role="tabpanel"
                                     aria-labelledby="history-tab">
-                                    <h5 class="mb-4"><i class="fas fa-history text-secondary me-2"></i>Recent Activity Timeline</h5>
+                                    <h5 class="mb-4"><i class="fas fa-history text-secondary me-2"></i>{% trans "Recent Activity Timeline" %}</h5>
                                     
                                     {% if timeline %}
                                     <div class="position-relative">
@@ -512,8 +512,8 @@
                                     <div class="alert alert-light d-flex align-items-center p-4 mb-0 text-center justify-content-center" role="alert">
                                         <div>
                                             <i class="fas fa-history text-muted mb-3" style="font-size: 2rem; display: block;"></i>
-                                            <strong>No activity yet</strong>
-                                            <p class="fs--1 mb-0 text-600">Activity will appear here as you work on this site</p>
+                                            <strong>{% trans "No activity yet" %}</strong>
+                                            <p class="fs--1 mb-0 text-600">{% trans "Activity will appear here as you work on this site" %}</p>
                                         </div>
                                     </div>
                                     {% endif %}
@@ -528,14 +528,14 @@
                     <!-- Financial Pulse Card -->
                     <div class="card mb-3 border-0 shadow-sm">
                         <div class="card-header bg-white border-bottom">
-                            <h5 class="mb-0"><i class="fas fa-pulse text-danger me-2"></i>Financial Pulse</h5>
+                            <h5 class="mb-0"><i class="fas fa-pulse text-danger me-2"></i>{% trans "Financial Pulse" %}</h5>
                         </div>
                         <div class="card-body">
                             <!-- Budget Usage -->
                             {% if site.budget %}
                             <div class="mb-4">
                                 <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <h6 class="mb-0 text-700"><i class="fas fa-chart-pie me-1"></i>Budget Usage</h6>
+                                    <h6 class="mb-0 text-700"><i class="fas fa-chart-pie me-1"></i>{% trans "Budget Usage" %}</h6>
                                     <span class="badge rounded-pill {% if site.budget_usage_percentage > 80 %}bg-danger{% elif site.budget_usage_percentage > 60 %}bg-warning{% else %}bg-success{% endif %}">
                                         {{ site.budget_usage_percentage }}%
                                     </span>
@@ -548,11 +548,11 @@
                                 </div>
                                 <div class="row g-2 mt-3">
                                     <div class="col-6 p-2 bg-light rounded-2">
-                                        <p class="fs--2 mb-1 text-500 text-uppercase fw-bold">Budgeted</p>
+                                        <p class="fs--2 mb-1 text-500 text-uppercase fw-bold">{% trans "Budgeted" %}</p>
                                         <h5 class="mb-0 text-primary">${{ site.budget.total_amount|floatformat:0 }}</h5>
                                     </div>
                                     <div class="col-6 p-2 bg-light rounded-2">
-                                        <p class="fs--2 mb-1 text-500 text-uppercase fw-bold">Spent</p>
+                                        <p class="fs--2 mb-1 text-500 text-uppercase fw-bold">{% trans "Spent" %}</p>
                                         <h5 class="mb-0 {% if site.budget_usage_percentage > 80 %}text-danger{% elif site.budget_usage_percentage > 60 %}text-warning{% else %}text-success{% endif %}">
                                             ${{ site.total_spent|floatformat:0 }}
                                         </h5>
@@ -561,7 +561,7 @@
                             </div>
                             {% else %}
                             <div class="alert alert-info p-2 fs--1 mb-0">
-                                <i class="fas fa-info-circle me-1"></i>No budget assigned to this site
+                                <i class="fas fa-info-circle me-1"></i>{% trans "No budget assigned to this site" %}
                             </div>
                             {% endif %}
 
@@ -569,17 +569,17 @@
 
                             <!-- Revenue Performance -->
                             <div class="mb-3">
-                                <h6 class="mb-3 text-700"><i class="fas fa-chart-line me-1"></i>Revenue Performance</h6>
+                                <h6 class="mb-3 text-700"><i class="fas fa-chart-line me-1"></i>{% trans "Revenue Performance" %}</h6>
                                 <div class="row g-2">
                                     <div class="col-6">
                                         <div class="p-3 bg-soft-success rounded-3 text-center border border-success border-opacity-25">
-                                            <p class="fs--2 mb-1 text-600 text-uppercase fw-bold">Income</p>
+                                            <p class="fs--2 mb-1 text-600 text-uppercase fw-bold">{% trans "Income" %}</p>
                                             <h5 class="mb-0 text-success fw-bold">${{ site.total_revenue|floatformat:0 }}</h5>
                                         </div>
                                     </div>
                                     <div class="col-6">
                                         <div class="p-3 {% if site.net_profit >= 0 %}bg-soft-primary{% else %}bg-soft-danger{% endif %} rounded-3 text-center border {% if site.net_profit >= 0 %}border-primary{% else %}border-danger{% endif %} border-opacity-25">
-                                            <p class="fs--2 mb-1 text-uppercase fw-bold {% if site.net_profit >= 0 %}text-primary{% else %}text-danger{% endif %}">Net Profit</p>
+                                            <p class="fs--2 mb-1 text-uppercase fw-bold {% if site.net_profit >= 0 %}text-primary{% else %}text-danger{% endif %}">{% trans "Net Profit" %}</p>
                                             <h5 class="mb-0 fw-bold {% if site.net_profit < 0 %}text-danger{% else %}text-primary{% endif %}">
                                                 ${{ site.net_profit|floatformat:0 }}
                                             </h5>
@@ -593,7 +593,7 @@
                     <!-- Quick Stats Card -->
                     <div class="card mb-3 border-0 shadow-sm">
                         <div class="card-header bg-white border-bottom">
-                            <h5 class="mb-0"><i class="fas fa-tachometer-alt text-info me-2"></i>Quick Stats</h5>
+                            <h5 class="mb-0"><i class="fas fa-tachometer-alt text-info me-2"></i>{% trans "Quick Stats" %}</h5>
                         </div>
                         <div class="card-body">
                             <div class="d-flex align-items-center mb-3 pb-3 border-bottom">
@@ -601,7 +601,7 @@
                                     <i class="fas fa-users"></i>
                                 </div>
                                 <div class="flex-1">
-                                    <p class="mb-0 fs--1 text-600">Active Staff</p>
+                                    <p class="mb-0 fs--1 text-600">{% trans "Active Staff" %}</p>
                                     <h6 class="mb-0 fw-semibold">{{ site.assignments.count }}</h6>
                                 </div>
                             </div>
@@ -610,7 +610,7 @@
                                     <i class="fas fa-boxes"></i>
                                 </div>
                                 <div class="flex-1">
-                                    <p class="mb-0 fs--1 text-600">Material Requests</p>
+                                    <p class="mb-0 fs--1 text-600">{% trans "Material Requests" %}</p>
                                     <h6 class="mb-0 fw-semibold">{{ site.material_requests.count }}</h6>
                                 </div>
                             </div>
@@ -619,7 +619,7 @@
                                     <i class="fas fa-tasks"></i>
                                 </div>
                                 <div class="flex-1">
-                                    <p class="mb-0 fs--1 text-600">Project Phases</p>
+                                    <p class="mb-0 fs--1 text-600">{% trans "Project Phases" %}</p>
                                     <h6 class="mb-0 fw-semibold">{{ site.phases.count }}</h6>
                                 </div>
                             </div>
@@ -629,12 +629,12 @@
                     <!-- Project Metadata Card -->
                     <div class="card border-0 shadow-sm">
                         <div class="card-header bg-white border-bottom">
-                            <h5 class="mb-0"><i class="fas fa-file-alt text-secondary me-2"></i>Project Details</h5>
+                            <h5 class="mb-0"><i class="fas fa-file-alt text-secondary me-2"></i>{% trans "Project Details" %}</h5>
                         </div>
                         <div class="card-body">
                             <div class="row g-0 mb-3 pb-3 border-bottom">
                                 <div class="col-5">
-                                    <p class="fs--1 text-600 mb-0 fw-bold">Site ID</p>
+                                    <p class="fs--1 text-600 mb-0 fw-bold">{% trans "Site ID" %}</p>
                                 </div>
                                 <div class="col-7 text-end">
                                     <code class="fs--2 bg-light px-2 py-1 rounded">{{ site.unique_id }}</code>
@@ -642,7 +642,7 @@
                             </div>
                             <div class="row g-0 mb-3 pb-3 border-bottom">
                                 <div class="col-5">
-                                    <p class="fs--1 text-600 mb-0 fw-bold">Location</p>
+                                    <p class="fs--1 text-600 mb-0 fw-bold">{% trans "Location" %}</p>
                                 </div>
                                 <div class="col-7 text-end">
                                     <p class="fs--1 mb-0">{{ site.location }}</p>
@@ -650,7 +650,7 @@
                             </div>
                             <div class="row g-0 mb-3 pb-3 border-bottom">
                                 <div class="col-5">
-                                    <p class="fs--1 text-600 mb-0 fw-bold">Status</p>
+                                    <p class="fs--1 text-600 mb-0 fw-bold">{% trans "Status" %}</p>
                                 </div>
                                 <div class="col-7 text-end">
                                     <span class="badge rounded-pill {% if site.status == 'ACTIVE' %}bg-success{% else %}bg-warning{% endif %}">
@@ -660,7 +660,7 @@
                             </div>
                             <div class="row g-0">
                                 <div class="col-5">
-                                    <p class="fs--1 text-600 mb-0 fw-bold">Entity</p>
+                                    <p class="fs--1 text-600 mb-0 fw-bold">{% trans "Entity" %}</p>
                                 </div>
                                 <div class="col-7 text-end">
                                     <p class="fs--1 mb-0 text-primary fw-semibold">{{ site.cabinet.name }}</p>

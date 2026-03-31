@@ -1,5 +1,5 @@
 {% extends 'falcon_base.html' %}
-{% load rbac_tags %}
+{% load i18n rbac_tags %}
 
 {% block title %}Budgets - ChantierMobile{% endblock %}
 
@@ -24,10 +24,10 @@
                         <table class="table table-sm table-striped fs--1 mb-0">
                             <thead class="bg-200 text-900">
                                 <tr>
-                                    <th scope="col" class="align-middle">Site</th>
-                                    <th scope="col" class="align-middle">Total Amount</th>
-                                    <th scope="col" class="align-middle">Period</th>
-                                    <th scope="col" class="align-middle text-end">Actions</th>
+                                    <th scope="col" class="align-middle">{% trans "Site" %}</th>
+                                    <th scope="col" class="align-middle">{% trans "Total Amount" %}</th>
+                                    <th scope="col" class="align-middle">{% trans "Period" %}</th>
+                                    <th scope="col" class="align-middle text-end">{% trans "Actions" %}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -53,9 +53,9 @@
                                 <tr>
                                     <td colspan="4" class="text-center py-5">
                                         <span class="fas fa-wallet fa-2x text-300 d-block mb-2"></span>
-                                        <p class="text-600 mb-2">No budgets defined yet.</p>
+                                        <p class="text-600 mb-2">{% trans "No budgets defined yet." %}</p>
                                         <a href="{% url 'finance:budget_create' %}" class="btn btn-falcon-primary btn-sm">
-                                            <span class="fas fa-plus me-1"></span>Create Budget
+                                            <span class="fas fa-plus me-1"></span>{% trans "Create Budget" %}
                                         </a>
                                     </td>
                                 </tr>
