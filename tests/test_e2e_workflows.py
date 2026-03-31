@@ -316,7 +316,7 @@ class TestRevenueManagementWorkflow:
     def test_invoice_creation_and_payment_workflow(self, accountant_client, site, contract):
         """Test invoice creation and payment workflow."""
         # Create invoice
-        response = accountant_client.get(reverse('revenue:invoice_create', kwargs={'contract_id': contract.pk}))
+        response = accountant_client.get(reverse('revenue:invoice_create_from_contract', kwargs={'contract_id': contract.pk}))
         assert response.status_code == 200
         
         invoice_data = {
@@ -329,7 +329,7 @@ class TestRevenueManagementWorkflow:
         }
         
         response = accountant_client.post(
-            reverse('revenue:invoice_create', kwargs={'contract_id': contract.pk}),
+            reverse('revenue:invoice_create_from_contract', kwargs={'contract_id': contract.pk}),
             invoice_data,
             follow=True
         )

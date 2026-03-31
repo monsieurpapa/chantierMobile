@@ -122,6 +122,25 @@ def accountant_user(db, cabinet):
 
 
 @pytest.fixture
+def director_user(db, cabinet):
+    """Create a director user."""
+    user = User.objects.create_user(
+        username='director',
+        email='director@example.com',
+        password='testpass123',
+        first_name='Director',
+        last_name='Name'
+    )
+    UserCabinetRole.objects.create(
+        user=user,
+        cabinet=cabinet,
+        role=UserRoles.DIRECTOR,
+        status=ApprovalStatus.APPROVED
+    )
+    return user
+
+
+@pytest.fixture
 def authenticated_client(client, user):
     """Authenticated client with regular user."""
     client.login(username='testuser', password='testpass123')
@@ -290,6 +309,7 @@ def expense_factory(db, site, user, expense_category):
             'requester': user,
             'category': expense_category,
             'amount': Decimal('500.00'),
+            'expense_date': date.today(),
             'description': 'Test expense',
             'status': ExpenseStatus.PENDING
         }
