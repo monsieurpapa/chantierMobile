@@ -1,5 +1,6 @@
 
 import os
+import dj_database_url
 from pathlib import Path
 from django.utils.translation import gettext_lazy as _
 
@@ -40,6 +41,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -93,22 +95,21 @@ TEMPLATES = [
 WSGI_APPLICATION = 'chantiermobile.wsgi.application'
 
 # Database
-DB_ENGINE = os.environ.get('DB_ENGINE', 'django.db.backends.sqlite3')
-DB_NAME = os.environ.get('DB_NAME', 'db.sqlite3')
-DB_USER = os.environ.get('DB_USER', '')
-DB_PASSWORD = os.environ.get('DB_PASSWORD', '')
-DB_HOST = os.environ.get('DB_HOST', '')
-DB_PORT = os.environ.get('DB_PORT', '')
+# Prefer DATABASE_URL (set by Render) over individual vars (used locally via docker-compose)
+_db_default = 'postgresql://{user}:{password}@{host}:{port}/{name}'.format(
+    user=os.environ.get('DB_USER', 'postgres'),
+    password=os.environ.get('DB_PASSWORD', 'postgres'),
+    host=os.environ.get('DB_HOST', 'localhost'),
+    port=os.environ.get('DB_PORT', '5432'),
+    name=os.environ.get('DB_NAME', 'postgres'),
+) if not os.environ.get('DATABASE_URL') else ''
 
 DATABASES = {
-    'default': {
-        'ENGINE': DB_ENGINE,
-        'NAME': DB_NAME,
-        'USER': DB_USER,
-        'PASSWORD': DB_PASSWORD,
-        'HOST': DB_HOST,
-        'PORT': DB_PORT,
-    }
+    'default': dj_database_url.config(
+        default=_db_default or 'sqlite:///db.sqlite3',
+        conn_max_age=600,
+        ssl_require=not DEBUG,
+    )
 }
 
 # Password validation
@@ -134,9 +135,16 @@ LOCALE_PATHS = [
 # Language cookie settings
 LANGUAGE_COOKIE_NAME = 'django_language'
 LANGUAGE_COOKIE_AGE = 31536000  # 1 year
-LANGUAGE_COOKIE_SECURE = False  # Set to True in production with HTTPS
+LANGUAGE_COOKIE_SECURE = not DEBUG  # True in production (HTTPS), False locally
 LANGUAGE_COOKIE_HTTPONLY = False  # False so JavaScript can read it if needed
 LANGUAGE_COOKIE_DOMAIN = None  # None for all domains
+
+# Production security
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
 TIME_ZONE = 'Africa/Kigali'
 USE_I18N = True
@@ -146,6 +154,7 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static']
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

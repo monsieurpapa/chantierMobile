@@ -1,0 +1,48 @@
+services:
+  - type: web
+    name: chantiermobile-web
+    runtime: python
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn chantiermobile.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120"
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "0"
+      - key: ALLOWED_HOSTS
+        value: ".onrender.com"
+      - key: PYTHON_VERSION
+        value: "3.12.0"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: chantiermobile-db
+          property: connectionString
+      - key: REDIS_URL
+        sync: false   # paste your Upstash Redis URL here after creating the DB
+
+  - type: worker
+    name: chantiermobile-celery
+    runtime: python
+    buildCommand: "pip install -r requirements.txt"
+    # -B flag runs celery-beat scheduler inside the same worker process (1 dyno = worker + beat)
+    startCommand: "celery -A chantiermobile worker -B --loglevel=info"
+    envVars:
+      - key: SECRET_KEY
+        fromService:
+          name: chantiermobile-web
+          type: web
+          envVarKey: SECRET_KEY
+      - key: DEBUG
+        value: "0"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: chantiermobile-db
+          property: connectionString
+      - key: REDIS_URL
+        sync: false   # paste your Upstash Redis URL here after creating the DB
+
+databases:
+  - name: chantiermobile-db
+    databaseName: chantiermobile
+    user: chantiermobile
+    plan: free

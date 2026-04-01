@@ -8,3 +8,6 @@ flower
 django-celery-results
 django-celery-beat
 django-allauth
+gunicorn
+whitenoise
+dj-database-url
