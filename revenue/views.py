@@ -6,7 +6,7 @@ from django.db.models import Sum
 from django.views.generic import ListView, CreateView, UpdateView, DetailView
 from django.urls import reverse_lazy
 from .models import Contract, Invoice, Payment
-from chantiermobile.constants import InvoiceStatus
+from chantiermobile.constants import InvoiceStatus, UserRoles
 from .forms import ContractForm, InvoiceForm, PaymentForm
 from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin
 from projects.models import Site
@@ -21,7 +21,7 @@ class ContractListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, 
     def get_header_actions(self):
         from accounts.models import UserCabinetRole
         if self.request.user.is_superuser or UserCabinetRole.objects.filter(
-            user=self.request.user, role__in=['DIRECTOR', 'ACCOUNTANT']
+            user=self.request.user, role__in=[UserRoles.DIRECTOR, UserRoles.ACCOUNTANT]
         ).exists():
             return [{
                 'label': 'New Contract',

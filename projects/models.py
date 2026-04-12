@@ -2,7 +2,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from core.models import BaseModel
 from accounts.models import Cabinet
-from chantiermobile.constants import SiteStatus, ProjectConfig
+from chantiermobile.constants import SiteStatus, ProjectConfig, ExpenseStatus
 
 class Site(BaseModel):
     cabinet = models.ForeignKey(Cabinet, on_delete=models.CASCADE, related_name='sites')
@@ -85,7 +85,7 @@ class Site(BaseModel):
 
     @property
     def total_spent(self):
-        return self.expenses.filter(status__in=['APPROVED', 'PAID']).aggregate(
+        return self.expenses.filter(status__in=[ExpenseStatus.APPROVED, ExpenseStatus.PAID]).aggregate(
             total=models.Sum('amount')
         )['total'] or 0
 

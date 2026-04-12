@@ -8,6 +8,7 @@ from .models import Material, MaterialRequest
 from .forms import MaterialForm, MaterialRequestForm, MaterialRequestItemFormSet
 from projects.models import Site
 from core.mixins import RoleRequiredMixin, PageHeaderMixin
+from chantiermobile.constants import UserRoles
 
 # Material Catalog Views
 class MaterialListView(LoginRequiredMixin, PageHeaderMixin, ListView):
@@ -21,7 +22,7 @@ class MaterialListView(LoginRequiredMixin, PageHeaderMixin, ListView):
     def get_header_actions(self):
         from accounts.models import UserCabinetRole
         if self.request.user.is_superuser or UserCabinetRole.objects.filter(
-            user=self.request.user, role__in=['DIRECTOR', 'CHIEF_ENGINEER']
+            user=self.request.user, role__in=[UserRoles.DIRECTOR, UserRoles.CHIEF_ENGINEER]
         ).exists():
             return [{
                 'label': 'Add Material',
@@ -221,7 +222,7 @@ class MaterialRequestDetailView(LoginRequiredMixin, PageHeaderMixin, DetailView)
 def approve_material_request(request, pk):
     if request.method == 'POST':
         mat_request = get_object_or_404(MaterialRequest, pk=pk)
-        if request.user.is_superuser or request.user.cabinet_roles.filter(cabinet=mat_request.site.cabinet, role__in=['DIRECTOR', 'CHIEF_ENGINEER']).exists():
+        if request.user.is_superuser or request.user.cabinet_roles.filter(cabinet=mat_request.site.cabinet, role__in=[UserRoles.DIRECTOR, UserRoles.CHIEF_ENGINEER]).exists():
             action = request.POST.get('action')
             if action == 'approve':
                 mat_request.status = MaterialRequest.Status.APPROVED

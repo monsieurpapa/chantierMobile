@@ -6,6 +6,7 @@ from django.contrib import messages
 from .models import Site, ProjectPhase, SiteProgress
 from .forms import SiteForm, ProjectPhaseForm, SiteProgressForm
 from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin
+from chantiermobile.constants import UserRoles
 
 class SiteListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
     model = Site
@@ -20,7 +21,7 @@ class SiteListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, List
         from accounts.models import UserCabinetRole
         if self.request.user.is_superuser or UserCabinetRole.objects.filter(
             user=self.request.user, 
-            role__in=['DIRECTOR', 'CHIEF_ENGINEER']
+            role__in=[UserRoles.DIRECTOR, UserRoles.CHIEF_ENGINEER]
         ).exists():
             return [{
                 'label': 'Create New Site',
@@ -117,7 +118,7 @@ class SiteDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, De
         actions = []
         
         is_admin = user.is_superuser or UserCabinetRole.objects.filter(
-            user=user, role__in=['DIRECTOR', 'CHIEF_ENGINEER']
+            user=user, role__in=[UserRoles.DIRECTOR, UserRoles.CHIEF_ENGINEER]
         ).exists()
         
         is_director = user.is_superuser or UserCabinetRole.objects.filter(

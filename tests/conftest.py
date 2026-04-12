@@ -204,12 +204,13 @@ def sample_image_file():
     """Sample image file for testing."""
     import io
     from PIL import Image
-    
+    from django.core.files.uploadedfile import SimpleUploadedFile
+
     image = Image.new('RGB', (100, 100), 'red')
     image_io = io.BytesIO()
     image.save(image_io, 'JPEG')
     image_io.seek(0)
-    
+
     return SimpleUploadedFile(
         "test_image.jpg",
         image_io.getvalue(),

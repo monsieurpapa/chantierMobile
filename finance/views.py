@@ -9,7 +9,7 @@ from .models import Expense, ExpenseApproval, Budget
 from .forms import ExpenseForm, BudgetForm
 from projects.models import Site
 from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin
-from chantiermobile.constants import ExpenseStatus
+from chantiermobile.constants import ExpenseStatus, UserRoles
 
 class ExpenseListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
     model = Expense
@@ -88,7 +88,7 @@ class ExpenseDetailView(LoginRequiredMixin, PageHeaderMixin, DetailView):
 def approve_expense(request, pk):
     if request.method == 'POST':
         expense = get_object_or_404(Expense, pk=pk)
-        if request.user.is_superuser or request.user.cabinet_roles.filter(cabinet=expense.site.cabinet, role__in=['DIRECTOR', 'ACCOUNTANT']).exists():
+        if request.user.is_superuser or request.user.cabinet_roles.filter(cabinet=expense.site.cabinet, role__in=[UserRoles.DIRECTOR, UserRoles.ACCOUNTANT]).exists():
             try:
                 expense.approve(request.user, comments=request.POST.get('comments', ''))
                 messages.success(request, "Expense approved.")
@@ -103,7 +103,7 @@ def approve_expense(request, pk):
 def mark_expense_paid(request, pk):
     if request.method == 'POST':
         expense = get_object_or_404(Expense, pk=pk)
-        if request.user.is_superuser or request.user.cabinet_roles.filter(cabinet=expense.site.cabinet, role__in=['DIRECTOR', 'CASHIER']).exists():
+        if request.user.is_superuser or request.user.cabinet_roles.filter(cabinet=expense.site.cabinet, role__in=[UserRoles.DIRECTOR, UserRoles.CASHIER]).exists():
             # Validate expense can be paid
             if not expense.can_be_paid():
                 messages.error(request, f"Only approved expenses can be paid. Current status: {expense.status}.")
@@ -132,7 +132,7 @@ class BudgetListView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, Lis
     def get_header_actions(self):
         from accounts.models import UserCabinetRole
         if self.request.user.is_superuser or UserCabinetRole.objects.filter(
-            user=self.request.user, role__in=['DIRECTOR', 'ACCOUNTANT']
+            user=self.request.user, role__in=[UserRoles.DIRECTOR, UserRoles.ACCOUNTANT]
         ).exists():
             return [{
                 'label': 'Create Budget',
