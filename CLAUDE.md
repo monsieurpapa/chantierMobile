@@ -21,14 +21,24 @@ just test                        # Run all tests
 just test-file tests/test_unit.py  # Single file
 just test-app finance            # Filter by app keyword
 just test-unit                   # Only @pytest.mark.unit
+just test-integration            # Only @pytest.mark.integration
+just test-e2e                    # Only @pytest.mark.e2e
 just test-fast                   # Stop on first failure (-x)
 just test-debug                  # With pdb on failure
+just test-coverage               # With HTML coverage report
 
 # Code quality
 just lint            # flake8
 just format          # black
 just sort-imports    # isort
 just quality         # all three together
+
+# Data management
+just load-sample-data          # loaddata sample_data.json
+# Or use management commands directly:
+# python manage.py seed_sample_data
+# python manage.py clear_sample_data
+# python manage.py populate_materials
 
 # i18n
 just i18n-extract    # makemessages (fr + en)
@@ -99,6 +109,39 @@ Default language is French (`fr`). English (`en`) is also supported. Translation
 ### Shared constants
 
 `chantiermobile/constants.py` is the single source of truth for all `TextChoices` enums (`UserRoles`, `SiteStatus`, `ExpenseStatus`, `InvoiceStatus`, `PaymentMethod`, etc.). Always import from there rather than defining inline string literals.
+
+### View composition
+
+All views follow this mixin stack (order matters for MRO):
+
+```python
+class MyView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, RoleRequiredMixin, ListView):
+    allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER']
+    header_title = "..."
+    header_subtitle = "..."
+    back_url = reverse_lazy('app:list')
+```
+
+- `CabinetAccessMixin` — filters `get_queryset()` to the user's cabinets; use `get_user_cabinet()` on create views.
+- `RoleRequiredMixin` — add `allowed_roles` class attribute; omit if any authenticated user should have access.
+- `PageHeaderMixin` — injects `header_title`, `header_subtitle`, `breadcrumb_items`, `back_url`, `header_actions` into context.
+
+For template-level role checks, use the `has_role` filter from `core/templatetags/rbac_tags.py`:
+
+```html
+{% load rbac_tags %}
+{% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER' %}...{% endif %}
+```
+
+### Celery
+
+Celery is configured in `chantiermobile/celery.py`. Workers and the beat scheduler run as separate Docker services.
+
+- `django_celery_beat` — stores periodic task schedules in the DB (manageable via Django admin).
+- `django_celery_results` — persists task results to the DB.
+- `revenue/tasks.py` — `mark_overdue_invoices` runs daily at 01:00 Africa/Kigali to transition SENT → OVERDUE invoices.
+
+New tasks go in `<app>/tasks.py` and use `@shared_task`. Periodic schedules are registered in Django admin under **Periodic Tasks**.
 
 ### Testing
 
