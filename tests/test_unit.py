@@ -165,9 +165,68 @@ class TestValidators:
 
 
 @pytest.mark.unit
+@pytest.mark.django_db
+class TestSoftDeleteCascade:
+    """Regression tests for Site.delete() cascade soft-delete (fix: 7dfbc03)."""
+
+    def test_site_delete_cascades_to_expenses(self, site, expense):
+        """Soft-deleting a site must mark its expenses as deleted."""
+        from finance.models import Expense
+        assert not expense.is_deleted
+        site.delete()
+        expense.refresh_from_db()
+        assert expense.is_deleted
+
+    def test_site_delete_cascades_to_contract_and_invoices(self, site, contract, invoice):
+        """Soft-deleting a site must cascade to contract and invoices."""
+        from revenue.models import Contract, Invoice
+        assert not contract.is_deleted
+        assert not invoice.is_deleted
+        site.delete()
+        contract.refresh_from_db()
+        invoice.refresh_from_db()
+        assert contract.is_deleted
+        assert invoice.is_deleted
+
+    def test_site_delete_cascades_to_budget(self, site):
+        """Soft-deleting a site must cascade to its budget."""
+        from finance.models import Budget
+        from datetime import timedelta
+        budget = Budget.objects.create(
+            site=site,
+            total_amount=Decimal('5000.00'),
+            start_date=date.today(),
+            end_date=date.today() + timedelta(days=30),
+        )
+        site.delete()
+        budget.refresh_from_db()
+        assert budget.is_deleted
+
+
+@pytest.mark.unit
+@pytest.mark.django_db
+class TestApprovalViewAuth:
+    """Regression tests for @login_required on approval FBVs (fix: 7dfbc03)."""
+
+    def test_approve_expense_requires_login(self, client, expense):
+        """Unauthenticated POST to approve_expense must redirect to login, not 500."""
+        url = reverse('finance:expense_approve', kwargs={'pk': expense.pk})
+        response = client.post(url)
+        assert response.status_code == 302
+        assert '/login' in response['Location'] or 'login' in response['Location']
+
+    def test_mark_expense_paid_requires_login(self, client, expense):
+        """Unauthenticated POST to mark_expense_paid must redirect to login, not 500."""
+        url = reverse('finance:expense_pay', kwargs={'pk': expense.pk})
+        response = client.post(url)
+        assert response.status_code == 302
+        assert '/login' in response['Location'] or 'login' in response['Location']
+
+
+@pytest.mark.unit
 class TestMixins:
     """Test custom mixins."""
-    
+
     def test_cabinet_access_mixin_logic(self, user, cabinet):
         """Test CabinetAccessMixin logic."""
         # User with cabinet role should have access

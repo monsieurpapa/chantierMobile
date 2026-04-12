@@ -8,8 +8,8 @@ ENV PYTHONUNBUFFERED 1
 RUN apk update \
     && apk add --no-cache postgresql-dev gcc python3-dev musl-dev gettext
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements.txt requirements-test.txt ./
+RUN pip install --no-cache-dir -r requirements.txt -r requirements-test.txt
 
 COPY . .
 
