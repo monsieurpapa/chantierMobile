@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ChantiérMobile 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-04-13 01:18+0200\n"
+"POT-Creation-Date: 2026-04-13 01:23+0200\n"
 "PO-Revision-Date: 2026-01-26 17:00+0000\n"
 "Last-Translator: ChantiérMobile Team\n"
 "Language-Team: French\n"
@@ -1145,6 +1145,33 @@ msgstr "Assurez-vous que l'adresse est correcte et que la page n'a pas été dé
 #: templates/404.html:21
 msgid "Return to Dashboard"
 msgstr "Retour au Tableau de Bord"
+
+#: templates/account/account_confirm_email.html:18
+#: templates/account/account_confirm_email.html:26
+#, fuzzy
+#| msgid "Confirm E-mail Address"
+msgid "Confirm Email Address"
+msgstr "Confirmer l'adresse e-mail"
+
+#: templates/account/account_confirm_email.html:20
+#, python-format
+msgid "Please confirm that <b><a href=\"mailto:%(email)s\">%(email)s</a></b> is an email address for user <b>%(user_display)s.</b>"
+msgstr ""
+
+#: templates/account/account_confirm_email.html:22
+#, fuzzy
+#| msgid "Confirm Delete"
+msgid "Confirm"
+msgstr "Confirmer la suppression"
+
+#: templates/account/account_confirm_email.html:28
+#, python-format
+msgid "This email confirmation link expired or is invalid. Please <b><a href=\"%(email_url)s\">issue a new email confirmation request</a></b>."
+msgstr ""
+
+#: templates/account/account_confirm_email.html:32
+msgid "Home"
+msgstr "Accueil"
 
 #: templates/account/admin_assign_user_to_cabinet.html:17
 msgid "Add a user to"
