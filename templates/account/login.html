@@ -51,21 +51,21 @@
                             </div>
                           </div> -->
                     <div class="col-auto">
-                      <a class="fs--1" href="{% url 'account_reset_password' %}">Forgot your password?</a>
+                      <a class="fs--1" href="{% url 'account_reset_password' %}">{% trans "Forgot your password?" %}</a>
                     </div>
                   </div>
                   <div class="mb-3">
-                    <button class="btn btn-primary d-block w-100 mt-3" type="submit" name="submit">Log in</button>
+                    <button class="btn btn-primary d-block w-100 mt-3" type="submit" name="submit">{% trans "Log in" %}</button>
                   </div>
                 </form>
                 <div class="position-relative mt-4">
                   <hr class="bg-300" />
-                  <div class="divider-content-center">or Sign Up now!</div>
+                  <div class="divider-content-center">{% trans "or Sign Up now!" %}</div>
                 </div>
                 <div class="row g-2 mt-2">
                   <div class="col-sm-12"><a class="btn btn-outline-secondary btn-sm d-block w-100"
                       href="{% url 'account_signup' %}"><span class="fas fa-user-plus me-2"
-                        data-fa-transform="grow-8"></span>Sign Up</a></div>
+                        data-fa-transform="grow-8"></span>{% trans "Sign Up" %}</a></div>
                 </div>
               </div>
             </div>

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ChantiérMobile 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-04-01 01:09+0200\n"
+"POT-Creation-Date: 2026-04-13 01:18+0200\n"
 "PO-Revision-Date: 2026-01-26 17:00+0000\n"
 "Last-Translator: ChantiérMobile Team\n"
 "Language-Team: English\n"
@@ -418,11 +418,11 @@ msgstr ""
 msgid "You do not have permission to perform this action."
 msgstr ""
 
-#: chantiermobile/settings.py:126
+#: chantiermobile/settings.py:127
 msgid "Français"
 msgstr "French"
 
-#: chantiermobile/settings.py:127
+#: chantiermobile/settings.py:128
 msgid "English"
 msgstr "English"
 
@@ -1100,7 +1100,7 @@ msgstr ""
 #: templates/account/admin_cabinet_confirm_delete.html:48
 #: templates/account/admin_cabinet_detail.html:51
 #: templates/account/admin_cabinet_form.html:40
-#: templates/account/admin_cabinet_form.html:146
+#: templates/account/admin_cabinet_form.html:146 templates/home.html:138
 msgid "Cabinet Information"
 msgstr ""
 
@@ -1277,10 +1277,8 @@ msgstr ""
 #, python-format
 msgid ""
 "\n"
-"                        You are about to permanently delete the cabinet "
-"<strong>%(object.name)s</strong>. \n"
-"                        This action cannot be undone and will remove all "
-"associated data.\n"
+"                        You are about to permanently delete the cabinet <strong>%(object.name)s</strong>. \n"
+"                        This action cannot be undone and will remove all associated data.\n"
 "                        "
 msgstr ""
 
@@ -1303,13 +1301,11 @@ msgstr ""
 #, python-format
 msgid ""
 "\n"
-"                    This cabinet has %(counter)s user assignment. It will "
-"also be deleted.\n"
+"                    This cabinet has %(counter)s user assignment. It will also be deleted.\n"
 "                    "
 msgid_plural ""
 "\n"
-"                    This cabinet has %(counter)s user assignments. They will "
-"also be deleted.\n"
+"                    This cabinet has %(counter)s user assignments. They will also be deleted.\n"
 "                    "
 msgstr[0] ""
 msgstr[1] ""
@@ -1321,8 +1317,7 @@ msgid "Confirm Deletion"
 msgstr ""
 
 #: templates/account/admin_cabinet_confirm_delete.html:128
-msgid ""
-"To permanently delete this cabinet and all its data, click the button below:"
+msgid "To permanently delete this cabinet and all its data, click the button below:"
 msgstr ""
 
 #: templates/account/admin_cabinet_confirm_delete.html:133
@@ -1485,9 +1480,7 @@ msgstr ""
 
 #: templates/account/admin_cabinet_user_role_confirm_delete.html:14
 #, python-format
-msgid ""
-"You are about to remove %(user.get_full_name|default:user.username)s from "
-"%(cabinet.name)s."
+msgid "You are about to remove %(user.get_full_name|default:user.username)s from %(cabinet.name)s."
 msgstr ""
 
 #: templates/account/admin_cabinet_user_role_confirm_delete.html:17
@@ -1694,9 +1687,7 @@ msgid "Warning: This Action Cannot Be Undone"
 msgstr ""
 
 #: templates/account/admin_user_delete.html:50
-msgid ""
-"Once you delete this user account, all associated data will be permanently "
-"removed from the system. Please ensure this is the correct action."
+msgid "Once you delete this user account, all associated data will be permanently removed from the system. Please ensure this is the correct action."
 msgstr ""
 
 #: templates/account/admin_user_delete.html:59
@@ -2097,8 +2088,7 @@ msgid "Manage Users"
 msgstr ""
 
 #: templates/account/cabinets.html:357
-msgid ""
-"As a superadmin, you have access to comprehensive cabinet management tools:"
+msgid "As a superadmin, you have access to comprehensive cabinet management tools:"
 msgstr ""
 
 #: templates/account/cabinets.html:365
@@ -2114,8 +2104,7 @@ msgid "Role Management"
 msgstr ""
 
 #: templates/account/cabinets.html:377
-msgid ""
-"Define roles: Director, Chief Engineer, Engineer, Accountant, Cashier, Worker"
+msgid "Define roles: Director, Chief Engineer, Engineer, Accountant, Cashier, Worker"
 msgstr ""
 
 #: templates/account/cabinets.html:387
@@ -2132,25 +2121,14 @@ msgid ""
 "Hello from the <b>%(site_name)s</b>!\n"
 "</p>\n"
 "\n"
-"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-"
-"serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: "
-"1.6;color: #999999;\">\n"
-"    You're receiving this e-mail because <b>%(user_display)s</b> has been "
-"registered at %(site_domain)s.\n"
+"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: 1.6;color: #999999;\">\n"
+"    You're receiving this e-mail because <b>%(user_display)s</b> has been registered at %(site_domain)s.\n"
 "</p>\n"
 "\n"
-"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-"
-"serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: "
-"1.6;color: #999999;\">\n"
-"To confirm that this is correct, please click on the \"Confirm\" button "
-"below. \n"
+"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: 1.6;color: #999999;\">\n"
+"To confirm that this is correct, please click on the \"Confirm\" button below. \n"
 "<br/>\n"
-"<a href=\"%(activate_url)s\" target=\"_blank\" style=\"display: inline-"
-"block; color: #ffffff; background-color: #3498db; border: solid 1px #3498db; "
-"border-radius: 5px; box-sizing: border-box; cursor: pointer; text-"
-"decoration: none; font-size: 14px; font-weight: bold; margin: 0; padding: "
-"12px 25px; text-transform: capitalize; border-color: #3498db;\">Confirm</"
-"a> \n"
+"<a href=\"%(activate_url)s\" target=\"_blank\" style=\"display: inline-block; color: #ffffff; background-color: #3498db; border: solid 1px #3498db; border-radius: 5px; box-sizing: border-box; cursor: pointer; text-decoration: none; font-size: 14px; font-weight: bold; margin: 0; padding: 12px 25px; text-transform: capitalize; border-color: #3498db;\">Confirm</a> \n"
 "\n"
 msgstr ""
 
@@ -2159,9 +2137,7 @@ msgstr ""
 msgid ""
 "Hello from %(site_name)s!\n"
 "\n"
-"You're receiving this e-mail because user %(user_display)s at "
-"%(site_domain)s has given yours as an e-mail address to connect their "
-"account.\n"
+"You're receiving this e-mail because user %(user_display)s at %(site_domain)s has given yours as an e-mail address to connect their account.\n"
 "\n"
 "To confirm this is correct, go to %(activate_url)s\n"
 msgstr ""
@@ -2181,35 +2157,21 @@ msgstr ""
 #, python-format
 msgid ""
 "\n"
-"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-"
-"serif;margin-bottom: 30px;font-weight: normal;font-size: 13px;line-height: "
-"1.6;color: #999999;\">\n"
+"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-serif;margin-bottom: 30px;font-weight: normal;font-size: 13px;line-height: 1.6;color: #999999;\">\n"
 "    Hello from the <b>%(site_name)s</b>!\n"
 "</p>\n"
 "\n"
-"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-"
-"serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: "
-"1.6;color: #999999;\">\n"
-"    You're receiving this e-mail because you or someone else has requested a "
-"password for your user account at %(site_domain)s. \n"
+"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: 1.6;color: #999999;\">\n"
+"    You're receiving this e-mail because you or someone else has requested a password for your user account at %(site_domain)s. \n"
 "</p>\n"
 "\n"
-"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-"
-"serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: "
-"1.6;color: #999999;\">\n"
-"    To confirm, please click on the reset button below to reset your "
-"password.\n"
+"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: 1.6;color: #999999;\">\n"
+"    To confirm, please click on the reset button below to reset your password.\n"
 "</p>\n"
 "\n"
-"<a href=\"%(password_reset_url)s\" target=\"_blank\" style=\"display: inline-"
-"block; color: #ffffff; background-color: #3498db; border: solid 1px #3498db; "
-"border-radius: 5px; box-sizing: border-box; cursor: pointer; text-"
-"decoration: none; font-size: 14px; font-weight: bold; margin: 0; padding: "
-"12px 25px; text-transform: capitalize; border-color: #3498db;\">Reset</a> \n"
+"<a href=\"%(password_reset_url)s\" target=\"_blank\" style=\"display: inline-block; color: #ffffff; background-color: #3498db; border: solid 1px #3498db; border-radius: 5px; box-sizing: border-box; cursor: pointer; text-decoration: none; font-size: 14px; font-weight: bold; margin: 0; padding: 12px 25px; text-transform: capitalize; border-color: #3498db;\">Reset</a> \n"
 "\n"
-"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-"
-"serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: "
-"1.6;color: #999999;\">\n"
+"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: 1.6;color: #999999;\">\n"
 "    It can be safely ignored if you did not request a password reset."
 msgstr ""
 
@@ -2218,10 +2180,8 @@ msgstr ""
 msgid ""
 "Hello from %(site_name)s!\n"
 "\n"
-"You're receiving this e-mail because you or someone else has requested a "
-"password for your user account at %(site_domain)s.\n"
-"It can be safely ignored if you did not request a password reset. Click the "
-"link below to reset your password."
+"You're receiving this e-mail because you or someone else has requested a password for your user account at %(site_domain)s.\n"
+"It can be safely ignored if you did not request a password reset. Click the link below to reset your password."
 msgstr ""
 
 #: templates/account/email/password_reset_key_message.txt:8
@@ -2240,12 +2200,28 @@ msgstr ""
 msgid "Password Reset E-mail"
 msgstr ""
 
-#: templates/account/login.html:24
+#: templates/account/login.html:21
 msgid "Welcome to Assistance Technique en Genie Civil's Self Service Portal"
 msgstr ""
 
-#: templates/account/login.html:36 templates/account/signup.html:28
+#: templates/account/login.html:33 templates/account/signup.html:28
 msgid "Login"
+msgstr ""
+
+#: templates/account/login.html:54
+msgid "Forgot your password?"
+msgstr ""
+
+#: templates/account/login.html:58
+msgid "Log in"
+msgstr ""
+
+#: templates/account/login.html:63
+msgid "or Sign Up now!"
+msgstr ""
+
+#: templates/account/login.html:68
+msgid "Sign Up"
 msgstr ""
 
 #: templates/account/signup.html:26
@@ -2280,8 +2256,7 @@ msgid "Viewing data from your assigned cabinets only"
 msgstr ""
 
 #: templates/account/user_profile_update.html:66
-msgid ""
-"You have not been assigned to any cabinet yet. Contact your administrator."
+msgid "You have not been assigned to any cabinet yet. Contact your administrator."
 msgstr ""
 
 #: templates/account/user_profile_update.html:145
@@ -2289,9 +2264,7 @@ msgid "Cabinet Roles & Permissions"
 msgstr ""
 
 #: templates/account/user_profile_update.html:151
-msgid ""
-"Your access to projects, materials, expenses, and invoices is controlled by "
-"your assigned roles."
+msgid "Your access to projects, materials, expenses, and invoices is controlled by your assigned roles."
 msgstr ""
 
 #: templates/account/user_profile_update.html:203
@@ -2382,13 +2355,11 @@ msgstr ""
 #, python-format
 msgid ""
 "\n"
-"                                        You have %(counter)s item awaiting "
-"approval\n"
+"                                        You have %(counter)s item awaiting approval\n"
 "                                    "
 msgid_plural ""
 "\n"
-"                                        You have %(counter)s items awaiting "
-"approval\n"
+"                                        You have %(counter)s items awaiting approval\n"
 "                                    "
 msgstr[0] ""
 msgstr[1] ""
@@ -2416,9 +2387,7 @@ msgid "Chantier Mobile Dashboard"
 msgstr ""
 
 #: templates/home.html:23
-msgid ""
-"Enterprise Resource Planning for Construction Sites. Monitor progress, "
-"manage personnel, and track finances in real-time."
+msgid "Enterprise Resource Planning for Construction Sites. Monitor progress, manage personnel, and track finances in real-time."
 msgstr ""
 
 #: templates/home.html:25
@@ -2427,6 +2396,77 @@ msgstr ""
 
 #: templates/home.html:26
 msgid "New Project"
+msgstr ""
+
+#: templates/home.html:44
+msgid "Projects & Sites"
+msgstr ""
+
+#: templates/home.html:45
+msgid "Track construction progress, milestones, and daily site logs."
+msgstr ""
+
+#: templates/home.html:58 templates/personnel/assignment_form.html:32
+#: templates/projects/site_detail.html:103
+msgid "Personnel"
+msgstr ""
+
+#: templates/home.html:59
+msgid "Manage workers, trade skills, and site-specific staff assignments."
+msgstr ""
+
+#: templates/home.html:73
+msgid "Finance & Expenses"
+msgstr ""
+
+#: templates/home.html:74
+msgid "Monitor project budgets, approve expenses, and track cash flow."
+msgstr ""
+
+#: templates/home.html:87
+msgid "Materials & Stock"
+msgstr ""
+
+#: templates/home.html:88
+msgid "Manage equipment inventory and handle on-site material requests."
+msgstr ""
+
+#: templates/home.html:101
+#, fuzzy
+#| msgid "Directeur de Cabinet"
+msgid "Revenue & Contracts"
+msgstr "Cabinet Director"
+
+#: templates/home.html:103
+msgid "Manage client contracts, milestones, and payment collections."
+msgstr ""
+
+#: templates/home.html:115 templates/includes/navbar-vertical.html:207
+msgid "System Admin"
+msgstr ""
+
+#: templates/home.html:117
+msgid "Configure company settings, user roles, and system security."
+msgstr ""
+
+#: templates/home.html:127
+#, fuzzy
+#| msgid "Actif"
+msgid "System Activity"
+msgstr "Active"
+
+#: templates/home.html:130
+msgid "Real-time activity logs will appear here as projects progress."
+msgstr ""
+
+#: templates/home.html:147
+#, fuzzy
+#| msgid "Directeur de Cabinet"
+msgid "Active Session"
+msgstr "Cabinet Director"
+
+#: templates/home.html:151
+msgid "Ensure all daily reports are submitted before the end of the business day for accurate tracking."
 msgstr ""
 
 #: templates/includes/language-switcher.html:10
@@ -2449,17 +2489,8 @@ msgstr "Logout"
 msgid "Administration"
 msgstr ""
 
-#: templates/includes/navbar-vertical.html:207
-msgid "System Admin"
-msgstr ""
-
 #: templates/personnel/assignment_form.html:25
 msgid "Assign Personnel to Site"
-msgstr ""
-
-#: templates/personnel/assignment_form.html:32
-#: templates/projects/site_detail.html:103
-msgid "Personnel"
 msgstr ""
 
 #: templates/personnel/assignment_form.html:49
@@ -2479,8 +2510,7 @@ msgid "Daily Rate ($)"
 msgstr ""
 
 #: templates/personnel/assignment_form.html:83
-msgid ""
-"This overrides the worker's default daily rate for this specific project."
+msgid "This overrides the worker's default daily rate for this specific project."
 msgstr ""
 
 #: templates/personnel/assignment_form.html:93

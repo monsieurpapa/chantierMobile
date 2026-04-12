@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ChantiérMobile 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-04-01 01:08+0200\n"
+"POT-Creation-Date: 2026-04-13 01:18+0200\n"
 "PO-Revision-Date: 2026-01-26 17:00+0000\n"
 "Last-Translator: ChantiérMobile Team\n"
 "Language-Team: French\n"
@@ -80,9 +80,7 @@ msgstr "Votre profil a été mis à jour avec succès."
 
 #: accounts/views.py:155
 msgid "There was an error updating your profile. Please check the form."
-msgstr ""
-"Une erreur est survenue lors de la mise à jour de votre profil. Veuillez "
-"vérifier le formulaire."
+msgstr "Une erreur est survenue lors de la mise à jour de votre profil. Veuillez vérifier le formulaire."
 
 #: accounts/views.py:170 accounts/views.py:375
 msgid "You do not have permission to access this page."
@@ -426,11 +424,11 @@ msgstr "Limite budgétaire dépassée."
 msgid "You do not have permission to perform this action."
 msgstr "Vous n'avez pas la permission d'accéder à cette page."
 
-#: chantiermobile/settings.py:126
+#: chantiermobile/settings.py:127
 msgid "Français"
 msgstr "Français"
 
-#: chantiermobile/settings.py:127
+#: chantiermobile/settings.py:128
 msgid "English"
 msgstr "English"
 
@@ -1142,8 +1140,7 @@ msgstr "La page que vous cherchez n'est pas trouvée."
 
 #: templates/404.html:19
 msgid "Make sure the address is correct and that the page hasn't moved."
-msgstr ""
-"Assurez-vous que l'adresse est correcte et que la page n'a pas été déplacée."
+msgstr "Assurez-vous que l'adresse est correcte et que la page n'a pas été déplacée."
 
 #: templates/404.html:21
 msgid "Return to Dashboard"
@@ -1163,7 +1160,7 @@ msgstr "Retour au cabinet"
 #: templates/account/admin_cabinet_confirm_delete.html:48
 #: templates/account/admin_cabinet_detail.html:51
 #: templates/account/admin_cabinet_form.html:40
-#: templates/account/admin_cabinet_form.html:146
+#: templates/account/admin_cabinet_form.html:146 templates/home.html:138
 msgid "Cabinet Information"
 msgstr "Informations du cabinet"
 
@@ -1340,17 +1337,13 @@ msgstr "Avertissement : Suppression définitive"
 #, python-format
 msgid ""
 "\n"
-"                        You are about to permanently delete the cabinet "
-"<strong>%(object.name)s</strong>. \n"
-"                        This action cannot be undone and will remove all "
-"associated data.\n"
+"                        You are about to permanently delete the cabinet <strong>%(object.name)s</strong>. \n"
+"                        This action cannot be undone and will remove all associated data.\n"
 "                        "
 msgstr ""
 "\n"
-"                        Vous êtes sur le point de supprimer définitivement le cabinet "
-"<strong>%(object.name)s</strong>. \n"
-"                        Cette action est irréversible et supprimera toutes "
-"les données associées.\n"
+"                        Vous êtes sur le point de supprimer définitivement le cabinet <strong>%(object.name)s</strong>. \n"
+"                        Cette action est irréversible et supprimera toutes les données associées.\n"
 "                        "
 
 #: templates/account/admin_cabinet_confirm_delete.html:71
@@ -1372,23 +1365,19 @@ msgstr "Nombre total d'utilisateurs"
 #, python-format
 msgid ""
 "\n"
-"                    This cabinet has %(counter)s user assignment. It will "
-"also be deleted.\n"
+"                    This cabinet has %(counter)s user assignment. It will also be deleted.\n"
 "                    "
 msgid_plural ""
 "\n"
-"                    This cabinet has %(counter)s user assignments. They will "
-"also be deleted.\n"
+"                    This cabinet has %(counter)s user assignments. They will also be deleted.\n"
 "                    "
 msgstr[0] ""
 "\n"
-"                    Ce cabinet a %(counter)s affectation d'utilisateur. Elle sera "
-"également supprimée.\n"
+"                    Ce cabinet a %(counter)s affectation d'utilisateur. Elle sera également supprimée.\n"
 "                    "
 msgstr[1] ""
 "\n"
-"                    Ce cabinet a %(counter)s affectations d'utilisateurs. Elles seront "
-"également supprimées.\n"
+"                    Ce cabinet a %(counter)s affectations d'utilisateurs. Elles seront également supprimées.\n"
 "                    "
 
 #: templates/account/admin_cabinet_confirm_delete.html:124
@@ -1398,8 +1387,7 @@ msgid "Confirm Deletion"
 msgstr "Confirmer la suppression"
 
 #: templates/account/admin_cabinet_confirm_delete.html:128
-msgid ""
-"To permanently delete this cabinet and all its data, click the button below:"
+msgid "To permanently delete this cabinet and all its data, click the button below:"
 msgstr "Pour supprimer définitivement ce cabinet et toutes ses données, cliquez sur le bouton ci-dessous :"
 
 #: templates/account/admin_cabinet_confirm_delete.html:133
@@ -1562,12 +1550,8 @@ msgstr "Confirmer le retrait"
 
 #: templates/account/admin_cabinet_user_role_confirm_delete.html:14
 #, python-format
-msgid ""
-"You are about to remove %(user.get_full_name|default:user.username)s from "
-"%(cabinet.name)s."
-msgstr ""
-"Vous êtes sur le point de retirer %(user.get_full_name|default:user.username)s du "
-"cabinet %(cabinet.name)s."
+msgid "You are about to remove %(user.get_full_name|default:user.username)s from %(cabinet.name)s."
+msgstr "Vous êtes sur le point de retirer %(user.get_full_name|default:user.username)s du cabinet %(cabinet.name)s."
 
 #: templates/account/admin_cabinet_user_role_confirm_delete.html:17
 msgid "Yes, remove user"
@@ -1773,12 +1757,8 @@ msgid "Warning: This Action Cannot Be Undone"
 msgstr "Avertissement : Cette action est irréversible"
 
 #: templates/account/admin_user_delete.html:50
-msgid ""
-"Once you delete this user account, all associated data will be permanently "
-"removed from the system. Please ensure this is the correct action."
-msgstr ""
-"Une fois ce compte utilisateur supprimé, toutes les données associées seront "
-"définitivement supprimées du système. Veuillez vous assurer que cette action est correcte."
+msgid "Once you delete this user account, all associated data will be permanently removed from the system. Please ensure this is the correct action."
+msgstr "Une fois ce compte utilisateur supprimé, toutes les données associées seront définitivement supprimées du système. Veuillez vous assurer que cette action est correcte."
 
 #: templates/account/admin_user_delete.html:59
 #: templates/account/assign_user_to_cabinet.html:44
@@ -2184,10 +2164,8 @@ msgid "Manage Users"
 msgstr "Gérer les utilisateurs"
 
 #: templates/account/cabinets.html:357
-msgid ""
-"As a superadmin, you have access to comprehensive cabinet management tools:"
-msgstr ""
-"En tant que superadministrateur, vous avez accès à des outils complets de gestion des cabinets :"
+msgid "As a superadmin, you have access to comprehensive cabinet management tools:"
+msgstr "En tant que superadministrateur, vous avez accès à des outils complets de gestion des cabinets :"
 
 #: templates/account/cabinets.html:365
 msgid "Cabinet Assignments"
@@ -2202,10 +2180,8 @@ msgid "Role Management"
 msgstr "Gestion des rôles"
 
 #: templates/account/cabinets.html:377
-msgid ""
-"Define roles: Director, Chief Engineer, Engineer, Accountant, Cashier, Worker"
-msgstr ""
-"Définir les rôles : Directeur, Chef des ingénieurs, Ingénieur, Comptable, Caissier, Ouvrier"
+msgid "Define roles: Director, Chief Engineer, Engineer, Accountant, Cashier, Worker"
+msgstr "Définir les rôles : Directeur, Chef des ingénieurs, Ingénieur, Comptable, Caissier, Ouvrier"
 
 #: templates/account/cabinets.html:387
 msgid "Approval Workflow"
@@ -2221,49 +2197,27 @@ msgid ""
 "Hello from the <b>%(site_name)s</b>!\n"
 "</p>\n"
 "\n"
-"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-"
-"serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: "
-"1.6;color: #999999;\">\n"
-"    You're receiving this e-mail because <b>%(user_display)s</b> has been "
-"registered at %(site_domain)s.\n"
+"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: 1.6;color: #999999;\">\n"
+"    You're receiving this e-mail because <b>%(user_display)s</b> has been registered at %(site_domain)s.\n"
 "</p>\n"
 "\n"
-"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-"
-"serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: "
-"1.6;color: #999999;\">\n"
-"To confirm that this is correct, please click on the \"Confirm\" button "
-"below. \n"
+"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: 1.6;color: #999999;\">\n"
+"To confirm that this is correct, please click on the \"Confirm\" button below. \n"
 "<br/>\n"
-"<a href=\"%(activate_url)s\" target=\"_blank\" style=\"display: inline-"
-"block; color: #ffffff; background-color: #3498db; border: solid 1px #3498db; "
-"border-radius: 5px; box-sizing: border-box; cursor: pointer; text-"
-"decoration: none; font-size: 14px; font-weight: bold; margin: 0; padding: "
-"12px 25px; text-transform: capitalize; border-color: #3498db;\">Confirm</"
-"a> \n"
+"<a href=\"%(activate_url)s\" target=\"_blank\" style=\"display: inline-block; color: #ffffff; background-color: #3498db; border: solid 1px #3498db; border-radius: 5px; box-sizing: border-box; cursor: pointer; text-decoration: none; font-size: 14px; font-weight: bold; margin: 0; padding: 12px 25px; text-transform: capitalize; border-color: #3498db;\">Confirm</a> \n"
 "\n"
 msgstr ""
 "Bonjour de la part de <b>%(site_name)s</b> !\n"
 "</p>\n"
 "\n"
-"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-"
-"serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: "
-"1.6;color: #999999;\">\n"
-"    Vous recevez cet e-mail parce que <b>%(user_display)s</b> a été "
-"enregistré sur %(site_domain)s.\n"
+"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: 1.6;color: #999999;\">\n"
+"    Vous recevez cet e-mail parce que <b>%(user_display)s</b> a été enregistré sur %(site_domain)s.\n"
 "</p>\n"
 "\n"
-"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-"
-"serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: "
-"1.6;color: #999999;\">\n"
-"Pour confirmer que c'est bien correct, veuillez cliquer sur le bouton « Confirmer » "
-"ci-dessous. \n"
+"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: 1.6;color: #999999;\">\n"
+"Pour confirmer que c'est bien correct, veuillez cliquer sur le bouton « Confirmer » ci-dessous. \n"
 "<br/>\n"
-"<a href=\"%(activate_url)s\" target=\"_blank\" style=\"display: inline-"
-"block; color: #ffffff; background-color: #3498db; border: solid 1px #3498db; "
-"border-radius: 5px; box-sizing: border-box; cursor: pointer; text-"
-"decoration: none; font-size: 14px; font-weight: bold; margin: 0; padding: "
-"12px 25px; text-transform: capitalize; border-color: #3498db;\">Confirmer</"
-"a> \n"
+"<a href=\"%(activate_url)s\" target=\"_blank\" style=\"display: inline-block; color: #ffffff; background-color: #3498db; border: solid 1px #3498db; border-radius: 5px; box-sizing: border-box; cursor: pointer; text-decoration: none; font-size: 14px; font-weight: bold; margin: 0; padding: 12px 25px; text-transform: capitalize; border-color: #3498db;\">Confirmer</a> \n"
 "\n"
 
 #: templates/account/email/email_confirmation_message.txt:5
@@ -2271,17 +2225,13 @@ msgstr ""
 msgid ""
 "Hello from %(site_name)s!\n"
 "\n"
-"You're receiving this e-mail because user %(user_display)s at "
-"%(site_domain)s has given yours as an e-mail address to connect their "
-"account.\n"
+"You're receiving this e-mail because user %(user_display)s at %(site_domain)s has given yours as an e-mail address to connect their account.\n"
 "\n"
 "To confirm this is correct, go to %(activate_url)s\n"
 msgstr ""
 "Bonjour de la part de %(site_name)s !\n"
 "\n"
-"Vous recevez cet e-mail parce que l'utilisateur %(user_display)s sur "
-"%(site_domain)s a fourni votre adresse e-mail pour connecter son "
-"compte.\n"
+"Vous recevez cet e-mail parce que l'utilisateur %(user_display)s sur %(site_domain)s a fourni votre adresse e-mail pour connecter son compte.\n"
 "\n"
 "Pour confirmer que c'est bien correct, rendez-vous sur %(activate_url)s\n"
 
@@ -2302,67 +2252,39 @@ msgstr "Confirmer l'adresse e-mail"
 #, python-format
 msgid ""
 "\n"
-"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-"
-"serif;margin-bottom: 30px;font-weight: normal;font-size: 13px;line-height: "
-"1.6;color: #999999;\">\n"
+"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-serif;margin-bottom: 30px;font-weight: normal;font-size: 13px;line-height: 1.6;color: #999999;\">\n"
 "    Hello from the <b>%(site_name)s</b>!\n"
 "</p>\n"
 "\n"
-"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-"
-"serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: "
-"1.6;color: #999999;\">\n"
-"    You're receiving this e-mail because you or someone else has requested a "
-"password for your user account at %(site_domain)s. \n"
+"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: 1.6;color: #999999;\">\n"
+"    You're receiving this e-mail because you or someone else has requested a password for your user account at %(site_domain)s. \n"
 "</p>\n"
 "\n"
-"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-"
-"serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: "
-"1.6;color: #999999;\">\n"
-"    To confirm, please click on the reset button below to reset your "
-"password.\n"
+"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: 1.6;color: #999999;\">\n"
+"    To confirm, please click on the reset button below to reset your password.\n"
 "</p>\n"
 "\n"
-"<a href=\"%(password_reset_url)s\" target=\"_blank\" style=\"display: inline-"
-"block; color: #ffffff; background-color: #3498db; border: solid 1px #3498db; "
-"border-radius: 5px; box-sizing: border-box; cursor: pointer; text-"
-"decoration: none; font-size: 14px; font-weight: bold; margin: 0; padding: "
-"12px 25px; text-transform: capitalize; border-color: #3498db;\">Reset</a> \n"
+"<a href=\"%(password_reset_url)s\" target=\"_blank\" style=\"display: inline-block; color: #ffffff; background-color: #3498db; border: solid 1px #3498db; border-radius: 5px; box-sizing: border-box; cursor: pointer; text-decoration: none; font-size: 14px; font-weight: bold; margin: 0; padding: 12px 25px; text-transform: capitalize; border-color: #3498db;\">Reset</a> \n"
 "\n"
-"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-"
-"serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: "
-"1.6;color: #999999;\">\n"
+"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: 1.6;color: #999999;\">\n"
 "    It can be safely ignored if you did not request a password reset."
 msgstr ""
 "\n"
-"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-"
-"serif;margin-bottom: 30px;font-weight: normal;font-size: 13px;line-height: "
-"1.6;color: #999999;\">\n"
+"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-serif;margin-bottom: 30px;font-weight: normal;font-size: 13px;line-height: 1.6;color: #999999;\">\n"
 "    Bonjour de la part de <b>%(site_name)s</b> !\n"
 "</p>\n"
 "\n"
-"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-"
-"serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: "
-"1.6;color: #999999;\">\n"
-"    Vous recevez cet e-mail parce que vous ou quelqu'un d'autre a demandé un "
-"mot de passe pour votre compte utilisateur sur %(site_domain)s. \n"
+"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: 1.6;color: #999999;\">\n"
+"    Vous recevez cet e-mail parce que vous ou quelqu'un d'autre a demandé un mot de passe pour votre compte utilisateur sur %(site_domain)s. \n"
 "</p>\n"
 "\n"
-"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-"
-"serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: "
-"1.6;color: #999999;\">\n"
-"    Pour confirmer, veuillez cliquer sur le bouton de réinitialisation ci-dessous pour "
-"réinitialiser votre mot de passe.\n"
+"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: 1.6;color: #999999;\">\n"
+"    Pour confirmer, veuillez cliquer sur le bouton de réinitialisation ci-dessous pour réinitialiser votre mot de passe.\n"
 "</p>\n"
 "\n"
-"<a href=\"%(password_reset_url)s\" target=\"_blank\" style=\"display: inline-"
-"block; color: #ffffff; background-color: #3498db; border: solid 1px #3498db; "
-"border-radius: 5px; box-sizing: border-box; cursor: pointer; text-"
-"decoration: none; font-size: 14px; font-weight: bold; margin: 0; padding: "
-"12px 25px; text-transform: capitalize; border-color: #3498db;\">Réinitialiser</a> \n"
+"<a href=\"%(password_reset_url)s\" target=\"_blank\" style=\"display: inline-block; color: #ffffff; background-color: #3498db; border: solid 1px #3498db; border-radius: 5px; box-sizing: border-box; cursor: pointer; text-decoration: none; font-size: 14px; font-weight: bold; margin: 0; padding: 12px 25px; text-transform: capitalize; border-color: #3498db;\">Réinitialiser</a> \n"
 "\n"
-"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-"
-"serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: "
-"1.6;color: #999999;\">\n"
+"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: 1.6;color: #999999;\">\n"
 "    Vous pouvez ignorer cet e-mail en toute sécurité si vous n'avez pas demandé de réinitialisation de mot de passe."
 
 #: templates/account/email/password_reset_key_message.txt:1
@@ -2370,17 +2292,13 @@ msgstr ""
 msgid ""
 "Hello from %(site_name)s!\n"
 "\n"
-"You're receiving this e-mail because you or someone else has requested a "
-"password for your user account at %(site_domain)s.\n"
-"It can be safely ignored if you did not request a password reset. Click the "
-"link below to reset your password."
+"You're receiving this e-mail because you or someone else has requested a password for your user account at %(site_domain)s.\n"
+"It can be safely ignored if you did not request a password reset. Click the link below to reset your password."
 msgstr ""
 "Bonjour de la part de %(site_name)s !\n"
 "\n"
-"Vous recevez cet e-mail parce que vous ou quelqu'un d'autre a demandé un "
-"mot de passe pour votre compte utilisateur sur %(site_domain)s.\n"
-"Vous pouvez l'ignorer en toute sécurité si vous n'avez pas demandé de réinitialisation de mot de passe. Cliquez sur le "
-"lien ci-dessous pour réinitialiser votre mot de passe."
+"Vous recevez cet e-mail parce que vous ou quelqu'un d'autre a demandé un mot de passe pour votre compte utilisateur sur %(site_domain)s.\n"
+"Vous pouvez l'ignorer en toute sécurité si vous n'avez pas demandé de réinitialisation de mot de passe. Cliquez sur le lien ci-dessous pour réinitialiser votre mot de passe."
 
 #: templates/account/email/password_reset_key_message.txt:8
 #, python-format
@@ -2400,14 +2318,31 @@ msgstr ""
 msgid "Password Reset E-mail"
 msgstr "E-mail de réinitialisation de mot de passe"
 
-#: templates/account/login.html:24
+#: templates/account/login.html:21
 msgid "Welcome to Assistance Technique en Genie Civil's Self Service Portal"
-msgstr ""
-"Bienvenue sur le Portail Libre-Service d'Assistance Technique en Génie Civil"
+msgstr "Bienvenue sur le Portail Libre-Service d'Assistance Technique en Génie Civil"
 
-#: templates/account/login.html:36 templates/account/signup.html:28
+#: templates/account/login.html:33 templates/account/signup.html:28
 msgid "Login"
 msgstr "Connexion"
+
+#: templates/account/login.html:54
+msgid "Forgot your password?"
+msgstr "Mot de passe oublié ?"
+
+#: templates/account/login.html:58
+msgid "Log in"
+msgstr "Se connecter"
+
+#: templates/account/login.html:63
+msgid "or Sign Up now!"
+msgstr "ou Inscrivez-vous maintenant !"
+
+#: templates/account/login.html:68
+#, fuzzy
+#| msgid "Sign up"
+msgid "Sign Up"
+msgstr "S'inscrire"
 
 #: templates/account/signup.html:26
 msgid "Sign up"
@@ -2441,22 +2376,16 @@ msgid "Viewing data from your assigned cabinets only"
 msgstr "Affichage des données de vos cabinets assignés uniquement"
 
 #: templates/account/user_profile_update.html:66
-msgid ""
-"You have not been assigned to any cabinet yet. Contact your administrator."
-msgstr ""
-"Vous n'avez pas encore été affecté à un cabinet. Contactez votre administrateur."
+msgid "You have not been assigned to any cabinet yet. Contact your administrator."
+msgstr "Vous n'avez pas encore été affecté à un cabinet. Contactez votre administrateur."
 
 #: templates/account/user_profile_update.html:145
 msgid "Cabinet Roles & Permissions"
 msgstr "Rôles et permissions dans les cabinets"
 
 #: templates/account/user_profile_update.html:151
-msgid ""
-"Your access to projects, materials, expenses, and invoices is controlled by "
-"your assigned roles."
-msgstr ""
-"Votre accès aux projets, matériaux, dépenses et factures est contrôlé par "
-"vos rôles attribués."
+msgid "Your access to projects, materials, expenses, and invoices is controlled by your assigned roles."
+msgstr "Votre accès aux projets, matériaux, dépenses et factures est contrôlé par vos rôles attribués."
 
 #: templates/account/user_profile_update.html:203
 #, fuzzy
@@ -2546,23 +2475,19 @@ msgstr "Approbations en attente"
 #, python-format
 msgid ""
 "\n"
-"                                        You have %(counter)s item awaiting "
-"approval\n"
+"                                        You have %(counter)s item awaiting approval\n"
 "                                    "
 msgid_plural ""
 "\n"
-"                                        You have %(counter)s items awaiting "
-"approval\n"
+"                                        You have %(counter)s items awaiting approval\n"
 "                                    "
 msgstr[0] ""
 "\n"
-"                                        Vous avez %(counter)s élément en attente "
-"d'approbation\n"
+"                                        Vous avez %(counter)s élément en attente d'approbation\n"
 "                                    "
 msgstr[1] ""
 "\n"
-"                                        Vous avez %(counter)s éléments en attente "
-"d'approbation\n"
+"                                        Vous avez %(counter)s éléments en attente d'approbation\n"
 "                                    "
 
 #: templates/account/user_profile_update.html:507
@@ -2588,13 +2513,8 @@ msgid "Chantier Mobile Dashboard"
 msgstr "Tableau de Bord Chantier Mobile"
 
 #: templates/home.html:23
-msgid ""
-"Enterprise Resource Planning for Construction Sites. Monitor progress, "
-"manage personnel, and track finances in real-time."
-msgstr ""
-"Planification des Ressources d'Entreprise pour les Chantiers de "
-"Construction. Surveillez les progrès, gérez le personnel et suivez les "
-"finances en temps réel."
+msgid "Enterprise Resource Planning for Construction Sites. Monitor progress, manage personnel, and track finances in real-time."
+msgstr "Planification des Ressources d'Entreprise pour les Chantiers de Construction. Surveillez les progrès, gérez le personnel et suivez les finances en temps réel."
 
 #: templates/home.html:25
 msgid "View Projects"
@@ -2603,6 +2523,85 @@ msgstr "Voir les Projets"
 #: templates/home.html:26
 msgid "New Project"
 msgstr "Nouveau Projet"
+
+#: templates/home.html:44
+#, fuzzy
+#| msgid "Project / Site"
+msgid "Projects & Sites"
+msgstr "Projet / Site"
+
+#: templates/home.html:45
+msgid "Track construction progress, milestones, and daily site logs."
+msgstr "Suivez l'avancement des travaux, les jalons et les rapports journaliers."
+
+#: templates/home.html:58 templates/personnel/assignment_form.html:32
+#: templates/projects/site_detail.html:103
+msgid "Personnel"
+msgstr "Personnel"
+
+#: templates/home.html:59
+msgid "Manage workers, trade skills, and site-specific staff assignments."
+msgstr "Gérez les ouvriers, les corps de métier et les affectations par chantier."
+
+#: templates/home.html:73
+#, fuzzy
+#| msgid "View All Expenses"
+msgid "Finance & Expenses"
+msgstr "Voir toutes les dépenses"
+
+#: templates/home.html:74
+msgid "Monitor project budgets, approve expenses, and track cash flow."
+msgstr "Surveillez les budgets, approuvez les dépenses et suivez les flux de trésorerie."
+
+#: templates/home.html:87
+#, fuzzy
+#| msgid "Materials"
+msgid "Materials & Stock"
+msgstr "Matériaux"
+
+#: templates/home.html:88
+msgid "Manage equipment inventory and handle on-site material requests."
+msgstr "Gérez l'inventaire des matériaux et traitez les demandes d'approvisionnement sur site."
+
+#: templates/home.html:101
+#, fuzzy
+#| msgid "Contract"
+msgid "Revenue & Contracts"
+msgstr "Contrat"
+
+#: templates/home.html:103
+msgid "Manage client contracts, milestones, and payment collections."
+msgstr "Gérez les contrats clients, les jalons et les encaissements."
+
+#: templates/home.html:115 templates/includes/navbar-vertical.html:207
+msgid "System Admin"
+msgstr "Administrateur système"
+
+#: templates/home.html:117
+msgid "Configure company settings, user roles, and system security."
+msgstr "Configurez les paramètres de l'entreprise, les rôles utilisateurs et la sécurité du système."
+
+#: templates/home.html:127
+#, fuzzy
+#| msgid "Actif"
+msgid "System Activity"
+msgstr "Actif"
+
+#: templates/home.html:130
+#, fuzzy
+#| msgid "Activity will appear here as you work on this site"
+msgid "Real-time activity logs will appear here as projects progress."
+msgstr "L'activité apparaîtra ici au fur et à mesure de votre travail sur ce chantier"
+
+#: templates/home.html:147
+#, fuzzy
+#| msgid "Directeur de Cabinet"
+msgid "Active Session"
+msgstr "Directeur de Cabinet"
+
+#: templates/home.html:151
+msgid "Ensure all daily reports are submitted before the end of the business day for accurate tracking."
+msgstr "Assurez-vous que tous les rapports journaliers sont soumis avant la fin de la journée de travail pour un suivi précis."
 
 #: templates/includes/language-switcher.html:10
 msgid "Change language"
@@ -2624,18 +2623,9 @@ msgstr "Déconnexion"
 msgid "Administration"
 msgstr "Administration"
 
-#: templates/includes/navbar-vertical.html:207
-msgid "System Admin"
-msgstr "Administrateur système"
-
 #: templates/personnel/assignment_form.html:25
 msgid "Assign Personnel to Site"
 msgstr "Affecter un personnel à un chantier"
-
-#: templates/personnel/assignment_form.html:32
-#: templates/projects/site_detail.html:103
-msgid "Personnel"
-msgstr "Personnel"
 
 #: templates/personnel/assignment_form.html:49
 #, fuzzy
@@ -2656,10 +2646,8 @@ msgid "Daily Rate ($)"
 msgstr "Tarif journalier ($)"
 
 #: templates/personnel/assignment_form.html:83
-msgid ""
-"This overrides the worker's default daily rate for this specific project."
-msgstr ""
-"Ceci remplace le tarif journalier par défaut du travailleur pour ce chantier spécifique."
+msgid "This overrides the worker's default daily rate for this specific project."
+msgstr "Ceci remplace le tarif journalier par défaut du travailleur pour ce chantier spécifique."
 
 #: templates/personnel/assignment_form.html:93
 #, fuzzy
