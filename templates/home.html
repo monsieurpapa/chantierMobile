@@ -85,7 +85,7 @@
           <div class="icon-item icon-item-xl shadow-none mx-auto mt-x1 bg-info-subtle">
             <span class="text-info fas fa-boxes fs-3"></span>
           </div>
-          <h5 class="mt-3 mb-2"><a class="text-900 hover-primary stretched-link" href="#">Materials & Stock</a></h5>
+          <h5 class="mt-3 mb-2"><a class="text-900 hover-primary stretched-link" href="{% url 'materials:request_list' %}">Materials & Stock</a></h5>
           <h6 class="w-75 mx-auto text-600 mb-x1">Manage equipment inventory and handle on-site material requests.
           </h6>
         </div>
@@ -99,7 +99,7 @@
           <div class="icon-item icon-item-xl shadow-none mx-auto mt-x1 bg-secondary-subtle">
             <span class="text-secondary fas fa-file-invoice-dollar fs-3"></span>
           </div>
-          <h5 class="mt-3 mb-2"><a class="text-900 hover-primary stretched-link" href="#">Revenue & Contracts</a>
+          <h5 class="mt-3 mb-2"><a class="text-900 hover-primary stretched-link" href="{% url 'revenue:contract_list' %}">Revenue & Contracts</a>
           </h5>
           <h6 class="w-75 mx-auto text-600 mb-x1">Manage client contracts, milestones, and payment collections.</h6>
         </div>
