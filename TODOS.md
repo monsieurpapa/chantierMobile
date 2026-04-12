@@ -55,3 +55,17 @@ Deferred work tracked here. Items added by `/plan-ceo-review` on 2026-03-31.
 ---
 
 ~~## P3 — SiteDetailView Double Query~~ *(Fixed in commit 031deb1 — perf: eliminate duplicate site/expenses queries)*
+
+---
+
+## P2 — Expense Approval Race Condition
+
+**What:** Add `select_for_update()` + `transaction.atomic()` to `Expense.approve()` and `Expense.reject()` in `finance/models.py`.
+
+**Why:** Two concurrent approval POST requests could both pass the budget check independently, then both save, resulting in a budget overrun. Under current single-worker traffic this is unlikely, but it becomes a real risk under load or with multiple accountants approving simultaneously.
+
+**Context:** Wrap `approve()` body in `with transaction.atomic():` and add `budget = Budget.objects.select_for_update().get(site=self.site)` before the budget check in `Expense.clean()`. The `select_for_update()` acquires a row lock so only one request can proceed through the budget check at a time.
+
+**Effort:** S (human: 30min / CC+gstack: 5min)
+**Priority:** P2
+**Depends on:** None
