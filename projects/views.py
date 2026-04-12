@@ -145,18 +145,20 @@ class SiteDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, De
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        site = self.get_object()
-        
+        # Use self.object (already fetched by DetailView.get) — avoids a duplicate DB query
+        site = self.object
+
         # Financial context
-        context['expenses'] = site.expenses.select_related('category', 'requester').order_by('-created_at')
+        expenses_qs = site.expenses.select_related('category', 'requester').order_by('-created_at')
+        context['expenses'] = expenses_qs
         context['contract'] = getattr(site, 'contract', None)
         if context['contract']:
             context['invoices'] = context['contract'].invoices.all().order_by('-issued_date')
-        
+
         # Unified Timeline / History
         # We collect different types of events and tag them for the template
         timeline = []
-        
+
         # 1. Progress Reports
         for progress in SiteProgress.objects.filter(phase__site=site).select_related('phase'):
             timeline.append({
@@ -168,9 +170,9 @@ class SiteDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, De
                 'icon': 'fas fa-chart-line',
                 'color': 'primary'
             })
-            
-        # 2. Expenses
-        for expense in site.expenses.all().select_related('category', 'requester'):
+
+        # 2. Expenses — reuse the already-evaluated queryset, no second DB round-trip
+        for expense in expenses_qs:
             timeline.append({
                 'type': 'EXPENSE',
                 'date': expense.created_at.date(),

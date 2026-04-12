@@ -77,48 +77,53 @@ class UserProfileUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView)
         # RBAC: Projects
         # ====================
         # Only show sites from cabinets where user has a role
-        sites = Site.objects.filter(
+        # Evaluate each queryset once: use list() so the slice is reused for .count via len()
+        sites = list(Site.objects.filter(
             cabinet__in=user_cabinet_ids
-        ).select_related('cabinet').order_by('-created_at')
-        context['sites'] = sites[:10]
-        context['total_sites'] = sites.count()
-        
+        ).select_related('cabinet').order_by('-created_at')[:10])
+        context['sites'] = sites
+        context['total_sites'] = len(sites)
+
         # ====================
         # RBAC: Material Requests
         # ====================
         # Only show material requests from user's cabinet projects
-        material_requests = MaterialRequest.objects.filter(
+        material_requests = list(MaterialRequest.objects.filter(
             site__cabinet__in=user_cabinet_ids
-        ).select_related('site').order_by('-created_at')
-        context['material_requests'] = material_requests[:10]
-        context['total_material_requests'] = material_requests.count()
-        
+        ).select_related('site').order_by('-created_at')[:10])
+        context['material_requests'] = material_requests
+        context['total_material_requests'] = len(material_requests)
+
         # ====================
         # RBAC: Expenses
         # ====================
         # Only show expenses from sites in user's cabinets
-        expenses = Expense.objects.filter(
+        expenses = list(Expense.objects.filter(
             site__cabinet__in=user_cabinet_ids
-        ).select_related('category', 'site').order_by('-created_at')
-        context['expenses'] = expenses[:10]
-        context['total_expenses'] = expenses.count()
-        
+        ).select_related('category', 'site').order_by('-created_at')[:10])
+        context['expenses'] = expenses
+        context['total_expenses'] = len(expenses)
+
         # ====================
         # RBAC: Invoices
         # ====================
         # Only show invoices from contracts related to user's cabinet sites
-        invoices = Invoice.objects.filter(
+        invoices = list(Invoice.objects.filter(
             contract__site__cabinet__in=user_cabinet_ids
-        ).select_related('contract').order_by('-created_at')
-        context['invoices'] = invoices[:10]
-        context['total_invoices'] = invoices.count()
-        
+        ).select_related('contract').order_by('-created_at')[:10])
+        context['invoices'] = invoices
+        context['total_invoices'] = len(invoices)
+
         # ====================
         # RBAC: Statistics & Permissions
         # ====================
-        # Calculate pending items for user's cabinets
-        pending_material_requests = material_requests.filter(status='PENDING').count()
-        pending_expenses = expenses.filter(status='PENDING').count()
+        # Calculate pending items for user's cabinets (separate queries — different filter)
+        pending_material_requests = MaterialRequest.objects.filter(
+            site__cabinet__in=user_cabinet_ids, status='PENDING'
+        ).count()
+        pending_expenses = Expense.objects.filter(
+            site__cabinet__in=user_cabinet_ids, status='PENDING'
+        ).count()
         context['pending_items'] = pending_material_requests + pending_expenses
         
         # Add permission context for template

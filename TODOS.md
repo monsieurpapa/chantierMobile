@@ -54,14 +54,4 @@ Deferred work tracked here. Items added by `/plan-ceo-review` on 2026-03-31.
 
 ---
 
-## P3 — SiteDetailView Double Query
-
-**What:** `SiteDetailView.get_context_data()` calls `self.get_object()` explicitly (line 147 in `projects/views.py`), duplicating the query that `DetailView.get()` already issued and cached in `self.object`. Additionally, `site.expenses` is iterated twice — once for the expenses context and again for the timeline.
-
-**Why:** Pre-existing inefficiency, not a correctness bug. At current scale it adds ~2 extra DB queries per site detail page load.
-
-**Context:** Fix by replacing `site = self.get_object()` with `site = self.object`. Deduplicate the expenses iteration by building the timeline from `context['expenses']` (already fetched) instead of `site.expenses.all()` again.
-
-**Effort:** S (human: 30min / CC+gstack: 5min)
-**Priority:** P3
-**Depends on:** None
+~~## P3 — SiteDetailView Double Query~~ *(Fixed in commit 031deb1 — perf: eliminate duplicate site/expenses queries)*
