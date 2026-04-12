@@ -14,7 +14,37 @@ class Site(BaseModel):
     
     def __str__(self):
         return f"{self.name} ({self.status})"
-    
+
+    def delete(self, using=None, keep_parents=False):
+        """Soft-delete this site and cascade to all owned child records."""
+        from django.utils import timezone
+        now = timezone.now()
+        # Cascade soft-delete to expenses
+        self.expenses.filter(is_deleted=False).update(is_deleted=True, deleted_at=now)
+        # Cascade soft-delete to material requests
+        self.material_requests.filter(is_deleted=False).update(is_deleted=True, deleted_at=now)
+        # Cascade soft-delete to phases (and their progress reports)
+        for phase in self.phases.filter(is_deleted=False):
+            phase.progress_reports.filter(is_deleted=False).update(is_deleted=True, deleted_at=now)
+        self.phases.filter(is_deleted=False).update(is_deleted=True, deleted_at=now)
+        # Cascade soft-delete to personnel assignments
+        self.assignments.filter(is_deleted=False).update(is_deleted=True, deleted_at=now)
+        # Cascade soft-delete to budget
+        if hasattr(self, 'budget'):
+            self.budget.is_deleted = True
+            self.budget.deleted_at = now
+            self.budget.save(update_fields=['is_deleted', 'deleted_at'])
+        # Cascade soft-delete to contract and its invoices/payments
+        if hasattr(self, 'contract'):
+            contract = self.contract
+            for invoice in contract.invoices.filter(is_deleted=False):
+                invoice.payments.filter(is_deleted=False).update(is_deleted=True, deleted_at=now)
+            contract.invoices.filter(is_deleted=False).update(is_deleted=True, deleted_at=now)
+            contract.is_deleted = True
+            contract.deleted_at = now
+            contract.save(update_fields=['is_deleted', 'deleted_at'])
+        super().delete(using=using, keep_parents=keep_parents)
+
     def clean(self):
         """Validate site status transitions."""
         from django.core.exceptions import ValidationError

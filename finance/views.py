@@ -1,5 +1,6 @@
 from django.views.generic import ListView, CreateView, DetailView, UpdateView
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.urls import reverse_lazy
 from django.shortcuts import redirect, get_object_or_404
@@ -83,6 +84,7 @@ class ExpenseDetailView(LoginRequiredMixin, PageHeaderMixin, DetailView):
             qs = qs.filter(site__cabinet__id__in=user_cabinet_ids)
         return qs
 
+@login_required
 def approve_expense(request, pk):
     if request.method == 'POST':
         expense = get_object_or_404(Expense, pk=pk)
@@ -97,6 +99,7 @@ def approve_expense(request, pk):
         return redirect('finance:expense_detail', pk=pk)
     return redirect('finance:expense_list')
 
+@login_required
 def mark_expense_paid(request, pk):
     if request.method == 'POST':
         expense = get_object_or_404(Expense, pk=pk)

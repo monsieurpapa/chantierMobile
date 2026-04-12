@@ -39,8 +39,17 @@ class RoleRequiredMixin:
     """
     Mixin to check if the user has one of the allowed roles within their cabinet.
     Access is denied if the user does not have the role.
+
+    By default, checks role across all of the user's cabinets. Override
+    get_role_cabinet() to scope the check to a specific cabinet (e.g. the
+    cabinet that owns the resource being accessed). This prevents a user who
+    is a DIRECTOR in Cabinet A from taking write actions on Cabinet B.
     """
-    allowed_roles = [] # List of roles e.g. ['DIRECTOR', 'CHIEF_ENGINEER']
+    allowed_roles = []  # List of roles e.g. ['DIRECTOR', 'CHIEF_ENGINEER']
+
+    def get_role_cabinet(self):
+        """Return the cabinet to scope the role check to, or None to allow any cabinet."""
+        return None
 
     def dispatch(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
@@ -49,16 +58,18 @@ class RoleRequiredMixin:
         if request.user.is_superuser:
             return super().dispatch(request, *args, **kwargs)
 
-        has_role = UserCabinetRole.objects.filter(
+        qs = UserCabinetRole.objects.filter(
             user=request.user,
-            role__in=self.allowed_roles
-        ).exists()
+            role__in=self.allowed_roles,
+        )
+        cabinet = self.get_role_cabinet()
+        if cabinet is not None:
+            qs = qs.filter(cabinet=cabinet)
+        has_role = qs.exists()
 
         if not has_role:
-             messages.error(request, "You do not have permission to perform this action.")
-             # Check if referer exists to redirect back, else go home
-             return redirect(request.META.get('HTTP_REFERER', 'home'))
-             # Alternatively raise 403: raise PermissionDenied 
+            messages.error(request, "You do not have permission to perform this action.")
+            return redirect(request.META.get('HTTP_REFERER', 'home'))
 
         return super().dispatch(request, *args, **kwargs)
 
