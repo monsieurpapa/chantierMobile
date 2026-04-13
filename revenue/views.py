@@ -8,7 +8,7 @@ from django.urls import reverse_lazy
 from .models import Contract, Invoice, Payment
 from chantiermobile.constants import InvoiceStatus, UserRoles
 from .forms import ContractForm, InvoiceForm, PaymentForm
-from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin
+from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet
 from projects.models import Site
 
 class ContractListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
@@ -32,6 +32,11 @@ class ContractListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, 
         return []
 
     def get_queryset(self):
+        if self.request.user.is_superuser:
+            active_cabinet = get_session_cabinet(self.request)
+            if active_cabinet:
+                return super().get_queryset().filter(site__cabinet=active_cabinet)
+            return super().get_queryset()
         user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
         return super().get_queryset().filter(site__cabinet__id__in=user_cabinet_ids)
 
@@ -60,7 +65,11 @@ class ContractCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMix
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
         if self.request.user.is_superuser:
-            form.fields['site'].queryset = Site.objects.all()
+            active_cabinet = get_session_cabinet(self.request)
+            if active_cabinet:
+                form.fields['site'].queryset = Site.objects.filter(cabinet=active_cabinet)
+            else:
+                form.fields['site'].queryset = Site.objects.all()
         else:
             user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
             form.fields['site'].queryset = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
@@ -91,7 +100,11 @@ class ContractUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMix
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
         if self.request.user.is_superuser:
-            form.fields['site'].queryset = Site.objects.all()
+            active_cabinet = get_session_cabinet(self.request)
+            if active_cabinet:
+                form.fields['site'].queryset = Site.objects.filter(cabinet=active_cabinet)
+            else:
+                form.fields['site'].queryset = Site.objects.all()
         else:
             user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
             form.fields['site'].queryset = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
@@ -117,6 +130,11 @@ class InvoiceListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, L
         }]
 
     def get_queryset(self):
+        if self.request.user.is_superuser:
+            active_cabinet = get_session_cabinet(self.request)
+            if active_cabinet:
+                return super().get_queryset().filter(contract__site__cabinet=active_cabinet)
+            return super().get_queryset()
         user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
         return super().get_queryset().filter(contract__site__cabinet__id__in=user_cabinet_ids)
 
@@ -145,7 +163,11 @@ class InvoiceCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixi
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
         if self.request.user.is_superuser:
-            form.fields['contract'].queryset = Contract.objects.all()
+            active_cabinet = get_session_cabinet(self.request)
+            if active_cabinet:
+                form.fields['contract'].queryset = Contract.objects.filter(site__cabinet=active_cabinet)
+            else:
+                form.fields['contract'].queryset = Contract.objects.all()
         else:
             user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
             form.fields['contract'].queryset = Contract.objects.filter(site__cabinet__id__in=user_cabinet_ids)
@@ -206,6 +228,9 @@ class PaymentListView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin,
     def get_queryset(self):
         qs = Payment.objects.select_related('invoice__contract__site').order_by('-payment_date')
         if self.request.user.is_superuser:
+            active_cabinet = get_session_cabinet(self.request)
+            if active_cabinet:
+                return qs.filter(invoice__contract__site__cabinet=active_cabinet)
             return qs
         user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
         return qs.filter(invoice__contract__site__cabinet__id__in=user_cabinet_ids)
@@ -234,7 +259,14 @@ class PaymentCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixi
         form = super().get_form(form_class)
         payable_statuses = [InvoiceStatus.SENT, InvoiceStatus.OVERDUE]
         if self.request.user.is_superuser:
-            form.fields['invoice'].queryset = Invoice.objects.filter(status__in=payable_statuses)
+            active_cabinet = get_session_cabinet(self.request)
+            if active_cabinet:
+                form.fields['invoice'].queryset = Invoice.objects.filter(
+                    contract__site__cabinet=active_cabinet,
+                    status__in=payable_statuses,
+                )
+            else:
+                form.fields['invoice'].queryset = Invoice.objects.filter(status__in=payable_statuses)
         else:
             user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
             form.fields['invoice'].queryset = Invoice.objects.filter(

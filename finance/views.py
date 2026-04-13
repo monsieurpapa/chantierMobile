@@ -8,7 +8,7 @@ from django.contrib import messages
 from .models import Expense, ExpenseApproval, Budget
 from .forms import ExpenseForm, BudgetForm
 from projects.models import Site
-from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin
+from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet
 from chantiermobile.constants import ExpenseStatus, UserRoles
 
 class ExpenseListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
@@ -18,6 +18,7 @@ class ExpenseListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, L
     paginate_by = 20
     header_title = "Expense Management"
     header_subtitle = "Track and approve project expenses"
+    cabinet_lookup_field = 'site__cabinet'
     
     def get_header_actions(self):
         return [{
@@ -45,7 +46,11 @@ class ExpenseCreateView(LoginRequiredMixin, PageHeaderMixin, CreateView):
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
         if self.request.user.is_superuser:
-            form.fields['site'].queryset = Site.objects.all()
+            active_cabinet = get_session_cabinet(self.request)
+            if active_cabinet:
+                form.fields['site'].queryset = Site.objects.filter(cabinet=active_cabinet)
+            else:
+                form.fields['site'].queryset = Site.objects.all()
         else:
             user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
             form.fields['site'].queryset = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
@@ -143,6 +148,11 @@ class BudgetListView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, Lis
         return []
 
     def get_queryset(self):
+        if self.request.user.is_superuser:
+            active_cabinet = get_session_cabinet(self.request)
+            if active_cabinet:
+                return super().get_queryset().filter(site__cabinet=active_cabinet)
+            return super().get_queryset()
         user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
         return super().get_queryset().filter(site__cabinet__id__in=user_cabinet_ids)
 
@@ -156,7 +166,11 @@ class BudgetCreateView(LoginRequiredMixin, RoleRequiredMixin, CreateView):
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
         if self.request.user.is_superuser:
-            form.fields['site'].queryset = Site.objects.all()
+            active_cabinet = get_session_cabinet(self.request)
+            if active_cabinet:
+                form.fields['site'].queryset = Site.objects.filter(cabinet=active_cabinet)
+            else:
+                form.fields['site'].queryset = Site.objects.all()
         else:
             user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
             form.fields['site'].queryset = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
@@ -180,7 +194,11 @@ class BudgetUpdateView(LoginRequiredMixin, RoleRequiredMixin, UpdateView):
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
         if self.request.user.is_superuser:
-            form.fields['site'].queryset = Site.objects.all()
+            active_cabinet = get_session_cabinet(self.request)
+            if active_cabinet:
+                form.fields['site'].queryset = Site.objects.filter(cabinet=active_cabinet)
+            else:
+                form.fields['site'].queryset = Site.objects.all()
         else:
             user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
             form.fields['site'].queryset = Site.objects.filter(cabinet__id__in=user_cabinet_ids)

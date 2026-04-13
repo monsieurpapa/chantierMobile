@@ -25,13 +25,47 @@ class UserCabinetRole(BaseModel):
     cabinet = models.ForeignKey(Cabinet, on_delete=models.CASCADE, related_name='user_roles')
     role = models.CharField(max_length=50, choices=UserRoles.choices)
     status = models.CharField(
-        max_length=20, 
-        choices=ApprovalStatus.choices, 
+        max_length=20,
+        choices=ApprovalStatus.choices,
         default=ApprovalStatus.PENDING
     )
-    
+
     class Meta:
         unique_together = ('user', 'cabinet')
 
     def __str__(self):
         return f"{self.user.username} - {self.role} @ {self.cabinet.name}"
+
+
+class CabinetContextLog(models.Model):
+    """Audit log for superadmin cabinet context switches."""
+    SWITCH = 'SWITCH'
+    CLEAR = 'CLEAR'
+    ACTION_CHOICES = [
+        (SWITCH, 'Switch to Cabinet'),
+        (CLEAR, 'Clear to All Cabinets'),
+    ]
+
+    cabinet = models.ForeignKey(
+        Cabinet,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='context_logs',
+    )
+    switched_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='cabinet_context_logs',
+    )
+    action = models.CharField(max_length=10, choices=ACTION_CHOICES)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        if self.action == self.SWITCH:
+            return f"{self.switched_by} → {self.cabinet}"
+        return f"{self.switched_by} → All Cabinets"

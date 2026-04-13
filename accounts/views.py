@@ -1,13 +1,13 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
-from django.views.generic import DetailView, UpdateView, ListView, DeleteView, CreateView
+from django.views.generic import DetailView, UpdateView, ListView, DeleteView, CreateView, View
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse_lazy
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth import get_user_model
 from django.http import Http404
-from .models import UserCabinetRole, Cabinet
+from .models import UserCabinetRole, Cabinet, CabinetContextLog
 from .forms import UserProfileForm, UserCabinetRoleForm, UserAdminForm, AssignUserToCabinetForm, CabinetForm, AssignRoleToCabinetUserForm
 from projects.models import Site, ProjectPhase
 from materials.models import MaterialRequest
@@ -368,18 +368,37 @@ class UserDetailAdminView(LoginRequiredMixin, IsSuperAdminMixin, DetailView):
 # Superadmin Cabinet Assignment Views
 # ============================================
 
-class IsSuperAdminMixin(UserPassesTestMixin):
-    """Mixin to restrict views to superadmin users only"""
-    
-    def test_func(self):
-        return self.request.user.is_superuser
-    
-    def handle_no_permission(self):
-        messages.error(
-            self.request,
-            _('You do not have permission to access this page.')
-        )
-        return redirect('home')
+class SwitchCabinetView(LoginRequiredMixin, IsSuperAdminMixin, View):
+    """POST-only view for superadmins to switch their active cabinet context."""
+
+    def post(self, request):
+        cabinet_id = request.POST.get('cabinet_id', '').strip()
+
+        if not cabinet_id:
+            # Clear active cabinet → back to "all cabinets"
+            old_cabinet_id = request.session.pop('active_cabinet_id', None)
+            if old_cabinet_id:
+                CabinetContextLog.objects.create(
+                    cabinet=None,
+                    switched_by=request.user,
+                    action=CabinetContextLog.CLEAR,
+                )
+        else:
+            try:
+                cabinet_pk = int(cabinet_id)
+            except (ValueError, TypeError):
+                messages.error(request, _('Invalid cabinet selection.'))
+                return redirect(request.META.get('HTTP_REFERER') or 'home')
+
+            cabinet = get_object_or_404(Cabinet, pk=cabinet_pk)
+            request.session['active_cabinet_id'] = cabinet_pk
+            CabinetContextLog.objects.create(
+                cabinet=cabinet,
+                switched_by=request.user,
+                action=CabinetContextLog.SWITCH,
+            )
+
+        return redirect(request.META.get('HTTP_REFERER') or 'home')
 
 
 class AssignUserToCabinetView(IsSuperAdminMixin, CreateView):

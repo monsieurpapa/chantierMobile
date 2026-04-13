@@ -4,6 +4,9 @@ from . import views
 app_name = 'accounts'
 
 urlpatterns = [
+    # Superadmin: Cabinet context switcher
+    path('switch-cabinet/', views.SwitchCabinetView.as_view(), name='switch_cabinet'),
+
     # User Profile
     path('profile/update/', views.UserProfileUpdateView.as_view(), name='profile_update'),
     

@@ -22,15 +22,54 @@
       </div>
     </li>
 
-    <!-- Cabinet Info -->
+    <!-- Cabinet Display / Switcher -->
+    {% if request.user.is_superuser %}
+    <li class="nav-item ms-2 dropdown">
+      <a class="nav-link dropdown-toggle p-0" href="#" id="cabinetSwitcher" role="button"
+         data-bs-toggle="dropdown" aria-expanded="false">
+        <span class="badge {% if active_cabinet %}badge-soft-warning{% else %}badge-soft-secondary{% endif %}"
+              style="cursor:pointer">
+          <span class="fas fa-building me-1"></span>
+          {% if active_cabinet %}{{ active_cabinet.name }}{% else %}{% trans "All Cabinets" %}{% endif %}
+          <span class="fas fa-caret-down ms-1 fs--2"></span>
+        </span>
+      </a>
+      <div class="dropdown-menu dropdown-menu-start py-2" aria-labelledby="cabinetSwitcher"
+           style="min-width:220px;max-height:320px;overflow-y:auto">
+        <h6 class="dropdown-header text-uppercase fs--2">{% trans "Switch Cabinet" %}</h6>
+        <form method="post" action="{% url 'accounts:switch_cabinet' %}">
+          {% csrf_token %}
+          <input type="hidden" name="cabinet_id" value="">
+          <button type="submit" class="dropdown-item {% if not active_cabinet %}active{% endif %}">
+            <span class="fas fa-globe me-2 text-500"></span>{% trans "All Cabinets" %}
+          </button>
+        </form>
+        {% if all_cabinets %}
+        <div class="dropdown-divider"></div>
+        {% for cabinet in all_cabinets %}
+        <form method="post" action="{% url 'accounts:switch_cabinet' %}">
+          {% csrf_token %}
+          <input type="hidden" name="cabinet_id" value="{{ cabinet.pk }}">
+          <button type="submit"
+                  class="dropdown-item {% if active_cabinet.pk == cabinet.pk %}active{% endif %}">
+            <span class="fas fa-building me-2 text-500"></span>{{ cabinet.name }}
+          </button>
+        </form>
+        {% endfor %}
+        {% endif %}
+      </div>
+    </li>
+    {% else %}
     {% with primary_role=request.user.cabinet_roles.first %}
     {% if primary_role %}
     <li class="nav-item ms-2">
-      <span class="badge badge-soft-primary"><span class="fas fa-building me-1"></span>{{ primary_role.cabinet.name
-        }}</span>
+      <span class="badge badge-soft-primary">
+        <span class="fas fa-building me-1"></span>{{ primary_role.cabinet.name }}
+      </span>
     </li>
     {% endif %}
     {% endwith %}
+    {% endif %}
 
     <li class="nav-item ms-3">
       <span class="text-600 fs--2">

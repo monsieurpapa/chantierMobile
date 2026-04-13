@@ -37,3 +37,30 @@ def site_info_context(request):
     return {
         'LANGUAGE_COOKIE_NAME': settings.LANGUAGE_COOKIE_NAME,
     }
+
+
+def active_cabinet_context(request):
+    """
+    Inject active_cabinet and all_cabinets for superadmin cabinet switcher.
+    """
+    if not request.user.is_authenticated or not request.user.is_superuser:
+        return {}
+
+    from accounts.models import Cabinet
+
+    cabinet_id = request.session.get('active_cabinet_id')
+    active_cabinet = None
+
+    if cabinet_id:
+        try:
+            active_cabinet = Cabinet.objects.get(pk=int(cabinet_id))
+        except (Cabinet.DoesNotExist, ValueError, TypeError):
+            try:
+                del request.session['active_cabinet_id']
+            except KeyError:
+                pass
+
+    return {
+        'active_cabinet': active_cabinet,
+        'all_cabinets': Cabinet.objects.order_by('name'),
+    }
