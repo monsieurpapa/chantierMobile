@@ -2551,11 +2551,9 @@ msgstr "Voir les Projets"
 msgid "New Project"
 msgstr "Nouveau Projet"
 
-#: templates/home.html:44
-#, fuzzy
-#| msgid "Project / Site"
+#: templates/home.html:44 templates/includes/navbar-vertical.html
 msgid "Projects & Sites"
-msgstr "Projet / Site"
+msgstr "Projets & Chantiers"
 
 #: templates/home.html:45
 msgid "Track construction progress, milestones, and daily site logs."
@@ -3033,6 +3031,30 @@ msgstr "Aucun chantier pour l'instant."
 #| msgid "Directeur de Cabinet"
 msgid "Create New Site"
 msgstr "Directeur de Cabinet"
+
+#: templates/includes/navbar-vertical.html
+msgid "Modules"
+msgstr "Modules"
+
+#: templates/includes/navbar-vertical.html
+msgid "Budgets"
+msgstr "Budgets"
+
+#: templates/includes/navbar-vertical.html
+msgid "Logistics / Catalog"
+msgstr "Logistique / Catalogue"
+
+#: templates/includes/navbar-vertical.html
+msgid "Revenue"
+msgstr "Revenus"
+
+#: templates/includes/navbar-vertical.html
+msgid "Client Contracts"
+msgstr "Contrats Clients"
+
+#: templates/includes/navbar-vertical.html
+msgid "Payments"
+msgstr "Paiements"
 
 #~ msgid "Description..."
 #~ msgstr "Description..."

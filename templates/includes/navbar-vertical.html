@@ -40,12 +40,12 @@
                     <a class="nav-link {% if on == 'home' %}active{% endif %}" href="{% url 'home' %}" role="button">
                         <div class="d-flex align-items-center">
                             <span class="nav-link-icon"><span class="fas fa-home fs-1"></span></span>
-                            <span class="nav-link-text ps-1">Dashboard</span>
+                            <span class="nav-link-text ps-1">{% trans "Dashboard" %}</span>
                         </div>
                     </a>
                 </li>
 
-                <li class="nav-divider">Modules</li>
+                <li class="nav-divider">{% trans "Modules" %}</li>
 
                 <!-- Projects -->
                 <li class="nav-item">
@@ -53,7 +53,7 @@
                         role="button">
                         <div class="d-flex align-items-center">
                             <span class="nav-link-icon"><span class="fas fa-project-diagram fs-1"></span></span>
-                            <span class="nav-link-text ps-1">Projects & Sites</span>
+                            <span class="nav-link-text ps-1">{% trans "Projects & Sites" %}</span>
                         </div>
                     </a>
                 </li>
@@ -64,7 +64,7 @@
                         href="{% url 'personnel:personnel_list' %}" role="button">
                         <div class="d-flex align-items-center">
                             <span class="nav-link-icon"><span class="fas fa-users fs-1"></span></span>
-                            <span class="nav-link-text ps-1">Personnel</span>
+                            <span class="nav-link-text ps-1">{% trans "Personnel" %}</span>
                         </div>
                     </a>
                 </li>
@@ -75,7 +75,7 @@
                         aria-expanded="false" aria-controls="finance">
                         <div class="d-flex align-items-center">
                             <span class="nav-link-icon"><span class="fas fa-money-bill-wave fs-1"></span></span>
-                            <span class="nav-link-text ps-1">Finance</span>
+                            <span class="nav-link-text ps-1">{% trans "Finance" %}</span>
                         </div>
                     </a>
                     <ul class="nav collapse" id="finance">
@@ -83,7 +83,7 @@
                             <a class="nav-link {% if on == 'expense_list' %}active{% endif %}"
                                 href="{% url 'finance:expense_list' %}">
                                 <div class="d-flex align-items-center">
-                                    <span class="nav-link-text ps-1">Expenses</span>
+                                    <span class="nav-link-text ps-1">{% trans "Expenses" %}</span>
                                 </div>
                             </a>
                         </li>
@@ -91,7 +91,7 @@
                             <a class="nav-link {% if on == 'budget_list' %}active{% endif %}"
                                 href="{% url 'finance:budget_list' %}">
                                 <div class="d-flex align-items-center">
-                                    <span class="nav-link-text ps-1">Budgets</span>
+                                    <span class="nav-link-text ps-1">{% trans "Budgets" %}</span>
                                 </div>
                             </a>
                         </li>
@@ -104,7 +104,7 @@
                         aria-expanded="false" aria-controls="materials">
                         <div class="d-flex align-items-center">
                             <span class="nav-link-icon"><span class="fas fa-boxes fs-1"></span></span>
-                            <span class="nav-link-text ps-1">Materials</span>
+                            <span class="nav-link-text ps-1">{% trans "Materials" %}</span>
                         </div>
                     </a>
                     <ul class="nav collapse" id="materials">
@@ -112,7 +112,7 @@
                             <a class="nav-link {% if on == 'material_list' %}active{% endif %}"
                                 href="{% url 'materials:material_list' %}">
                                 <div class="d-flex align-items-center">
-                                    <span class="nav-link-text ps-1">Logistics / Catalog</span>
+                                    <span class="nav-link-text ps-1">{% trans "Logistics / Catalog" %}</span>
                                 </div>
                             </a>
                         </li>
@@ -120,7 +120,7 @@
                             <a class="nav-link {% if on == 'request_list' %}active{% endif %}"
                                 href="{% url 'materials:request_list' %}">
                                 <div class="d-flex align-items-center">
-                                    <span class="nav-link-text ps-1">Requests</span>
+                                    <span class="nav-link-text ps-1">{% trans "Requests" %}</span>
                                 </div>
                             </a>
                         </li>
@@ -133,7 +133,7 @@
                         aria-expanded="false" aria-controls="revenue">
                         <div class="d-flex align-items-center">
                             <span class="nav-link-icon"><span class="fas fa-chart-line fs-1"></span></span>
-                            <span class="nav-link-text ps-1">Revenue</span>
+                            <span class="nav-link-text ps-1">{% trans "Revenue" %}</span>
                         </div>
                     </a>
                     <ul class="nav collapse" id="revenue">
@@ -141,7 +141,7 @@
                             <a class="nav-link {% if on == 'contract_list' %}active{% endif %}"
                                 href="{% url 'revenue:contract_list' %}">
                                 <div class="d-flex align-items-center">
-                                    <span class="nav-link-text ps-1">Client Contracts</span>
+                                    <span class="nav-link-text ps-1">{% trans "Client Contracts" %}</span>
                                 </div>
                             </a>
                         </li>
@@ -149,7 +149,7 @@
                             <a class="nav-link {% if on == 'invoice_list' %}active{% endif %}"
                                 href="{% url 'revenue:invoice_list' %}">
                                 <div class="d-flex align-items-center">
-                                    <span class="nav-link-text ps-1">Invoices</span>
+                                    <span class="nav-link-text ps-1">{% trans "Invoices" %}</span>
                                 </div>
                             </a>
                         </li>
@@ -157,14 +157,14 @@
                             <a class="nav-link {% if on == 'payment_list' %}active{% endif %}"
                                 href="{% url 'revenue:payment_list' %}">
                                 <div class="d-flex align-items-center">
-                                    <span class="nav-link-text ps-1">Payments</span>
+                                    <span class="nav-link-text ps-1">{% trans "Payments" %}</span>
                                 </div>
                             </a>
                         </li>
                     </ul>
                 </li>
 
-                <li class="nav-divider">Administration</li>
+                <li class="nav-divider">{% trans "Administration" %}</li>
 
                 <!-- Administration (Superadmin/Staff) -->
                 {% if user.is_superuser or user.is_staff %}

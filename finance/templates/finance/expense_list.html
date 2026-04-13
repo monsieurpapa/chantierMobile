@@ -40,8 +40,7 @@
                                         <strong>{{ expense.site.name }}</strong>
                                     </td>
                                     <td class="align-middle white-space-nowrap">{{ expense.category.name }}</td>
-                                    <td class="align-middle white-space-nowrap fw-bold text-primary">${{ expense.amount
-                                        }}</td>
+                                    <td class="align-middle white-space-nowrap fw-bold text-primary">${{ expense.amount|floatformat:2 }}</td>
                                     <td class="align-middle white-space-nowrap">{{ expense.requester.username }}</td>
                                     <td class="align-middle white-space-nowrap">
                                         <span class="badge rounded-pill 
