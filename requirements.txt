@@ -11,3 +11,5 @@ django-allauth
 gunicorn
 whitenoise
 dj-database-url
+django-storages[s3]
+boto3

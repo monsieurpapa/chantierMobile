@@ -1,48 +1,66 @@
 services:
   - type: web
-    name: chantiermobile-web
+    name: chantiermobile
     runtime: python
     buildCommand: "./build.sh"
     startCommand: "gunicorn chantiermobile.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120"
+    healthCheckPath: /
     envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: chantiermobile.settings
       - key: SECRET_KEY
         generateValue: true
       - key: DEBUG
         value: "0"
+      # ALLOWED_HOSTS: update to your actual .onrender.com subdomain after first deploy.
+      # Render also sets RENDER_EXTERNAL_HOSTNAME automatically — settings.py reads it.
       - key: ALLOWED_HOSTS
-        value: ".onrender.com"
+        value: "chantiermobile.onrender.com"
       - key: PYTHON_VERSION
         value: "3.12.0"
+      # DATABASE_URL: paste your Supabase connection string (recommended — no 90-day expiry).
+      # Format: postgresql://user:password@host:5432/postgres?sslmode=require
       - key: DATABASE_URL
-        fromDatabase:
-          name: chantiermobile-db
-          property: connectionString
+        sync: false
+      # REDIS_URL: paste your Upstash Redis TLS URL.
+      # Format: rediss://default:password@host:port
       - key: REDIS_URL
-        sync: false   # paste your Upstash Redis URL here after creating the DB
+        sync: false
+      # Media files (Cloudflare R2 — S3-compatible, 10 GB free)
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_STORAGE_BUCKET_NAME
+        sync: false
+      - key: AWS_S3_ENDPOINT_URL
+        sync: false
+      # Optional: email (Gmail SMTP or any SMTP provider)
+      - key: EMAIL_HOST_USER
+        sync: false
+      - key: EMAIL_HOST_PASSWORD
+        sync: false
+      - key: DEFAULT_FROM_EMAIL
+        value: "noreply@chantiermobile.com"
 
   - type: worker
     name: chantiermobile-celery
     runtime: python
-    buildCommand: "pip install -r requirements.txt"
-    # -B flag runs celery-beat scheduler inside the same worker process (1 dyno = worker + beat)
-    startCommand: "celery -A chantiermobile worker -B --loglevel=info"
+    buildCommand: "./build.sh"
+    # --beat runs the scheduler inside the worker (saves one service slot on free tier)
+    startCommand: "celery -A chantiermobile worker --beat --loglevel=info --concurrency=1"
     envVars:
-      - key: SECRET_KEY
-        fromService:
-          name: chantiermobile-web
-          type: web
-          envVarKey: SECRET_KEY
+      - key: DJANGO_SETTINGS_MODULE
+        value: chantiermobile.settings
       - key: DEBUG
         value: "0"
       - key: DATABASE_URL
-        fromDatabase:
-          name: chantiermobile-db
-          property: connectionString
+        sync: false
       - key: REDIS_URL
-        sync: false   # paste your Upstash Redis URL here after creating the DB
-
-databases:
-  - name: chantiermobile-db
-    databaseName: chantiermobile
-    user: chantiermobile
-    plan: free
+        sync: false
+      - key: SECRET_KEY
+        fromService:
+          name: chantiermobile
+          type: web
+          property: envVarValue
+          envVarKey: SECRET_KEY
