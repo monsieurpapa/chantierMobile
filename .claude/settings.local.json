@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c ':*)",
+      "Bash(docker-compose exec:*)",
+      "Skill(ship)",
+      "Bash(docker-compose -f docker-compose.dev.yml exec -T web python manage.py makemigrations core --name status_change_log)",
+      "Bash(docker-compose ps:*)",
+      "Bash(cat docker-compose.yml)",
+      "Bash(cat docker-compose.yaml)",
+      "Bash(ls -la *.txt *.toml *.cfg)",
+      "Bash(ls .github/)",
+      "Bash(cat .github/workflows/*.yml)",
+      "Bash(ls revenue/tasks.py materials/models.py)",
+      "Bash(cat revenue/tasks.py)"
+    ]
+  }
+}
