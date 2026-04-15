@@ -27,13 +27,13 @@ services:
       - key: REDIS_URL
         sync: false
       # Media files (Cloudflare R2 — S3-compatible, 10 GB free)
-      - key: AWS_ACCESS_KEY_ID
+      - key: CLOUDFARE_R2_TOKEN_NAME
         sync: false
-      - key: AWS_SECRET_ACCESS_KEY
+      - key: CLOUDFARE_API_TOKEN
         sync: false
-      - key: AWS_STORAGE_BUCKET_NAME
+      - key: CLOUDFARE_R2_BUCKET_NAME
         sync: false
-      - key: AWS_S3_ENDPOINT_URL
+      - key: CLOUDFARE_R2_BUCKET_URL
         sync: false
       # Optional: email (Gmail SMTP or any SMTP provider)
       - key: EMAIL_HOST_USER
