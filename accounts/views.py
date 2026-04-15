@@ -8,11 +8,12 @@ from django.utils.translation import gettext_lazy as _
 from django.contrib.auth import get_user_model
 from django.http import Http404
 from .models import UserCabinetRole, Cabinet, CabinetContextLog
-from .forms import UserProfileForm, UserCabinetRoleForm, UserAdminForm, AssignUserToCabinetForm, CabinetForm, AssignRoleToCabinetUserForm
+from .forms import UserProfileForm, UserCabinetRoleForm, UserAdminForm, AssignUserToCabinetForm, AssignUserToCabinetFromCabinetForm, CabinetForm, AssignRoleToCabinetUserForm
 from projects.models import Site, ProjectPhase
 from materials.models import MaterialRequest
 from finance.models import Expense
 from revenue.models import Invoice
+from core.mixins import PageHeaderMixin
 
 User = get_user_model()
 
@@ -176,7 +177,7 @@ class IsSuperAdminMixin(UserPassesTestMixin):
         return redirect('home')
 
 
-class UserListAdminView(LoginRequiredMixin, IsSuperAdminMixin, ListView):
+class UserListAdminView(LoginRequiredMixin, IsSuperAdminMixin, PageHeaderMixin, ListView):
     """
     SUPERADMIN ONLY: List all users with management capabilities
     
@@ -191,7 +192,16 @@ class UserListAdminView(LoginRequiredMixin, IsSuperAdminMixin, ListView):
     template_name = 'account/admin_users_list.html'
     context_object_name = 'users'
     paginate_by = 25
-    
+    header_title = "User Management"
+    header_subtitle = "Manage all system users, permissions, and access levels"
+    back_url = reverse_lazy('home')
+
+    def get_breadcrumb_items(self):
+        return [
+            {'title': 'Admin', 'url': None},
+            {'title': 'Users', 'url': None},
+        ]
+
     def get_queryset(self):
         """Get all users with related data"""
         queryset = User.objects.all().order_by('-date_joined')
@@ -234,7 +244,7 @@ class UserListAdminView(LoginRequiredMixin, IsSuperAdminMixin, ListView):
         return context
 
 
-class UserEditAdminView(LoginRequiredMixin, IsSuperAdminMixin, UpdateView):
+class UserEditAdminView(LoginRequiredMixin, IsSuperAdminMixin, PageHeaderMixin, UpdateView):
     """
     SUPERADMIN ONLY: Edit any user's information and permissions
     
@@ -248,19 +258,33 @@ class UserEditAdminView(LoginRequiredMixin, IsSuperAdminMixin, UpdateView):
     form_class = UserAdminForm
     template_name = 'account/admin_user_edit.html'
     success_url = reverse_lazy('accounts:admin_users_list')
-    
+
+    def get_header_title(self):
+        return f"Edit User: {self.object.username}"
+
+    def get_back_url(self):
+        return str(reverse_lazy('accounts:admin_user_detail', kwargs={'pk': self.object.pk}))
+
+    def get_breadcrumb_items(self):
+        return [
+            {'title': 'Admin', 'url': None},
+            {'title': 'Users', 'url': str(reverse_lazy('accounts:admin_users_list'))},
+            {'title': self.object.username, 'url': str(reverse_lazy('accounts:admin_user_detail', kwargs={'pk': self.object.pk}))},
+            {'title': 'Edit', 'url': None},
+        ]
+
     def get_object(self):
         """Get the user to edit"""
         user_id = self.kwargs.get('pk')
         return get_object_or_404(User, pk=user_id)
-    
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        user = self.get_object()
+        user = self.object
         context['target_user'] = user
         context['cabinet_roles'] = user.cabinet_roles.all().select_related('cabinet')
         return context
-    
+
     def form_valid(self, form):
         """Handle successful form submission"""
         user = form.save(commit=False)
@@ -272,7 +296,7 @@ class UserEditAdminView(LoginRequiredMixin, IsSuperAdminMixin, UpdateView):
         return super().form_valid(form)
 
 
-class UserDeleteAdminView(LoginRequiredMixin, IsSuperAdminMixin, DeleteView):
+class UserDeleteAdminView(LoginRequiredMixin, IsSuperAdminMixin, PageHeaderMixin, DeleteView):
     """
     SUPERADMIN ONLY: Delete a user account
     
@@ -284,12 +308,29 @@ class UserDeleteAdminView(LoginRequiredMixin, IsSuperAdminMixin, DeleteView):
     model = User
     template_name = 'account/admin_user_delete.html'
     success_url = reverse_lazy('accounts:admin_users_list')
-    
+
+    def get_header_title(self):
+        return f"Delete User: {self.object.username}"
+
+    def get_header_subtitle(self):
+        return "This action cannot be undone."
+
+    def get_back_url(self):
+        return str(reverse_lazy('accounts:admin_user_detail', kwargs={'pk': self.object.pk}))
+
+    def get_breadcrumb_items(self):
+        return [
+            {'title': 'Admin', 'url': None},
+            {'title': 'Users', 'url': str(reverse_lazy('accounts:admin_users_list'))},
+            {'title': self.object.username, 'url': str(reverse_lazy('accounts:admin_user_detail', kwargs={'pk': self.object.pk}))},
+            {'title': 'Delete', 'url': None},
+        ]
+
     def get_object(self):
         """Get the user to delete"""
         user_id = self.kwargs.get('pk')
         user = get_object_or_404(User, pk=user_id)
-        
+
         # Prevent self-deletion
         if user.id == self.request.user.id:
             raise Http404(_('You cannot delete your own account.'))
@@ -298,7 +339,7 @@ class UserDeleteAdminView(LoginRequiredMixin, IsSuperAdminMixin, DeleteView):
     
     def delete(self, request, *args, **kwargs):
         """Delete the user and show message"""
-        user = self.get_object()
+        user = self.object
         username = user.username
         messages.warning(
             self.request,
@@ -307,7 +348,7 @@ class UserDeleteAdminView(LoginRequiredMixin, IsSuperAdminMixin, DeleteView):
         return super().delete(request, *args, **kwargs)
 
 
-class UserDetailAdminView(LoginRequiredMixin, IsSuperAdminMixin, DetailView):
+class UserDetailAdminView(LoginRequiredMixin, IsSuperAdminMixin, PageHeaderMixin, DetailView):
     """
     SUPERADMIN ONLY: View detailed user information
     
@@ -321,7 +362,33 @@ class UserDetailAdminView(LoginRequiredMixin, IsSuperAdminMixin, DetailView):
     model = User
     template_name = 'account/admin_user_detail.html'
     context_object_name = 'target_user'
-    
+
+    def get_header_title(self):
+        return f"User Profile: {self.object.username}"
+
+    def get_header_subtitle(self):
+        return self.object.email or ""
+
+    def get_back_url(self):
+        return str(reverse_lazy('accounts:admin_users_list'))
+
+    def get_breadcrumb_items(self):
+        return [
+            {'title': 'Admin', 'url': None},
+            {'title': 'Users', 'url': str(reverse_lazy('accounts:admin_users_list'))},
+            {'title': self.object.username, 'url': None},
+        ]
+
+    def get_header_actions(self):
+        return [
+            {
+                'label': 'Edit User',
+                'url': str(reverse_lazy('accounts:admin_user_edit', kwargs={'pk': self.object.pk})),
+                'icon': 'edit',
+                'class': 'btn-falcon-default',
+            },
+        ]
+
     def get_object(self):
         """Get the user to view"""
         user_id = self.kwargs.get('pk')
@@ -329,8 +396,8 @@ class UserDetailAdminView(LoginRequiredMixin, IsSuperAdminMixin, DetailView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        user = self.get_object()
-        
+        user = self.object
+
         # Get cabinet roles
         cabinet_roles = user.cabinet_roles.all().select_related('cabinet')
         context['cabinet_roles'] = cabinet_roles
@@ -401,7 +468,7 @@ class SwitchCabinetView(LoginRequiredMixin, IsSuperAdminMixin, View):
         return redirect(request.META.get('HTTP_REFERER') or 'home')
 
 
-class AssignUserToCabinetView(IsSuperAdminMixin, CreateView):
+class AssignUserToCabinetView(LoginRequiredMixin, IsSuperAdminMixin, PageHeaderMixin, CreateView):
     """
     Superadmin view to assign users to cabinets
     
@@ -414,35 +481,50 @@ class AssignUserToCabinetView(IsSuperAdminMixin, CreateView):
     model = UserCabinetRole
     form_class = AssignUserToCabinetForm
     template_name = 'account/assign_user_to_cabinet.html'
-    
+
+    def get_target_user(self):
+        if not hasattr(self, '_target_user'):
+            self._target_user = get_object_or_404(User, pk=self.kwargs.get('user_id'))
+        return self._target_user
+
+    def get_header_title(self):
+        return f"Assign {self.get_target_user().username} to Cabinet"
+
+    def get_header_subtitle(self):
+        return "Select a cabinet and role for this user"
+
+    def get_back_url(self):
+        return str(reverse_lazy('accounts:admin_user_detail', kwargs={'pk': self.kwargs.get('user_id')}))
+
+    def get_breadcrumb_items(self):
+        user = self.get_target_user()
+        return [
+            {'title': 'Admin', 'url': None},
+            {'title': 'Users', 'url': str(reverse_lazy('accounts:admin_users_list'))},
+            {'title': user.username, 'url': str(reverse_lazy('accounts:admin_user_detail', kwargs={'pk': user.pk}))},
+            {'title': 'Assign Cabinet', 'url': None},
+        ]
+
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        user_id = self.kwargs.get('user_id')
-        user = get_object_or_404(User, pk=user_id)
-        kwargs['user'] = user
+        kwargs['user'] = self.get_target_user()
         return kwargs
-    
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        user_id = self.kwargs.get('user_id')
-        target_user = get_object_or_404(User, pk=user_id)
-        context['target_user'] = target_user
-        context['page_title'] = _('Assign User to Cabinet')
+        context['target_user'] = self.get_target_user()
         return context
-    
+
     def get_success_url(self):
         user_id = self.kwargs.get('user_id')
         return reverse_lazy('accounts:admin_user_detail', kwargs={'pk': user_id})
-    
+
     def form_valid(self, form):
-        messages.success(
-            self.request,
-            _('User assigned to cabinet successfully.')
-        )
+        messages.success(self.request, _('User assigned to cabinet successfully.'))
         return super().form_valid(form)
 
 
-class CabinetListAdminView(IsSuperAdminMixin, ListView):
+class CabinetListAdminView(LoginRequiredMixin, IsSuperAdminMixin, PageHeaderMixin, ListView):
     """
     Superadmin view to manage all cabinets
     
@@ -456,7 +538,26 @@ class CabinetListAdminView(IsSuperAdminMixin, ListView):
     template_name = 'account/admin_cabinets_list.html'
     context_object_name = 'cabinets'
     paginate_by = 25
-    
+    header_title = "Cabinet Management"
+    header_subtitle = "Manage all project cabinets and their user assignments"
+    back_url = reverse_lazy('home')
+
+    def get_breadcrumb_items(self):
+        return [
+            {'title': 'Admin', 'url': None},
+            {'title': 'Cabinets', 'url': None},
+        ]
+
+    def get_header_actions(self):
+        return [
+            {
+                'label': 'New Cabinet',
+                'url': str(reverse_lazy('accounts:admin_cabinet_create')),
+                'icon': 'plus',
+                'class': 'btn-falcon-primary',
+            }
+        ]
+
     def get_queryset(self):
         qs = Cabinet.objects.all().order_by('name')
         
@@ -491,7 +592,7 @@ class CabinetListAdminView(IsSuperAdminMixin, ListView):
         return context
 
 
-class CabinetDetailAdminView(IsSuperAdminMixin, DetailView):
+class CabinetDetailAdminView(LoginRequiredMixin, IsSuperAdminMixin, PageHeaderMixin, DetailView):
     """
     Superadmin view to view cabinet details
     
@@ -504,11 +605,43 @@ class CabinetDetailAdminView(IsSuperAdminMixin, DetailView):
     model = Cabinet
     template_name = 'account/admin_cabinet_detail.html'
     context_object_name = 'cabinet'
-    
+
+    def get_header_title(self):
+        return self.object.name
+
+    def get_header_subtitle(self):
+        return "Cabinet Details and User Assignments"
+
+    def get_back_url(self):
+        return str(reverse_lazy('accounts:admin_cabinets_list'))
+
+    def get_breadcrumb_items(self):
+        return [
+            {'title': 'Admin', 'url': None},
+            {'title': 'Cabinets', 'url': str(reverse_lazy('accounts:admin_cabinets_list'))},
+            {'title': self.object.name, 'url': None},
+        ]
+
+    def get_header_actions(self):
+        return [
+            {
+                'label': 'Edit Cabinet',
+                'url': str(reverse_lazy('accounts:admin_cabinet_edit', kwargs={'pk': self.object.pk})),
+                'icon': 'edit',
+                'class': 'btn-falcon-default',
+            },
+            {
+                'label': 'Add User',
+                'url': str(reverse_lazy('accounts:admin_assign_user_to_cabinet', kwargs={'cabinet_id': self.object.pk})),
+                'icon': 'user-plus',
+                'class': 'btn-falcon-success',
+            },
+        ]
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        cabinet = self.get_object()
-        
+        cabinet = self.object
+
         # Get all user roles for this cabinet
         all_roles = cabinet.user_roles.select_related('user').order_by('-status', 'user__username')
         
@@ -526,7 +659,7 @@ class CabinetDetailAdminView(IsSuperAdminMixin, DetailView):
         return context
 
 
-class CabinetCreateView(IsSuperAdminMixin, CreateView):
+class CabinetCreateView(LoginRequiredMixin, IsSuperAdminMixin, PageHeaderMixin, CreateView):
     """
     Superadmin view to create new cabinet
     
@@ -538,23 +671,28 @@ class CabinetCreateView(IsSuperAdminMixin, CreateView):
     model = Cabinet
     form_class = CabinetForm
     template_name = 'account/admin_cabinet_form.html'
-    
+    header_title = "Create New Cabinet"
+    header_subtitle = "Add a new project cabinet to the system"
+    back_url = reverse_lazy('accounts:admin_cabinets_list')
+
+    def get_breadcrumb_items(self):
+        return [
+            {'title': 'Admin', 'url': None},
+            {'title': 'Cabinets', 'url': str(reverse_lazy('accounts:admin_cabinets_list'))},
+            {'title': 'New Cabinet', 'url': None},
+        ]
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['page_title'] = _('Create New Cabinet')
-        context['page_subtitle'] = _('Add a new project cabinet to the system')
         context['submit_label'] = _('Create Cabinet')
         return context
-    
+
     def get_success_url(self):
-        messages.success(
-            self.request,
-            _('Cabinet created successfully.')
-        )
+        messages.success(self.request, _('Cabinet created successfully.'))
         return reverse_lazy('accounts:admin_cabinet_detail', kwargs={'pk': self.object.pk})
 
 
-class CabinetUpdateView(IsSuperAdminMixin, UpdateView):
+class CabinetUpdateView(LoginRequiredMixin, IsSuperAdminMixin, PageHeaderMixin, UpdateView):
     """
     Superadmin view to edit cabinet information
     
@@ -566,23 +704,32 @@ class CabinetUpdateView(IsSuperAdminMixin, UpdateView):
     model = Cabinet
     form_class = CabinetForm
     template_name = 'account/admin_cabinet_form.html'
-    
+
+    def get_header_title(self):
+        return f"Edit Cabinet: {self.object.name}"
+
+    def get_back_url(self):
+        return str(reverse_lazy('accounts:admin_cabinet_detail', kwargs={'pk': self.object.pk}))
+
+    def get_breadcrumb_items(self):
+        return [
+            {'title': 'Admin', 'url': None},
+            {'title': 'Cabinets', 'url': str(reverse_lazy('accounts:admin_cabinets_list'))},
+            {'title': self.object.name, 'url': str(reverse_lazy('accounts:admin_cabinet_detail', kwargs={'pk': self.object.pk}))},
+            {'title': 'Edit', 'url': None},
+        ]
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['page_title'] = _('Edit Cabinet')
-        context['page_subtitle'] = _('Update cabinet information')
         context['submit_label'] = _('Update Cabinet')
         return context
-    
+
     def get_success_url(self):
-        messages.success(
-            self.request,
-            _('Cabinet updated successfully.')
-        )
+        messages.success(self.request, _('Cabinet updated successfully.'))
         return reverse_lazy('accounts:admin_cabinet_detail', kwargs={'pk': self.object.pk})
 
 
-class CabinetDeleteView(IsSuperAdminMixin, DeleteView):
+class CabinetDeleteView(LoginRequiredMixin, IsSuperAdminMixin, PageHeaderMixin, DeleteView):
     """
     Superadmin view to delete cabinet
     
@@ -594,15 +741,36 @@ class CabinetDeleteView(IsSuperAdminMixin, DeleteView):
     model = Cabinet
     template_name = 'account/admin_cabinet_confirm_delete.html'
     success_url = reverse_lazy('accounts:admin_cabinets_list')
-    
+
+    def get_header_title(self):
+        return f"Delete Cabinet: {self.object.name}"
+
+    def get_header_subtitle(self):
+        return "This will permanently delete the cabinet and all related data."
+
+    def get_back_url(self):
+        return str(reverse_lazy('accounts:admin_cabinet_detail', kwargs={'pk': self.object.pk}))
+
+    def get_breadcrumb_items(self):
+        return [
+            {'title': 'Admin', 'url': None},
+            {'title': 'Cabinets', 'url': str(reverse_lazy('accounts:admin_cabinets_list'))},
+            {'title': self.object.name, 'url': str(reverse_lazy('accounts:admin_cabinet_detail', kwargs={'pk': self.object.pk}))},
+            {'title': 'Delete', 'url': None},
+        ]
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        cabinet = self.get_object()
+        cabinet = self.object
         context['user_count'] = cabinet.user_roles.count()
         context['approved_count'] = cabinet.user_roles.filter(status='APPROVED').count()
         context['pending_count'] = cabinet.user_roles.filter(status='PENDING').count()
+        # Cascade warning: show what will be destroyed
+        context['site_count'] = Site.objects.filter(cabinet=cabinet).count()
+        context['expense_count'] = Expense.objects.filter(site__cabinet=cabinet).count()
+        context['invoice_count'] = Invoice.objects.filter(contract__site__cabinet=cabinet).count()
         return context
-    
+
     def delete(self, request, *args, **kwargs):
         messages.success(
             request,
@@ -611,47 +779,57 @@ class CabinetDeleteView(IsSuperAdminMixin, DeleteView):
         return super().delete(request, *args, **kwargs)
 
 
-class AssignUserToCabinetFromDetailView(IsSuperAdminMixin, CreateView):
+class AssignUserToCabinetFromDetailView(LoginRequiredMixin, IsSuperAdminMixin, PageHeaderMixin, CreateView):
     """
-    Superadmin view to assign user to cabinet from cabinet detail page
-    
-    Same as AssignUserToCabinetView but accessed from cabinet detail
-    Instead of passing user_id in URL, passes cabinet_id
+    Superadmin view to assign a user to a cabinet from the cabinet detail page.
+    The cabinet is fixed from the URL; the form presents a user dropdown.
     """
     model = UserCabinetRole
-    form_class = AssignUserToCabinetForm
+    form_class = AssignUserToCabinetFromCabinetForm
     template_name = 'account/admin_assign_user_to_cabinet.html'
-    
+
+    def get_cabinet(self):
+        if not hasattr(self, '_cabinet'):
+            self._cabinet = get_object_or_404(Cabinet, pk=self.kwargs['cabinet_id'])
+        return self._cabinet
+
+    def get_header_title(self):
+        return f"Add User to: {self.get_cabinet().name}"
+
+    def get_header_subtitle(self):
+        return "Assign a system user and role to this cabinet"
+
+    def get_back_url(self):
+        return str(reverse_lazy('accounts:admin_cabinet_detail', kwargs={'pk': self.kwargs['cabinet_id']}))
+
+    def get_breadcrumb_items(self):
+        cabinet = self.get_cabinet()
+        return [
+            {'title': 'Admin', 'url': None},
+            {'title': 'Cabinets', 'url': str(reverse_lazy('accounts:admin_cabinets_list'))},
+            {'title': cabinet.name, 'url': str(reverse_lazy('accounts:admin_cabinet_detail', kwargs={'pk': cabinet.pk}))},
+            {'title': 'Add User', 'url': None},
+        ]
+
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        # No user pre-selected - let form handle it
-        kwargs['user'] = None
+        kwargs['cabinet'] = self.get_cabinet()
         return kwargs
-    
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        cabinet_id = self.kwargs.get('cabinet_id')
-        cabinet = get_object_or_404(Cabinet, pk=cabinet_id)
-        context['cabinet'] = cabinet
-        context['page_title'] = _('Assign User to Cabinet')
+        context['cabinet'] = self.get_cabinet()
         return context
-    
+
     def form_valid(self, form):
-        cabinet_id = self.kwargs.get('cabinet_id')
-        cabinet = get_object_or_404(Cabinet, pk=cabinet_id)
-        form.instance.cabinet = cabinet
-        messages.success(
-            self.request,
-            _('User assigned to cabinet successfully.')
-        )
+        messages.success(self.request, _('User assigned to cabinet successfully.'))
         return super().form_valid(form)
-    
+
     def get_success_url(self):
-        cabinet_id = self.kwargs.get('cabinet_id')
-        return reverse_lazy('accounts:admin_cabinet_detail', kwargs={'pk': cabinet_id})
+        return reverse_lazy('accounts:admin_cabinet_detail', kwargs={'pk': self.kwargs['cabinet_id']})
 
 
-class CabinetUserRoleUpdateView(IsSuperAdminMixin, UpdateView):
+class CabinetUserRoleUpdateView(LoginRequiredMixin, IsSuperAdminMixin, PageHeaderMixin, UpdateView):
     """
     Superadmin view to edit user role in cabinet
     
@@ -663,26 +841,37 @@ class CabinetUserRoleUpdateView(IsSuperAdminMixin, UpdateView):
     model = UserCabinetRole
     form_class = AssignRoleToCabinetUserForm
     template_name = 'account/admin_cabinet_user_role_form.html'
-    
+
+    def get_header_title(self):
+        return f"Edit Role: {self.object.user.username}"
+
+    def get_header_subtitle(self):
+        return f"Cabinet: {self.object.cabinet.name}"
+
+    def get_back_url(self):
+        return str(reverse_lazy('accounts:admin_cabinet_detail', kwargs={'pk': self.object.cabinet.pk}))
+
+    def get_breadcrumb_items(self):
+        return [
+            {'title': 'Admin', 'url': None},
+            {'title': 'Cabinets', 'url': str(reverse_lazy('accounts:admin_cabinets_list'))},
+            {'title': self.object.cabinet.name, 'url': str(reverse_lazy('accounts:admin_cabinet_detail', kwargs={'pk': self.object.cabinet.pk}))},
+            {'title': 'Edit Role', 'url': None},
+        ]
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        role = self.get_object()
-        context['page_title'] = _('Edit Cabinet Assignment')
-        context['user'] = role.user
-        context['cabinet'] = role.cabinet
-        context['page_subtitle'] = _('Modify user role and approval status')
+        context['user'] = self.object.user
+        context['cabinet'] = self.object.cabinet
         return context
-    
+
     def get_success_url(self):
-        cabinet_id = self.get_object().cabinet.pk
-        messages.success(
-            self.request,
-            _('User role updated successfully.')
-        )
+        cabinet_id = self.object.cabinet.pk
+        messages.success(self.request, _('User role updated successfully.'))
         return reverse_lazy('accounts:admin_cabinet_detail', kwargs={'pk': cabinet_id})
 
 
-class CabinetUserRoleDeleteView(IsSuperAdminMixin, DeleteView):
+class CabinetUserRoleDeleteView(LoginRequiredMixin, IsSuperAdminMixin, PageHeaderMixin, DeleteView):
     """
     Superadmin view to remove user from cabinet
     
@@ -693,20 +882,33 @@ class CabinetUserRoleDeleteView(IsSuperAdminMixin, DeleteView):
     """
     model = UserCabinetRole
     template_name = 'account/admin_cabinet_user_role_confirm_delete.html'
-    
+
+    def get_header_title(self):
+        return f"Remove {self.object.user.username} from {self.object.cabinet.name}"
+
+    def get_header_subtitle(self):
+        return "This will revoke the user's access to this cabinet."
+
+    def get_back_url(self):
+        return str(reverse_lazy('accounts:admin_cabinet_detail', kwargs={'pk': self.object.cabinet.pk}))
+
+    def get_breadcrumb_items(self):
+        return [
+            {'title': 'Admin', 'url': None},
+            {'title': 'Cabinets', 'url': str(reverse_lazy('accounts:admin_cabinets_list'))},
+            {'title': self.object.cabinet.name, 'url': str(reverse_lazy('accounts:admin_cabinet_detail', kwargs={'pk': self.object.cabinet.pk}))},
+            {'title': 'Remove User', 'url': None},
+        ]
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        role = self.get_object()
-        context['user'] = role.user
-        context['cabinet'] = role.cabinet
-        context['role_display'] = role.get_role_display()
+        context['user'] = self.object.user
+        context['cabinet'] = self.object.cabinet
+        context['role_display'] = self.object.get_role_display()
         return context
-    
+
     def get_success_url(self):
-        cabinet_id = self.get_object().cabinet.pk
-        messages.success(
-            self.request,
-            _('User removed from cabinet successfully.')
-        )
+        cabinet_id = self.object.cabinet.pk
+        messages.success(self.request, _('User removed from cabinet successfully.'))
         return reverse_lazy('accounts:admin_cabinet_detail', kwargs={'pk': cabinet_id})
 

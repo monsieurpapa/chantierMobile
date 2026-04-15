@@ -1,27 +1,19 @@
-{% extends 'base.html' %}
+{% extends 'falcon_base.html' %}
 {% load static i18n %}
 
 {% block title %}{% trans "Delete Cabinet" %} - ChantiérMobile{% endblock %}
 
-{% block subcontent %}
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    {% include 'includes/navbar-vertical.html' with on="account" %}
+
+    <div class="content">
+        {% include 'includes/navbar-top.html' %}
+
+        <div class="container-fluid py-4">
+{% include 'includes/page_header.html' %}
 <div class="row">
     <div class="col-lg-8 offset-lg-2">
-        <!-- Header -->
-        <div class="page-header mb-4">
-            <div class="row align-items-center">
-                <div class="col">
-                    <h1 class="page-header-title">
-                        <span class="fas fa-trash text-danger me-2"></span>{% trans "Delete Cabinet" %}
-                    </h1>
-                    <p class="text-500">{% trans "This action cannot be undone" %}</p>
-                </div>
-                <div class="col-auto">
-                    <a href="{% url 'accounts:admin_cabinet_detail' cabinet.pk %}" class="btn btn-falcon-default">
-                        <span class="fas fa-arrow-left me-2"></span>{% trans "Back to Cabinet" %}
-                    </a>
-                </div>
-            </div>
-        </div>
 
         <!-- Warning Alert -->
         <div class="alert alert-danger" role="alert">
@@ -117,6 +109,34 @@
             </div>
         </div>
 
+        <!-- Cascade Data Warning -->
+        {% if site_count or expense_count or invoice_count %}
+        <div class="card mb-3 border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0">
+                    <span class="fas fa-exclamation-triangle me-2"></span>{% trans "Data That Will Be Permanently Destroyed" %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="text-danger mb-3">{% trans "Deleting this cabinet will cascade and permanently destroy all of the following:" %}</p>
+                <div class="row g-3">
+                    <div class="col-md-4 text-center">
+                        <h3 class="mb-0 text-danger">{{ site_count }}</h3>
+                        <small class="text-500">{% trans "Construction Sites" %}</small>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <h3 class="mb-0 text-danger">{{ expense_count }}</h3>
+                        <small class="text-500">{% trans "Expenses" %}</small>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <h3 class="mb-0 text-danger">{{ invoice_count }}</h3>
+                        <small class="text-500">{% trans "Invoices" %}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
         <!-- Confirmation Form -->
         <div class="card">
             <div class="card-header bg-light">
@@ -138,6 +158,10 @@
                 </form>
             </div>
         </div>
+    </div>
+</div>
+        </div>
+        {% include 'includes/footer.html' %}
     </div>
 </div>
 {% endblock %}

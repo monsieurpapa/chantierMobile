@@ -1,0 +1,236 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n rbac_tags %}
+
+{% block title %}{% trans "Budget Report" %} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    {% include 'includes/navbar-vertical.html' with on="finance" %}
+
+    <div class="content">
+        {% include 'includes/navbar-top.html' %}
+
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            <!-- Summary KPIs -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <div class="card text-center h-100">
+                        <div class="card-body">
+                            <h6 class="text-600 mb-1">{% trans "Total Budget" %}</h6>
+                            <h3 class="text-primary mb-0">${{ budget.total_amount }}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center h-100">
+                        <div class="card-body">
+                            <h6 class="text-600 mb-1">{% trans "Spent" %}</h6>
+                            <h3 class="{% if usage_pct > 90 %}text-danger{% elif usage_pct > 70 %}text-warning{% else %}text-success{% endif %} mb-0">
+                                ${{ spent }}
+                            </h3>
+                            <small class="text-500">{{ usage_pct }}%</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center h-100">
+                        <div class="card-body">
+                            <h6 class="text-600 mb-1">{% trans "Remaining" %}</h6>
+                            <h3 class="{% if remaining < 0 %}text-danger{% else %}text-success{% endif %} mb-0">
+                                ${{ remaining }}
+                            </h3>
+                            <small class="text-500">{{ remaining_days }} {% trans "days left" %}</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center h-100">
+                        <div class="card-body">
+                            <h6 class="text-600 mb-1">{% trans "Forecast at End" %}</h6>
+                            <h3 class="{% if forecast_overrun %}text-danger{% else %}text-success{% endif %} mb-0">
+                                ${{ forecast_total }}
+                            </h3>
+                            <small class="text-500">
+                                {% if forecast_overrun %}
+                                <span class="fas fa-exclamation-triangle me-1 text-danger"></span>{% trans "Projected overrun" %}
+                                {% else %}
+                                <span class="fas fa-check-circle me-1 text-success"></span>{% trans "On track" %}
+                                {% endif %}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="fs--1 text-600">{% trans "Budget utilization" %}</span>
+                        <span class="fs--1 fw-semi-bold">{{ usage_pct }}%</span>
+                    </div>
+                    <div class="progress" style="height: 10px;">
+                        <div class="progress-bar {% if usage_pct > 90 %}bg-danger{% elif usage_pct > 70 %}bg-warning{% else %}bg-success{% endif %}"
+                             role="progressbar"
+                             style="width: {{ usage_pct }}%"
+                             aria-valuenow="{{ usage_pct }}"
+                             aria-valuemin="0"
+                             aria-valuemax="100">
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between mt-1">
+                        <small class="text-500">{{ budget.start_date }}</small>
+                        <small class="text-500">{{ budget.end_date }}</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <!-- Category Breakdown -->
+                <div class="col-lg-7">
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">
+                                <span class="fas fa-chart-bar me-2"></span>{% trans "Spend by Category" %}
+                            </h5>
+                        </div>
+                        <div class="card-body p-0">
+                            {% if category_breakdown %}
+                            <div class="table-responsive">
+                                <table class="table table-sm fs--1 mb-0">
+                                    <thead class="bg-200 text-900">
+                                        <tr>
+                                            <th>{% trans "Category" %}</th>
+                                            <th class="text-end">{% trans "Count" %}</th>
+                                            <th class="text-end">{% trans "Total" %}</th>
+                                            <th class="text-end">{% trans "% of Budget" %}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for row in category_breakdown %}
+                                        <tr>
+                                            <td>{{ row.category__name }}</td>
+                                            <td class="text-end">{{ row.count }}</td>
+                                            <td class="text-end fw-semi-bold">${{ row.total }}</td>
+                                            <td class="text-end">
+                                                {% if budget.total_amount %}
+                                                {{ row.total|floatformat:0 }}
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="text-center py-5">
+                                <span class="fas fa-receipt fa-2x text-300 d-block mb-2"></span>
+                                <p class="text-500">{% trans "No approved expenses in this budget period." %}</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Forecast & Info Panel -->
+                <div class="col-lg-5">
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">
+                                <span class="fas fa-tachometer-alt me-2"></span>{% trans "Burn Rate" %}
+                            </h5>
+                        </div>
+                        <div class="card-body fs--1">
+                            <div class="row mb-2">
+                                <div class="col-7 text-600">{% trans "Daily burn rate" %}</div>
+                                <div class="col-5 fw-semi-bold text-end">${{ daily_burn }}/{% trans "day" %}</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-7 text-600">{% trans "Days remaining" %}</div>
+                                <div class="col-5 fw-semi-bold text-end">{{ remaining_days }}</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-7 text-600">{% trans "Projected spend at end" %}</div>
+                                <div class="col-5 fw-semi-bold text-end {% if forecast_overrun %}text-danger{% else %}text-success{% endif %}">
+                                    ${{ forecast_total }}
+                                </div>
+                            </div>
+                            {% if forecast_overrun %}
+                            <div class="alert alert-danger mt-3 mb-0 fs--1">
+                                <span class="fas fa-exclamation-triangle me-2"></span>
+                                {% trans "At current burn rate the budget will be exceeded before the period ends." %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if request.user|has_role:'DIRECTOR,ACCOUNTANT' %}
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <a href="{% url 'finance:budget_update' pk=budget.pk %}" class="btn btn-falcon-default btn-sm w-100">
+                                <span class="fas fa-edit me-2"></span>{% trans "Edit Budget" %}
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Recent Expenses -->
+            <div class="card mb-3">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <span class="fas fa-list me-2"></span>{% trans "Recent Expenses (this period)" %}
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if recent_expenses %}
+                    <div class="table-responsive">
+                        <table class="table table-sm fs--1 mb-0">
+                            <thead class="bg-200 text-900">
+                                <tr>
+                                    <th>{% trans "Date" %}</th>
+                                    <th>{% trans "Category" %}</th>
+                                    <th>{% trans "Description" %}</th>
+                                    <th>{% trans "Requester" %}</th>
+                                    <th class="text-end">{% trans "Amount" %}</th>
+                                    <th>{% trans "Status" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for expense in recent_expenses %}
+                                <tr>
+                                    <td>{{ expense.expense_date }}</td>
+                                    <td>{{ expense.category.name }}</td>
+                                    <td>{{ expense.description|truncatechars:40 }}</td>
+                                    <td>{{ expense.requester }}</td>
+                                    <td class="text-end fw-semi-bold">${{ expense.amount }}</td>
+                                    <td>
+                                        <span class="badge rounded-pill
+                                            {% if expense.status == 'APPROVED' %}badge-soft-success
+                                            {% elif expense.status == 'PAID' %}badge-soft-info
+                                            {% elif expense.status == 'REJECTED' %}badge-soft-danger
+                                            {% else %}badge-soft-warning{% endif %}">
+                                            {{ expense.get_status_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <p class="text-500">{% trans "No expenses recorded in this period." %}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}

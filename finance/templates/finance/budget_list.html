@@ -34,7 +34,7 @@
                                 {% for budget in budgets %}
                                 <tr>
                                     <td class="align-middle">
-                                        <a href="{% url 'projects:site_detail' unique_id=budget.site.unique_id %}">
+                                        <a href="{% url 'finance:budget_detail' pk=budget.pk %}">
                                             <strong>{{ budget.site.name }}</strong>
                                         </a>
                                     </td>

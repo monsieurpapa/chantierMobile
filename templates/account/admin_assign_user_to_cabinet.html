@@ -1,29 +1,19 @@
-{% extends 'base.html' %}
+{% extends 'falcon_base.html' %}
 {% load static i18n %}
 
 {% block title %}{% trans "Assign User to Cabinet" %} - ChantiérMobile{% endblock %}
 
-{% block subcontent %}
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    {% include 'includes/navbar-vertical.html' with on="account" %}
+
+    <div class="content">
+        {% include 'includes/navbar-top.html' %}
+
+        <div class="container-fluid py-4">
+{% include 'includes/page_header.html' %}
 <div class="row">
     <div class="col-lg-8">
-        <!-- Header -->
-        <div class="page-header mb-4">
-            <div class="row align-items-center">
-                <div class="col">
-                    <h1 class="page-header-title">
-                        <span class="fas fa-user-plus me-2"></span>{% trans "Assign User to Cabinet" %}
-                    </h1>
-                    <p class="text-500">
-                        {% trans "Add a user to" %} <strong>{{ cabinet.name }}</strong>
-                    </p>
-                </div>
-                <div class="col-auto">
-                    <a href="{% url 'accounts:admin_cabinet_detail' cabinet.pk %}" class="btn btn-falcon-default">
-                        <span class="fas fa-arrow-left me-2"></span>{% trans "Back to Cabinet" %}
-                    </a>
-                </div>
-            </div>
-        </div>
 
         <!-- Messages -->
         {% if messages %}
@@ -180,6 +170,10 @@
                 <p class="mb-0 mt-2 fs--2">{% trans "Only superadmins can assign users to cabinets and manage their roles." %}</p>
             </div>
         </div>
+    </div>
+</div>
+        </div>
+        {% include 'includes/footer.html' %}
     </div>
 </div>
 {% endblock %}

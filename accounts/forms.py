@@ -196,15 +196,70 @@ class AssignUserToCabinetForm(forms.ModelForm):
     def __init__(self, user, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.user = user
-        # Exclude cabinets user already has roles in
-        assigned_cabinets = user.cabinet_roles.values_list('cabinet_id', flat=True)
-        self.fields['cabinet'].queryset = Cabinet.objects.exclude(
-            id__in=assigned_cabinets
-        ).order_by('name')
+        if user is not None:
+            # Exclude cabinets user already has roles in
+            assigned_cabinets = user.cabinet_roles.values_list('cabinet_id', flat=True)
+            self.fields['cabinet'].queryset = Cabinet.objects.exclude(
+                id__in=assigned_cabinets
+            ).order_by('name')
+        else:
+            self.fields['cabinet'].queryset = Cabinet.objects.order_by('name')
     
     def save(self, commit=True):
         instance = super().save(commit=False)
         instance.user = self.user
+        if commit:
+            instance.save()
+        return instance
+
+
+class AssignUserToCabinetFromCabinetForm(forms.ModelForm):
+    """
+    Form used when assigning a user to a cabinet from the cabinet detail page.
+    The cabinet is fixed (from the URL); the user is selected via dropdown
+    filtered to exclude users already assigned to this cabinet.
+    """
+
+    user = forms.ModelChoiceField(
+        queryset=User.objects.none(),
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        label=_('User'),
+        help_text=_('Select a user to add to this cabinet'),
+    )
+
+    role = forms.ChoiceField(
+        choices=UserRoles.choices,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        label=_('Role'),
+        help_text=_('Select the role this user will have in the cabinet'),
+    )
+
+    status = forms.ChoiceField(
+        choices=ApprovalStatus.choices,
+        initial=ApprovalStatus.APPROVED,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        label=_('Status'),
+        help_text=_('Set initial approval status'),
+    )
+
+    class Meta:
+        model = UserCabinetRole
+        fields = ['user', 'role', 'status']
+
+    def __init__(self, cabinet, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.cabinet = cabinet
+        # Only show users not already assigned to this cabinet
+        already_assigned = UserCabinetRole.objects.filter(
+            cabinet=cabinet
+        ).values_list('user_id', flat=True)
+        self.fields['user'].queryset = User.objects.exclude(
+            id__in=already_assigned
+        ).order_by('username')
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.cabinet = self.cabinet
         if commit:
             instance.save()
         return instance

@@ -15,6 +15,7 @@ class ContractListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, 
     model = Contract
     template_name = 'revenue/contract_list.html'
     context_object_name = 'contracts'
+    cabinet_lookup_field = 'site__cabinet'
     header_title = "Revenue: Client Contracts"
     header_subtitle = "Manage project contracts and financial agreements"
     
@@ -84,6 +85,7 @@ class ContractUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMix
     form_class = ContractForm
     template_name = 'revenue/contract_form.html'
     allowed_roles = ['DIRECTOR', 'ACCOUNTANT']
+    cabinet_lookup_field = 'site__cabinet'
     
     def get_header_title(self):
         return f"Edit Contract: {self.object.client_name}"
@@ -118,6 +120,7 @@ class InvoiceListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, L
     model = Invoice
     template_name = 'revenue/invoice_list.html'
     context_object_name = 'invoices'
+    cabinet_lookup_field = 'contract__site__cabinet'
     header_title = "Billing: Client Invoices"
     header_subtitle = "Monitor and track all project invoices"
 
@@ -179,6 +182,7 @@ class InvoiceCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixi
 
 class InvoiceDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, DetailView):
     model = Invoice
+    cabinet_lookup_field = 'contract__site__cabinet'
     template_name = 'revenue/invoice_detail.html'
     context_object_name = 'invoice'
 
@@ -242,11 +246,14 @@ class PaymentListView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin,
         context['total_count'] = qs.count()
         return context
 
-class PaymentCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, CreateView):
+class PaymentCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, CreateView):
     model = Payment
     form_class = PaymentForm
     template_name = 'revenue/payment_form.html'
     allowed_roles = ['DIRECTOR', 'ACCOUNTANT', 'CASHIER']
+    header_title = "Record Payment"
+    header_subtitle = "Log a payment received against an invoice"
+    back_url = reverse_lazy('revenue:invoice_list')
 
     def get_initial(self):
         initial = super().get_initial()
@@ -276,15 +283,24 @@ class PaymentCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixi
         return form
 
     def form_valid(self, form):
+        from core.models import StatusChangeLog
         response = super().form_valid(form)
         # Auto-mark invoice as PAID when total payments cover the full amount.
         # Only transitions SENT/OVERDUE → PAID (valid per state machine).
         invoice = self.object.invoice
         total_paid = invoice.payments.aggregate(total=Sum('amount'))['total'] or 0
         if total_paid >= invoice.amount and invoice.status in [InvoiceStatus.SENT, InvoiceStatus.OVERDUE]:
+            old_status = invoice.status
             invoice.status = InvoiceStatus.PAID
             invoice.full_clean()
             invoice.save()
+            StatusChangeLog.log(
+                invoice,
+                changed_by=self.request.user,
+                old_status=old_status,
+                new_status=InvoiceStatus.PAID,
+                note='Auto-marked PAID — full payment received.',
+            )
         return response
 
     def get_success_url(self):

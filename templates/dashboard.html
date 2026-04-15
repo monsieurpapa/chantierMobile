@@ -1,14 +1,16 @@
-{% extends 'base.html' %}
+{% extends 'falcon_base.html' %}
 {% load static %}
 
 {% block title %}Dashboard - TicTacFlow Solutions{% endblock %}
 
-{% block navbar_vertical %}
-{% include 'includes/navbar-vertical.html' with on="dashboard" %}
-{% endblock %}
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    {% include 'includes/navbar-vertical.html' with on="dashboard" %}
 
-{% block subcontent %}
-<div class="container-fluid py-4">
+    <div class="content">
+        {% include 'includes/navbar-top.html' %}
+
+        <div class="container-fluid py-4">
     <!-- Welcome & Quick Actions -->
     <div class="row g-3 mb-3">
         <div class="col-md-12 col-xxl-9">
@@ -310,6 +312,9 @@
                 </div>
             </div>
         </div>
+    </div>
+        </div>
+        {% include 'includes/footer.html' %}
     </div>
 </div>
 {% endblock %}

@@ -4,122 +4,44 @@ Deferred work tracked here. Items added by `/plan-ceo-review` on 2026-03-31.
 
 ---
 
-## P2 — Self-Approval Prevention
+~~## P2 — Self-Approval Prevention~~ *(Implemented — `Expense.approve()` raises `ValidationError` when `requester == approver`; bypassable by `is_superuser`.)*
 
-**What:** Prevent a user who submitted an expense from also approving it.
+~~## P2 — Status Change Audit Log~~ *(Implemented — generic `StatusChangeLog` model in `core/models.py` using ContentTypes; migration `core/0001_status_change_log.py` applied; hooked into `SiteUpdateView.form_valid()` and `PaymentCreateView.form_valid()`.)*
 
-**Why:** Even in a small team, having the same person request and approve their own expense is a financial controls gap. Auditors flag this.
-
-**Pros:** Strengthens financial controls; simple check.
-
-**Cons:** Could be too restrictive for tiny cabinets where the Director is the only approver; may need an escape hatch for superusers.
-
-**Context:** Add `if expense.requester == user: raise ValidationError(...)` to `Expense.approve()` in `finance/models.py`. Consider making it bypassable by `is_superuser` only.
-
-**Effort:** S (human: 1h / CC+gstack: 5min)
-**Priority:** P2
-**Depends on:** None
-
----
-
-## P2 — Status Change Audit Log
-
-**What:** Track who changed the status of a Site or Invoice, when, and from what to what.
-
-**Why:** Operational visibility — when a Site is paused or an invoice cancelled, there's currently no record of who made that decision or why. Hard to audit and debug post-hoc.
-
-**Pros:** Full audit trail for compliance; enables "show history" UI.
-
-**Cons:** Requires a new model and migration; need to hook into `save()` signals or override `save()` in Site/Invoice models.
-
-**Context:** `ExpenseApproval` already does this for expenses — replicate the pattern generically. Options: (a) a generic `StatusChangeLog(content_type, object_id, changed_by, old_status, new_status, note, changed_at)` using ContentTypes framework, or (b) model-specific logs like `SiteStatusLog` and `InvoiceStatusLog`. Option (a) is more reusable.
-
-**Effort:** M (human: 3h / CC+gstack: 15min)
-**Priority:** P2
-**Depends on:** None
-
----
-
-## P3 — Budget Period Reporting
-
-**What:** Add a budget utilization report showing spend by period, category breakdown, and forecast to end of period.
-
-**Why:** Directors currently have to mentally calculate remaining budget from the expense list. A dashboard view would reduce errors and improve financial decision-making.
-
-**Context:** `Budget.get_remaining_amount()` and `Budget.get_spent_amount()` already exist. Build a `BudgetDetailView` that aggregates by `ExpenseCategory` and projects spend rate to end of period.
-
-**Effort:** M (human: 4h / CC+gstack: 20min)
-**Priority:** P3
-**Depends on:** expense_date field (already added)
-
----
+~~## P3 — Budget Period Reporting~~ *(Implemented — `BudgetDetailView` with KPI cards, progress bar, category breakdown, burn-rate forecast, and recent expenses table. URL: `finance:budget_detail <pk>`. Budget list links to it.)*
 
 ~~## P3 — SiteDetailView Double Query~~ *(Fixed in commit 031deb1 — perf: eliminate duplicate site/expenses queries)*
 
----
+~~## P2 — Fix `IsSuperAdminMixin` Duplicate Definition~~ *(Fixed — second definition removed from `accounts/views.py`)*
 
-## P1 — Cabinet Switcher for Superadmins
+~~## P2 — Fix `cabinet_lookup_field` Pattern in `CabinetAccessMixin`~~ *(Fixed — `cabinet_lookup_field` class attribute added, `ExpenseListView` uses `site__cabinet`)*
 
-**What:** Session-based org context switcher in the top navbar, superadmin-only. Lets a superadmin scope all querysets to a single Cabinet without needing a separate login.
+~~## P1 — Cabinet Switcher for Superadmins~~ *(Implemented — `SwitchCabinetView`, `CabinetContextLog`, `active_cabinet_context`, navbar dropdown, falcon_base amber banner, queryset scoping across all apps)*
 
-**Why:** Multi-tenant visibility — today a superadmin sees all tenant data interleaved with no filtering option. This is the foundation for per-tenant auditing, reporting, and support.
+~~## P2 — Expense Approval Race Condition~~ *(Implemented — `Expense.approve()` and `reject()` wrapped in `transaction.atomic()`; `select_for_update()` on budget row in `approve()` to serialize concurrent approvals.)*
 
-**Scope (locked):**
-1. `POST /accounts/switch-cabinet/` → `SwitchCabinetView` (superadmin-only, CSRF, integer-validated `cabinet_id`)
-2. `request.session['active_cabinet_id']` as context key
-3. `CabinetAccessMixin.get_queryset()` — filter by session cabinet if set
-4. `get_user_cabinet()` — use session cabinet for superusers (not `Cabinet.objects.first()`)
-5. Cabinet dropdown in `navbar-top.html` (superadmin-only, `fas fa-building`)
-6. Amber banner in `falcon_base.html` when session cabinet is active
-7. `CabinetContextLog(cabinet, switched_by, action, created_at)` model + migration — `switched_by` must use `on_delete=SET_NULL, null=True`
-8. `active_cabinet_context` context processor: injects `active_cabinet` into all templates (short-circuit for anonymous users)
-9. Fix `BudgetListView.get_queryset()` and revenue view equivalents — currently return empty for superusers
-10. Scope create form site dropdowns to session cabinet for superusers
+~~## P2 — Cross-Tenant Approval in Function-Based Action Views~~ *(Implemented — `approve_expense`, `mark_expense_paid`, `approve_material_request` now check `get_session_cabinet()` after `get_object_or_404` and block cross-cabinet mutations when a cabinet scope is active.)*
 
-**Security note:** Function-based action views (`approve_expense`, `approve_material_request`) ignore session cabinet — a superadmin can approve cross-tenant. Fix by adding explicit cabinet check in each action view before modifying the object.
+~~## P3 — CabinetDeleteView Cascade Warning~~ *(Implemented — `CabinetDeleteView.get_context_data()` now adds `site_count`, `expense_count`, `invoice_count`; template shows a red danger card listing all data that will be destroyed.)*
 
-**Effort:** M (human: 1 day / CC+gstack: 30min)
-**Priority:** P1
-**Depends on:** None
+~~## P2 — Cabinet Scoping on `SiteAssignmentCreateView`~~ *(Implemented — `get_form()` override filters site and personnel FK dropdowns to user's cabinet; `cabinet_lookup_field = 'site__cabinet'` set for `CabinetAccessMixin`. Regression test added in `TestSiteAssignmentCabinetScoping`.)*
 
----
+## P3 — Superadmin Banner on Assignment Form When No Cabinet Selected
 
-## P2 — Fix `IsSuperAdminMixin` Duplicate Definition
+When a superadmin opens `/personnel/assignments/add/` without an active cabinet selected, `get_session_cabinet()` returns `None` and the form shows all sites globally. Add a dismissible amber banner: "No cabinet selected — showing all sites. Use the cabinet switcher to scope to a specific firm." Priority: pre-demo polish, not a security issue (superadmins are trusted).
 
-**What:** `IsSuperAdminMixin` is defined twice in `accounts/views.py` (lines 168 and 371). Second definition silently overrides first.
+## P3 — `PersonnelListView` Missing `select_related`
 
-**Why:** Python class definitions are just assignments — the second one wins. If the two definitions ever diverge (someone edits one but not the other), behavior becomes unpredictable.
+`PersonnelListView.get_queryset()` has no `.select_related('cabinet')`. Fine at current data volume. Add before the list grows past 50 rows to avoid N+1.
 
-**Context:** Delete the second definition at line 371. Both are identical. One is enough.
+## P3 — `BudgetListView` Manual Cabinet Filtering (DRY violation)
 
-**Effort:** XS (human: 5min / CC+gstack: 1min)
-**Priority:** P2
-**Depends on:** None
+`BudgetListView.get_queryset()` manually filters `site__cabinet__id__in=user_cabinet_ids` instead of using `CabinetAccessMixin`. Pre-existing pattern, no active harm. Should be unified when touching `finance/views.py` next.
 
----
+## P3 — `approve_material_request` Lacks `transaction.atomic()`
 
-## P2 — Fix `cabinet_lookup_field` Pattern in `CabinetAccessMixin`
+Unlike `Expense.approve()`, `approve_material_request` does a bare `mat_request.save()` without wrapping in `transaction.atomic()`. At current complexity (no child records modified atomically) this is fine. Add if the function is extended to also create an Expense or log entry.
 
-**What:** `CabinetAccessMixin.get_queryset()` uses `qs.filter(cabinet__in=cabinets)` which only works for models with a direct `cabinet` FK (`Site`, `Budget`). Models with indirect FKs (`Expense → site__cabinet`, `MaterialRequest → site__cabinet`, `Invoice → contract__site__cabinet`) return an empty queryset or crash silently.
+## P3 — `StatusChangeLog` Not Wired to Invoice/Payment Status Changes
 
-**Why:** This is already worked around by individual view overrides, but the mixin's implicit contract is misleading. New models added without awareness of this will silently break.
-
-**Context:** Add `cabinet_lookup_field = 'cabinet'` class attribute to `CabinetAccessMixin`. Views with indirect FKs set this to `'site__cabinet'`. Mixin uses it: `qs.filter(**{f'{self.cabinet_lookup_field}__in': cabinets})`.
-
-**Effort:** S (human: 45min / CC+gstack: 5min)
-**Priority:** P2
-**Depends on:** Cabinet Switcher (P1)
-
----
-
-## P2 — Expense Approval Race Condition
-
-**What:** Add `select_for_update()` + `transaction.atomic()` to `Expense.approve()` and `Expense.reject()` in `finance/models.py`.
-
-**Why:** Two concurrent approval POST requests could both pass the budget check independently, then both save, resulting in a budget overrun. Under current single-worker traffic this is unlikely, but it becomes a real risk under load or with multiple accountants approving simultaneously.
-
-**Context:** Wrap `approve()` body in `with transaction.atomic():` and add `budget = Budget.objects.select_for_update().get(site=self.site)` before the budget check in `Expense.clean()`. The `select_for_update()` acquires a row lock so only one request can proceed through the budget check at a time.
-
-**Effort:** S (human: 30min / CC+gstack: 5min)
-**Priority:** P2
-**Depends on:** None
+`StatusChangeLog.log()` is only called from `SiteUpdateView.form_valid()`. Invoice (DRAFT→SENT→PAID→OVERDUE) and Payment status transitions are not logged. Add when audit trail becomes a customer requirement.

@@ -1,32 +1,19 @@
-{% extends 'base.html' %}
+{% extends 'falcon_base.html' %}
 {% load static i18n %}
 
 {% block title %}{% trans "Cabinet Management" %} - ChantiérMobile{% endblock %}
 
-{% block subcontent %}
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    {% include 'includes/navbar-vertical.html' with on="account" %}
+
+    <div class="content">
+        {% include 'includes/navbar-top.html' %}
+
+        <div class="container-fluid py-4">
+{% include 'includes/page_header.html' %}
 <div class="row">
     <div class="col-12">
-        <!-- Header -->
-        <div class="page-header mb-4">
-            <div class="row align-items-center">
-                <div class="col">
-                    <h1 class="page-header-title">
-                        <span class="fas fa-building me-2"></span>{% trans "Cabinet Management" %}
-                    </h1>
-                    <p class="text-500">{% trans "Manage all project cabinets and their user assignments" %}</p>
-                </div>
-                <div class="col-auto d-flex">
-                    {% if request.user.is_superuser %}
-                    <a href="{% url 'accounts:admin_cabinet_create' %}" class="btn btn-primary me-2">
-                        <span class="fas fa-plus me-2"></span>{% trans "Add Cabinet" %}
-                    </a>
-                    {% endif %}
-                    <a href="{% url 'accounts:admin_users_list' %}" class="btn btn-falcon-default">
-                        <span class="fas fa-arrow-left me-2"></span>{% trans "Back to Users" %}
-                    </a>
-                </div>
-            </div>
-        </div>
 
         <!-- Statistics Cards -->
         <div class="row g-3 mb-4">
@@ -254,6 +241,10 @@
             </div>
             {% endif %}
         </div>
+    </div>
+</div>
+        </div>
+        {% include 'includes/footer.html' %}
     </div>
 </div>
 {% endblock %}

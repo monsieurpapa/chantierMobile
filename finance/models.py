@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import models, transaction
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 from core.models import BaseModel
@@ -122,26 +122,34 @@ class Expense(BaseModel):
                 })
     
     def approve(self, user, comments=""):
-        self.status = ExpenseStatus.APPROVED
-        self.full_clean()  # Validate before saving
-        self.save()
-        ExpenseApproval.objects.create(
-            expense=self,
-            approver=user,
-            status=ExpenseApproval.Status.APPROVED,
-            comments=comments
-        )
+        from django.core.exceptions import ValidationError
+        if not user.is_superuser and self.requester_id == user.pk:
+            raise ValidationError(_("You cannot approve your own expense request."))
+        with transaction.atomic():
+            # Lock the budget row to serialize concurrent approvals and prevent budget overruns.
+            if hasattr(self.site, 'budget'):
+                Budget.objects.select_for_update().get(site=self.site)
+            self.status = ExpenseStatus.APPROVED
+            self.full_clean()
+            self.save()
+            ExpenseApproval.objects.create(
+                expense=self,
+                approver=user,
+                status=ExpenseApproval.Status.APPROVED,
+                comments=comments
+            )
 
     def reject(self, user, comments=""):
-        self.status = ExpenseStatus.REJECTED
-        self.full_clean()  # Validate before saving
-        self.save()
-        ExpenseApproval.objects.create(
-            expense=self,
-            approver=user,
-            status=ExpenseApproval.Status.REJECTED,
-            comments=comments
-        )
+        with transaction.atomic():
+            self.status = ExpenseStatus.REJECTED
+            self.full_clean()
+            self.save()
+            ExpenseApproval.objects.create(
+                expense=self,
+                approver=user,
+                status=ExpenseApproval.Status.REJECTED,
+                comments=comments
+            )
     
     def can_be_paid(self):
         """Check if expense can be marked as paid."""

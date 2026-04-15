@@ -16,11 +16,8 @@
 
         <!-- Main Content -->
         <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
             <div class="card mb-3 border-0 shadow-sm">
-                <div class="card-header bg-white border-bottom p-3">
-                    <h5 class="mb-0"><i class="fas fa-shopping-cart me-2 text-primary"></i>{% trans "Create Material Request" %}</h5>
-                    <p class="fs--1 text-600 mb-0 mt-1">{% trans "Add one or multiple materials for this site" %}</p>
-                </div>
                 <div class="card-body p-4">
                     <form method="post" id="material-request-form">
                         {% csrf_token %}

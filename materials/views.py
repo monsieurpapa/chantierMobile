@@ -1,5 +1,6 @@
 from django.views.generic import ListView, CreateView, UpdateView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.decorators import login_required
 from django.urls import reverse_lazy
 from django.shortcuts import redirect, get_object_or_404
 from django.contrib import messages
@@ -7,7 +8,7 @@ from django.http import HttpResponseRedirect
 from .models import Material, MaterialRequest
 from .forms import MaterialForm, MaterialRequestForm, MaterialRequestItemFormSet
 from projects.models import Site
-from core.mixins import RoleRequiredMixin, PageHeaderMixin
+from core.mixins import RoleRequiredMixin, PageHeaderMixin, get_session_cabinet
 from chantiermobile.constants import UserRoles
 
 # Material Catalog Views
@@ -219,9 +220,14 @@ class MaterialRequestDetailView(LoginRequiredMixin, PageHeaderMixin, DetailView)
             {'title': f"REQ-{self.object.id}", 'url': None},
         ]
 
+@login_required
 def approve_material_request(request, pk):
     if request.method == 'POST':
         mat_request = get_object_or_404(MaterialRequest, pk=pk)
+        active_cabinet = get_session_cabinet(request)
+        if active_cabinet and mat_request.site.cabinet != active_cabinet:
+            messages.error(request, "This material request belongs to a different cabinet than your active session.")
+            return redirect('materials:request_list')
         if request.user.is_superuser or request.user.cabinet_roles.filter(cabinet=mat_request.site.cabinet, role__in=[UserRoles.DIRECTOR, UserRoles.CHIEF_ENGINEER]).exists():
             action = request.POST.get('action')
             if action == 'approve':

@@ -1,7 +1,15 @@
-{% extends 'base.html' %}
+{% extends 'falcon_base.html' %}
 {% load static i18n rbac_tags %}
 
-{% block subcontent %}
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    {% include 'includes/navbar-vertical.html' with on="personnel" %}
+
+    <div class="content">
+        {% include 'includes/navbar-top.html' %}
+
+        <div class="container-fluid py-4">
+{% include 'includes/page_header.html' %}
 <div class="row g-3">
     <div class="col-lg-6">
         <div class="card">
@@ -59,5 +67,9 @@
         </div>
     </div>
     {% endif %}
+</div>
+        </div>
+        {% include 'includes/footer.html' %}
+    </div>
 </div>
 {% endblock %}

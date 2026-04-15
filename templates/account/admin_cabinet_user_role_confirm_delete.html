@@ -1,24 +1,38 @@
-{% extends 'base.html' %}
+{% extends 'falcon_base.html' %}
 {% load i18n %}
 
 {% block title %}{% trans "Remove User from Cabinet" %}{% endblock %}
 
-{% block subcontent %}
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    {% include 'includes/navbar-vertical.html' with on="account" %}
+
+    <div class="content">
+        {% include 'includes/navbar-top.html' %}
+
+        <div class="container-fluid py-4">
+{% include 'includes/page_header.html' %}
 <div class="row">
     <div class="col-lg-8 offset-lg-2">
         <div class="card">
-            <div class="card-header bg-light">
-                <h5 class="mb-0">{% trans "Confirm Removal" %}</h5>
-            </div>
             <div class="card-body">
                 <p class="mb-3">{% blocktrans %}You are about to remove {{ user.get_full_name|default:user.username }} from {{ cabinet.name }}.{% endblocktrans %}</p>
+                <p class="text-danger border-start border-danger ps-2">
+                    <strong>{% trans "Warning:" %}</strong> {% trans "This will revoke all access rights for this user in this cabinet." %}
+                </p>
                 <form method="post">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-danger">{% trans "Yes, remove user" %}</button>
-                    <a href="{% url 'accounts:admin_cabinet_detail' cabinet.pk %}" class="btn btn-secondary">{% trans "Cancel" %}</a>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-danger">{% trans "Yes, remove user" %}</button>
+                        <a href="{{ back_url|default:'#' }}" class="btn btn-falcon-default">{% trans "Cancel" %}</a>
+                    </div>
                 </form>
             </div>
         </div>
+    </div>
+</div>
+        </div>
+        {% include 'includes/footer.html' %}
     </div>
 </div>
 {% endblock %}

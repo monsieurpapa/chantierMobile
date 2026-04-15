@@ -1,14 +1,16 @@
-{% extends 'base.html' %}
+{% extends 'falcon_base.html' %}
 {% load static i18n %}
 
 {% block title %}{% trans "Dashboard" %} - ChantierMobile{% endblock %}
 
-{% block navbar_vertical %}
-{% include 'includes/navbar-vertical.html' with on="home" %}
-{% endblock %}
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    {% include 'includes/navbar-vertical.html' with on="home" %}
 
-{% block subcontent %}
-<div class="container-fluid py-4">
+    <div class="content">
+        {% include 'includes/navbar-top.html' %}
+
+        <div class="container-fluid py-4">
   <div class="row g-3 mb-3">
     <div class="col-12">
       <div class="card mb-3">
@@ -153,5 +155,8 @@
       </div>
     </div>
   </div>
+        </div>
+        {% include 'includes/footer.html' %}
+    </div>
 </div>
 {% endblock %}

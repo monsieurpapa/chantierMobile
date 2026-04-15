@@ -20,14 +20,8 @@
 
         <!-- Main Content -->
         <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
             <div class="card mb-3">
-                <div class="card-header">
-                    <div class="row flex-between-end">
-                        <div class="col-auto align-self-center">
-                            <h5 class="mb-0">Add Phase to: {{ site.name }}</h5>
-                        </div>
-                    </div>
-                </div>
                 <div class="card-body bg-light">
                     <form method="post">
                         {% csrf_token %}

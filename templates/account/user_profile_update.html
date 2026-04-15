@@ -1,9 +1,16 @@
-{% extends 'base.html' %}
+{% extends 'falcon_base.html' %}
 {% load static i18n %}
 
 {% block title %}{{ _('Profile Settings') }} - ChantiérMobile{% endblock %}
 
-{% block subcontent %}
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    {% include 'includes/navbar-vertical.html' with on="account" %}
+
+    <div class="content">
+        {% include 'includes/navbar-top.html' %}
+
+        <div class="container-fluid py-4">
 <div class="row">
     <div class="col-12">
         <!-- Header -->
@@ -554,6 +561,10 @@
                 </div>
             </div>
         </div>
+    </div>
+</div>
+        </div>
+        {% include 'includes/footer.html' %}
     </div>
 </div>
 {% endblock %}

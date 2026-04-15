@@ -11,7 +11,8 @@ from django.utils import timezone
 from datetime import timedelta, date
 from decimal import Decimal
 
-from accounts.models import User, Cabinet, UserCabinetRole
+from accounts.models import User, Cabinet, UserCabinetRole, CabinetContextLog
+from chantiermobile.constants import UserRoles, ApprovalStatus
 from projects.models import Site, ProjectPhase, SiteProgress
 from personnel.models import Skill, Personnel, SiteAssignment
 from materials.models import Material, MaterialRequest, MaterialRequestItem
@@ -100,6 +101,7 @@ class Command(BaseCommand):
     def clear_data(self):
         """Clear existing data"""
         self.stdout.write('🗑️  Clearing existing data...')
+        CabinetContextLog.objects.all().delete()
         Invoice.objects.all().delete()
         Contract.objects.all().delete()
         Expense.objects.all().delete()
@@ -212,13 +214,13 @@ class Command(BaseCommand):
     def assign_users_to_cabinets(self, users, cabinets):
         """Assign users to cabinets with roles"""
         role_assignments = [
-            (users[0], cabinets[0], UserCabinetRole.Role.DIRECTOR, UserCabinetRole.Status.APPROVED),
-            (users[1], cabinets[0], UserCabinetRole.Role.CHIEF_ENGINEER, UserCabinetRole.Status.APPROVED),
-            (users[2], cabinets[0], UserCabinetRole.Role.ENGINEER, UserCabinetRole.Status.APPROVED),
-            (users[3], cabinets[0], UserCabinetRole.Role.ACCOUNTANT, UserCabinetRole.Status.APPROVED),
-            (users[4], cabinets[0], UserCabinetRole.Role.CASHIER, UserCabinetRole.Status.APPROVED),
-            (users[0], cabinets[1], UserCabinetRole.Role.DIRECTOR, UserCabinetRole.Status.APPROVED),
-            (users[1], cabinets[1], UserCabinetRole.Role.CHIEF_ENGINEER, UserCabinetRole.Status.APPROVED),
+            (users[0], cabinets[0], UserRoles.DIRECTOR, ApprovalStatus.APPROVED),
+            (users[1], cabinets[0], UserRoles.CHIEF_ENGINEER, ApprovalStatus.APPROVED),
+            (users[2], cabinets[0], UserRoles.ENGINEER, ApprovalStatus.APPROVED),
+            (users[3], cabinets[0], UserRoles.ACCOUNTANT, ApprovalStatus.APPROVED),
+            (users[4], cabinets[0], UserRoles.CASHIER, ApprovalStatus.APPROVED),
+            (users[0], cabinets[1], UserRoles.DIRECTOR, ApprovalStatus.APPROVED),
+            (users[1], cabinets[1], UserRoles.CHIEF_ENGINEER, ApprovalStatus.APPROVED),
         ]
         
         for user, cabinet, role, status in role_assignments:
@@ -372,11 +374,11 @@ class Command(BaseCommand):
         return progress_reports
 
     def create_site_assignments(self, personnel, sites):
-        """Create site assignments for personnel"""
+        """Create site assignments for personnel — only within the same cabinet."""
         today = date.today()
         assignments = []
-        
-        # Assign personnel to first site
+
+        # All personnel belong to cabinets[0]; sites[0] and sites[1] also belong to cabinets[0].
         for person in personnel[:4]:
             assignment = SiteAssignment.objects.create(
                 personnel=person,
@@ -387,19 +389,18 @@ class Command(BaseCommand):
                 daily_rate=person.default_daily_rate
             )
             assignments.append(assignment)
-        
-        # Assign to third site
+
         for person in personnel[2:5]:
             assignment = SiteAssignment.objects.create(
                 personnel=person,
-                site=sites[2],
+                site=sites[1],
                 role='Ouvrier',
                 start_date=today - timedelta(days=30),
                 end_date=today + timedelta(days=90),
                 daily_rate=person.default_daily_rate
             )
             assignments.append(assignment)
-        
+
         return assignments
 
     def create_materials(self):
@@ -502,12 +503,15 @@ class Command(BaseCommand):
         today = date.today()
         expenses = []
         
+        # All expenses use sites from cabinets[0] only (sites[0] and sites[1]).
+        # sites[2] belongs to cabinets[1] — using Cabinet A users against it would
+        # violate tenant isolation in demo data.
         expense_data = [
             {'site': 0, 'category': 0, 'amount': 5000000, 'description': 'Achat de ciment et sable pour les fondations'},
             {'site': 0, 'category': 1, 'amount': 2500000, 'description': 'Salaires des ouvriers - janvier'},
             {'site': 0, 'category': 2, 'amount': 800000, 'description': 'Transport des matériaux vers le chantier'},
-            {'site': 2, 'category': 3, 'amount': 1200000, 'description': 'Équipements de sécurité et outils'},
-            {'site': 2, 'category': 4, 'amount': 300000, 'description': 'Demande de permis de construction'},
+            {'site': 1, 'category': 3, 'amount': 1200000, 'description': 'Équipements de sécurité et outils'},
+            {'site': 1, 'category': 4, 'amount': 300000, 'description': 'Demande de permis de construction'},
         ]
         
         for exp_data in expense_data:

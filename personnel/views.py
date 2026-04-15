@@ -5,8 +5,9 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from .models import Personnel, Skill, SiteAssignment
 from .forms import PersonnelForm, SiteAssignmentForm, SkillForm
-from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin
+from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet
 from chantiermobile.constants import UserRoles
+from projects.models import Site
 
 class PersonnelListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
     model = Personnel
@@ -126,7 +127,7 @@ class PersonnelUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMi
         messages.success(self.request, "Profile updated.")
         return reverse_lazy('personnel:personnel_detail', kwargs={'unique_id': self.object.unique_id})
 
-class PersonnelDeleteView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, DeleteView):
+class PersonnelDeleteView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, DeleteView):
     model = Personnel
     template_name = 'projects/confirm_delete.html'
     slug_field = 'unique_id'
@@ -134,17 +135,42 @@ class PersonnelDeleteView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMi
     success_url = reverse_lazy('personnel:personnel_list')
     allowed_roles = ['DIRECTOR']
 
+    def get_header_title(self):
+        return f"Delete Personnel: {self.object.get_full_name() or self.object.username}"
+
+    def get_header_subtitle(self):
+        return "This action cannot be undone."
+
+    def get_back_url(self):
+        return str(reverse_lazy('personnel:personnel_detail', kwargs={'unique_id': self.object.unique_id}))
+
+    def get_breadcrumb_items(self):
+        return [
+            {'title': 'Personnel', 'url': str(reverse_lazy('personnel:personnel_list'))},
+            {'title': self.object.get_full_name() or self.object.username, 'url': str(reverse_lazy('personnel:personnel_detail', kwargs={'unique_id': self.object.unique_id}))},
+            {'title': 'Delete', 'url': None},
+        ]
+
     def delete(self, request, *args, **kwargs):
         self.object = self.get_object()
         personnel_name = self.object.get_full_name() or self.object.username
         messages.success(request, f"Personnel '{personnel_name}' deleted successfully.")
         return super().delete(request, *args, **kwargs)
 
-class SkillListView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, ListView):
+class SkillListView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, ListView):
     model = Skill
     template_name = 'personnel/skill_list.html'
     context_object_name = 'skill_list'
     allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER']
+    header_title = "Skills Catalog"
+    header_subtitle = "Manage worker skills and competencies"
+    back_url = reverse_lazy('personnel:personnel_list')
+
+    def get_breadcrumb_items(self):
+        return [
+            {'title': 'Personnel', 'url': str(reverse_lazy('personnel:personnel_list'))},
+            {'title': 'Skills', 'url': None},
+        ]
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -157,16 +183,43 @@ class SkillListView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, L
             form.save()
             messages.success(request, f"Skill added successfully.")
             return redirect('personnel:skill_list')
-        
+
         self.object_list = self.get_queryset()
         return self.render_to_response(self.get_context_data(form=form))
 
 
-class SiteAssignmentCreateView(LoginRequiredMixin, RoleRequiredMixin, CreateView):
+class SiteAssignmentCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, CreateView):
     model = SiteAssignment
     form_class = SiteAssignmentForm
     template_name = 'personnel/assignment_form.html'
     allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER']
+    cabinet_lookup_field = 'site__cabinet'
+    header_title = "Assign Personnel to Site"
+    header_subtitle = "Link a worker to a construction site"
+    back_url = reverse_lazy('personnel:personnel_list')
+
+    def get_breadcrumb_items(self):
+        return [
+            {'title': 'Personnel', 'url': str(reverse_lazy('personnel:personnel_list'))},
+            {'title': 'New Assignment', 'url': None},
+        ]
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        user = self.request.user
+        if user.is_superuser:
+            active_cabinet = get_session_cabinet(self.request)
+            if active_cabinet:
+                form.fields['site'].queryset = Site.objects.filter(cabinet=active_cabinet)
+                form.fields['personnel'].queryset = Personnel.objects.filter(cabinet=active_cabinet)
+        elif hasattr(user, 'cabinet_roles'):
+            cabinets = user.cabinet_roles.values_list('cabinet', flat=True)
+            form.fields['site'].queryset = Site.objects.filter(cabinet__in=cabinets)
+            form.fields['personnel'].queryset = Personnel.objects.filter(cabinet__in=cabinets)
+        else:
+            form.fields['site'].queryset = Site.objects.none()
+            form.fields['personnel'].queryset = Personnel.objects.none()
+        return form
 
     def get_initial(self):
         initial = super().get_initial()

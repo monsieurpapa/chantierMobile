@@ -17,7 +17,7 @@ from decimal import Decimal
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from accounts.models import Cabinet, User, UserCabinetRole
+from accounts.models import Cabinet, CabinetContextLog, User, UserCabinetRole
 from chantiermobile.constants import (
     ApprovalStatus, ExpenseStatus, InvoiceStatus, MaterialRequestStatus,
     PaymentMethod, SiteStatus, UserRoles,
@@ -137,6 +137,7 @@ class Command(BaseCommand):
 
     def _clear_all(self):
         self.stdout.write('Clearing existing data...')
+        CabinetContextLog.objects.all().delete()
         Payment.objects.all().delete()
         Invoice.objects.all().delete()
         Contract.objects.all().delete()

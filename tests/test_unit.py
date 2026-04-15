@@ -51,15 +51,19 @@ class TestModels:
         site.refresh_from_db()
         assert site.total_spent == expense.amount
     
-    def test_expense_approval_methods(self, expense, user):
+    def test_expense_approval_methods(self, expense, user, director_user):
         """Test Expense approval methods."""
-        # Test approve method
-        expense.approve(user, "Looks good")
+        # Self-approval must be blocked (requester == approver)
+        with pytest.raises(Exception):
+            expense.approve(user, "Self-approve attempt")
+
+        # Approval by a different user must succeed
+        expense.approve(director_user, "Looks good")
         expense.refresh_from_db()
         assert expense.status == ExpenseStatus.APPROVED
-        
+
         # Test reject method
-        expense.reject(user, "Not approved")
+        expense.reject(director_user, "Not approved")
         expense.refresh_from_db()
         assert expense.status == ExpenseStatus.REJECTED
 
@@ -221,6 +225,118 @@ class TestApprovalViewAuth:
         response = client.post(url)
         assert response.status_code == 302
         assert '/login' in response['Location'] or 'login' in response['Location']
+
+    def test_approve_material_request_requires_login(self, client, db):
+        """Unauthenticated POST to approve_material_request must redirect to login, not 500."""
+        from accounts.models import Cabinet, UserCabinetRole
+        from projects.models import Site
+        from materials.models import Material, MaterialRequest
+        from chantiermobile.constants import UserRoles, ApprovalStatus, SiteStatus
+        from django.contrib.auth import get_user_model
+        from datetime import date, timedelta
+
+        User = get_user_model()
+        cabinet = Cabinet.objects.create(name='MatCabinet')
+        requester = User.objects.create_user(username='mat_req', password='pass', email='r@r.com')
+        UserCabinetRole.objects.create(user=requester, cabinet=cabinet, role=UserRoles.ENGINEER, status=ApprovalStatus.APPROVED)
+        site = Site.objects.create(
+            name='Mat Site', cabinet=cabinet,
+            start_date=date.today(), expected_end_date=date.today() + timedelta(days=30),
+            status=SiteStatus.PLANNING,
+        )
+        mat_request = MaterialRequest.objects.create(site=site, requested_by=requester)
+        url = reverse('materials:request_approve', kwargs={'pk': mat_request.pk})
+        response = client.post(url)
+        assert response.status_code == 302
+        assert '/login' in response['Location'] or 'login' in response['Location']
+
+
+@pytest.mark.unit
+@pytest.mark.django_db
+class TestSiteAssignmentCabinetScoping:
+    """Regression test: SiteAssignmentCreateView must only show cabinet-scoped sites/personnel."""
+
+    def test_form_only_shows_cabinet_sites(self, client, db):
+        """A director of cabinet A must not see cabinet B's sites in the assignment form."""
+        from accounts.models import Cabinet, UserCabinetRole
+        from projects.models import Site
+        from chantiermobile.constants import UserRoles, ApprovalStatus, SiteStatus
+        from django.contrib.auth import get_user_model
+        from datetime import date, timedelta
+
+        User = get_user_model()
+
+        # Cabinet A with a director and a site
+        cabinet_a = Cabinet.objects.create(name='Cabinet A')
+        director = User.objects.create_user(username='dir_a', password='pass', email='a@a.com')
+        UserCabinetRole.objects.create(user=director, cabinet=cabinet_a, role=UserRoles.DIRECTOR, status=ApprovalStatus.APPROVED)
+        site_a = Site.objects.create(
+            name='Site A', cabinet=cabinet_a,
+            start_date=date.today(), expected_end_date=date.today() + timedelta(days=30),
+            status=SiteStatus.PLANNING,
+        )
+
+        # Cabinet B with a separate site (should NOT appear for director of A)
+        cabinet_b = Cabinet.objects.create(name='Cabinet B')
+        site_b = Site.objects.create(
+            name='Site B', cabinet=cabinet_b,
+            start_date=date.today(), expected_end_date=date.today() + timedelta(days=30),
+            status=SiteStatus.PLANNING,
+        )
+
+        client.login(username='dir_a', password='pass')
+        response = client.get('/personnel/assignments/add/')
+
+        assert response.status_code == 200
+        site_qs = response.context['form'].fields['site'].queryset
+        assert site_a in site_qs
+        assert site_b not in site_qs
+
+
+@pytest.mark.unit
+@pytest.mark.django_db
+class TestBudgetCabinetScoping:
+    """Regression tests for CabinetAccessMixin on Budget views (fix: eng-review-2026-04-15)."""
+
+    def test_budget_detail_scoped_to_cabinet(self, client, db):
+        """A director of cabinet A must get 404 when accessing cabinet B's budget detail."""
+        from accounts.models import Cabinet, UserCabinetRole
+        from projects.models import Site
+        from finance.models import Budget
+        from chantiermobile.constants import UserRoles, ApprovalStatus, SiteStatus
+        from django.contrib.auth import get_user_model
+        from datetime import date, timedelta
+        from decimal import Decimal
+
+        User = get_user_model()
+
+        # Cabinet A — director logs in
+        cabinet_a = Cabinet.objects.create(name='Budget Cabinet A')
+        director = User.objects.create_user(username='budget_dir_a', password='pass', email='ba@ba.com')
+        UserCabinetRole.objects.create(user=director, cabinet=cabinet_a, role=UserRoles.DIRECTOR, status=ApprovalStatus.APPROVED)
+        site_a = Site.objects.create(
+            name='Budget Site A', cabinet=cabinet_a,
+            start_date=date.today(), expected_end_date=date.today() + timedelta(days=30),
+            status=SiteStatus.PLANNING,
+        )
+
+        # Cabinet B — separate budget (should NOT be accessible to director_a)
+        cabinet_b = Cabinet.objects.create(name='Budget Cabinet B')
+        site_b = Site.objects.create(
+            name='Budget Site B', cabinet=cabinet_b,
+            start_date=date.today(), expected_end_date=date.today() + timedelta(days=30),
+            status=SiteStatus.PLANNING,
+        )
+        budget_b = Budget.objects.create(
+            site=site_b,
+            total_amount=Decimal('10000.00'),
+            start_date=date.today(),
+            end_date=date.today() + timedelta(days=30),
+        )
+
+        client.login(username='budget_dir_a', password='pass')
+        response = client.get(reverse('finance:budget_detail', kwargs={'pk': budget_b.pk}))
+        assert response.status_code == 404
 
 
 @pytest.mark.unit

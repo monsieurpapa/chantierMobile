@@ -57,34 +57,80 @@ class SiteCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, 
         messages.success(self.request, "Site created successfully!")
         return super().form_valid(form)
 
-class SiteUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, UpdateView):
+class SiteUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, UpdateView):
     model = Site
     form_class = SiteForm
     template_name = 'projects/site_form.html'
     slug_field = 'unique_id'
     slug_url_kwarg = 'unique_id'
     allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER']
-    
+
+    def get_header_title(self):
+        return f"Edit Site: {self.object.name}"
+
+    def get_header_subtitle(self):
+        return self.object.location
+
+    def get_back_url(self):
+        return str(reverse_lazy('projects:site_detail', kwargs={'unique_id': self.object.unique_id}))
+
+    def get_breadcrumb_items(self):
+        return [
+            {'title': 'Projects & Sites', 'url': str(reverse_lazy('projects:site_list'))},
+            {'title': self.object.name, 'url': str(reverse_lazy('projects:site_detail', kwargs={'unique_id': self.object.unique_id}))},
+            {'title': 'Edit', 'url': None},
+        ]
+
     def form_valid(self, form):
         from django.core.exceptions import ValidationError
+        from django.db import transaction
+        from core.models import StatusChangeLog
+        old_status = self.object.status
         try:
             form.instance.full_clean()
-            return super().form_valid(form)
+            with transaction.atomic():
+                form.save()
+                self.object = form.instance
+                if old_status != self.object.status:
+                    StatusChangeLog.log(
+                        self.object,
+                        changed_by=self.request.user,
+                        old_status=old_status,
+                        new_status=self.object.status,
+                    )
+            messages.success(self.request, "Site updated successfully!")
+            from django.http import HttpResponseRedirect
+            return HttpResponseRedirect(self.get_success_url())
         except ValidationError as e:
             messages.error(self.request, str(e))
             return self.form_invalid(form)
-    
+
     def get_success_url(self):
-        messages.success(self.request, "Site updated successfully!")
         return reverse_lazy('projects:site_detail', kwargs={'unique_id': self.object.unique_id})
 
-class SiteDeleteView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, DeleteView):
+class SiteDeleteView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, DeleteView):
     model = Site
     template_name = 'projects/confirm_delete.html'
     slug_field = 'unique_id'
     slug_url_kwarg = 'unique_id'
     success_url = reverse_lazy('projects:site_list')
-    allowed_roles = ['DIRECTOR'] # Only Director can delete sites
+    allowed_roles = ['DIRECTOR']
+
+    def get_header_title(self):
+        return f"Delete Site: {self.object.name}"
+
+    def get_header_subtitle(self):
+        return "This action cannot be undone."
+
+    def get_back_url(self):
+        return str(reverse_lazy('projects:site_detail', kwargs={'unique_id': self.object.unique_id}))
+
+    def get_breadcrumb_items(self):
+        return [
+            {'title': 'Projects & Sites', 'url': str(reverse_lazy('projects:site_list'))},
+            {'title': self.object.name, 'url': str(reverse_lazy('projects:site_detail', kwargs={'unique_id': self.object.unique_id}))},
+            {'title': 'Delete', 'url': None},
+        ]
 
     def delete(self, request, *args, **kwargs):
         messages.success(self.request, "Site deleted successfully!")
@@ -203,15 +249,31 @@ class SiteDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, De
 
 # --- PHASES ---
 
-class ProjectPhaseCreateView(LoginRequiredMixin, RoleRequiredMixin, CreateView):
+class ProjectPhaseCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, CreateView):
     model = ProjectPhase
     form_class = ProjectPhaseForm
     template_name = 'projects/phase_form.html'
     allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER']
-    
+
     def dispatch(self, request, *args, **kwargs):
         self.site = get_object_or_404(Site, unique_id=self.kwargs.get('site_id'))
         return super().dispatch(request, *args, **kwargs)
+
+    def get_header_title(self):
+        return f"Add Phase: {self.site.name}"
+
+    def get_header_subtitle(self):
+        return "Define a new construction phase for this project"
+
+    def get_back_url(self):
+        return str(reverse_lazy('projects:site_detail', kwargs={'unique_id': self.site.unique_id}))
+
+    def get_breadcrumb_items(self):
+        return [
+            {'title': 'Projects & Sites', 'url': str(reverse_lazy('projects:site_list'))},
+            {'title': self.site.name, 'url': str(reverse_lazy('projects:site_detail', kwargs={'unique_id': self.site.unique_id}))},
+            {'title': 'Add Phase', 'url': None},
+        ]
 
     def form_valid(self, form):
         form.instance.site = self.site
@@ -226,13 +288,26 @@ class ProjectPhaseCreateView(LoginRequiredMixin, RoleRequiredMixin, CreateView):
     def get_success_url(self):
         return reverse_lazy('projects:site_detail', kwargs={'unique_id': self.site.unique_id})
 
-class ProjectPhaseUpdateView(LoginRequiredMixin, RoleRequiredMixin, UpdateView):
+class ProjectPhaseUpdateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, UpdateView):
     model = ProjectPhase
     form_class = ProjectPhaseForm
     template_name = 'projects/phase_form.html'
     slug_field = 'unique_id'
     slug_url_kwarg = 'unique_id'
     allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER']
+
+    def get_header_title(self):
+        return f"Edit Phase: {self.object.name}"
+
+    def get_back_url(self):
+        return str(reverse_lazy('projects:site_detail', kwargs={'unique_id': self.object.site.unique_id}))
+
+    def get_breadcrumb_items(self):
+        return [
+            {'title': 'Projects & Sites', 'url': str(reverse_lazy('projects:site_list'))},
+            {'title': self.object.site.name, 'url': str(reverse_lazy('projects:site_detail', kwargs={'unique_id': self.object.site.unique_id}))},
+            {'title': 'Edit Phase', 'url': None},
+        ]
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -243,12 +318,28 @@ class ProjectPhaseUpdateView(LoginRequiredMixin, RoleRequiredMixin, UpdateView):
         messages.success(self.request, "Phase updated.")
         return reverse_lazy('projects:site_detail', kwargs={'unique_id': self.object.site.unique_id})
 
-class ProjectPhaseDeleteView(LoginRequiredMixin, RoleRequiredMixin, DeleteView):
+class ProjectPhaseDeleteView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, DeleteView):
     model = ProjectPhase
     template_name = 'projects/confirm_delete.html'
     slug_field = 'unique_id'
     slug_url_kwarg = 'unique_id'
     allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER']
+
+    def get_header_title(self):
+        return f"Delete Phase: {self.object.name}"
+
+    def get_header_subtitle(self):
+        return "This action cannot be undone."
+
+    def get_back_url(self):
+        return str(reverse_lazy('projects:site_detail', kwargs={'unique_id': self.object.site.unique_id}))
+
+    def get_breadcrumb_items(self):
+        return [
+            {'title': 'Projects & Sites', 'url': str(reverse_lazy('projects:site_list'))},
+            {'title': self.object.site.name, 'url': str(reverse_lazy('projects:site_detail', kwargs={'unique_id': self.object.site.unique_id}))},
+            {'title': 'Delete Phase', 'url': None},
+        ]
 
     def get_success_url(self):
         messages.success(self.request, "Phase deleted.")
@@ -257,7 +348,7 @@ class ProjectPhaseDeleteView(LoginRequiredMixin, RoleRequiredMixin, DeleteView):
 
 # --- PROGRESS ---
 
-class SiteProgressCreateView(LoginRequiredMixin, RoleRequiredMixin, CreateView):
+class SiteProgressCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, CreateView):
     model = SiteProgress
     form_class = SiteProgressForm
     template_name = 'projects/progress_form.html'
@@ -267,11 +358,27 @@ class SiteProgressCreateView(LoginRequiredMixin, RoleRequiredMixin, CreateView):
         self.phase = get_object_or_404(ProjectPhase, unique_id=self.kwargs.get('phase_id'))
         return super().dispatch(request, *args, **kwargs)
 
+    def get_header_title(self):
+        return f"Log Progress: {self.phase.name}"
+
+    def get_header_subtitle(self):
+        return f"Project: {self.phase.site.name}"
+
+    def get_back_url(self):
+        return str(reverse_lazy('projects:site_detail', kwargs={'unique_id': self.phase.site.unique_id}))
+
+    def get_breadcrumb_items(self):
+        return [
+            {'title': 'Projects & Sites', 'url': str(reverse_lazy('projects:site_list'))},
+            {'title': self.phase.site.name, 'url': str(reverse_lazy('projects:site_detail', kwargs={'unique_id': self.phase.site.unique_id}))},
+            {'title': 'Log Progress', 'url': None},
+        ]
+
     def form_valid(self, form):
         form.instance.phase = self.phase
         messages.success(self.request, "Progress report logged.")
         return super().form_valid(form)
-    
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['phase'] = self.phase
