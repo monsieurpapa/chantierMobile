@@ -170,13 +170,17 @@ MEDIA_ROOT = BASE_DIR / 'mediafiles'
 
 if not DEBUG:
     # Cloudflare R2 via S3-compatible API (10 GB free, no egress fees)
-    # Set these env vars in Render dashboard after creating your R2 bucket.
+    # Env vars map from Render dashboard → Cloudflare R2 API token values:
+    #   CLOUDFARE_R2_TOKEN_NAME  → the "Access Key ID" shown when you create an R2 API token
+    #   CLOUDFARE_API_TOKEN      → the "Secret Access Key" shown when you create an R2 API token
+    #   CLOUDFARE_R2_BUCKET_NAME → the bucket name you created (e.g. "chantiermobile-media")
+    #   CLOUDFARE_R2_BUCKET_URL  → S3 endpoint: https://<account-id>.r2.cloudflarestorage.com
     DEFAULT_FILE_STORAGE = 'chantiermobile.storage_backends.MediaStorage'
-    AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
-    AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
-    AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME', 'chantiermobile-media')
-    AWS_S3_ENDPOINT_URL = os.environ.get('AWS_S3_ENDPOINT_URL')  # https://<id>.r2.cloudflarestorage.com
-    AWS_S3_CUSTOM_DOMAIN = os.environ.get('AWS_S3_CUSTOM_DOMAIN')  # optional: your R2 public domain
+    AWS_ACCESS_KEY_ID = os.environ.get('CLOUDFARE_R2_TOKEN_NAME')
+    AWS_SECRET_ACCESS_KEY = os.environ.get('CLOUDFARE_API_TOKEN')
+    AWS_STORAGE_BUCKET_NAME = os.environ.get('CLOUDFARE_R2_BUCKET_NAME', 'chantiermobile-media')
+    AWS_S3_ENDPOINT_URL = os.environ.get('CLOUDFARE_R2_BUCKET_URL')
+    AWS_S3_CUSTOM_DOMAIN = os.environ.get('AWS_S3_CUSTOM_DOMAIN')  # optional: custom public domain
     AWS_DEFAULT_ACL = 'public-read'
     AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}
 
