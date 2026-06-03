@@ -11,10 +11,20 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-key')
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS = [h for h in os.environ.get('ALLOWED_HOSTS', '').split(',') if h]
-# Render injects RENDER_EXTERNAL_HOSTNAME — include it automatically
+# Render injects RENDER_EXTERNAL_HOSTNAME
 _render_hostname = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
 if _render_hostname:
     ALLOWED_HOSTS.append(_render_hostname)
+# Railway injects RAILWAY_PUBLIC_DOMAIN
+_railway_hostname = os.environ.get('RAILWAY_PUBLIC_DOMAIN')
+if _railway_hostname:
+    ALLOWED_HOSTS.append(_railway_hostname)
+
+CSRF_TRUSTED_ORIGINS = [h for h in os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',') if h]
+if _render_hostname:
+    CSRF_TRUSTED_ORIGINS.append(f'https://{_render_hostname}')
+if _railway_hostname:
+    CSRF_TRUSTED_ORIGINS.append(f'https://{_railway_hostname}')
 
 INSTALLED_APPS = [
     'django.contrib.admin',

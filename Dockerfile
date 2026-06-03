@@ -8,9 +8,11 @@ ENV PYTHONUNBUFFERED 1
 RUN apk update \
     && apk add --no-cache postgresql-dev gcc python3-dev musl-dev gettext
 
-COPY requirements.txt requirements-test.txt ./
-RUN pip install --no-cache-dir -r requirements.txt -r requirements-test.txt
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8001"]
+EXPOSE 8000
+
+CMD ["sh", "-c", "python manage.py migrate && python manage.py collectstatic --no-input && gunicorn chantiermobile.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 2 --timeout 120"]

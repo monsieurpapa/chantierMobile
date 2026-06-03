@@ -45,3 +45,23 @@ Unlike `Expense.approve()`, `approve_material_request` does a bare `mat_request.
 ## P3 — `StatusChangeLog` Not Wired to Invoice/Payment Status Changes
 
 `StatusChangeLog.log()` is only called from `SiteUpdateView.form_valid()`. Invoice (DRAFT→SENT→PAID→OVERDUE) and Payment status transitions are not logged. Add when audit trail becomes a customer requirement.
+
+---
+
+*Items below added by `/plan-eng-review` on 2026-05-15 (frontend re-engineering review):*
+
+## P3 — Cache Director List in `check_budget_warning` Signal
+
+`check_budget_warning` queries `UserCabinetRole.objects.filter(cabinet=..., role=DIRECTOR)` on every expense approval. At current scale this is fine. When approval volume grows past ~50/day per cabinet, add `cache.get_or_set(f'cabinet_directors_{site.cabinet_id}', lambda: list(query), 60)` in `finance/signals.py`. **Requires:** add `cache.delete(f'cabinet_directors_{cabinet_id}')` call in `UserCabinetRole.save()` and `UserCabinetRole.delete()` to invalidate when directors change. Do not add the cache without also adding the invalidation.
+
+## P3 — Bundle `BudgetListView` DRY Violation Fix in Phase 3
+
+`BudgetListView.get_queryset()` manually filters `site__cabinet__id__in=user_cabinet_ids` instead of using `CabinetAccessMixin`. When Phase 3 (HTMX expense flow) touches `finance/views.py`, add `cabinet_lookup_field = 'site__cabinet'` to `BudgetListView` and remove the manual filter. Zero risk, one-liner fix.
+
+## P3 — `approve_material_request` Lacks `transaction.atomic()`
+
+When Phase 4 (materials HTMX) extends `approve_material_request` to create an Expense or log entry, wrap in `transaction.atomic()` at that point. Currently the bare `mat_request.save()` is fine. See `Expense.approve()` for the reference pattern.
+
+## P3 — `StatusChangeLog` Wiring for Invoice/Payment
+
+Bundle with Phase 4 (revenue HTMX). Wire `StatusChangeLog.log()` into `InvoiceUpdateView.form_valid()` and `PaymentCreateView.form_valid()` (the latter is already done per TODOS; verify Invoice is covered).

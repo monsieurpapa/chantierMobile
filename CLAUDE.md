@@ -170,3 +170,37 @@ Key routing rules:
 - Architecture review → invoke plan-eng-review
 - Save progress, checkpoint, resume → invoke checkpoint
 - Code quality, health check → invoke health
+
+## Deploy Configuration (configured by /setup-deploy)
+- Platform: Railway
+- Production URL: https://{your-service}.railway.app (set after first deploy)
+- Deploy workflow: auto-deploy on push to main
+- Deploy status command: HTTP health check
+- Merge method: squash
+- Project type: web app (Django + Celery)
+- Post-deploy health check: https://{your-service}.railway.app/
+
+### Custom deploy hooks
+- Pre-merge: none
+- Deploy trigger: automatic on push to main (Railway watches the connected branch)
+- Deploy status: poll production URL
+- Health check: https://{your-service}.railway.app/
+
+### Railway services required (create in Railway dashboard)
+1. **Web** — Dockerfile build, start command from `railway.toml`
+2. **Celery worker** — same repo, start command: `celery -A chantiermobile worker --beat --loglevel=info --concurrency=1`
+
+### Required env vars (set in Railway dashboard)
+| Variable | Value |
+|---|---|
+| `SECRET_KEY` | generate a strong random string |
+| `DEBUG` | `False` |
+| `DATABASE_URL` | PostgreSQL connection string (Railway PostgreSQL plugin or Supabase) |
+| `REDIS_URL` | Redis URL (Railway Redis plugin or Upstash) |
+| `ALLOWED_HOSTS` | comma-separated hostnames (Railway sets `RAILWAY_PUBLIC_DOMAIN` automatically) |
+| `CLOUDFARE_R2_TOKEN_NAME` | R2 Access Key ID (for media uploads) |
+| `CLOUDFARE_API_TOKEN` | R2 Secret Access Key |
+| `CLOUDFARE_R2_BUCKET_NAME` | R2 bucket name |
+| `CLOUDFARE_R2_BUCKET_URL` | `https://<account-id>.r2.cloudflarestorage.com` |
+| `EMAIL_HOST_USER` | SMTP user (optional) |
+| `EMAIL_HOST_PASSWORD` | SMTP password (optional) |
