@@ -111,30 +111,24 @@ msgid "User assigned to cabinet successfully."
 msgstr "L'utilisateur a été affecté au cabinet avec succès."
 
 #: accounts/views.py:520
-#, fuzzy
-#| msgid "Directeur de Cabinet"
 msgid "Create New Cabinet"
-msgstr "Directeur de Cabinet"
+msgstr "Créer un nouveau cabinet"
 
 #: accounts/views.py:521
 msgid "Add a new project cabinet to the system"
 msgstr "Ajouter un nouveau cabinet de projet au système"
 
 #: accounts/views.py:522
-#, fuzzy
-#| msgid "Directeur de Cabinet"
 msgid "Create Cabinet"
-msgstr "Directeur de Cabinet"
+msgstr "Créer un cabinet"
 
 #: accounts/views.py:528
 msgid "Cabinet created successfully."
 msgstr "Cabinet créé avec succès."
 
 #: accounts/views.py:548 templates/account/admin_cabinet_detail.html:21
-#, fuzzy
-#| msgid "Directeur de Cabinet"
 msgid "Edit Cabinet"
-msgstr "Directeur de Cabinet"
+msgstr "Modifier le cabinet"
 
 #: accounts/views.py:549
 msgid "Update cabinet information"
@@ -513,10 +507,8 @@ msgid "Site"
 msgstr "Chantier"
 
 #: finance/templates/finance/budget_list.html:28
-#, fuzzy
-#| msgid "Amount"
 msgid "Total Amount"
-msgstr "Montant"
+msgstr "Montant total"
 
 #: finance/templates/finance/budget_list.html:29
 msgid "Period"
@@ -537,10 +529,8 @@ msgstr "Période"
 #: templates/account/admin_user_detail.html:328
 #: templates/account/admin_user_edit.html:212
 #: templates/account/admin_users_list.html:171
-#, fuzzy
-#| msgid "Actif"
 msgid "Actions"
-msgstr "Actif"
+msgstr "Actions"
 
 #: finance/templates/finance/budget_list.html:56
 msgid "No budgets defined yet."
@@ -666,10 +656,8 @@ msgstr "Métadonnées"
 
 #: finance/templates/finance/expense_detail.html:138
 #: finance/templates/finance/expense_list.html:30
-#, fuzzy
-#| msgid "Submit Request"
 msgid "Requester"
-msgstr "Soumettre la Demande"
+msgstr "Demandeur"
 
 #: finance/templates/finance/expense_detail.html:140
 #, fuzzy
@@ -884,10 +872,8 @@ msgid "Edit"
 msgstr "Modifier"
 
 #: materials/templates/materials/request_list.html:95
-#, fuzzy
-#| msgid "Material Request"
 msgid "No material requests found."
-msgstr "Demande de Matériel"
+msgstr "Aucune demande de matériaux trouvée."
 
 #: personnel/models.py:16
 msgid "Link to system user if they have login access"
