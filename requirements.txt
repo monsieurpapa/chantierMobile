@@ -9,6 +9,7 @@ django-celery-results
 django-celery-beat
 django-allauth
 gunicorn
+gevent
 whitenoise
 dj-database-url
 django-storages[s3]

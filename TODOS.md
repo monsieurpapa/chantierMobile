@@ -65,3 +65,36 @@ When Phase 4 (materials HTMX) extends `approve_material_request` to create an Ex
 ## P3 — `StatusChangeLog` Wiring for Invoice/Payment
 
 Bundle with Phase 4 (revenue HTMX). Wire `StatusChangeLog.log()` into `InvoiceUpdateView.form_valid()` and `PaymentCreateView.form_valid()` (the latter is already done per TODOS; verify Invoice is covered).
+
+---
+
+*Items below added by `/plan-ceo-review` on 2026-06-05 (Frontend Re-Engineering Railway edition):*
+
+## P2 — PWA manifest + service worker
+
+After first 10 paying directors are using Phase 2 for 30+ days, add `manifest.json` and a service worker with cache-first strategy for key views (Dashboard, Site Detail). This turns ChantierMobile into an installable app on Android — directors tap "Add to Home Screen" and it opens fullscreen like WhatsApp.
+
+**Why:** Mobile-first audience in Goma; app store friction is high; PWA install creates daily-use habit.
+**Depends on:** Phase 2 shipped and 10 paying directors acquired.
+**Effort:** S (human: ~1 day / CC: ~20min)
+
+## P2 — Railway WebSocket validation sprint
+
+Before Phase 3 planning begins, deploy a minimal Django Channels consumer to Railway staging to validate WebSocket support end-to-end with Supabase PgBouncer (CONN_MAX_AGE=0) and Daphne. Open Question 4 from the design doc is deferred — not resolved.
+
+**Why:** Phase 3 requires Channels/Daphne on Railway. Railway supports WebSockets natively but the Supabase PgBouncer + Daphne combination has known gotchas (CONN_MAX_AGE=0 required).
+**Depends on:** Launch gate met (5 paying directors × 30 days on Phase 2).
+**Effort:** S (human: ~2h / CC: ~15min)
+
+~~## P1 — Update railway.toml to gevent workers before Phase 2 deploy~~ *(Done — `railway.toml` now uses `--worker-class gevent --workers 4 --worker-connections 200 --timeout 300`; `gevent` added to `requirements.txt`.)*
+
+## P2 — SSE keepalive comment (proxy 60s timeout)
+
+Railway's reverse proxy closes idle SSE connections after ~60 seconds of no data. Add a keepalive comment event inside the `notification_stream` generator:
+
+```python
+# Inside the while True loop, before time.sleep(2):
+yield ": keepalive\n\n"
+```
+
+**Effort:** XS (5 lines of code)

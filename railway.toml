@@ -2,7 +2,7 @@
 builder = "DOCKERFILE"
 
 [deploy]
-startCommand = "python manage.py migrate && python manage.py collectstatic --no-input && gunicorn chantiermobile.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120"
+startCommand = "python manage.py migrate && python manage.py collectstatic --no-input && gunicorn chantiermobile.wsgi:application --bind 0.0.0.0:$PORT --worker-class gevent --workers 4 --worker-connections 200 --timeout 300"
 healthcheckPath = "/"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
