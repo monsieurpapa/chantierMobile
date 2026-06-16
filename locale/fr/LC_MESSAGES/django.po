@@ -2569,30 +2569,24 @@ msgid "Manage workers, trade skills, and site-specific staff assignments."
 msgstr "Gérez les ouvriers, les corps de métier et les affectations par chantier."
 
 #: templates/home.html:73
-#, fuzzy
-#| msgid "View All Expenses"
 msgid "Finance & Expenses"
-msgstr "Voir toutes les dépenses"
+msgstr "Finance & Dépenses"
 
 #: templates/home.html:74
 msgid "Monitor project budgets, approve expenses, and track cash flow."
 msgstr "Surveillez les budgets, approuvez les dépenses et suivez les flux de trésorerie."
 
 #: templates/home.html:87
-#, fuzzy
-#| msgid "Materials"
 msgid "Materials & Stock"
-msgstr "Matériaux"
+msgstr "Matériaux & Stock"
 
 #: templates/home.html:88
 msgid "Manage equipment inventory and handle on-site material requests."
 msgstr "Gérez l'inventaire des matériaux et traitez les demandes d'approvisionnement sur site."
 
 #: templates/home.html:101
-#, fuzzy
-#| msgid "Contract"
 msgid "Revenue & Contracts"
-msgstr "Contrat"
+msgstr "Revenus & Contrats"
 
 #: templates/home.html:103
 msgid "Manage client contracts, milestones, and payment collections."
@@ -2815,10 +2809,8 @@ msgid "Overview"
 msgstr "Vue d'ensemble"
 
 #: templates/projects/site_detail.html:116
-#, fuzzy
-#| msgid "Actif"
 msgid "Activity"
-msgstr "Actif"
+msgstr "Activité"
 
 #: templates/projects/site_detail.html:128
 msgid "Project Phases & Progress"
@@ -3027,10 +3019,8 @@ msgid "No construction sites yet."
 msgstr "Aucun chantier pour l'instant."
 
 #: templates/projects/site_list.html:105
-#, fuzzy
-#| msgid "Directeur de Cabinet"
 msgid "Create New Site"
-msgstr "Directeur de Cabinet"
+msgstr "Créer un chantier"
 
 #: templates/includes/navbar-vertical.html
 msgid "Modules"

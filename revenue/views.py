@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.db.models import Sum
 from django.views.generic import ListView, CreateView, UpdateView, DetailView
 from django.urls import reverse_lazy
+from django.utils.translation import gettext_lazy as _
 from .models import Contract, Invoice, Payment
 from chantiermobile.constants import InvoiceStatus, UserRoles
 from .forms import ContractForm, InvoiceForm, PaymentForm
@@ -16,16 +17,16 @@ class ContractListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, 
     template_name = 'revenue/contract_list.html'
     context_object_name = 'contracts'
     cabinet_lookup_field = 'site__cabinet'
-    header_title = "Revenue: Client Contracts"
-    header_subtitle = "Manage project contracts and financial agreements"
-    
+    header_title = _("Contrats clients")
+    header_subtitle = _("Gérez les contrats et accords financiers des projets")
+
     def get_header_actions(self):
         from accounts.models import UserCabinetRole
         if self.request.user.is_superuser or UserCabinetRole.objects.filter(
             user=self.request.user, role__in=[UserRoles.DIRECTOR, UserRoles.ACCOUNTANT]
         ).exists():
             return [{
-                'label': 'New Contract',
+                'label': _("Nouveau contrat"),
                 'url': str(reverse_lazy('revenue:contract_create')),
                 'icon': 'file-contract',
                 'class': 'btn-falcon-primary'
@@ -46,14 +47,14 @@ class ContractCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMix
     form_class = ContractForm
     template_name = 'revenue/contract_form.html'
     allowed_roles = ['DIRECTOR', 'ACCOUNTANT']
-    header_title = "Define New Contract"
-    header_subtitle = "Register a new client contract for a project"
+    header_title = _("Définir un nouveau contrat")
+    header_subtitle = _("Enregistrez un nouveau contrat client pour un projet")
     back_url = reverse_lazy('revenue:contract_list')
-    
+
     def get_breadcrumb_items(self):
         return [
-            {'title': 'Revenue', 'url': str(reverse_lazy('revenue:contract_list'))},
-            {'title': 'New Contract', 'url': None},
+            {'title': _("Revenus"), 'url': str(reverse_lazy('revenue:contract_list'))},
+            {'title': _("Nouveau contrat"), 'url': None},
         ]
 
     def get_initial(self):
@@ -77,7 +78,7 @@ class ContractCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMix
         return form
 
     def get_success_url(self):
-        messages.success(self.request, "Contract created successfully!")
+        messages.success(self.request, _("Contrat créé avec succès !"))
         return reverse_lazy('projects:site_detail', kwargs={'unique_id': self.object.site.unique_id})
 
 class ContractUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, UpdateView):
@@ -86,17 +87,17 @@ class ContractUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMix
     template_name = 'revenue/contract_form.html'
     allowed_roles = ['DIRECTOR', 'ACCOUNTANT']
     cabinet_lookup_field = 'site__cabinet'
-    
+
     def get_header_title(self):
-        return f"Edit Contract: {self.object.client_name}"
+        return _("Modifier le contrat : %(name)s") % {'name': self.object.client_name}
 
     def get_back_url(self):
         return str(reverse_lazy('revenue:contract_list'))
 
     def get_breadcrumb_items(self):
         return [
-            {'title': 'Revenue', 'url': str(reverse_lazy('revenue:contract_list'))},
-            {'title': 'Edit Contract', 'url': None},
+            {'title': _("Revenus"), 'url': str(reverse_lazy('revenue:contract_list'))},
+            {'title': _("Modifier le contrat"), 'url': None},
         ]
 
     def get_form(self, form_class=None):
@@ -113,7 +114,7 @@ class ContractUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMix
         return form
 
     def get_success_url(self):
-        messages.success(self.request, "Contract updated.")
+        messages.success(self.request, _("Contrat mis à jour avec succès."))
         return reverse_lazy('projects:site_detail', kwargs={'unique_id': self.object.site.unique_id})
 
 class InvoiceListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
@@ -121,12 +122,12 @@ class InvoiceListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, L
     template_name = 'revenue/invoice_list.html'
     context_object_name = 'invoices'
     cabinet_lookup_field = 'contract__site__cabinet'
-    header_title = "Billing: Client Invoices"
-    header_subtitle = "Monitor and track all project invoices"
+    header_title = _("Factures clients")
+    header_subtitle = _("Suivez toutes les factures des projets")
 
     def get_header_actions(self):
         return [{
-            'label': 'New Invoice',
+            'label': _("Nouvelle facture"),
             'url': str(reverse_lazy('revenue:invoice_create')),
             'icon': 'file-invoice-dollar',
             'class': 'btn-falcon-primary'
@@ -146,14 +147,14 @@ class InvoiceCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixi
     form_class = InvoiceForm
     template_name = 'revenue/invoice_form.html'
     allowed_roles = ['DIRECTOR', 'ACCOUNTANT']
-    header_title = "Generate New Invoice"
-    header_subtitle = "Create a new billing statement for a contract"
+    header_title = _("Générer une nouvelle facture")
+    header_subtitle = _("Créez un relevé de facturation pour un contrat")
     back_url = reverse_lazy('revenue:invoice_list')
-    
+
     def get_breadcrumb_items(self):
         return [
-            {'title': 'Invoices', 'url': str(reverse_lazy('revenue:invoice_list'))},
-            {'title': 'New Generation', 'url': None},
+            {'title': _("Factures"), 'url': str(reverse_lazy('revenue:invoice_list'))},
+            {'title': _("Nouvelle facture"), 'url': None},
         ]
 
     def get_initial(self):
@@ -177,7 +178,7 @@ class InvoiceCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixi
         return form
 
     def get_success_url(self):
-        messages.success(self.request, "Invoice generated successfully!")
+        messages.success(self.request, _("Facture générée avec succès !"))
         return reverse_lazy('revenue:invoice_detail', kwargs={'pk': self.object.pk})
 
 class InvoiceDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, DetailView):
@@ -187,17 +188,17 @@ class InvoiceDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin,
     context_object_name = 'invoice'
 
     def get_header_title(self):
-        return f"Invoice: {self.object.invoice_number}"
+        return _("Facture : %(num)s") % {'num': self.object.invoice_number}
 
     def get_header_subtitle(self):
-        return f"Amount: ${self.object.amount} | Status: {self.object.status}"
+        return _("Montant : %(amount)s$ | Statut : %(status)s") % {'amount': self.object.amount, 'status': self.object.get_status_display()}
 
     def get_back_url(self):
         return str(reverse_lazy('revenue:invoice_list'))
 
     def get_breadcrumb_items(self):
         return [
-            {'title': 'Invoices', 'url': str(reverse_lazy('revenue:invoice_list'))},
+            {'title': _("Factures"), 'url': str(reverse_lazy('revenue:invoice_list'))},
             {'title': self.object.invoice_number, 'url': None},
         ]
 
@@ -205,7 +206,7 @@ class InvoiceDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin,
         actions = []
         if self.object.status != InvoiceStatus.PAID:
             actions.append({
-                'label': 'Record Payment',
+                'label': _("Enregistrer un paiement"),
                 'url': str(reverse_lazy('revenue:payment_create', kwargs={'invoice_id': self.object.id})),
                 'icon': 'credit-card',
                 'class': 'btn-falcon-success'
@@ -218,12 +219,12 @@ class PaymentListView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin,
     context_object_name = 'payments'
     paginate_by = 50
     allowed_roles = ['DIRECTOR', 'ACCOUNTANT']
-    header_title = "Payment Records"
-    header_subtitle = "Track all payments received from invoices"
-    
+    header_title = _("Historique des paiements")
+    header_subtitle = _("Suivez tous les paiements reçus des factures")
+
     def get_header_actions(self):
         return [{
-            'label': 'New Payment',
+            'label': _("Nouveau paiement"),
             'url': str(reverse_lazy('revenue:payment_create_standalone')),
             'icon': 'plus',
             'class': 'btn-falcon-primary'
@@ -251,8 +252,8 @@ class PaymentCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixi
     form_class = PaymentForm
     template_name = 'revenue/payment_form.html'
     allowed_roles = ['DIRECTOR', 'ACCOUNTANT', 'CASHIER']
-    header_title = "Record Payment"
-    header_subtitle = "Log a payment received against an invoice"
+    header_title = _("Enregistrer un paiement")
+    header_subtitle = _("Enregistrez un paiement reçu contre une facture")
     back_url = reverse_lazy('revenue:invoice_list')
 
     def get_initial(self):
@@ -304,5 +305,5 @@ class PaymentCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixi
         return response
 
     def get_success_url(self):
-        messages.success(self.request, "Payment recorded.")
+        messages.success(self.request, _("Paiement enregistré avec succès."))
         return reverse_lazy('revenue:invoice_detail', kwargs={'pk': self.object.invoice.pk})

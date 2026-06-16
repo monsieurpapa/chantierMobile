@@ -7,6 +7,7 @@ from django.shortcuts import redirect, get_object_or_404
 from django.contrib import messages
 from django.db.models import Sum, Count
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 from decimal import Decimal
 from .models import Expense, ExpenseApproval, Budget
 from .forms import ExpenseForm, BudgetForm
@@ -19,13 +20,13 @@ class ExpenseListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, L
     context_object_name = 'expenses'
     template_name = 'finance/expense_list.html'
     paginate_by = 20
-    header_title = "Expense Management"
-    header_subtitle = "Track and approve project expenses"
+    header_title = _("Gestion des dépenses")
+    header_subtitle = _("Suivez et approuvez les dépenses du projet")
     cabinet_lookup_field = 'site__cabinet'
-    
+
     def get_header_actions(self):
         return [{
-            'label': 'Request Expense',
+            'label': _("Soumettre une dépense"),
             'url': str(reverse_lazy('finance:expense_create')),
             'icon': 'plus',
             'class': 'btn-falcon-primary'
@@ -36,14 +37,14 @@ class ExpenseCreateView(LoginRequiredMixin, PageHeaderMixin, CreateView):
     form_class = ExpenseForm
     template_name = 'finance/expense_form.html'
     success_url = reverse_lazy('finance:expense_list')
-    header_title = "New Expense Request"
-    header_subtitle = "Submit a new expense for approval"
+    header_title = _("Nouvelle demande de dépense")
+    header_subtitle = _("Soumettez une nouvelle dépense pour approbation")
     back_url = reverse_lazy('finance:expense_list')
-    
+
     def get_breadcrumb_items(self):
         return [
-            {'title': 'Finance', 'url': str(reverse_lazy('finance:expense_list'))},
-            {'title': 'New Request', 'url': None},
+            {'title': _("Finance"), 'url': str(reverse_lazy('finance:expense_list'))},
+            {'title': _("Nouvelle demande"), 'url': None},
         ]
 
     def get_form(self, form_class=None):
@@ -62,7 +63,7 @@ class ExpenseCreateView(LoginRequiredMixin, PageHeaderMixin, CreateView):
     def form_valid(self, form):
         form.instance.requester = self.request.user
         from django.contrib import messages
-        messages.success(self.request, "Expense request submitted successfully!")
+        messages.success(self.request, _("Demande de dépense soumise avec succès !"))
         return super().form_valid(form)
 
 class ExpenseDetailView(LoginRequiredMixin, PageHeaderMixin, DetailView):
@@ -71,17 +72,17 @@ class ExpenseDetailView(LoginRequiredMixin, PageHeaderMixin, DetailView):
     template_name = 'finance/expense_detail.html'
 
     def get_header_title(self):
-        return f"Expense: {self.object.category.name}"
+        return _("Dépense : %(name)s") % {'name': self.object.category.name}
 
     def get_header_subtitle(self):
-        return f"Amount: ${self.object.amount} | Site: {self.object.site.name}"
+        return _("Montant : %(amount)s$ | Chantier : %(site)s") % {'amount': self.object.amount, 'site': self.object.site.name}
 
     def get_back_url(self):
         return str(reverse_lazy('finance:expense_list'))
 
     def get_breadcrumb_items(self):
         return [
-            {'title': 'Finance', 'url': str(reverse_lazy('finance:expense_list'))},
+            {'title': _("Finance"), 'url': str(reverse_lazy('finance:expense_list'))},
             {'title': f"EX-{self.object.id}", 'url': None},
         ]
 
@@ -142,16 +143,16 @@ class BudgetListView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, Lis
     template_name = 'finance/budget_list.html'
     context_object_name = 'budgets'
     allowed_roles = ['DIRECTOR', 'ACCOUNTANT', 'CHIEF_ENGINEER']
-    header_title = "Project Budgets"
-    header_subtitle = "Monitor and manage construction budgets"
-    
+    header_title = _("Budgets des projets")
+    header_subtitle = _("Surveillez et gérez les budgets de construction")
+
     def get_header_actions(self):
         from accounts.models import UserCabinetRole
         if self.request.user.is_superuser or UserCabinetRole.objects.filter(
             user=self.request.user, role__in=[UserRoles.DIRECTOR, UserRoles.ACCOUNTANT]
         ).exists():
             return [{
-                'label': 'Create Budget',
+                'label': _("Créer un budget"),
                 'url': str(reverse_lazy('finance:budget_create')),
                 'icon': 'plus',
                 'class': 'btn-falcon-primary'
@@ -173,14 +174,14 @@ class BudgetCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, C
     template_name = 'finance/budget_form.html'
     success_url = reverse_lazy('finance:budget_list')
     allowed_roles = ['DIRECTOR', 'ACCOUNTANT']
-    header_title = "Create Budget"
-    header_subtitle = "Set the financial plan for a project site"
+    header_title = _("Créer un budget")
+    header_subtitle = _("Définissez le plan financier pour un chantier")
     back_url = reverse_lazy('finance:budget_list')
 
     def get_breadcrumb_items(self):
         return [
-            {'title': 'Budgets', 'url': str(reverse_lazy('finance:budget_list'))},
-            {'title': 'New Budget', 'url': None},
+            {'title': _("Budgets"), 'url': str(reverse_lazy('finance:budget_list'))},
+            {'title': _("Nouveau budget"), 'url': None},
         ]
 
     def get_form(self, form_class=None):
@@ -197,7 +198,7 @@ class BudgetCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, C
         return form
 
     def form_valid(self, form):
-        messages.success(self.request, f"Budget created for {form.instance.site.name} successfully!")
+        messages.success(self.request, _("Budget créé pour %(site)s avec succès !") % {'site': form.instance.site.name})
         return super().form_valid(form)
 
 class BudgetDetailView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, DetailView):
@@ -208,17 +209,17 @@ class BudgetDetailView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin
     cabinet_lookup_field = 'site__cabinet'
 
     def get_header_title(self):
-        return f"Budget: {self.object.site.name}"
+        return _("Budget : %(name)s") % {'name': self.object.site.name}
 
     def get_header_subtitle(self):
-        return f"{self.object.start_date} → {self.object.end_date}"
+        return _("Du %(start)s au %(end)s") % {'start': self.object.start_date, 'end': self.object.end_date}
 
     def get_back_url(self):
         return str(reverse_lazy('finance:budget_list'))
 
     def get_breadcrumb_items(self):
         return [
-            {'title': 'Budgets', 'url': str(reverse_lazy('finance:budget_list'))},
+            {'title': _("Budgets"), 'url': str(reverse_lazy('finance:budget_list'))},
             {'title': self.object.site.name, 'url': None},
         ]
 
@@ -278,20 +279,20 @@ class BudgetUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin
     cabinet_lookup_field = 'site__cabinet'
 
     def get_header_title(self):
-        return f"Edit Budget: {self.object.site.name}"
+        return _("Modifier le budget : %(name)s") % {'name': self.object.site.name}
 
     def get_back_url(self):
         return str(reverse_lazy('finance:budget_list'))
 
     def get_breadcrumb_items(self):
         return [
-            {'title': 'Budgets', 'url': str(reverse_lazy('finance:budget_list'))},
+            {'title': _("Budgets"), 'url': str(reverse_lazy('finance:budget_list'))},
             {'title': self.object.site.name, 'url': None},
-            {'title': 'Edit', 'url': None},
+            {'title': _("Modifier"), 'url': None},
         ]
 
     def form_valid(self, form):
-        messages.success(self.request, f"Budget for {form.instance.site.name} updated successfully!")
+        messages.success(self.request, _("Budget mis à jour pour %(site)s avec succès !") % {'site': form.instance.site.name})
         return super().form_valid(form)
 
     def get_form(self, form_class=None):

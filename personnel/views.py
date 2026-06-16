@@ -3,6 +3,7 @@ from django.views.generic import ListView, CreateView, UpdateView, DetailView, D
 from django.urls import reverse_lazy
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
+from django.utils.translation import gettext_lazy as _
 from .models import Personnel, Skill, SiteAssignment
 from .forms import PersonnelForm, SiteAssignmentForm, SkillForm
 from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet
@@ -14,17 +15,17 @@ class PersonnelListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin,
     template_name = 'personnel/personnel_list.html'
     context_object_name = 'personnel_list'
     ordering = ['last_name', 'first_name']
-    header_title = "Human Resources"
-    header_subtitle = "Manage all personnel and staff assignments"
-    
+    header_title = _("Ressources humaines")
+    header_subtitle = _("Gérez le personnel et les affectations sur les chantiers")
+
     def get_header_actions(self):
         from accounts.models import UserCabinetRole
         if self.request.user.is_superuser or UserCabinetRole.objects.filter(
-            user=self.request.user, 
+            user=self.request.user,
             role__in=[UserRoles.DIRECTOR, UserRoles.CHIEF_ENGINEER]
         ).exists():
             return [{
-                'label': 'Register Personnel',
+                'label': _("Enregistrer un personnel"),
                 'url': str(reverse_lazy('personnel:personnel_create')),
                 'icon': 'user-plus',
                 'class': 'btn-falcon-primary'
@@ -37,24 +38,24 @@ class PersonnelCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMi
     template_name = 'personnel/personnel_form.html'
     allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER']
     success_url = reverse_lazy('personnel:personnel_list')
-    header_title = "Register New Personnel"
-    header_subtitle = "Add a new staff member to the system"
+    header_title = _("Enregistrer un nouveau personnel")
+    header_subtitle = _("Ajoutez un nouveau membre du personnel au système")
     back_url = reverse_lazy('personnel:personnel_list')
 
     def get_breadcrumb_items(self):
         return [
-            {'title': 'Human Resources', 'url': str(reverse_lazy('personnel:personnel_list'))},
-            {'title': 'New Registration', 'url': None},
+            {'title': _("Ressources humaines"), 'url': str(reverse_lazy('personnel:personnel_list'))},
+            {'title': _("Nouvel enregistrement"), 'url': None},
         ]
 
     def form_valid(self, form):
         cabinet = self.get_user_cabinet()
         if not cabinet:
-             messages.error(self.request, "Cabinet identification failed.")
+             messages.error(self.request, _("Identification du cabinet échouée."))
              return self.form_invalid(form)
-             
+
         form.instance.cabinet = cabinet
-        messages.success(self.request, "Personnel registered successfully.")
+        messages.success(self.request, _("Personnel enregistré avec succès."))
         return super().form_valid(form)
 
 class PersonnelDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, DetailView):
@@ -68,14 +69,14 @@ class PersonnelDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixi
         return self.object.get_full_name() or self.object.username
 
     def get_header_subtitle(self):
-        return self.object.job_title or "Staff Member"
+        return self.object.job_title or _("Membre du personnel")
 
     def get_back_url(self):
         return str(reverse_lazy('personnel:personnel_list'))
 
     def get_breadcrumb_items(self):
         return [
-            {'title': 'Human Resources', 'url': str(reverse_lazy('personnel:personnel_list'))},
+            {'title': _("Ressources humaines"), 'url': str(reverse_lazy('personnel:personnel_list'))},
             {'title': self.object.last_name or self.object.username, 'url': None},
         ]
 
@@ -83,18 +84,18 @@ class PersonnelDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixi
         from accounts.models import UserCabinetRole
         user = self.request.user
         actions = []
-        
+
         is_admin = user.is_superuser or UserCabinetRole.objects.filter(
             user=user, role__in=[UserRoles.DIRECTOR, UserRoles.CHIEF_ENGINEER]
         ).exists()
-        
+
         is_director = user.is_superuser or UserCabinetRole.objects.filter(
             user=user, role='DIRECTOR'
         ).exists()
 
         if is_admin:
             actions.append({
-                'label': 'Edit Profile',
+                'label': _("Modifier le profil"),
                 'url': str(reverse_lazy('personnel:personnel_update', kwargs={'unique_id': self.object.unique_id})),
                 'icon': 'user-edit',
                 'class': 'btn-falcon-default'
@@ -111,20 +112,20 @@ class PersonnelUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMi
     allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER']
     
     def get_header_title(self):
-        return f"Edit Profile: {self.object.username}"
+        return _("Modifier le profil : %(name)s") % {'name': self.object.username}
 
     def get_back_url(self):
         return str(reverse_lazy('personnel:personnel_detail', kwargs={'unique_id': self.object.unique_id}))
 
     def get_breadcrumb_items(self):
         return [
-            {'title': 'Human Resources', 'url': str(reverse_lazy('personnel:personnel_list'))},
+            {'title': _("Ressources humaines"), 'url': str(reverse_lazy('personnel:personnel_list'))},
             {'title': self.object.username, 'url': str(reverse_lazy('personnel:personnel_detail', kwargs={'unique_id': self.object.unique_id}))},
-            {'title': 'Edit', 'url': None},
+            {'title': _("Modifier"), 'url': None},
         ]
-    
+
     def get_success_url(self):
-        messages.success(self.request, "Profile updated.")
+        messages.success(self.request, _("Profil mis à jour avec succès."))
         return reverse_lazy('personnel:personnel_detail', kwargs={'unique_id': self.object.unique_id})
 
 class PersonnelDeleteView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, DeleteView):
@@ -136,25 +137,25 @@ class PersonnelDeleteView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMi
     allowed_roles = ['DIRECTOR']
 
     def get_header_title(self):
-        return f"Delete Personnel: {self.object.get_full_name() or self.object.username}"
+        return _("Supprimer le personnel : %(name)s") % {'name': self.object.get_full_name() or self.object.username}
 
     def get_header_subtitle(self):
-        return "This action cannot be undone."
+        return _("Cette action est irréversible.")
 
     def get_back_url(self):
         return str(reverse_lazy('personnel:personnel_detail', kwargs={'unique_id': self.object.unique_id}))
 
     def get_breadcrumb_items(self):
         return [
-            {'title': 'Personnel', 'url': str(reverse_lazy('personnel:personnel_list'))},
+            {'title': _("Personnel"), 'url': str(reverse_lazy('personnel:personnel_list'))},
             {'title': self.object.get_full_name() or self.object.username, 'url': str(reverse_lazy('personnel:personnel_detail', kwargs={'unique_id': self.object.unique_id}))},
-            {'title': 'Delete', 'url': None},
+            {'title': _("Supprimer"), 'url': None},
         ]
 
     def delete(self, request, *args, **kwargs):
         self.object = self.get_object()
         personnel_name = self.object.get_full_name() or self.object.username
-        messages.success(request, f"Personnel '{personnel_name}' deleted successfully.")
+        messages.success(request, _("Personnel '%(name)s' supprimé avec succès.") % {'name': personnel_name})
         return super().delete(request, *args, **kwargs)
 
 class SkillListView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, ListView):
@@ -162,14 +163,14 @@ class SkillListView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, List
     template_name = 'personnel/skill_list.html'
     context_object_name = 'skill_list'
     allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER']
-    header_title = "Skills Catalog"
-    header_subtitle = "Manage worker skills and competencies"
+    header_title = _("Catalogue des compétences")
+    header_subtitle = _("Gérez les compétences et aptitudes des travailleurs")
     back_url = reverse_lazy('personnel:personnel_list')
 
     def get_breadcrumb_items(self):
         return [
-            {'title': 'Personnel', 'url': str(reverse_lazy('personnel:personnel_list'))},
-            {'title': 'Skills', 'url': None},
+            {'title': _("Personnel"), 'url': str(reverse_lazy('personnel:personnel_list'))},
+            {'title': _("Compétences"), 'url': None},
         ]
 
     def get_context_data(self, **kwargs):
@@ -181,7 +182,7 @@ class SkillListView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, List
         form = SkillForm(request.POST)
         if form.is_valid():
             form.save()
-            messages.success(request, f"Skill added successfully.")
+            messages.success(request, _("Compétence ajoutée avec succès."))
             return redirect('personnel:skill_list')
 
         self.object_list = self.get_queryset()
@@ -194,14 +195,14 @@ class SiteAssignmentCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAcc
     template_name = 'personnel/assignment_form.html'
     allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER']
     cabinet_lookup_field = 'site__cabinet'
-    header_title = "Assign Personnel to Site"
-    header_subtitle = "Link a worker to a construction site"
+    header_title = _("Affecter un personnel à un chantier")
+    header_subtitle = _("Associez un travailleur à un chantier de construction")
     back_url = reverse_lazy('personnel:personnel_list')
 
     def get_breadcrumb_items(self):
         return [
-            {'title': 'Personnel', 'url': str(reverse_lazy('personnel:personnel_list'))},
-            {'title': 'New Assignment', 'url': None},
+            {'title': _("Personnel"), 'url': str(reverse_lazy('personnel:personnel_list'))},
+            {'title': _("Nouvelle affectation"), 'url': None},
         ]
 
     def get_form(self, form_class=None):
@@ -231,7 +232,7 @@ class SiteAssignmentCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAcc
         return initial
 
     def form_valid(self, form):
-        messages.success(self.request, "Site assignment completed.")
+        messages.success(self.request, _("Affectation au chantier effectuée avec succès."))
         return super().form_valid(form)
 
     def get_success_url(self):

@@ -192,8 +192,8 @@ class UserListAdminView(LoginRequiredMixin, IsSuperAdminMixin, PageHeaderMixin, 
     template_name = 'account/admin_users_list.html'
     context_object_name = 'users'
     paginate_by = 25
-    header_title = "User Management"
-    header_subtitle = "Manage all system users, permissions, and access levels"
+    header_title = _("Gestion des utilisateurs")
+    header_subtitle = _("Gérez tous les utilisateurs, permissions et niveaux d'accès")
     back_url = reverse_lazy('home')
 
     def get_breadcrumb_items(self):
@@ -260,17 +260,17 @@ class UserEditAdminView(LoginRequiredMixin, IsSuperAdminMixin, PageHeaderMixin, 
     success_url = reverse_lazy('accounts:admin_users_list')
 
     def get_header_title(self):
-        return f"Edit User: {self.object.username}"
+        return _("Modifier l'utilisateur : %(name)s") % {'name': self.object.username}
 
     def get_back_url(self):
         return str(reverse_lazy('accounts:admin_user_detail', kwargs={'pk': self.object.pk}))
 
     def get_breadcrumb_items(self):
         return [
-            {'title': 'Admin', 'url': None},
-            {'title': 'Users', 'url': str(reverse_lazy('accounts:admin_users_list'))},
+            {'title': _("Admin"), 'url': None},
+            {'title': _("Utilisateurs"), 'url': str(reverse_lazy('accounts:admin_users_list'))},
             {'title': self.object.username, 'url': str(reverse_lazy('accounts:admin_user_detail', kwargs={'pk': self.object.pk}))},
-            {'title': 'Edit', 'url': None},
+            {'title': _("Modifier"), 'url': None},
         ]
 
     def get_object(self):
@@ -310,20 +310,20 @@ class UserDeleteAdminView(LoginRequiredMixin, IsSuperAdminMixin, PageHeaderMixin
     success_url = reverse_lazy('accounts:admin_users_list')
 
     def get_header_title(self):
-        return f"Delete User: {self.object.username}"
+        return _("Supprimer l'utilisateur : %(name)s") % {'name': self.object.username}
 
     def get_header_subtitle(self):
-        return "This action cannot be undone."
+        return _("Cette action est irréversible.")
 
     def get_back_url(self):
         return str(reverse_lazy('accounts:admin_user_detail', kwargs={'pk': self.object.pk}))
 
     def get_breadcrumb_items(self):
         return [
-            {'title': 'Admin', 'url': None},
-            {'title': 'Users', 'url': str(reverse_lazy('accounts:admin_users_list'))},
+            {'title': _("Admin"), 'url': None},
+            {'title': _("Utilisateurs"), 'url': str(reverse_lazy('accounts:admin_users_list'))},
             {'title': self.object.username, 'url': str(reverse_lazy('accounts:admin_user_detail', kwargs={'pk': self.object.pk}))},
-            {'title': 'Delete', 'url': None},
+            {'title': _("Supprimer"), 'url': None},
         ]
 
     def get_object(self):
@@ -364,7 +364,7 @@ class UserDetailAdminView(LoginRequiredMixin, IsSuperAdminMixin, PageHeaderMixin
     context_object_name = 'target_user'
 
     def get_header_title(self):
-        return f"User Profile: {self.object.username}"
+        return _("Profil utilisateur : %(name)s") % {'name': self.object.username}
 
     def get_header_subtitle(self):
         return self.object.email or ""
@@ -374,15 +374,15 @@ class UserDetailAdminView(LoginRequiredMixin, IsSuperAdminMixin, PageHeaderMixin
 
     def get_breadcrumb_items(self):
         return [
-            {'title': 'Admin', 'url': None},
-            {'title': 'Users', 'url': str(reverse_lazy('accounts:admin_users_list'))},
+            {'title': _("Admin"), 'url': None},
+            {'title': _("Utilisateurs"), 'url': str(reverse_lazy('accounts:admin_users_list'))},
             {'title': self.object.username, 'url': None},
         ]
 
     def get_header_actions(self):
         return [
             {
-                'label': 'Edit User',
+                'label': _("Modifier l'utilisateur"),
                 'url': str(reverse_lazy('accounts:admin_user_edit', kwargs={'pk': self.object.pk})),
                 'icon': 'edit',
                 'class': 'btn-falcon-default',
@@ -488,10 +488,10 @@ class AssignUserToCabinetView(LoginRequiredMixin, IsSuperAdminMixin, PageHeaderM
         return self._target_user
 
     def get_header_title(self):
-        return f"Assign {self.get_target_user().username} to Cabinet"
+        return _("Affecter %(name)s à un cabinet") % {'name': self.get_target_user().username}
 
     def get_header_subtitle(self):
-        return "Select a cabinet and role for this user"
+        return _("Sélectionnez un cabinet et un rôle pour cet utilisateur")
 
     def get_back_url(self):
         return str(reverse_lazy('accounts:admin_user_detail', kwargs={'pk': self.kwargs.get('user_id')}))
@@ -499,10 +499,10 @@ class AssignUserToCabinetView(LoginRequiredMixin, IsSuperAdminMixin, PageHeaderM
     def get_breadcrumb_items(self):
         user = self.get_target_user()
         return [
-            {'title': 'Admin', 'url': None},
-            {'title': 'Users', 'url': str(reverse_lazy('accounts:admin_users_list'))},
+            {'title': _("Admin"), 'url': None},
+            {'title': _("Utilisateurs"), 'url': str(reverse_lazy('accounts:admin_users_list'))},
             {'title': user.username, 'url': str(reverse_lazy('accounts:admin_user_detail', kwargs={'pk': user.pk}))},
-            {'title': 'Assign Cabinet', 'url': None},
+            {'title': _("Affecter un cabinet"), 'url': None},
         ]
 
     def get_form_kwargs(self):
@@ -538,20 +538,20 @@ class CabinetListAdminView(LoginRequiredMixin, IsSuperAdminMixin, PageHeaderMixi
     template_name = 'account/admin_cabinets_list.html'
     context_object_name = 'cabinets'
     paginate_by = 25
-    header_title = "Cabinet Management"
-    header_subtitle = "Manage all project cabinets and their user assignments"
+    header_title = _("Gestion des cabinets")
+    header_subtitle = _("Gérez tous les cabinets et les affectations des utilisateurs")
     back_url = reverse_lazy('home')
 
     def get_breadcrumb_items(self):
         return [
-            {'title': 'Admin', 'url': None},
-            {'title': 'Cabinets', 'url': None},
+            {'title': _("Admin"), 'url': None},
+            {'title': _("Cabinets"), 'url': None},
         ]
 
     def get_header_actions(self):
         return [
             {
-                'label': 'New Cabinet',
+                'label': _("Nouveau cabinet"),
                 'url': str(reverse_lazy('accounts:admin_cabinet_create')),
                 'icon': 'plus',
                 'class': 'btn-falcon-primary',
@@ -610,28 +610,28 @@ class CabinetDetailAdminView(LoginRequiredMixin, IsSuperAdminMixin, PageHeaderMi
         return self.object.name
 
     def get_header_subtitle(self):
-        return "Cabinet Details and User Assignments"
+        return _("Détails du cabinet et affectations des utilisateurs")
 
     def get_back_url(self):
         return str(reverse_lazy('accounts:admin_cabinets_list'))
 
     def get_breadcrumb_items(self):
         return [
-            {'title': 'Admin', 'url': None},
-            {'title': 'Cabinets', 'url': str(reverse_lazy('accounts:admin_cabinets_list'))},
+            {'title': _("Admin"), 'url': None},
+            {'title': _("Cabinets"), 'url': str(reverse_lazy('accounts:admin_cabinets_list'))},
             {'title': self.object.name, 'url': None},
         ]
 
     def get_header_actions(self):
         return [
             {
-                'label': 'Edit Cabinet',
+                'label': _("Modifier le cabinet"),
                 'url': str(reverse_lazy('accounts:admin_cabinet_edit', kwargs={'pk': self.object.pk})),
                 'icon': 'edit',
                 'class': 'btn-falcon-default',
             },
             {
-                'label': 'Add User',
+                'label': _("Ajouter un utilisateur"),
                 'url': str(reverse_lazy('accounts:admin_assign_user_to_cabinet', kwargs={'cabinet_id': self.object.pk})),
                 'icon': 'user-plus',
                 'class': 'btn-falcon-success',
@@ -671,15 +671,15 @@ class CabinetCreateView(LoginRequiredMixin, IsSuperAdminMixin, PageHeaderMixin, 
     model = Cabinet
     form_class = CabinetForm
     template_name = 'account/admin_cabinet_form.html'
-    header_title = "Create New Cabinet"
-    header_subtitle = "Add a new project cabinet to the system"
+    header_title = _("Créer un nouveau cabinet")
+    header_subtitle = _("Ajoutez un nouveau cabinet au système")
     back_url = reverse_lazy('accounts:admin_cabinets_list')
 
     def get_breadcrumb_items(self):
         return [
-            {'title': 'Admin', 'url': None},
-            {'title': 'Cabinets', 'url': str(reverse_lazy('accounts:admin_cabinets_list'))},
-            {'title': 'New Cabinet', 'url': None},
+            {'title': _("Admin"), 'url': None},
+            {'title': _("Cabinets"), 'url': str(reverse_lazy('accounts:admin_cabinets_list'))},
+            {'title': _("Nouveau cabinet"), 'url': None},
         ]
 
     def get_context_data(self, **kwargs):
@@ -706,17 +706,17 @@ class CabinetUpdateView(LoginRequiredMixin, IsSuperAdminMixin, PageHeaderMixin, 
     template_name = 'account/admin_cabinet_form.html'
 
     def get_header_title(self):
-        return f"Edit Cabinet: {self.object.name}"
+        return _("Modifier le cabinet : %(name)s") % {'name': self.object.name}
 
     def get_back_url(self):
         return str(reverse_lazy('accounts:admin_cabinet_detail', kwargs={'pk': self.object.pk}))
 
     def get_breadcrumb_items(self):
         return [
-            {'title': 'Admin', 'url': None},
-            {'title': 'Cabinets', 'url': str(reverse_lazy('accounts:admin_cabinets_list'))},
+            {'title': _("Admin"), 'url': None},
+            {'title': _("Cabinets"), 'url': str(reverse_lazy('accounts:admin_cabinets_list'))},
             {'title': self.object.name, 'url': str(reverse_lazy('accounts:admin_cabinet_detail', kwargs={'pk': self.object.pk}))},
-            {'title': 'Edit', 'url': None},
+            {'title': _("Modifier"), 'url': None},
         ]
 
     def get_context_data(self, **kwargs):
@@ -743,20 +743,20 @@ class CabinetDeleteView(LoginRequiredMixin, IsSuperAdminMixin, PageHeaderMixin, 
     success_url = reverse_lazy('accounts:admin_cabinets_list')
 
     def get_header_title(self):
-        return f"Delete Cabinet: {self.object.name}"
+        return _("Supprimer le cabinet : %(name)s") % {'name': self.object.name}
 
     def get_header_subtitle(self):
-        return "This will permanently delete the cabinet and all related data."
+        return _("Cette action supprimera définitivement le cabinet et toutes les données associées.")
 
     def get_back_url(self):
         return str(reverse_lazy('accounts:admin_cabinet_detail', kwargs={'pk': self.object.pk}))
 
     def get_breadcrumb_items(self):
         return [
-            {'title': 'Admin', 'url': None},
-            {'title': 'Cabinets', 'url': str(reverse_lazy('accounts:admin_cabinets_list'))},
+            {'title': _("Admin"), 'url': None},
+            {'title': _("Cabinets"), 'url': str(reverse_lazy('accounts:admin_cabinets_list'))},
             {'title': self.object.name, 'url': str(reverse_lazy('accounts:admin_cabinet_detail', kwargs={'pk': self.object.pk}))},
-            {'title': 'Delete', 'url': None},
+            {'title': _("Supprimer"), 'url': None},
         ]
 
     def get_context_data(self, **kwargs):
@@ -794,10 +794,10 @@ class AssignUserToCabinetFromDetailView(LoginRequiredMixin, IsSuperAdminMixin, P
         return self._cabinet
 
     def get_header_title(self):
-        return f"Add User to: {self.get_cabinet().name}"
+        return _("Ajouter un utilisateur à : %(name)s") % {'name': self.get_cabinet().name}
 
     def get_header_subtitle(self):
-        return "Assign a system user and role to this cabinet"
+        return _("Assignez un utilisateur et un rôle à ce cabinet")
 
     def get_back_url(self):
         return str(reverse_lazy('accounts:admin_cabinet_detail', kwargs={'pk': self.kwargs['cabinet_id']}))
@@ -805,10 +805,10 @@ class AssignUserToCabinetFromDetailView(LoginRequiredMixin, IsSuperAdminMixin, P
     def get_breadcrumb_items(self):
         cabinet = self.get_cabinet()
         return [
-            {'title': 'Admin', 'url': None},
-            {'title': 'Cabinets', 'url': str(reverse_lazy('accounts:admin_cabinets_list'))},
+            {'title': _("Admin"), 'url': None},
+            {'title': _("Cabinets"), 'url': str(reverse_lazy('accounts:admin_cabinets_list'))},
             {'title': cabinet.name, 'url': str(reverse_lazy('accounts:admin_cabinet_detail', kwargs={'pk': cabinet.pk}))},
-            {'title': 'Add User', 'url': None},
+            {'title': _("Ajouter un utilisateur"), 'url': None},
         ]
 
     def get_form_kwargs(self):
@@ -843,20 +843,20 @@ class CabinetUserRoleUpdateView(LoginRequiredMixin, IsSuperAdminMixin, PageHeade
     template_name = 'account/admin_cabinet_user_role_form.html'
 
     def get_header_title(self):
-        return f"Edit Role: {self.object.user.username}"
+        return _("Modifier le rôle : %(name)s") % {'name': self.object.user.username}
 
     def get_header_subtitle(self):
-        return f"Cabinet: {self.object.cabinet.name}"
+        return _("Cabinet : %(name)s") % {'name': self.object.cabinet.name}
 
     def get_back_url(self):
         return str(reverse_lazy('accounts:admin_cabinet_detail', kwargs={'pk': self.object.cabinet.pk}))
 
     def get_breadcrumb_items(self):
         return [
-            {'title': 'Admin', 'url': None},
-            {'title': 'Cabinets', 'url': str(reverse_lazy('accounts:admin_cabinets_list'))},
+            {'title': _("Admin"), 'url': None},
+            {'title': _("Cabinets"), 'url': str(reverse_lazy('accounts:admin_cabinets_list'))},
             {'title': self.object.cabinet.name, 'url': str(reverse_lazy('accounts:admin_cabinet_detail', kwargs={'pk': self.object.cabinet.pk}))},
-            {'title': 'Edit Role', 'url': None},
+            {'title': _("Modifier le rôle"), 'url': None},
         ]
 
     def get_context_data(self, **kwargs):
@@ -884,20 +884,20 @@ class CabinetUserRoleDeleteView(LoginRequiredMixin, IsSuperAdminMixin, PageHeade
     template_name = 'account/admin_cabinet_user_role_confirm_delete.html'
 
     def get_header_title(self):
-        return f"Remove {self.object.user.username} from {self.object.cabinet.name}"
+        return _("Retirer %(user)s de %(cabinet)s") % {'user': self.object.user.username, 'cabinet': self.object.cabinet.name}
 
     def get_header_subtitle(self):
-        return "This will revoke the user's access to this cabinet."
+        return _("Cette action révoquera l'accès de l'utilisateur à ce cabinet.")
 
     def get_back_url(self):
         return str(reverse_lazy('accounts:admin_cabinet_detail', kwargs={'pk': self.object.cabinet.pk}))
 
     def get_breadcrumb_items(self):
         return [
-            {'title': 'Admin', 'url': None},
-            {'title': 'Cabinets', 'url': str(reverse_lazy('accounts:admin_cabinets_list'))},
+            {'title': _("Admin"), 'url': None},
+            {'title': _("Cabinets"), 'url': str(reverse_lazy('accounts:admin_cabinets_list'))},
             {'title': self.object.cabinet.name, 'url': str(reverse_lazy('accounts:admin_cabinet_detail', kwargs={'pk': self.object.cabinet.pk}))},
-            {'title': 'Remove User', 'url': None},
+            {'title': _("Retirer l'utilisateur"), 'url': None},
         ]
 
     def get_context_data(self, **kwargs):

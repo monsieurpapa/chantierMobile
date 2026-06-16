@@ -5,6 +5,7 @@ from django.urls import reverse_lazy
 from django.shortcuts import redirect, get_object_or_404
 from django.contrib import messages
 from django.http import HttpResponseRedirect
+from django.utils.translation import gettext_lazy as _
 from .models import Material, MaterialRequest
 from .forms import MaterialForm, MaterialRequestForm, MaterialRequestItemFormSet
 from projects.models import Site
@@ -17,16 +18,16 @@ class MaterialListView(LoginRequiredMixin, PageHeaderMixin, ListView):
     template_name = 'materials/material_list.html'
     context_object_name = 'materials'
     paginate_by = 50
-    header_title = "Logistics: Material Catalog"
-    header_subtitle = "Browse and manage available construction materials"
-    
+    header_title = _("Catalogue des matériaux")
+    header_subtitle = _("Parcourez et gérez les matériaux de construction disponibles")
+
     def get_header_actions(self):
         from accounts.models import UserCabinetRole
         if self.request.user.is_superuser or UserCabinetRole.objects.filter(
             user=self.request.user, role__in=[UserRoles.DIRECTOR, UserRoles.CHIEF_ENGINEER]
         ).exists():
             return [{
-                'label': 'Add Material',
+                'label': _("Ajouter un matériau"),
                 'url': str(reverse_lazy('materials:material_create')),
                 'icon': 'plus',
                 'class': 'btn-falcon-primary'
@@ -39,19 +40,19 @@ class MaterialCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin,
     template_name = 'materials/material_form.html'
     success_url = reverse_lazy('materials:material_list')
     allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER']
-    
+    header_title = _("Ajouter un nouveau matériau")
+    header_subtitle = _("Définir un nouvel article dans le catalogue des matériaux")
+    back_url = reverse_lazy('materials:material_list')
+
     def form_valid(self, form):
         from django.contrib import messages
-        messages.success(self.request, f"Material '{form.instance.name}' added to catalog successfully!")
+        messages.success(self.request, _("Matériau '%(name)s' ajouté au catalogue avec succès !") % {'name': form.instance.name})
         return super().form_valid(form)
-    header_title = "Add New Material"
-    header_subtitle = "Define a new item in the material catalog"
-    back_url = reverse_lazy('materials:material_list')
-    
+
     def get_breadcrumb_items(self):
         return [
-            {'title': 'Logistics', 'url': str(reverse_lazy('materials:material_list'))},
-            {'title': 'New Material', 'url': None},
+            {'title': _("Logistique"), 'url': str(reverse_lazy('materials:material_list'))},
+            {'title': _("Nouveau matériau"), 'url': None},
         ]
 
 class MaterialUpdateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, UpdateView):
@@ -63,19 +64,19 @@ class MaterialUpdateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin,
     
     def form_valid(self, form):
         from django.contrib import messages
-        messages.success(self.request, f"Material '{form.instance.name}' updated successfully!")
+        messages.success(self.request, _("Matériau '%(name)s' mis à jour avec succès !") % {'name': form.instance.name})
         return super().form_valid(form)
-    
+
     def get_header_title(self):
-        return f"Edit: {self.object.name}"
+        return _("Modifier : %(name)s") % {'name': self.object.name}
 
     def get_back_url(self):
         return str(reverse_lazy('materials:material_list'))
 
     def get_breadcrumb_items(self):
         return [
-            {'title': 'Logistics', 'url': str(reverse_lazy('materials:material_list'))},
-            {'title': 'Edit Material', 'url': None},
+            {'title': _("Logistique"), 'url': str(reverse_lazy('materials:material_list'))},
+            {'title': _("Modifier le matériau"), 'url': None},
         ]
 
 # Material Request Views
@@ -83,12 +84,12 @@ class MaterialRequestListView(LoginRequiredMixin, PageHeaderMixin, ListView):
     model = MaterialRequest
     template_name = 'materials/request_list.html'
     context_object_name = 'requests'
-    header_title = "Material Requests"
-    header_subtitle = "Monitor and manage site-specific material logistics"
+    header_title = _("Demandes de matériaux")
+    header_subtitle = _("Gérez la logistique des matériaux par chantier")
 
     def get_header_actions(self):
         return [{
-            'label': 'New Request',
+            'label': _("Nouvelle demande"),
             'url': str(reverse_lazy('materials:request_create')),
             'icon': 'plus',
             'class': 'btn-falcon-primary'
@@ -106,14 +107,14 @@ class MaterialRequestCreateView(LoginRequiredMixin, PageHeaderMixin, CreateView)
     form_class = MaterialRequestForm
     template_name = 'materials/request_form.html'
     success_url = reverse_lazy('materials:request_list')
-    header_title = "New Material Request"
-    header_subtitle = "Request items from the catalog for a project site"
+    header_title = _("Nouvelle demande de matériaux")
+    header_subtitle = _("Demandez des articles du catalogue pour un chantier")
     back_url = reverse_lazy('materials:request_list')
-    
+
     def get_breadcrumb_items(self):
         return [
-            {'title': 'Requests', 'url': str(reverse_lazy('materials:request_list'))},
-            {'title': 'New Request', 'url': None},
+            {'title': _("Demandes"), 'url': str(reverse_lazy('materials:request_list'))},
+            {'title': _("Nouvelle demande"), 'url': None},
         ]
 
     def get_initial(self):
@@ -149,7 +150,7 @@ class MaterialRequestCreateView(LoginRequiredMixin, PageHeaderMixin, CreateView)
             self.object = form.save()
             items_formset.instance = self.object
             items_formset.save()
-            messages.success(self.request, f"Material request submitted with {self.object.total_items} item(s).")
+            messages.success(self.request, _("Demande de matériaux soumise avec %(count)s article(s).") % {'count': self.object.total_items})
             return HttpResponseRedirect(self.get_success_url())
         else:
             return self.form_invalid(form)
@@ -161,19 +162,19 @@ class MaterialRequestUpdateView(LoginRequiredMixin, PageHeaderMixin, UpdateView)
     success_url = reverse_lazy('materials:request_list')
     
     def get_header_title(self):
-        return f"Edit Request #{self.object.id}"
+        return _("Modifier la demande n°%(id)s") % {'id': self.object.id}
 
     def get_header_subtitle(self):
-        return f"Site: {self.object.site.name}"
+        return _("Chantier : %(name)s") % {'name': self.object.site.name}
 
     def get_back_url(self):
         return reverse_lazy('materials:request_detail', kwargs={'pk': self.object.pk})
 
     def get_breadcrumb_items(self):
         return [
-            {'title': 'Requests', 'url': str(reverse_lazy('materials:request_list'))},
+            {'title': _("Demandes"), 'url': str(reverse_lazy('materials:request_list'))},
             {'title': f"REQ-{self.object.id}", 'url': str(reverse_lazy('materials:request_detail', kwargs={'pk': self.object.pk}))},
-            {'title': 'Edit', 'url': None},
+            {'title': _("Modifier"), 'url': None},
         ]
     
     def get_context_data(self, **kwargs):
@@ -192,7 +193,7 @@ class MaterialRequestUpdateView(LoginRequiredMixin, PageHeaderMixin, UpdateView)
             self.object = form.save()
             items_formset.instance = self.object
             items_formset.save()
-            messages.success(self.request, f"Material request updated with {self.object.total_items} item(s).")
+            messages.success(self.request, _("Demande de matériaux mise à jour avec %(count)s article(s).") % {'count': self.object.total_items})
             return HttpResponseRedirect(self.get_success_url())
         else:
             return self.form_invalid(form)
@@ -206,17 +207,21 @@ class MaterialRequestDetailView(LoginRequiredMixin, PageHeaderMixin, DetailView)
         return super().get_queryset().prefetch_related('items__material')
 
     def get_header_title(self):
-        return f"Request #{self.object.id}"
+        return _("Demande n°%(id)s") % {'id': self.object.id}
 
     def get_header_subtitle(self):
-        return f"Site: {self.object.site.name} | {self.object.total_items} item(s) | Status: {self.object.get_status_display()}"
+        return _("Chantier : %(site)s | %(count)s article(s) | Statut : %(status)s") % {
+            'site': self.object.site.name,
+            'count': self.object.total_items,
+            'status': self.object.get_status_display(),
+        }
 
     def get_back_url(self):
         return str(reverse_lazy('materials:request_list'))
 
     def get_breadcrumb_items(self):
         return [
-            {'title': 'Requests', 'url': str(reverse_lazy('materials:request_list'))},
+            {'title': _("Demandes"), 'url': str(reverse_lazy('materials:request_list'))},
             {'title': f"REQ-{self.object.id}", 'url': None},
         ]
 

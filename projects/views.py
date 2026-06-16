@@ -3,6 +3,7 @@ from django.views.generic import ListView, CreateView, UpdateView, DetailView, D
 from django.urls import reverse_lazy
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
+from django.utils.translation import gettext_lazy as _
 from .models import Site, ProjectPhase, SiteProgress
 from .forms import SiteForm, ProjectPhaseForm, SiteProgressForm
 from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin
@@ -13,18 +14,18 @@ class SiteListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, List
     template_name = 'projects/site_list.html'
     context_object_name = 'sites'
     ordering = ['-created_at']
-    header_title = "Projects & Sites"
-    header_subtitle = "Manage and track all active construction projects"
-    
+    header_title = _("Projets & Chantiers")
+    header_subtitle = _("Gérez et suivez tous les chantiers actifs")
+
     def get_header_actions(self):
         # We can't easily use rbac_tags here, so we use UserCabinetRole logic
         from accounts.models import UserCabinetRole
         if self.request.user.is_superuser or UserCabinetRole.objects.filter(
-            user=self.request.user, 
+            user=self.request.user,
             role__in=[UserRoles.DIRECTOR, UserRoles.CHIEF_ENGINEER]
         ).exists():
             return [{
-                'label': 'Create New Site',
+                'label': _("Créer un chantier"),
                 'url': str(reverse_lazy('projects:site_create')),
                 'icon': 'plus',
                 'class': 'btn-falcon-primary'
@@ -37,24 +38,24 @@ class SiteCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, 
     template_name = 'projects/site_form.html'
     success_url = reverse_lazy('projects:site_list')
     allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER']
-    header_title = "Register New Site"
-    header_subtitle = "Enter site details to begin tracking"
+    header_title = _("Nouveau chantier")
+    header_subtitle = _("Saisissez les informations du chantier pour commencer le suivi")
     back_url = reverse_lazy('projects:site_list')
-    
+
     def get_breadcrumb_items(self):
         return [
-            {'title': 'Projects & Sites', 'url': str(reverse_lazy('projects:site_list'))},
-            {'title': 'New Site', 'url': None},
+            {'title': _("Projets & Chantiers"), 'url': str(reverse_lazy('projects:site_list'))},
+            {'title': _("Nouveau chantier"), 'url': None},
         ]
 
     def form_valid(self, form):
         cabinet = self.get_user_cabinet()
         if not cabinet:
-             messages.error(self.request, "You must belong to a Cabinet to create a site.")
-             return self.form_invalid(form)
-             
+            messages.error(self.request, _("Vous devez appartenir à un cabinet pour créer un chantier."))
+            return self.form_invalid(form)
+
         form.instance.cabinet = cabinet
-        messages.success(self.request, "Site created successfully!")
+        messages.success(self.request, _("Chantier créé avec succès !"))
         return super().form_valid(form)
 
 class SiteUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, UpdateView):
@@ -66,7 +67,7 @@ class SiteUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, 
     allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER']
 
     def get_header_title(self):
-        return f"Edit Site: {self.object.name}"
+        return _("Modifier : %(name)s") % {'name': self.object.name}
 
     def get_header_subtitle(self):
         return self.object.location
@@ -76,9 +77,9 @@ class SiteUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, 
 
     def get_breadcrumb_items(self):
         return [
-            {'title': 'Projects & Sites', 'url': str(reverse_lazy('projects:site_list'))},
+            {'title': _("Projets & Chantiers"), 'url': str(reverse_lazy('projects:site_list'))},
             {'title': self.object.name, 'url': str(reverse_lazy('projects:site_detail', kwargs={'unique_id': self.object.unique_id}))},
-            {'title': 'Edit', 'url': None},
+            {'title': _("Modifier"), 'url': None},
         ]
 
     def form_valid(self, form):
@@ -98,7 +99,7 @@ class SiteUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, 
                         old_status=old_status,
                         new_status=self.object.status,
                     )
-            messages.success(self.request, "Site updated successfully!")
+            messages.success(self.request, _("Chantier mis à jour avec succès !"))
             from django.http import HttpResponseRedirect
             return HttpResponseRedirect(self.get_success_url())
         except ValidationError as e:
@@ -117,23 +118,23 @@ class SiteDeleteView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, 
     allowed_roles = ['DIRECTOR']
 
     def get_header_title(self):
-        return f"Delete Site: {self.object.name}"
+        return _("Supprimer : %(name)s") % {'name': self.object.name}
 
     def get_header_subtitle(self):
-        return "This action cannot be undone."
+        return _("Cette action est irréversible.")
 
     def get_back_url(self):
         return str(reverse_lazy('projects:site_detail', kwargs={'unique_id': self.object.unique_id}))
 
     def get_breadcrumb_items(self):
         return [
-            {'title': 'Projects & Sites', 'url': str(reverse_lazy('projects:site_list'))},
+            {'title': _("Projets & Chantiers"), 'url': str(reverse_lazy('projects:site_list'))},
             {'title': self.object.name, 'url': str(reverse_lazy('projects:site_detail', kwargs={'unique_id': self.object.unique_id}))},
-            {'title': 'Delete', 'url': None},
+            {'title': _("Supprimer"), 'url': None},
         ]
 
     def delete(self, request, *args, **kwargs):
-        messages.success(self.request, "Site deleted successfully!")
+        messages.success(self.request, _("Chantier supprimé avec succès !"))
         return super().delete(request, *args, **kwargs)
 
 class SiteDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, DetailView):
@@ -154,7 +155,7 @@ class SiteDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, De
 
     def get_breadcrumb_items(self):
         return [
-            {'title': 'Projects & Sites', 'url': str(reverse_lazy('projects:site_list'))},
+            {'title': _("Projets & Chantiers"), 'url': str(reverse_lazy('projects:site_list'))},
             {'title': self.object.name, 'url': None},
         ]
 
@@ -162,18 +163,18 @@ class SiteDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, De
         from accounts.models import UserCabinetRole
         user = self.request.user
         actions = []
-        
+
         is_admin = user.is_superuser or UserCabinetRole.objects.filter(
             user=user, role__in=[UserRoles.DIRECTOR, UserRoles.CHIEF_ENGINEER]
         ).exists()
-        
+
         is_director = user.is_superuser or UserCabinetRole.objects.filter(
             user=user, role='DIRECTOR'
         ).exists()
 
         if is_admin:
             actions.append({
-                'label': 'Edit Site',
+                'label': _("Modifier"),
                 'url': str(reverse_lazy('projects:site_update', kwargs={'unique_id': self.object.unique_id})),
                 'icon': 'edit',
                 'class': 'btn-falcon-default'
@@ -181,7 +182,7 @@ class SiteDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, De
         
         if is_director:
             actions.append({
-                'label': 'Delete',
+                'label': _("Supprimer"),
                 'url': str(reverse_lazy('projects:site_delete', kwargs={'unique_id': self.object.unique_id})),
                 'icon': 'trash-alt',
                 'class': 'btn-falcon-danger'
@@ -211,8 +212,8 @@ class SiteDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, De
                 'type': 'PROGRESS',
                 'date': progress.report_date,
                 'timestamp': progress.created_at,
-                'title': f"Progress logged for {progress.phase.name}",
-                'content': f"Completed: {progress.percentage_complete}% - {progress.description}",
+                'title': _("Avancement : %(phase)s") % {'phase': progress.phase.name},
+                'content': _("Complété : %(pct)s%% — %(desc)s") % {'pct': progress.percentage_complete, 'desc': progress.description},
                 'icon': 'fas fa-chart-line',
                 'color': 'primary'
             })
@@ -223,20 +224,20 @@ class SiteDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, De
                 'type': 'EXPENSE',
                 'date': expense.created_at.date(),
                 'timestamp': expense.created_at,
-                'title': f"Expense Request: {expense.category.name}",
-                'content': f"Amount: ${expense.amount} - Status: {expense.get_status_display()}",
+                'title': _("Dépense : %(cat)s") % {'cat': expense.category.name},
+                'content': _("Montant : %(amount)s$ — Statut : %(status)s") % {'amount': expense.amount, 'status': expense.get_status_display()},
                 'icon': 'fas fa-money-bill-wave',
                 'color': 'warning'
             })
-            
+
         # 3. Material Requests
         for req in site.material_requests.all().select_related('requested_by').prefetch_related('items__material'):
             timeline.append({
                 'type': 'MATERIAL',
                 'date': req.created_at.date(),
                 'timestamp': req.created_at,
-                'title': f"Material Request #{req.id}",
-                'content': f"{req.total_items} item(s) - Status: {req.get_status_display()}",
+                'title': _("Demande de matériaux n°%(id)s") % {'id': req.id},
+                'content': _("%(count)s article(s) — Statut : %(status)s") % {'count': req.total_items, 'status': req.get_status_display()},
                 'icon': 'fas fa-boxes',
                 'color': 'info'
             })
@@ -260,24 +261,24 @@ class ProjectPhaseCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMi
         return super().dispatch(request, *args, **kwargs)
 
     def get_header_title(self):
-        return f"Add Phase: {self.site.name}"
+        return _("Ajouter une phase : %(name)s") % {'name': self.site.name}
 
     def get_header_subtitle(self):
-        return "Define a new construction phase for this project"
+        return _("Définissez une nouvelle phase de construction pour ce projet")
 
     def get_back_url(self):
         return str(reverse_lazy('projects:site_detail', kwargs={'unique_id': self.site.unique_id}))
 
     def get_breadcrumb_items(self):
         return [
-            {'title': 'Projects & Sites', 'url': str(reverse_lazy('projects:site_list'))},
+            {'title': _("Projets & Chantiers"), 'url': str(reverse_lazy('projects:site_list'))},
             {'title': self.site.name, 'url': str(reverse_lazy('projects:site_detail', kwargs={'unique_id': self.site.unique_id}))},
-            {'title': 'Add Phase', 'url': None},
+            {'title': _("Ajouter une phase"), 'url': None},
         ]
 
     def form_valid(self, form):
         form.instance.site = self.site
-        messages.success(self.request, f"Phase '{form.instance.name}' added to project.")
+        messages.success(self.request, _("Phase '%(name)s' ajoutée au projet.") % {'name': form.instance.name})
         return super().form_valid(form)
 
     def get_context_data(self, **kwargs):
@@ -297,16 +298,16 @@ class ProjectPhaseUpdateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMi
     allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER']
 
     def get_header_title(self):
-        return f"Edit Phase: {self.object.name}"
+        return _("Modifier la phase : %(name)s") % {'name': self.object.name}
 
     def get_back_url(self):
         return str(reverse_lazy('projects:site_detail', kwargs={'unique_id': self.object.site.unique_id}))
 
     def get_breadcrumb_items(self):
         return [
-            {'title': 'Projects & Sites', 'url': str(reverse_lazy('projects:site_list'))},
+            {'title': _("Projets & Chantiers"), 'url': str(reverse_lazy('projects:site_list'))},
             {'title': self.object.site.name, 'url': str(reverse_lazy('projects:site_detail', kwargs={'unique_id': self.object.site.unique_id}))},
-            {'title': 'Edit Phase', 'url': None},
+            {'title': _("Modifier la phase"), 'url': None},
         ]
 
     def get_context_data(self, **kwargs):
@@ -315,7 +316,7 @@ class ProjectPhaseUpdateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMi
         return context
 
     def get_success_url(self):
-        messages.success(self.request, "Phase updated.")
+        messages.success(self.request, _("Phase mise à jour avec succès !"))
         return reverse_lazy('projects:site_detail', kwargs={'unique_id': self.object.site.unique_id})
 
 class ProjectPhaseDeleteView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, DeleteView):
@@ -326,23 +327,23 @@ class ProjectPhaseDeleteView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMi
     allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER']
 
     def get_header_title(self):
-        return f"Delete Phase: {self.object.name}"
+        return _("Supprimer la phase : %(name)s") % {'name': self.object.name}
 
     def get_header_subtitle(self):
-        return "This action cannot be undone."
+        return _("Cette action est irréversible.")
 
     def get_back_url(self):
         return str(reverse_lazy('projects:site_detail', kwargs={'unique_id': self.object.site.unique_id}))
 
     def get_breadcrumb_items(self):
         return [
-            {'title': 'Projects & Sites', 'url': str(reverse_lazy('projects:site_list'))},
+            {'title': _("Projets & Chantiers"), 'url': str(reverse_lazy('projects:site_list'))},
             {'title': self.object.site.name, 'url': str(reverse_lazy('projects:site_detail', kwargs={'unique_id': self.object.site.unique_id}))},
-            {'title': 'Delete Phase', 'url': None},
+            {'title': _("Supprimer la phase"), 'url': None},
         ]
 
     def get_success_url(self):
-        messages.success(self.request, "Phase deleted.")
+        messages.success(self.request, _("Phase supprimée avec succès !"))
         return reverse_lazy('projects:site_detail', kwargs={'unique_id': self.object.site.unique_id})
 
 
@@ -359,24 +360,24 @@ class SiteProgressCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMi
         return super().dispatch(request, *args, **kwargs)
 
     def get_header_title(self):
-        return f"Log Progress: {self.phase.name}"
+        return _("Rapport d'avancement : %(name)s") % {'name': self.phase.name}
 
     def get_header_subtitle(self):
-        return f"Project: {self.phase.site.name}"
+        return _("Projet : %(name)s") % {'name': self.phase.site.name}
 
     def get_back_url(self):
         return str(reverse_lazy('projects:site_detail', kwargs={'unique_id': self.phase.site.unique_id}))
 
     def get_breadcrumb_items(self):
         return [
-            {'title': 'Projects & Sites', 'url': str(reverse_lazy('projects:site_list'))},
+            {'title': _("Projets & Chantiers"), 'url': str(reverse_lazy('projects:site_list'))},
             {'title': self.phase.site.name, 'url': str(reverse_lazy('projects:site_detail', kwargs={'unique_id': self.phase.site.unique_id}))},
-            {'title': 'Log Progress', 'url': None},
+            {'title': _("Rapport d'avancement"), 'url': None},
         ]
 
     def form_valid(self, form):
         form.instance.phase = self.phase
-        messages.success(self.request, "Progress report logged.")
+        messages.success(self.request, _("Rapport d'avancement enregistré avec succès !"))
         return super().form_valid(form)
 
     def get_context_data(self, **kwargs):
