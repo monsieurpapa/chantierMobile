@@ -1,4 +1,4 @@
-{% load static %}
+{% load static i18n %}
 
 {# Page Header Component - displays title, subtitle, breadcrumbs, back button, and action buttons #}
 <div class="card mb-3">
@@ -8,7 +8,7 @@
         {% if back_url %}
         <div class="mb-2">
           <a href="{{ back_url }}" class="btn btn-link btn-sm ps-0">
-            <span class="fas fa-arrow-left me-1"></span> Back
+            <span class="fas fa-arrow-left me-1"></span> {% trans "Retour" %}
           </a>
         </div>
         {% endif %}
