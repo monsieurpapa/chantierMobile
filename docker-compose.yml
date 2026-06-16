@@ -10,10 +10,10 @@ services:
       - .env
     environment:
       SECRET_KEY: insecure-dev-key-change-me
-      DEBUG: "1"
+      DEBUG: "True"
       DJANGO_SETTINGS_MODULE: chantiermobile.settings
       ALLOWED_HOSTS: 127.0.0.1,localhost,testserver
-      DATABASE_URL: ""
+      DATABASE_URL: "postgresql://postgres:postgres@tictacflow-postgres-service:5432/postgres"
       DB_ENGINE: django.db.backends.postgresql
       DB_NAME: postgres
       DB_USER: postgres
@@ -34,8 +34,8 @@ services:
       - .env
     environment:
       SECRET_KEY: insecure-dev-key-change-me
-      DEBUG: "1"
-      DATABASE_URL: ""
+      DEBUG: "True"
+      DATABASE_URL: "postgresql://postgres:postgres@tictacflow-postgres-service:5432/postgres"
       DB_ENGINE: django.db.backends.postgresql
       DB_NAME: postgres
       DB_USER: postgres
@@ -56,8 +56,8 @@ services:
       - .env
     environment:
       SECRET_KEY: insecure-dev-key-change-me
-      DEBUG: "1"
-      DATABASE_URL: ""
+      DEBUG: "True"
+      DATABASE_URL: "postgresql://postgres:postgres@tictacflow-postgres-service:5432/postgres"
       DB_ENGINE: django.db.backends.postgresql
       DB_NAME: postgres
       DB_USER: postgres
@@ -86,8 +86,8 @@ services:
       - .env
     environment:
       SECRET_KEY: insecure-dev-key-change-me
-      DEBUG: "1"
-      DATABASE_URL: ""
+      DEBUG: "True"
+      DATABASE_URL: "postgresql://postgres:postgres@tictacflow-postgres-service:5432/postgres"
       DB_ENGINE: django.db.backends.postgresql
       DB_NAME: postgres
       DB_USER: postgres
