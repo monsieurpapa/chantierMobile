@@ -43,12 +43,12 @@
                                     <div class="text-md-end">
                                         {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER' %}
                                         <a class="btn btn-sm btn-outline-primary me-2" href="{% url 'projects:site_update' unique_id=site.unique_id %}">
-                                            <i class="fas fa-edit me-1"></i>Edit
+                                            <i class="fas fa-edit me-1"></i>{% trans "Modifier" %}
                                         </a>
                                         {% endif %}
                                         {% if request.user|has_role:'DIRECTOR' %}
                                         <a class="btn btn-sm btn-outline-danger" href="{% url 'projects:site_delete' unique_id=site.unique_id %}">
-                                            <i class="fas fa-trash me-1"></i>Delete
+                                            <i class="fas fa-trash me-1"></i>{% trans "Supprimer" %}
                                         </a>
                                         {% endif %}
                                     </div>

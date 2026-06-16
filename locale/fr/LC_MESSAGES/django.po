@@ -2787,10 +2787,8 @@ msgstr "Effectif total"
 
 #: templates/projects/site_detail.html:68
 #: templates/projects/site_detail.html:613
-#, fuzzy
-#| msgid "Material Request"
 msgid "Material Requests"
-msgstr "Demande de Matériel"
+msgstr "Demandes de matériaux"
 
 #: templates/projects/site_detail.html:74
 #: templates/projects/site_detail.html:538
@@ -2799,10 +2797,8 @@ msgstr "Utilisation du budget"
 
 #: templates/projects/site_detail.html:80
 #: templates/projects/site_detail.html:582
-#, fuzzy
-#| msgid "New Project"
 msgid "Net Profit"
-msgstr "Nouveau Projet"
+msgstr "Bénéfice net"
 
 #: templates/projects/site_detail.html:98
 msgid "Overview"
@@ -2957,22 +2953,16 @@ msgid "Income"
 msgstr "Revenu"
 
 #: templates/projects/site_detail.html:604
-#, fuzzy
-#| msgid "Actif"
 msgid "Active Staff"
-msgstr "Actif"
+msgstr "Personnel actif"
 
 #: templates/projects/site_detail.html:622
-#, fuzzy
-#| msgid "Project / Site"
 msgid "Project Phases"
-msgstr "Projet / Site"
+msgstr "Phases du projet"
 
 #: templates/projects/site_detail.html:632
-#, fuzzy
-#| msgid "Project / Site"
 msgid "Project Details"
-msgstr "Projet / Site"
+msgstr "Détails du chantier"
 
 #: templates/projects/site_detail.html:637
 msgid "Site ID"
@@ -2991,10 +2981,8 @@ msgid "Save Site"
 msgstr "Enregistrer le chantier"
 
 #: templates/projects/site_list.html:25
-#, fuzzy
-#| msgid "Directeur de Cabinet"
 msgid "Active Sites"
-msgstr "Directeur de Cabinet"
+msgstr "Chantiers actifs"
 
 #: templates/projects/site_list.html:46
 msgid "Expected End"
