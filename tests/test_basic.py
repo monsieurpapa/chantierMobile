@@ -68,7 +68,7 @@ class TestBasicWorkflow(TestCase):
     def test_user_registration_workflow(self):
         """Test basic user registration workflow."""
         # Test registration page loads
-        response = self.client.get(reverse('account:signup'))
+        response = self.client.get(reverse('account_signup'))
         assert response.status_code == 200
         
         # Create user
@@ -81,7 +81,7 @@ class TestBasicWorkflow(TestCase):
         assert user is not None
         
         # Test login
-        response = self.client.post(reverse('account:login'), {
+        response = self.client.post(reverse('account_login'), {
             'username': 'newuser',
             'password': 'testpass123'
         }, follow=True)
