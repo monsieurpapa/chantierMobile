@@ -12,7 +12,16 @@
       "Bash(ls .github/)",
       "Bash(cat .github/workflows/*.yml)",
       "Bash(ls revenue/tasks.py materials/models.py)",
-      "Bash(cat revenue/tasks.py)"
+      "Bash(cat revenue/tasks.py)",
+      "Bash(docker-compose up *)",
+      "Bash('/c/Users/Yves Zigashane/.claude/skills/gstack/browse/dist/browse' goto http://localhost:8001)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash($B status *)",
+      "Bash(docker-compose logs *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(docker ps *)",
+      "Bash(break)"
     ]
   }
 }

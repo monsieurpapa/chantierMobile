@@ -52,7 +52,10 @@ class TestBasicIntegration(TestCase):
         assert user.email == 'test@example.com'
     
     def test_home_page_loads(self):
-        """Test home page loads."""
+        """Test home page loads for authenticated user."""
+        User = get_user_model()
+        user = User.objects.create_user(username='hometest', password='pass123')
+        self.client.force_login(user)
         response = self.client.get('/')
         assert response.status_code == 200
 
