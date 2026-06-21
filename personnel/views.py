@@ -66,10 +66,10 @@ class PersonnelDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixi
     slug_url_kwarg = 'unique_id'
 
     def get_header_title(self):
-        return self.object.get_full_name() or self.object.username
+        return self.object.get_full_name()
 
     def get_header_subtitle(self):
-        return self.object.job_title or _("Membre du personnel")
+        return _("Membre du personnel")
 
     def get_back_url(self):
         return str(reverse_lazy('personnel:personnel_list'))
@@ -77,7 +77,7 @@ class PersonnelDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixi
     def get_breadcrumb_items(self):
         return [
             {'title': _("Ressources humaines"), 'url': str(reverse_lazy('personnel:personnel_list'))},
-            {'title': self.object.last_name or self.object.username, 'url': None},
+            {'title': self.object.get_full_name(), 'url': None},
         ]
 
     def get_header_actions(self):
@@ -112,7 +112,7 @@ class PersonnelUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMi
     allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER']
     
     def get_header_title(self):
-        return _("Modifier le profil : %(name)s") % {'name': self.object.username}
+        return _("Modifier le profil : %(name)s") % {'name': self.object.get_full_name()}
 
     def get_back_url(self):
         return str(reverse_lazy('personnel:personnel_detail', kwargs={'unique_id': self.object.unique_id}))
@@ -120,7 +120,7 @@ class PersonnelUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMi
     def get_breadcrumb_items(self):
         return [
             {'title': _("Ressources humaines"), 'url': str(reverse_lazy('personnel:personnel_list'))},
-            {'title': self.object.username, 'url': str(reverse_lazy('personnel:personnel_detail', kwargs={'unique_id': self.object.unique_id}))},
+            {'title': self.object.get_full_name(), 'url': str(reverse_lazy('personnel:personnel_detail', kwargs={'unique_id': self.object.unique_id}))},
             {'title': _("Modifier"), 'url': None},
         ]
 
@@ -137,7 +137,7 @@ class PersonnelDeleteView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMi
     allowed_roles = ['DIRECTOR']
 
     def get_header_title(self):
-        return _("Supprimer le personnel : %(name)s") % {'name': self.object.get_full_name() or self.object.username}
+        return _("Supprimer le personnel : %(name)s") % {'name': self.object.get_full_name()}
 
     def get_header_subtitle(self):
         return _("Cette action est irréversible.")
@@ -148,13 +148,13 @@ class PersonnelDeleteView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMi
     def get_breadcrumb_items(self):
         return [
             {'title': _("Personnel"), 'url': str(reverse_lazy('personnel:personnel_list'))},
-            {'title': self.object.get_full_name() or self.object.username, 'url': str(reverse_lazy('personnel:personnel_detail', kwargs={'unique_id': self.object.unique_id}))},
+            {'title': self.object.get_full_name(), 'url': str(reverse_lazy('personnel:personnel_detail', kwargs={'unique_id': self.object.unique_id}))},
             {'title': _("Supprimer"), 'url': None},
         ]
 
     def delete(self, request, *args, **kwargs):
         self.object = self.get_object()
-        personnel_name = self.object.get_full_name() or self.object.username
+        personnel_name = self.object.get_full_name()
         messages.success(request, _("Personnel '%(name)s' supprimé avec succès.") % {'name': personnel_name})
         return super().delete(request, *args, **kwargs)
 
