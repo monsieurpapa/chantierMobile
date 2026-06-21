@@ -88,6 +88,26 @@ Before Phase 3 planning begins, deploy a minimal Django Channels consumer to Rai
 
 ~~## P1 — Update railway.toml to gevent workers before Phase 2 deploy~~ *(Done — `railway.toml` now uses `--worker-class gevent --workers 4 --worker-connections 200 --timeout 300`; `gevent` added to `requirements.txt`.)*
 
+---
+
+*Items below added by `/qa` on 2026-06-21 (full-app browser QA pass — see `.gstack/qa-reports/qa-report-localhost-2026-06-21.md` for fix details on the 12 issues resolved in the same session):*
+
+## P3 — `tests/test_api.py` imports `djangorestframework`, which isn't installed
+
+No API views, serializers, or `rest_framework` entry in `INSTALLED_APPS`/`requirements.txt` exist anywhere else in the codebase. This test file (449 lines, added in commit `f464529` "testing") was written for an API layer that was never built. Blocks `pytest` collection entirely unless run with `--ignore=tests/test_api.py`. Decide: build the API layer, or delete the test file.
+
+## P3 — Browser tab `<title>` tags hardcoded in English
+
+`site_detail.html` ("Site Details"), `personnel_detail.html` ("Personnel Details"), `budget_list.html` ("Budgets"), and others interpolate raw English into `{% block title %}`. Low visibility (browser tab only) — deprioritized during the i18n pass in favor of in-page content. Sweep all `{% block title %}` blocks for `{% trans %}` coverage when next touching i18n.
+
+## P3 — Currency displayed as `$` throughout
+
+Budgets, expenses, and invoices all render amounts as `${{ amount }}`. Plausibly intentional (USD is commonly used for large transactions in DRC), but never confirmed with product — flag before assuming it's correct.
+
+## P3 — Seed data uses Senegal/Dakar addresses, not DRC/Goma
+
+`accounts/management/commands/seed_sample_data.py` generates `+221` Senegal phone numbers and Dakar addresses, despite the target market being DRC/Great Lakes per the workspace's root `CLAUDE.md`. Cosmetic for demos, but worth aligning if sample data is ever shown to a DRC-based prospect.
+
 ## P2 — SSE keepalive comment (proxy 60s timeout)
 
 Railway's reverse proxy closes idle SSE connections after ~60 seconds of no data. Add a keepalive comment event inside the `notification_stream` generator:
