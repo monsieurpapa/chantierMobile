@@ -2869,10 +2869,8 @@ msgid "Revenue & Invoicing"
 msgstr "Revenu et facturation"
 
 #: templates/projects/site_detail.html:359
-#, fuzzy
-#| msgid "Contract"
 msgid "Create Contract"
-msgstr "Contrat"
+msgstr "Créer un contrat"
 
 #: templates/projects/site_detail.html:409
 msgid "No invoices"
