@@ -2587,16 +2587,12 @@ msgid "Configure company settings, user roles, and system security."
 msgstr "Configurez les paramètres de l'entreprise, les rôles utilisateurs et la sécurité du système."
 
 #: templates/home.html:127
-#, fuzzy
-#| msgid "Actif"
 msgid "System Activity"
-msgstr "Actif"
+msgstr "Activité du système"
 
 #: templates/home.html:130
-#, fuzzy
-#| msgid "Activity will appear here as you work on this site"
 msgid "Real-time activity logs will appear here as projects progress."
-msgstr "L'activité apparaîtra ici au fur et à mesure de votre travail sur ce chantier"
+msgstr "Les journaux d'activité en temps réel s'afficheront ici au fur et à mesure de l'avancement des projets."
 
 #: templates/home.html:147
 #, fuzzy
