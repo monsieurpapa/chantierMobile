@@ -174,21 +174,21 @@
                                             {{ role.cabinet.name }}
                                         </td>
                                         <td class="align-middle">
-                                            <span class="badge bg-soft-primary text-primary">
+                                            <span class="badge badge-subtle-primary">
                                                 {{ role.get_role_display }}
                                             </span>
                                         </td>
                                         <td class="align-middle">
                                             {% if role.status == 'APPROVED' %}
-                                                <span class="badge bg-soft-success text-success">
+                                                <span class="badge badge-subtle-success">
                                                     <span class="fas fa-check-circle me-1"></span>{{ role.get_status_display }}
                                                 </span>
                                             {% elif role.status == 'PENDING' %}
-                                                <span class="badge bg-soft-warning text-warning">
+                                                <span class="badge badge-subtle-warning">
                                                     <span class="fas fa-clock me-1"></span>{{ role.get_status_display }}
                                                 </span>
                                             {% else %}
-                                                <span class="badge bg-soft-danger text-danger">
+                                                <span class="badge badge-subtle-danger">
                                                     <span class="fas fa-times-circle me-1"></span>{{ role.get_status_display }}
                                                 </span>
                                             {% endif %}
@@ -209,7 +209,7 @@
                         <h5 class="mb-0">
                             <span class="fas fa-tasks me-2"></span>{% trans "Projects (Authorized Cabinets)" %}
                         </h5>
-                        <span class="badge bg-soft-primary text-primary">{{ total_sites }}</span>
+                        <span class="badge badge-subtle-primary">{{ total_sites }}</span>
                     </div>
                     <div class="card-body p-0">
                         <p class="fs--2 text-500 px-3 pt-3 mb-2">
@@ -236,7 +236,7 @@
                                         </td>
                                         <td class="align-middle white-space-nowrap">{{ site.cabinet.name }}</td>
                                         <td class="align-middle text-center">
-                                            <span class="badge bg-soft-primary text-primary">
+                                            <span class="badge badge-subtle-primary">
                                                 {{ site.status.name }}
                                             </span>
                                         </td>
@@ -270,7 +270,7 @@
                         <h5 class="mb-0">
                             <span class="fas fa-clipboard-list me-2"></span>{% trans "Material Requests (Authorized Cabinets)" %}
                         </h5>
-                        <span class="badge bg-soft-primary text-primary">{{ total_material_requests }}</span>
+                        <span class="badge badge-subtle-primary">{{ total_material_requests }}</span>
                     </div>
                     <div class="card-body p-0">
                         <p class="fs--2 text-500 px-3 pt-3 mb-2">
@@ -297,7 +297,7 @@
                                         </td>
                                         <td class="align-middle white-space-nowrap">{{ mr.site.name }}</td>
                                         <td class="align-middle text-center">
-                                            <span class="badge bg-soft-success text-success">
+                                            <span class="badge badge-subtle-success">
                                                 {{ mr.status.name }}
                                             </span>
                                         </td>
@@ -331,7 +331,7 @@
                         <h5 class="mb-0">
                             <span class="fas fa-money-bill-wave me-2"></span>{% trans "Expenses (Authorized Cabinets)" %}
                         </h5>
-                        <span class="badge bg-soft-primary text-primary">{{ total_expenses }}</span>
+                        <span class="badge badge-subtle-primary">{{ total_expenses }}</span>
                     </div>
                     <div class="card-body p-0">
                         <p class="fs--2 text-500 px-3 pt-3 mb-2">
@@ -358,8 +358,8 @@
                                             ${{ expense.amount|floatformat:2 }}
                                         </td>
                                         <td class="align-middle text-center">
-                                            <span class="badge bg-soft-success text-success">
-                                                {{ expense.status }}
+                                            <span class="badge badge-subtle-success">
+                                                {{ expense.get_status_display }}
                                             </span>
                                         </td>
                                         <td class="align-middle text-end">{{ expense.created_at|date:"d M Y" }}</td>
@@ -392,7 +392,7 @@
                         <h5 class="mb-0">
                             <span class="fas fa-receipt me-2"></span>{% trans "Invoices (Authorized Cabinets)" %}
                         </h5>
-                        <span class="badge bg-soft-primary text-primary">{{ total_invoices }}</span>
+                        <span class="badge badge-subtle-primary">{{ total_invoices }}</span>
                     </div>
                     <div class="card-body p-0">
                         <p class="fs--2 text-500 px-3 pt-3 mb-2">
@@ -421,8 +421,8 @@
                                             ${{ invoice.amount|floatformat:2 }}
                                         </td>
                                         <td class="align-middle text-center">
-                                            <span class="badge bg-soft-success text-success">
-                                                {{ invoice.status }}
+                                            <span class="badge badge-subtle-success">
+                                                {{ invoice.get_status_display }}
                                             </span>
                                         </td>
                                         <td class="align-middle text-end">{{ invoice.issued_date|date:"d M Y" }}</td>
@@ -539,7 +539,7 @@
                             </p>
                             <p class="fs--2">
                                 <strong>{% trans "Active Cabinets" %}:</strong><br>
-                                <span class="badge bg-soft-primary text-primary">{{ cabinet_roles|length }}</span>
+                                <span class="badge badge-subtle-primary">{{ cabinet_roles|length }}</span>
                             </p>
                             <p class="fs--2">
                                 <strong>{% trans "Access Level" %}:</strong><br>

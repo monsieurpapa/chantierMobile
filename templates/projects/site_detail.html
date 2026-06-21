@@ -31,7 +31,7 @@
                                             <h2 class="mb-1">{{ site.name }}</h2>
                                             <p class="fs-0 mb-2 text-600"><i class="fas fa-map-marker-alt me-2"></i>{{ site.location }}</p>
                                             <div>
-                                                <span class="badge rounded-pill {% if site.status == 'ACTIVE' %}bg-success{% else %}bg-warning{% endif %} me-2">{{ site.status }}</span>
+                                                <span class="badge rounded-pill {% if site.status == 'ACTIVE' %}bg-success{% else %}bg-warning{% endif %} me-2">{{ site.get_status_display }}</span>
                                                 {% if site.phases.exists %}
                                                 <span class="badge rounded-pill bg-info">{{ site.phases.count }} Phase{{ site.phases.count|pluralize }}</span>
                                                 {% endif %}
@@ -489,7 +489,7 @@
                                         <div class="d-flex gap-3 mb-4">
                                             <!-- Timeline Icon -->
                                             <div class="flex-shrink-0">
-                                                <div class="avatar avatar-m rounded-circle shadow-sm bg-soft-{{ event.color }} text-{{ event.color }}">
+                                                <div class="avatar avatar-m rounded-circle shadow-sm bg-{{ event.color }}-subtle text-{{ event.color }}">
                                                     <i class="{{ event.icon }}"></i>
                                                 </div>
                                             </div>
@@ -572,13 +572,13 @@
                                 <h6 class="mb-3 text-700"><i class="fas fa-chart-line me-1"></i>{% trans "Revenue Performance" %}</h6>
                                 <div class="row g-2">
                                     <div class="col-6">
-                                        <div class="p-3 bg-soft-success rounded-3 text-center border border-success border-opacity-25">
+                                        <div class="p-3 bg-success-subtle rounded-3 text-center border border-success border-opacity-25">
                                             <p class="fs--2 mb-1 text-600 text-uppercase fw-bold">{% trans "Income" %}</p>
                                             <h5 class="mb-0 text-success fw-bold">${{ site.total_revenue|floatformat:0 }}</h5>
                                         </div>
                                     </div>
                                     <div class="col-6">
-                                        <div class="p-3 {% if site.net_profit >= 0 %}bg-soft-primary{% else %}bg-soft-danger{% endif %} rounded-3 text-center border {% if site.net_profit >= 0 %}border-primary{% else %}border-danger{% endif %} border-opacity-25">
+                                        <div class="p-3 {% if site.net_profit >= 0 %}bg-primary-subtle{% else %}bg-danger-subtle{% endif %} rounded-3 text-center border {% if site.net_profit >= 0 %}border-primary{% else %}border-danger{% endif %} border-opacity-25">
                                             <p class="fs--2 mb-1 text-uppercase fw-bold {% if site.net_profit >= 0 %}text-primary{% else %}text-danger{% endif %}">{% trans "Net Profit" %}</p>
                                             <h5 class="mb-0 fw-bold {% if site.net_profit < 0 %}text-danger{% else %}text-primary{% endif %}">
                                                 ${{ site.net_profit|floatformat:0 }}
@@ -597,7 +597,7 @@
                         </div>
                         <div class="card-body">
                             <div class="d-flex align-items-center mb-3 pb-3 border-bottom">
-                                <div class="avatar avatar-m rounded-2 bg-soft-primary text-primary me-3">
+                                <div class="avatar avatar-m rounded-2 bg-primary-subtle text-primary me-3">
                                     <i class="fas fa-users"></i>
                                 </div>
                                 <div class="flex-1">
@@ -606,7 +606,7 @@
                                 </div>
                             </div>
                             <div class="d-flex align-items-center mb-3 pb-3 border-bottom">
-                                <div class="avatar avatar-m rounded-2 bg-soft-warning text-warning me-3">
+                                <div class="avatar avatar-m rounded-2 bg-warning-subtle text-warning me-3">
                                     <i class="fas fa-boxes"></i>
                                 </div>
                                 <div class="flex-1">
@@ -615,7 +615,7 @@
                                 </div>
                             </div>
                             <div class="d-flex align-items-center">
-                                <div class="avatar avatar-m rounded-2 bg-soft-info text-info me-3">
+                                <div class="avatar avatar-m rounded-2 bg-info-subtle text-info me-3">
                                     <i class="fas fa-tasks"></i>
                                 </div>
                                 <div class="flex-1">
@@ -654,7 +654,7 @@
                                 </div>
                                 <div class="col-7 text-end">
                                     <span class="badge rounded-pill {% if site.status == 'ACTIVE' %}bg-success{% else %}bg-warning{% endif %}">
-                                        {{ site.status }}
+                                        {{ site.get_status_display }}
                                     </span>
                                 </div>
                             </div>
