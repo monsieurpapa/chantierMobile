@@ -35,9 +35,7 @@
                             <tbody>
                                 {% for invoice in invoices %}
                                 <tr class="align-middle">
-                                    <td><a href="{% url 'revenue:invoice_detail' pk=invoice.pk %}"><strong>{{
-                                                invoice.invoice_number
-                                                }}</strong></a></td>
+                                    <td><a href="{% url 'revenue:invoice_detail' pk=invoice.pk %}"><strong>{{ invoice.invoice_number }}</strong></a></td>
                                     <td>
                                         <p class="mb-0 fw-semi-bold">{{ invoice.contract.site.name }}</p>
                                         <p class="mb-0 fs--2 text-700">{{ invoice.contract.client_name }}</p>

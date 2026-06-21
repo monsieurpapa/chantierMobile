@@ -34,8 +34,7 @@
                             <tbody>
                                 {% for contract in contracts %}
                                 <tr class="align-middle">
-                                    <td><a href="{% url 'projects:site_detail' unique_id=contract.site.unique_id %}"><strong>{{
-                                                contract.site.name }}</strong></a></td>
+                                    <td><a href="{% url 'projects:site_detail' unique_id=contract.site.unique_id %}"><strong>{{ contract.site.name }}</strong></a></td>
                                     <td>{{ contract.client_name }}</td>
                                     <td class="fw-semi-bold">${{ contract.total_value|floatformat:2 }}</td>
                                     <td>{{ contract.signed_date }}</td>

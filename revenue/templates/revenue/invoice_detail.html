@@ -26,8 +26,7 @@
                                 <div class="col-sm-6 mb-3">
                                     <label class="form-label text-600 text-uppercase fs--2 fw-bold">{% trans "Site" %}</label>
                                     <p class="fs-0"><a
-                                            href="{% url 'projects:site_detail' unique_id=invoice.contract.site.unique_id %}">{{
-                                            invoice.contract.site.name }}</a></p>
+                                            href="{% url 'projects:site_detail' unique_id=invoice.contract.site.unique_id %}">{{ invoice.contract.site.name }}</a></p>
                                 </div>
                                 <div class="col-sm-6 mb-3 text-sm-end">
                                     <label class="form-label text-600 text-uppercase fs--2 fw-bold">{% trans "Client" %}</label>
@@ -73,8 +72,7 @@
                                             <td>{{ payment.payment_date }}</td>
                                             <td>{{ payment.get_method_display }}</td>
                                             <td>{{ payment.reference }}</td>
-                                            <td class="text-end fw-semi-bold text-success">${{
-                                                payment.amount|floatformat:2 }}</td>
+                                            <td class="text-end fw-semi-bold text-success">${{ payment.amount|floatformat:2 }}</td>
                                         </tr>
                                         {% empty %}
                                         <tr>

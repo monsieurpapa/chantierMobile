@@ -1,5 +1,5 @@
 {% extends 'falcon_base.html' %}
-{% load static rbac_tags %}
+{% load static i18n rbac_tags %}
 
 {% block title %}{{ personnel.get_full_name }} - Personnel Details - ChantierMobile{% endblock %}
 
@@ -36,8 +36,7 @@
                                         <span class="badge badge-subtle-primary rounded-pill me-1">{{ skill.name }}</span>
                                         {% endfor %}
                                     </div>
-                                    <p class="mb-0 fs--1 text-600">Employee ID: {{ personnel.unique_id|truncatechars:12
-                                        }}</p>
+                                    <p class="mb-0 fs--1 text-600">{% trans "Employee ID" %}: {{ personnel.unique_id|truncatechars:12 }}</p>
                                 </div>
                             </div>
                         </div>
@@ -49,11 +48,11 @@
                 <div class="col-lg-8">
                     <div class="card mb-3">
                         <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                            <h5 class="mb-0">Assignments</h5>
+                            <h5 class="mb-0">{% trans "Assignments" %}</h5>
                             {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER' %}
                             <a class="btn btn-falcon-primary btn-sm"
                                 href="{% url 'personnel:assignment_create' %}?personnel={{ personnel.unique_id }}">
-                                <span class="fas fa-plus me-1"></span>Assign to Site
+                                <span class="fas fa-plus me-1"></span>{% trans "Assign to Site" %}
                             </a>
                             {% endif %}
                         </div>
@@ -63,10 +62,10 @@
                                 <table class="table table-sm table-striped">
                                     <thead>
                                         <tr>
-                                            <th>Site</th>
-                                            <th>Role</th>
-                                            <th>Period</th>
-                                            <th class="text-end">Rate</th>
+                                            <th>{% trans "Site" %}</th>
+                                            <th>{% trans "Role" %}</th>
+                                            <th>{% trans "Period" %}</th>
+                                            <th class="text-end">{% trans "Rate" %}</th>
                                             <th></th>
                                         </tr>
                                     </thead>
@@ -75,8 +74,7 @@
                                         <tr>
                                             <td>{{ assignment.site.name }}</td>
                                             <td>{{ assignment.role }}</td>
-                                            <td>{{ assignment.start_date }} - {{ assignment.end_date|default:"Present"
-                                                }}</td>
+                                            <td>{{ assignment.start_date }} - {{ assignment.end_date|default:"Present" }}</td>
                                             <td class="text-end">
                                                 {% if request.user|has_role:'DIRECTOR,ACCOUNTANT' %}
                                                 ${{ assignment.daily_rate }}
@@ -90,7 +88,7 @@
                                 </table>
                             </div>
                             {% else %}
-                            <p class="text-center py-3">No active or past assignments.</p>
+                            <p class="text-center py-3">{% trans "No active or past assignments." %}</p>
                             {% endif %}
                         </div>
                     </div>
@@ -99,21 +97,21 @@
                 <div class="col-lg-4">
                     <div class="card mb-3">
                         <div class="card-header bg-light">
-                            <h5 class="mb-0">Stats & Rates</h5>
+                            <h5 class="mb-0">{% trans "Stats & Rates" %}</h5>
                         </div>
                         <div class="card-body">
                             <div class="mb-3">
-                                <label class="text-600 fs--1">Default Daily Rate</label>
+                                <label class="text-600 fs--1">{% trans "Default Daily Rate" %}</label>
                                 <p class="fs-1 fw-bold text-primary">
                                     {% if request.user|has_role:'DIRECTOR,ACCOUNTANT' %}
                                     ${{ personnel.default_daily_rate }}
                                     {% else %}
-                                    Restricted
+                                    {% trans "Restricted" %}
                                     {% endif %}
                                 </p>
                             </div>
                             <div class="mb-3">
-                                <label class="text-600 fs--1">Total Assignments</label>
+                                <label class="text-600 fs--1">{% trans "Total Assignments" %}</label>
                                 <p class="fs-1 fw-bold">{{ personnel.assignments.count }}</p>
                             </div>
                         </div>

@@ -234,15 +234,11 @@
                                                         <a href="{% url 'personnel:personnel_detail' unique_id=assignment.personnel.unique_id %}" class="text-decoration-none">
                                                             <div class="d-flex align-items-center gap-2">
                                                                 <div class="avatar avatar-m">
-                                                                    <div class="avatar-name rounded-2"><span>{{
-                                                                            assignment.personnel.username|slice:":1"|upper
-                                                                            }}</span>
+                                                                    <div class="avatar-name rounded-2"><span>{{ assignment.personnel.first_name|slice:":1"|upper }}</span>
                                                                     </div>
                                                                 </div>
                                                                 <div>
-                                                                    <h6 class="mb-0 fw-semibold">{{
-                                                                        assignment.personnel.get_full_name|default:assignment.personnel.username
-                                                                        }}</h6>
+                                                                    <h6 class="mb-0 fw-semibold">{{ assignment.personnel.get_full_name }}</h6>
                                                                     <p class="fs--2 mb-0 text-600">{{ assignment.role }}</p>
                                                                 </div>
                                                             </div>
@@ -258,8 +254,7 @@
                                                         {% endif %}
                                                     </td>
                                                     {% if request.user|has_role:'DIRECTOR,ACCOUNTANT' %}
-                                                    <td class="text-end fw-semibold">${{
-                                                        assignment.daily_rate|floatformat:2 }}
+                                                    <td class="text-end fw-semibold">${{ assignment.daily_rate|floatformat:2 }}
                                                     </td>
                                                     {% endif %}
                                                 </tr>
