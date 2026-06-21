@@ -182,11 +182,11 @@
                                     <small class="text-500">
                                         {{ role.get_role_display }}
                                         {% if role.status == 'APPROVED' %}
-                                            <span class="badge bg-soft-success text-success ms-2">{{ role.get_status_display }}</span>
+                                            <span class="badge badge-subtle-success ms-2">{{ role.get_status_display }}</span>
                                         {% elif role.status == 'PENDING' %}
-                                            <span class="badge bg-soft-warning text-warning ms-2">{{ role.get_status_display }}</span>
+                                            <span class="badge badge-subtle-warning ms-2">{{ role.get_status_display }}</span>
                                         {% else %}
-                                            <span class="badge bg-soft-danger text-danger ms-2">{{ role.get_status_display }}</span>
+                                            <span class="badge badge-subtle-danger ms-2">{{ role.get_status_display }}</span>
                                         {% endif %}
                                     </small>
                                 </div>

@@ -81,11 +81,11 @@
                             <label class="col-sm-3 fw-semi-bold">{% trans "Active" %}</label>
                             <div class="col-sm-9">
                                 {% if object.is_active %}
-                                    <span class="badge bg-soft-success text-success">
+                                    <span class="badge badge-subtle-success">
                                         <span class="fas fa-check-circle me-1"></span>{% trans "Active" %}
                                     </span>
                                 {% else %}
-                                    <span class="badge bg-soft-danger text-danger">
+                                    <span class="badge badge-subtle-danger">
                                         <span class="fas fa-ban me-1"></span>{% trans "Inactive" %}
                                     </span>
                                 {% endif %}
@@ -95,11 +95,11 @@
                             <label class="col-sm-3 fw-semi-bold">{% trans "Staff" %}</label>
                             <div class="col-sm-9">
                                 {% if object.is_staff %}
-                                    <span class="badge bg-soft-info text-info">
+                                    <span class="badge badge-subtle-info">
                                         <span class="fas fa-briefcase me-1"></span>{% trans "Staff" %}
                                     </span>
                                 {% else %}
-                                    <span class="badge bg-soft-secondary text-secondary">{% trans "Regular User" %}</span>
+                                    <span class="badge badge-subtle-secondary">{% trans "Regular User" %}</span>
                                 {% endif %}
                             </div>
                         </div>
@@ -111,7 +111,7 @@
                                         <span class="fas fa-crown me-1"></span>{% trans "Superadmin" %}
                                     </span>
                                 {% else %}
-                                    <span class="badge bg-soft-secondary text-secondary">{% trans "Regular User" %}</span>
+                                    <span class="badge badge-subtle-secondary">{% trans "Regular User" %}</span>
                                 {% endif %}
                             </div>
                         </div>
@@ -180,11 +180,11 @@
                                         <td>{{ role.get_role_display }}</td>
                                         <td>
                                             {% if role.status == 'APPROVED' %}
-                                                <span class="badge bg-soft-success text-success">{{ role.get_status_display }}</span>
+                                                <span class="badge badge-subtle-success">{{ role.get_status_display }}</span>
                                             {% elif role.status == 'PENDING' %}
-                                                <span class="badge bg-soft-warning text-warning">{{ role.get_status_display }}</span>
+                                                <span class="badge badge-subtle-warning">{{ role.get_status_display }}</span>
                                             {% else %}
-                                                <span class="badge bg-soft-danger text-danger">{{ role.get_status_display }}</span>
+                                                <span class="badge badge-subtle-danger">{{ role.get_status_display }}</span>
                                             {% endif %}
                                         </td>
                                         {% if request.user.is_superuser %}
