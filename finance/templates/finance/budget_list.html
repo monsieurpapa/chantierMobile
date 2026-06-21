@@ -39,7 +39,7 @@
                                         </a>
                                     </td>
                                     <td class="align-middle fw-bold text-primary">${{ budget.total_amount }}</td>
-                                    <td class="align-middle">{{ budget.start_date }} to {{ budget.end_date }}</td>
+                                    <td class="align-middle">{% blocktrans with start=budget.start_date end=budget.end_date %}{{ start }} au {{ end }}{% endblocktrans %}</td>
                                     <td class="align-middle text-end">
                                         {% if request.user|has_role:'DIRECTOR,ACCOUNTANT' %}
                                         <a class="btn btn-link text-600 btn-sm"

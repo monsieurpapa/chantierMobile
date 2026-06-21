@@ -30,14 +30,10 @@ msgid "Check to grant superadmin access"
 msgstr "Cocher pour accorder l'accès superadministrateur"
 
 #: accounts/forms.py:169
-#, fuzzy
-#| msgid "Select the user's role in this cabinet"
 msgid "Select the cabinet to assign this user to"
-msgstr "Sélectionnez le rôle de l'utilisateur dans ce cabinet"
+msgstr "Sélectionnez le cabinet auquel affecter cet utilisateur"
 
 #: accounts/forms.py:179
-#, fuzzy
-#| msgid "Select the user's role in this cabinet"
 msgid "Select the user role in this cabinet"
 msgstr "Sélectionnez le rôle de l'utilisateur dans ce cabinet"
 
@@ -413,10 +409,8 @@ msgid "Budget limit exceeded."
 msgstr "Limite budgétaire dépassée."
 
 #: chantiermobile/constants.py:175
-#, fuzzy
-#| msgid "You do not have permission to access this page."
 msgid "You do not have permission to perform this action."
-msgstr "Vous n'avez pas la permission d'accéder à cette page."
+msgstr "Vous n'avez pas la permission d'effectuer cette action."
 
 #: chantiermobile/settings.py:127
 msgid "Français"
@@ -436,8 +430,6 @@ msgstr "Date à laquelle la dépense a été engagée (utilisée pour le rapproc
 #: templates/account/admin_cabinet_detail.html:99
 #: templates/account/admin_cabinet_user_role_form.html:198
 #: templates/account/assign_user_to_cabinet.html:175
-#, fuzzy
-#| msgid "Approuvé"
 msgid "Approved"
 msgstr "Approuvé"
 
@@ -446,8 +438,6 @@ msgstr "Approuvé"
 #: templates/account/admin_cabinet_detail.html:119
 #: templates/account/admin_cabinet_user_role_form.html:202
 #: templates/account/assign_user_to_cabinet.html:176
-#, fuzzy
-#| msgid "Rejeté"
 msgid "Rejected"
 msgstr "Rejeté"
 
@@ -537,10 +527,8 @@ msgid "No budgets defined yet."
 msgstr "Aucun budget défini pour l'instant."
 
 #: finance/templates/finance/budget_list.html:58
-#, fuzzy
-#| msgid "Directeur de Cabinet"
 msgid "Create Budget"
-msgstr "Directeur de Cabinet"
+msgstr "Créer un budget"
 
 #: finance/templates/finance/expense_detail.html:4
 msgid "Expense Detail"
@@ -601,10 +589,8 @@ msgid "Receipt Image"
 msgstr "Image du Reçu"
 
 #: finance/templates/finance/expense_detail.html:61
-#, fuzzy
-#| msgid "Receipt Image"
 msgid "Receipt"
-msgstr "Image du Reçu"
+msgstr "Reçu"
 
 #: finance/templates/finance/expense_detail.html:71
 msgid "Approval History"
@@ -619,10 +605,8 @@ msgid "No approval history yet."
 msgstr "Aucun historique d'approbation pour l'instant."
 
 #: finance/templates/finance/expense_detail.html:97
-#, fuzzy
-#| msgid "Actif"
 msgid "Approval Actions"
-msgstr "Actif"
+msgstr "Actions d'approbation"
 
 #: finance/templates/finance/expense_detail.html:103
 msgid "Review Comments"
@@ -633,10 +617,8 @@ msgid "Optional notes..."
 msgstr "Notes optionnelles..."
 
 #: finance/templates/finance/expense_detail.html:108
-#, fuzzy
-#| msgid "Approuvé"
 msgid "Approve Request"
-msgstr "Approuvé"
+msgstr "Approuver la demande"
 
 #: finance/templates/finance/expense_detail.html:118
 msgid "Cashier Payment"
@@ -660,10 +642,8 @@ msgid "Requester"
 msgstr "Demandeur"
 
 #: finance/templates/finance/expense_detail.html:140
-#, fuzzy
-#| msgid "Submit Request"
 msgid "Submitted"
-msgstr "Soumettre la Demande"
+msgstr "Soumise"
 
 #: finance/templates/finance/expense_form.html:4
 msgid "Expense Form"
@@ -711,10 +691,8 @@ msgid "Notes specific to this material item"
 msgstr "Notes spécifiques à cet article de matériau"
 
 #: materials/templates/materials/material_form.html:4
-#, fuzzy
-#| msgid "Material Request"
 msgid "Material Form"
-msgstr "Demande de Matériel"
+msgstr "Formulaire de matériel"
 
 #: materials/templates/materials/material_form.html:37
 msgid "Unit (e.g. kg, L, m3)"
@@ -725,10 +703,8 @@ msgid "Est. Cost / Unit ($)"
 msgstr "Coût est. / Unité ($)"
 
 #: materials/templates/materials/material_form.html:58
-#, fuzzy
-#| msgid "Create Material Request"
 msgid "Save Material"
-msgstr "Créer une Demande de Matériel"
+msgstr "Enregistrer le matériel"
 
 #: materials/templates/materials/material_list.html:28
 msgid "Unit"
@@ -747,10 +723,8 @@ msgid "Request Details"
 msgstr "Détails de la demande"
 
 #: materials/templates/materials/request_detail.html:59
-#, fuzzy
-#| msgid "Generate Invoice"
 msgid "General Notes"
-msgstr "Générer la Facture"
+msgstr "Notes générales"
 
 #: materials/templates/materials/request_detail.html:71
 #: materials/templates/materials/request_list.html:28
@@ -762,10 +736,8 @@ msgstr "Matériaux"
 
 #: materials/templates/materials/request_detail.html:80
 #: templates/projects/site_detail.html:297
-#, fuzzy
-#| msgid "Material Request"
 msgid "Material"
-msgstr "Demande de Matériel"
+msgstr "Matériel"
 
 #: materials/templates/materials/request_detail.html:81
 #: templates/account/admin_user_detail.html:277
@@ -783,10 +755,8 @@ msgid "Total Estimated Cost:"
 msgstr "Coût total estimé :"
 
 #: materials/templates/materials/request_detail.html:119
-#, fuzzy
-#| msgid "Invoice Information"
 msgid "Request Information"
-msgstr "Informations de Facture"
+msgstr "Informations sur la demande"
 
 #: materials/templates/materials/request_detail.html:123
 msgid "Request ID:"
@@ -797,38 +767,28 @@ msgid "Requested By:"
 msgstr "Demandé par :"
 
 #: materials/templates/materials/request_detail.html:133
-#, fuzzy
-#| msgid "Material Request"
 msgid "Date Requested:"
-msgstr "Demande de Matériel"
+msgstr "Date de la demande :"
 
 #: materials/templates/materials/request_detail.html:137
-#, fuzzy
-#| msgid "Last Name"
 msgid "Last Updated:"
-msgstr "Nom"
+msgstr "Dernière mise à jour :"
 
 #: materials/templates/materials/request_detail.html:150
 msgid "Review"
 msgstr "Révision"
 
 #: materials/templates/materials/request_detail.html:157
-#, fuzzy
-#| msgid "Approuvé"
 msgid "Approve"
-msgstr "Approuvé"
+msgstr "Approuver"
 
 #: materials/templates/materials/request_detail.html:160
-#, fuzzy
-#| msgid "Rejeté"
 msgid "Reject"
-msgstr "Rejeté"
+msgstr "Rejeter"
 
 #: materials/templates/materials/request_detail.html:173
-#, fuzzy
-#| msgid "Submit Request"
 msgid "Edit Request"
-msgstr "Soumettre la Demande"
+msgstr "Modifier la demande"
 
 #: materials/templates/materials/request_detail.html:182
 #: templates/account/admin_user_detail.html:351
@@ -901,28 +861,20 @@ msgid "0-100"
 msgstr "0-100"
 
 #: revenue/templates/revenue/contract_form.html:4
-#, fuzzy
-#| msgid "Contract"
 msgid "Contract Form"
-msgstr "Contrat"
+msgstr "Formulaire de contrat"
 
 #: revenue/templates/revenue/contract_form.html:21
-#, fuzzy
-#| msgid "Invoice Information"
 msgid "Contract Information"
-msgstr "Informations de Facture"
+msgstr "Informations sur le contrat"
 
 #: revenue/templates/revenue/contract_form.html:33
-#, fuzzy
-#| msgid "Project / Site"
 msgid "Project Site"
 msgstr "Projet / Site"
 
 #: revenue/templates/revenue/contract_form.html:55
-#, fuzzy
-#| msgid "Contract"
 msgid "Contract Value"
-msgstr "Contrat"
+msgstr "Valeur du contrat"
 
 #: revenue/templates/revenue/contract_form.html:64
 #: revenue/templates/revenue/contract_list.html:30
@@ -930,10 +882,8 @@ msgid "Signed Date"
 msgstr "Date de signature"
 
 #: revenue/templates/revenue/contract_form.html:75
-#, fuzzy
-#| msgid "Contract"
 msgid "Save Contract"
-msgstr "Contrat"
+msgstr "Enregistrer le contrat"
 
 #: revenue/templates/revenue/contract_list.html:28
 #: revenue/templates/revenue/invoice_detail.html:33
@@ -949,22 +899,16 @@ msgid "No contracts found."
 msgstr "Aucun contrat trouvé."
 
 #: revenue/templates/revenue/contract_list.html:59
-#, fuzzy
-#| msgid "Contract"
 msgid "New Contract"
-msgstr "Contrat"
+msgstr "Nouveau contrat"
 
 #: revenue/templates/revenue/invoice_detail.html:4
-#, fuzzy
-#| msgid "Invoice Amount"
 msgid "Invoice Details"
-msgstr "Montant de la Facture"
+msgstr "Détails de la facture"
 
 #: revenue/templates/revenue/invoice_detail.html:40
-#, fuzzy
-#| msgid "Amount"
 msgid "Amount Due"
-msgstr "Montant"
+msgstr "Montant dû"
 
 #: revenue/templates/revenue/invoice_detail.html:44
 #: revenue/templates/revenue/invoice_form.html:50
@@ -1003,16 +947,12 @@ msgid "Record Payment"
 msgstr "Enregistrer un paiement"
 
 #: revenue/templates/revenue/invoice_detail.html:110
-#, fuzzy
-#| msgid "Contract"
 msgid "Contract Summary"
-msgstr "Contrat"
+msgstr "Résumé du contrat"
 
 #: revenue/templates/revenue/invoice_detail.html:114
-#, fuzzy
-#| msgid "Contract"
 msgid "Total Contract"
-msgstr "Contrat"
+msgstr "Total du contrat"
 
 #: revenue/templates/revenue/invoice_form.html:4
 msgid "Invoice Form"
@@ -1048,10 +988,8 @@ msgstr "Générer la Facture"
 
 #: revenue/templates/revenue/invoice_list.html:27
 #: templates/projects/site_detail.html:375
-#, fuzzy
-#| msgid "Invoice Form"
 msgid "Invoice #"
-msgstr "Formulaire de Facture"
+msgstr "Facture n°"
 
 #: revenue/templates/revenue/invoice_list.html:28
 #: revenue/templates/revenue/payment_list.html:49
@@ -1068,22 +1006,16 @@ msgstr "Aucune facture générée."
 
 #: revenue/templates/revenue/invoice_list.html:69
 #: templates/projects/site_detail.html:365
-#, fuzzy
-#| msgid "Generate Invoice"
 msgid "New Invoice"
-msgstr "Générer la Facture"
+msgstr "Nouvelle facture"
 
 #: revenue/templates/revenue/payment_form.html:30
-#, fuzzy
-#| msgid "Generate Invoice"
 msgid "Selected Invoice"
-msgstr "Générer la Facture"
+msgstr "Facture sélectionnée"
 
 #: revenue/templates/revenue/payment_form.html:35
-#, fuzzy
-#| msgid "Amount"
 msgid "Amount Paid"
-msgstr "Montant"
+msgstr "Montant payé"
 
 #: revenue/templates/revenue/payment_form.html:39
 #: revenue/templates/revenue/payment_list.html:51
@@ -1134,8 +1066,6 @@ msgstr "Retour au Tableau de Bord"
 
 #: templates/account/account_confirm_email.html:18
 #: templates/account/account_confirm_email.html:26
-#, fuzzy
-#| msgid "Confirm E-mail Address"
 msgid "Confirm Email Address"
 msgstr "Confirmer l'adresse e-mail"
 
@@ -1145,10 +1075,8 @@ msgid "Please confirm that <b><a href=\"mailto:%(email)s\">%(email)s</a></b> is 
 msgstr ""
 
 #: templates/account/account_confirm_email.html:22
-#, fuzzy
-#| msgid "Confirm Delete"
 msgid "Confirm"
-msgstr "Confirmer la suppression"
+msgstr "Confirmer"
 
 #: templates/account/account_confirm_email.html:28
 #, python-format
@@ -1333,10 +1261,8 @@ msgstr "Seuls les superadministrateurs peuvent affecter des utilisateurs aux cab
 
 #: templates/account/admin_cabinet_confirm_delete.html:4
 #: templates/account/admin_cabinet_confirm_delete.html:14
-#, fuzzy
-#| msgid "Directeur de Cabinet"
 msgid "Delete Cabinet"
-msgstr "Directeur de Cabinet"
+msgstr "Supprimer le cabinet"
 
 #: templates/account/admin_cabinet_confirm_delete.html:16
 msgid "This action cannot be undone"
@@ -1404,10 +1330,8 @@ msgid "To permanently delete this cabinet and all its data, click the button bel
 msgstr "Pour supprimer définitivement ce cabinet et toutes ses données, cliquez sur le bouton ci-dessous :"
 
 #: templates/account/admin_cabinet_confirm_delete.html:133
-#, fuzzy
-#| msgid "Directeur de Cabinet"
 msgid "Yes, Delete Cabinet"
-msgstr "Directeur de Cabinet"
+msgstr "Oui, supprimer le cabinet"
 
 #: templates/account/admin_cabinet_detail.html:4
 msgid "Cabinet Details"
@@ -1809,8 +1733,6 @@ msgstr "Membre depuis"
 #: templates/account/admin_user_detail.html:95
 #: templates/account/admin_users_list.html:191
 #: templates/projects/site_detail.html:257 templates/projects/site_list.html:61
-#, fuzzy
-#| msgid "Actif"
 msgid "Active"
 msgstr "Actif"
 
@@ -2352,8 +2274,6 @@ msgid "or Sign Up now!"
 msgstr "ou Inscrivez-vous maintenant !"
 
 #: templates/account/login.html:68
-#, fuzzy
-#| msgid "Sign up"
 msgid "Sign Up"
 msgstr "S'inscrire"
 
@@ -2401,10 +2321,8 @@ msgid "Your access to projects, materials, expenses, and invoices is controlled 
 msgstr "Votre accès aux projets, matériaux, dépenses et factures est contrôlé par vos rôles attribués."
 
 #: templates/account/user_profile_update.html:203
-#, fuzzy
-#| msgid "Directeur de Cabinet"
 msgid "Projects (Authorized Cabinets)"
-msgstr "Directeur de Cabinet"
+msgstr "Projets (cabinets autorisés)"
 
 #: templates/account/user_profile_update.html:210
 msgid "Showing projects from cabinets where you have an active role."
@@ -2512,10 +2430,8 @@ msgid "Change Password"
 msgstr "Changer le mot de passe"
 
 #: templates/account/user_profile_update.html:534
-#, fuzzy
-#| msgid "Directeur de Cabinet"
 msgid "Active Cabinets"
-msgstr "Directeur de Cabinet"
+msgstr "Cabinets actifs"
 
 #: templates/home.html:4
 msgid "Dashboard"
@@ -2595,10 +2511,8 @@ msgid "Real-time activity logs will appear here as projects progress."
 msgstr "Les journaux d'activité en temps réel s'afficheront ici au fur et à mesure de l'avancement des projets."
 
 #: templates/home.html:147
-#, fuzzy
-#| msgid "Directeur de Cabinet"
 msgid "Active Session"
-msgstr "Directeur de Cabinet"
+msgstr "Session active"
 
 #: templates/home.html:151
 msgid "Ensure all daily reports are submitted before the end of the business day for accurate tracking."
@@ -2629,10 +2543,8 @@ msgid "Assign Personnel to Site"
 msgstr "Affecter un personnel à un chantier"
 
 #: templates/personnel/assignment_form.html:49
-#, fuzzy
-#| msgid "Project / Site"
 msgid "Role on Site"
-msgstr "Projet / Site"
+msgstr "Rôle sur le chantier"
 
 #: templates/personnel/assignment_form.html:51
 msgid "e.g. Site Supervisor, Master Mason, General Laborer"
@@ -2651,10 +2563,8 @@ msgid "This overrides the worker's default daily rate for this specific project.
 msgstr "Ceci remplace le tarif journalier par défaut du travailleur pour ce chantier spécifique."
 
 #: templates/personnel/assignment_form.html:93
-#, fuzzy
-#| msgid "Select assignment status"
 msgid "Complete Assignment"
-msgstr "Sélectionnez le statut d'affectation"
+msgstr "Terminer l'affectation"
 
 #: templates/personnel/personnel_form.html:46
 #: templates/personnel/personnel_list.html:28
@@ -2686,16 +2596,12 @@ msgid "No skills listed"
 msgstr "Aucune compétence listée"
 
 #: templates/personnel/personnel_list.html:52
-#, fuzzy
-#| msgid "Rejeté"
 msgid "Restricted"
-msgstr "Rejeté"
+msgstr "Restreint"
 
 #: templates/personnel/personnel_list.html:64
-#, fuzzy
-#| msgid "View Projects"
 msgid "View Profile"
-msgstr "Voir les Projets"
+msgstr "Voir le profil"
 
 #: templates/personnel/personnel_list.html:83
 msgid "No personnel registered yet."
@@ -2734,10 +2640,8 @@ msgid "Confirm Delete"
 msgstr "Confirmer la suppression"
 
 #: templates/projects/phase_form.html:36
-#, fuzzy
-#| msgid "Last Name"
 msgid "Phase Name"
-msgstr "Nom"
+msgstr "Nom de la phase"
 
 #: templates/projects/phase_form.html:57
 #: templates/projects/site_detail.html:132
@@ -2754,8 +2658,6 @@ msgid "Percentage Complete (0-100%%)"
 msgstr "Pourcentage d'avancement (0-100%%)"
 
 #: templates/projects/progress_form.html:54
-#, fuzzy
-#| msgid "Description"
 msgid "Description / Notes"
 msgstr "Description"
 
@@ -2839,26 +2741,20 @@ msgid "Start by assigning staff members to this site"
 msgstr "Commencez par affecter des membres du personnel à ce chantier"
 
 #: templates/projects/site_detail.html:285
-#, fuzzy
-#| msgid "Material Request"
 msgid "Material Logistics"
-msgstr "Demande de Matériel"
+msgstr "Logistique des matériaux"
 
 #: templates/projects/site_detail.html:288
-#, fuzzy
-#| msgid "Material Request"
 msgid "New Request"
-msgstr "Demande de Matériel"
+msgstr "Nouvelle demande"
 
 #: templates/projects/site_detail.html:300
 msgid "Requested On"
 msgstr "Demandé le"
 
 #: templates/projects/site_detail.html:339
-#, fuzzy
-#| msgid "Material Request"
 msgid "No material requests"
-msgstr "Demande de Matériel"
+msgstr "Aucune demande de matériel"
 
 #: templates/projects/site_detail.html:340
 msgid "Create your first material request to track supplies"
@@ -2977,10 +2873,8 @@ msgid "Paused"
 msgstr "Suspendu"
 
 #: templates/projects/site_list.html:67
-#, fuzzy
-#| msgid "Comptable"
 msgid "Completed"
-msgstr "Comptable"
+msgstr "Terminé"
 
 #: templates/projects/site_list.html:103
 msgid "No construction sites yet."
