@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ChantiérMobile 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-06-21 12:02+0200\n"
+"POT-Creation-Date: 2026-06-21 12:17+0200\n"
 "PO-Revision-Date: 2026-01-26 17:00+0000\n"
 "Last-Translator: ChantiérMobile Team\n"
 "Language-Team: French\n"
@@ -223,7 +223,7 @@ msgstr ""
 
 #: accounts/views.py:505
 msgid "Affecter un cabinet"
-msgstr "Directeur de Cabinet"
+msgstr "Affecter un cabinet"
 
 #: accounts/views.py:523 accounts/views.py:825
 msgid "User assigned to cabinet successfully."
@@ -231,7 +231,7 @@ msgstr "L'utilisateur a été affecté au cabinet avec succès."
 
 #: accounts/views.py:541
 msgid "Gestion des cabinets"
-msgstr "Cabinets actifs"
+msgstr "Gestion des cabinets"
 
 #: accounts/views.py:542
 msgid "Gérez tous les cabinets et les affectations des utilisateurs"
@@ -241,11 +241,11 @@ msgstr ""
 #: accounts/views.py:717 accounts/views.py:757 accounts/views.py:809
 #: accounts/views.py:857 accounts/views.py:898
 msgid "Cabinets"
-msgstr "Cabinet"
+msgstr "Cabinets"
 
 #: accounts/views.py:554 accounts/views.py:682
 msgid "Nouveau cabinet"
-msgstr "Aucun cabinet trouvé"
+msgstr "Nouveau cabinet"
 
 #: accounts/views.py:613
 msgid "Détails du cabinet et affectations des utilisateurs"
@@ -253,7 +253,7 @@ msgstr ""
 
 #: accounts/views.py:628
 msgid "Modifier le cabinet"
-msgstr "Directeur de Cabinet"
+msgstr "Modifier le cabinet"
 
 #: accounts/views.py:634 accounts/views.py:811
 msgid "Ajouter un utilisateur"
@@ -1026,7 +1026,7 @@ msgstr "Budgets"
 
 #: finance/views.py:184
 msgid "Nouveau budget"
-msgstr "Enregistrer le budget"
+msgstr "Nouveau budget"
 
 #: finance/views.py:201
 #, python-format
@@ -1346,7 +1346,7 @@ msgstr "Enregistrer un personnel"
 
 #: personnel/views.py:41
 msgid "Enregistrer un nouveau personnel"
-msgstr "Enregistrer un personnel"
+msgstr "Enregistrer un nouveau personnel"
 
 #: personnel/views.py:42
 msgid "Ajoutez un nouveau membre du personnel au système"
@@ -1354,7 +1354,7 @@ msgstr ""
 
 #: personnel/views.py:48
 msgid "Nouvel enregistrement"
-msgstr "Aucun personnel enregistré."
+msgstr "Nouvel enregistrement"
 
 #: personnel/views.py:54
 msgid "Identification du cabinet échouée."
@@ -1362,7 +1362,7 @@ msgstr ""
 
 #: personnel/views.py:58
 msgid "Personnel enregistré avec succès."
-msgstr "Aucun personnel enregistré."
+msgstr "Personnel enregistré avec succès."
 
 #: personnel/views.py:72
 msgid "Membre du personnel"
@@ -1408,7 +1408,7 @@ msgstr ""
 
 #: personnel/views.py:173
 msgid "Compétences"
-msgstr "Complété"
+msgstr "Compétences"
 
 #: personnel/views.py:185
 msgid "Compétence ajoutée avec succès."
@@ -1599,6 +1599,10 @@ msgstr "Client"
 msgid "Total Value"
 msgstr "Valeur totale"
 
+#: revenue/templates/revenue/contract_list.html:44
+msgid "Invoice"
+msgstr "Facture"
+
 #: revenue/templates/revenue/contract_list.html:56
 msgid "No contracts found."
 msgstr "Aucun contrat trouvé."
@@ -1751,7 +1755,7 @@ msgstr "Aucun paiement enregistré."
 
 #: revenue/views.py:20
 msgid "Contrats clients"
-msgstr "Valeur du contrat"
+msgstr "Contrats clients"
 
 #: revenue/views.py:21
 msgid "Gérez les contrats et accords financiers des projets"
@@ -3611,7 +3615,7 @@ msgstr "Pourcentage d'avancement (0-100%%)"
 
 #: templates/projects/progress_form.html:47
 msgid "Description / Notes"
-msgstr "Description"
+msgstr "Description / Notes"
 
 #: templates/projects/progress_form.html:53
 msgid "Log Progress"

@@ -41,7 +41,7 @@
                                     <td class="text-end">
                                         <a class="btn btn-falcon-default btn-sm"
                                             href="{% url 'revenue:invoice_create_from_contract' contract_id=contract.id %}">
-                                            <span class="fas fa-file-invoice me-1"></span>Invoice
+                                            <span class="fas fa-file-invoice me-1"></span>{% trans "Invoice" %}
                                         </a>
                                         <a class="btn btn-falcon-default btn-sm"
                                             href="{% url 'revenue:contract_update' pk=contract.pk %}">
