@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ChantiérMobile 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-06-21 11:41+0200\n"
+"POT-Creation-Date: 2026-06-21 12:02+0200\n"
 "PO-Revision-Date: 2026-01-26 17:00+0000\n"
 "Last-Translator: ChantiérMobile Team\n"
 "Language-Team: French\n"
@@ -1106,6 +1106,13 @@ msgstr "Notes générales"
 msgid "Materials"
 msgstr "Matériaux"
 
+#: materials/templates/materials/request_detail.html:72
+#, python-format
+msgid "%(counter)s article"
+msgid_plural "%(counter)s articles"
+msgstr[0] "%(counter)s article"
+msgstr[1] "%(counter)s articles"
+
 #: materials/templates/materials/request_detail.html:80
 #: templates/projects/site_detail.html:292
 msgid "Material"
@@ -1175,6 +1182,22 @@ msgstr "Total d'articles"
 #: materials/templates/materials/request_detail.html:191
 msgid "Est. Total"
 msgstr "Coût total estimé"
+
+#: materials/templates/materials/request_detail.html:196
+msgid "Status Timeline"
+msgstr "Chronologie du statut"
+
+#: materials/templates/materials/request_detail.html:204
+msgid "Awaiting Review"
+msgstr "En attente d'examen"
+
+#: materials/templates/materials/request_detail.html:204
+msgid "Awaiting Order"
+msgstr "En attente de commande"
+
+#: materials/templates/materials/request_detail.html:204
+msgid "In Transit"
+msgstr "En transit"
 
 #: materials/templates/materials/request_form.html:4
 msgid "Material Request"
