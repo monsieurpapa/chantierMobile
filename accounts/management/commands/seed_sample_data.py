@@ -12,7 +12,9 @@ from datetime import timedelta, date
 from decimal import Decimal
 
 from accounts.models import User, Cabinet, UserCabinetRole, CabinetContextLog
-from chantiermobile.constants import UserRoles, ApprovalStatus
+from chantiermobile.constants import (
+    UserRoles, ApprovalStatus, SiteStatus, MaterialRequestStatus, ExpenseStatus, InvoiceStatus,
+)
 from projects.models import Site, ProjectPhase, SiteProgress
 from personnel.models import Skill, Personnel, SiteAssignment
 from materials.models import Material, MaterialRequest, MaterialRequestItem
@@ -282,7 +284,7 @@ class Command(BaseCommand):
             {
                 'name': 'Immeuble Residential Plateau',
                 'location': 'Plateau, Dakar',
-                'status': Site.Status.ACTIVE,
+                'status': SiteStatus.ACTIVE,
                 'start_date': today - timedelta(days=120),
                 'expected_end_date': today + timedelta(days=180),
                 'cabinet': cabinets[0]
@@ -290,7 +292,7 @@ class Command(BaseCommand):
             {
                 'name': 'Centre Commercial Point E',
                 'location': 'Point E, Dakar',
-                'status': Site.Status.PLANNING,
+                'status': SiteStatus.PLANNING,
                 'start_date': today + timedelta(days=30),
                 'expected_end_date': today + timedelta(days=480),
                 'cabinet': cabinets[0]
@@ -298,7 +300,7 @@ class Command(BaseCommand):
             {
                 'name': 'Rénovation École Secondaire Malick Sy',
                 'location': 'Médina, Dakar',
-                'status': Site.Status.ACTIVE,
+                'status': SiteStatus.ACTIVE,
                 'start_date': today - timedelta(days=60),
                 'expected_end_date': today + timedelta(days=120),
                 'cabinet': cabinets[1]
@@ -438,7 +440,7 @@ class Command(BaseCommand):
             request = MaterialRequest.objects.create(
                 site=site,
                 requested_by=users[2],  # Engineer user
-                status=MaterialRequest.Status.PENDING if i == 0 else MaterialRequest.Status.APPROVED,
+                status=MaterialRequestStatus.PENDING if i == 0 else MaterialRequestStatus.APPROVED,
                 notes=f'Matériaux nécessaires pour la phase {i+1} du chantier'
             )
             
@@ -520,8 +522,9 @@ class Command(BaseCommand):
                 requester=users[2],  # Engineer
                 category=categories[exp_data['category']],
                 amount=Decimal(exp_data['amount']),
+                expense_date=today - timedelta(days=5),
                 description=exp_data['description'],
-                status=Expense.Status.APPROVED,
+                status=ExpenseStatus.APPROVED,
                 created_at=today - timedelta(days=5)
             )
             expenses.append(expense)
@@ -547,11 +550,11 @@ class Command(BaseCommand):
             for i in range(3):
                 Invoice.objects.get_or_create(
                     contract=contract,
-                    invoice_number=f'INV-{site.unique_id[:8]}-{i+1:03d}',
+                    invoice_number=f'INV-{str(site.unique_id)[:8]}-{i+1:03d}',
                     defaults={
                         'amount': invoice_amount,
                         'issued_date': today - timedelta(days=30-i*10),
                         'due_date': today + timedelta(days=60-i*10),
-                        'status': Invoice.Status.PAID if i > 0 else Invoice.Status.DRAFT,
+                        'status': InvoiceStatus.PAID if i > 0 else InvoiceStatus.DRAFT,
                     }
                 )
