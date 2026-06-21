@@ -58,15 +58,15 @@
                                     <td class="location py-2 align-middle">{{ site.location }}</td>
                                     <td class="status py-2 align-middle">
                                         {% if site.status == 'ACTIVE' %}
-                                        <span class="badge badge-soft-success rounded-pill">{% trans "Active" %}</span>
+                                        <span class="badge badge-subtle-success rounded-pill">{% trans "Active" %}</span>
                                         {% elif site.status == 'PLANNING' %}
-                                        <span class="badge badge-soft-primary rounded-pill">{% trans "Planning" %}</span>
+                                        <span class="badge badge-subtle-primary rounded-pill">{% trans "Planning" %}</span>
                                         {% elif site.status == 'PAUSED' %}
-                                        <span class="badge badge-soft-warning rounded-pill">{% trans "Paused" %}</span>
+                                        <span class="badge badge-subtle-warning rounded-pill">{% trans "Paused" %}</span>
                                         {% elif site.status == 'COMPLETED' %}
-                                        <span class="badge badge-soft-secondary rounded-pill">{% trans "Completed" %}</span>
+                                        <span class="badge badge-subtle-secondary rounded-pill">{% trans "Completed" %}</span>
                                         {% else %}
-                                        <span class="badge badge-soft-danger rounded-pill">{{ site.status }}</span>
+                                        <span class="badge badge-subtle-danger rounded-pill">{{ site.status }}</span>
                                         {% endif %}
                                     </td>
                                     <td class="start py-2 align-middle">{{ site.start_date|default:"-" }}</td>

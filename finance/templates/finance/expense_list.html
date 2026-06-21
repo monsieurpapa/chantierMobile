@@ -44,9 +44,9 @@
                                     <td class="align-middle white-space-nowrap">{{ expense.requester.username }}</td>
                                     <td class="align-middle white-space-nowrap">
                                         <span class="badge rounded-pill 
-                                            {% if expense.status == 'APPROVED' %}badge-soft-success
-                                            {% elif expense.status == 'REJECTED' %}badge-soft-danger
-                                            {% else %}badge-soft-warning{% endif %}">
+                                            {% if expense.status == 'APPROVED' %}badge-subtle-success
+                                            {% elif expense.status == 'REJECTED' %}badge-subtle-danger
+                                            {% else %}badge-subtle-warning{% endif %}">
                                             {{ expense.get_status_display }}
                                         </span>
                                     </td>

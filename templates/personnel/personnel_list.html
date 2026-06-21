@@ -40,7 +40,7 @@
                                     </td>
                                     <td class="skills py-2 align-middle">
                                         {% for skill in person.skills.all %}
-                                        <span class="badge badge-soft-primary rounded-pill">{{ skill.name }}</span>
+                                        <span class="badge badge-subtle-primary rounded-pill">{{ skill.name }}</span>
                                         {% empty %}
                                         <span class="text-300 fs--2">{% trans "No skills listed" %}</span>
                                         {% endfor %}

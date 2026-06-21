@@ -33,7 +33,7 @@
                                 <div class="col">
                                     <div class="mb-2">
                                         {% for skill in personnel.skills.all %}
-                                        <span class="badge badge-soft-primary rounded-pill me-1">{{ skill.name }}</span>
+                                        <span class="badge badge-subtle-primary rounded-pill me-1">{{ skill.name }}</span>
                                         {% endfor %}
                                     </div>
                                     <p class="mb-0 fs--1 text-600">Employee ID: {{ personnel.unique_id|truncatechars:12

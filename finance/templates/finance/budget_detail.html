@@ -209,10 +209,10 @@
                                     <td class="text-end fw-semi-bold">${{ expense.amount }}</td>
                                     <td>
                                         <span class="badge rounded-pill
-                                            {% if expense.status == 'APPROVED' %}badge-soft-success
-                                            {% elif expense.status == 'PAID' %}badge-soft-info
-                                            {% elif expense.status == 'REJECTED' %}badge-soft-danger
-                                            {% else %}badge-soft-warning{% endif %}">
+                                            {% if expense.status == 'APPROVED' %}badge-subtle-success
+                                            {% elif expense.status == 'PAID' %}badge-subtle-info
+                                            {% elif expense.status == 'REJECTED' %}badge-subtle-danger
+                                            {% else %}badge-subtle-warning{% endif %}">
                                             {{ expense.get_status_display }}
                                         </span>
                                     </td>

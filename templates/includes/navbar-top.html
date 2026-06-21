@@ -27,7 +27,7 @@
     <li class="nav-item ms-2 dropdown">
       <a class="nav-link dropdown-toggle p-0" href="#" id="cabinetSwitcher" role="button"
          data-bs-toggle="dropdown" aria-expanded="false">
-        <span class="badge {% if active_cabinet %}badge-soft-warning{% else %}badge-soft-secondary{% endif %}"
+        <span class="badge {% if active_cabinet %}badge-subtle-warning{% else %}badge-subtle-secondary{% endif %}"
               style="cursor:pointer">
           <span class="fas fa-building me-1"></span>
           {% if active_cabinet %}{{ active_cabinet.name }}{% else %}{% trans "All Cabinets" %}{% endif %}
@@ -63,7 +63,7 @@
     {% with primary_role=request.user.cabinet_roles.first %}
     {% if primary_role %}
     <li class="nav-item ms-2">
-      <span class="badge badge-soft-primary">
+      <span class="badge badge-subtle-primary">
         <span class="fas fa-building me-1"></span>{{ primary_role.cabinet.name }}
       </span>
     </li>
