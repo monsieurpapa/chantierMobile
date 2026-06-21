@@ -380,6 +380,7 @@ def personnel_factory(db, cabinet):
     
     def create_personnel(**kwargs):
         defaults = {
+            'cabinet': cabinet,
             'first_name': 'Test',
             'last_name': 'Person',
             'default_daily_rate': Decimal('100.00')

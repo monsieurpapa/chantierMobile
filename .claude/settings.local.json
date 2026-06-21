@@ -21,7 +21,11 @@
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
       "Bash(docker ps *)",
-      "Bash(break)"
+      "Bash(break)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(python3 -c ' *)",
+      "Bash(awk '/Expense\\\\.objects\\\\.create\\\\\\(/{start=NR} start && /^\\\\s*\\\\\\)/{if\\(start\\){print \"---\", start, \"-\", NR; block=\"\"; for\\(i=start;i<=NR;i++\\) ; start=0}}' tests/test_critical_business_logic.py)"
     ]
   }
 }

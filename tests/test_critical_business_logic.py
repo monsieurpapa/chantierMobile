@@ -60,10 +60,11 @@ class TestBudgetConstraintEnforcement:
             requester=user,
             category=expense_category,
             amount=Decimal('2000.00'),
+            expense_date=date.today(),
             description='Test expense',
             status=ExpenseStatus.APPROVED
         )
-        
+
         # Remaining should be reduced
         assert budget.get_remaining_amount() == Decimal('8000.00')
     
@@ -82,7 +83,7 @@ class TestBudgetConstraintEnforcement:
         # Expense exceeding remaining should exceed
         assert budget.is_budget_exceeded(Decimal('6000.00'))
     
-    def test_expense_approval_blocked_by_budget(self, site, user):
+    def test_expense_approval_blocked_by_budget(self, site, user, expense_category):
         """Test expense cannot be approved if it exceeds budget."""
         # Create budget
         budget = Budget.objects.create(
@@ -91,13 +92,14 @@ class TestBudgetConstraintEnforcement:
             start_date=date.today(),
             end_date=date.today() + timedelta(days=30)
         )
-        
+
         # Create expense that would exceed budget
         expense = Expense.objects.create(
             site=site,
             requester=user,
-            category__name='Materials',
+            category=expense_category,
             amount=Decimal('1500.00'),
+            expense_date=date.today(),
             description='Over-budget expense',
             status=ExpenseStatus.PENDING
         )
@@ -154,7 +156,7 @@ class TestBudgetConstraintEnforcement:
         # Budget should be active on future date
         assert budget.is_budget_period_active(future_start)
     
-    def test_multiple_expenses_against_budget(self, site, user):
+    def test_multiple_expenses_against_budget(self, site, user, expense_category):
         """Test multiple expenses are correctly summed against budget."""
         budget = Budget.objects.create(
             site=site,
@@ -162,22 +164,24 @@ class TestBudgetConstraintEnforcement:
             start_date=date.today(),
             end_date=date.today() + timedelta(days=30)
         )
-        
+
         # Create and approve multiple expenses
         expense1 = Expense.objects.create(
             site=site,
             requester=user,
-            category__name='Materials',
+            category=expense_category,
             amount=Decimal('300.00'),
+            expense_date=date.today(),
             description='Expense 1',
             status=ExpenseStatus.APPROVED
         )
-        
+
         expense2 = Expense.objects.create(
             site=site,
             requester=user,
-            category__name='Materials',
+            category=expense_category,
             amount=Decimal('400.00'),
+            expense_date=date.today(),
             description='Expense 2',
             status=ExpenseStatus.APPROVED
         )
@@ -208,6 +212,7 @@ class TestApprovalChainEnforcement:
             requester=user,
             category=expense_category,
             amount=Decimal('100.00'),
+            expense_date=date.today(),
             description='Test expense',
             status=ExpenseStatus.PENDING
         )
@@ -226,6 +231,7 @@ class TestApprovalChainEnforcement:
             requester=user,
             category=expense_category,
             amount=Decimal('100.00'),
+            expense_date=date.today(),
             description='Test expense',
             status=ExpenseStatus.PENDING
         )
@@ -248,6 +254,7 @@ class TestApprovalChainEnforcement:
             requester=user,
             category=expense_category,
             amount=Decimal('100.00'),
+            expense_date=date.today(),
             description='Test expense',
             status=ExpenseStatus.REJECTED
         )
@@ -266,6 +273,7 @@ class TestApprovalChainEnforcement:
             requester=user,
             category=expense_category,
             amount=Decimal('100.00'),
+            expense_date=date.today(),
             description='Test expense',
             status=ExpenseStatus.PAID
         )
@@ -284,6 +292,7 @@ class TestApprovalChainEnforcement:
             requester=user,
             category=expense_category,
             amount=Decimal('100.00'),
+            expense_date=date.today(),
             description='Test expense',
             status=ExpenseStatus.PENDING
         )
@@ -305,6 +314,7 @@ class TestApprovalChainEnforcement:
             requester=user,
             category=expense_category,
             amount=Decimal('100.00'),
+            expense_date=date.today(),
             description='Test expense',
             status=ExpenseStatus.PENDING
         )
@@ -701,6 +711,7 @@ class TestCriticalBusinessLogicIntegration:
             requester=user,
             category=expense_category,
             amount=Decimal('2000.00'),
+            expense_date=date.today(),
             description='Materials purchase',
             status=ExpenseStatus.PENDING
         )
@@ -733,6 +744,7 @@ class TestCriticalBusinessLogicIntegration:
             requester=user,
             category=expense_category,
             amount=Decimal('10000.00'),  # Over budget
+            expense_date=date.today(),
             description='Expensive purchase',
             status=ExpenseStatus.PENDING
         )
@@ -812,6 +824,7 @@ class TestExpenseDoubleApproval:
             requester=user,
             category=expense_category,
             amount=Decimal('100.00'),
+            expense_date=date.today(),
             description='Test',
             status=ExpenseStatus.APPROVED,
         )

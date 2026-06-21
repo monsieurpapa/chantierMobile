@@ -55,8 +55,6 @@ class CabinetFactory(factory.django.DjangoModelFactory):
     name = factory.Faker('company')
     address = factory.Faker('address')
     tax_id = factory.Faker('bothify', text='??????')
-    phone = factory.Faker('phone_number')
-    email = factory.Faker('company_email')
 
 # User Cabinet Role Factory
 class UserCabinetRoleFactory(factory.django.DjangoModelFactory):

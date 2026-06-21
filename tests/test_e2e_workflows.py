@@ -24,7 +24,7 @@ class TestAuthenticationWorkflow:
     def test_user_registration_and_login(self, client):
         """Test user registration and login workflow."""
         # Test registration page loads
-        response = client.get(reverse('account:signup'))
+        response = client.get(reverse('account_signup'))
         assert response.status_code == 200
         
         # Test user registration
@@ -37,32 +37,32 @@ class TestAuthenticationWorkflow:
             'last_name': 'User'
         }
         
-        response = client.post(reverse('account:signup'), registration_data)
+        response = client.post(reverse('account_signup'), registration_data)
         # Should redirect after successful registration
         assert response.status_code in [302, 200]
         
         # Test login with new user
         login_data = {
-            'username': 'newuser',
+            'login': 'newuser',
             'password': 'complexpassword123'
         }
         
-        response = client.post(reverse('account:login'), login_data)
+        response = client.post(reverse('account_login'), login_data)
         assert response.status_code in [302, 200]
     
     def test_login_workflow(self, client, user):
         """Test login workflow with existing user."""
         # Test login page loads
-        response = client.get(reverse('account:login'))
+        response = client.get(reverse('account_login'))
         assert response.status_code == 200
         
         # Test successful login
         login_data = {
-            'username': 'testuser',
+            'login': 'testuser',
             'password': 'testpass123'
         }
         
-        response = client.post(reverse('account:login'), login_data, follow=True)
+        response = client.post(reverse('account_login'), login_data, follow=True)
         assert response.status_code == 200
         # Should be logged in now
         assert response.context['user'].is_authenticated
@@ -74,7 +74,7 @@ class TestAuthenticationWorkflow:
         assert response.context['user'].is_authenticated
         
         # Test logout
-        response = authenticated_client.post(reverse('account:logout'), follow=True)
+        response = authenticated_client.post(reverse('account_logout'), follow=True)
         assert response.status_code == 200
         # Should be logged out
         assert not response.context['user'].is_authenticated

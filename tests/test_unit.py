@@ -119,7 +119,7 @@ class TestViews:
     
     def test_login_view_redirect(self, authenticated_client):
         """Test login view redirects authenticated users."""
-        response = authenticated_client.get(reverse('account:login'))
+        response = authenticated_client.get(reverse('account_login'))
         assert response.status_code in [302, 200]
 
 
