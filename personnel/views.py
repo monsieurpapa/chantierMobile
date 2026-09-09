@@ -18,6 +18,9 @@ class PersonnelListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin,
     header_title = _("Ressources humaines")
     header_subtitle = _("Gérez le personnel et les affectations sur les chantiers")
 
+    def get_queryset(self):
+        return super().get_queryset().select_related('cabinet')
+
     def get_header_actions(self):
         from accounts.models import UserCabinetRole
         if self.request.user.is_superuser or UserCabinetRole.objects.filter(
@@ -230,6 +233,13 @@ class SiteAssignmentCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAcc
             initial['personnel'] = person
             initial['daily_rate'] = person.default_daily_rate
         return initial
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['no_cabinet_selected'] = (
+            self.request.user.is_superuser and not get_session_cabinet(self.request)
+        )
+        return context
 
     def form_valid(self, form):
         messages.success(self.request, _("Affectation au chantier effectuée avec succès."))

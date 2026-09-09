@@ -26,17 +26,11 @@ Deferred work tracked here. Items added by `/plan-ceo-review` on 2026-03-31.
 
 ~~## P2 — Cabinet Scoping on `SiteAssignmentCreateView`~~ *(Implemented — `get_form()` override filters site and personnel FK dropdowns to user's cabinet; `cabinet_lookup_field = 'site__cabinet'` set for `CabinetAccessMixin`. Regression test added in `TestSiteAssignmentCabinetScoping`.)*
 
-## P3 — Superadmin Banner on Assignment Form When No Cabinet Selected
+~~## P3 — Superadmin Banner on Assignment Form When No Cabinet Selected~~ *(Fixed by /qa on main, 2026-09-10 — dismissible amber banner added to `assignment_form.html`, gated on `no_cabinet_selected` context flag from `SiteAssignmentCreateView.get_context_data()`.)*
 
-When a superadmin opens `/personnel/assignments/add/` without an active cabinet selected, `get_session_cabinet()` returns `None` and the form shows all sites globally. Add a dismissible amber banner: "No cabinet selected — showing all sites. Use the cabinet switcher to scope to a specific firm." Priority: pre-demo polish, not a security issue (superadmins are trusted).
+~~## P3 — `PersonnelListView` Missing `select_related`~~ *(Fixed by /qa on main, 2026-09-10 — added `.select_related('cabinet')` to `get_queryset()`.)*
 
-## P3 — `PersonnelListView` Missing `select_related`
-
-`PersonnelListView.get_queryset()` has no `.select_related('cabinet')`. Fine at current data volume. Add before the list grows past 50 rows to avoid N+1.
-
-## P3 — `BudgetListView` Manual Cabinet Filtering (DRY violation)
-
-`BudgetListView.get_queryset()` manually filters `site__cabinet__id__in=user_cabinet_ids` instead of using `CabinetAccessMixin`. Pre-existing pattern, no active harm. Should be unified when touching `finance/views.py` next.
+~~## P3 — `BudgetListView` Manual Cabinet Filtering (DRY violation)~~ *(Fixed by /qa on main, 2026-09-10 — now uses `CabinetAccessMixin` with `cabinet_lookup_field = 'site__cabinet'`, manual filter removed.)*
 
 ## P3 — `approve_material_request` Lacks `transaction.atomic()`
 
@@ -54,9 +48,7 @@ Unlike `Expense.approve()`, `approve_material_request` does a bare `mat_request.
 
 `check_budget_warning` queries `UserCabinetRole.objects.filter(cabinet=..., role=DIRECTOR)` on every expense approval. At current scale this is fine. When approval volume grows past ~50/day per cabinet, add `cache.get_or_set(f'cabinet_directors_{site.cabinet_id}', lambda: list(query), 60)` in `finance/signals.py`. **Requires:** add `cache.delete(f'cabinet_directors_{cabinet_id}')` call in `UserCabinetRole.save()` and `UserCabinetRole.delete()` to invalidate when directors change. Do not add the cache without also adding the invalidation.
 
-## P3 — Bundle `BudgetListView` DRY Violation Fix in Phase 3
-
-`BudgetListView.get_queryset()` manually filters `site__cabinet__id__in=user_cabinet_ids` instead of using `CabinetAccessMixin`. When Phase 3 (HTMX expense flow) touches `finance/views.py`, add `cabinet_lookup_field = 'site__cabinet'` to `BudgetListView` and remove the manual filter. Zero risk, one-liner fix.
+~~## P3 — Bundle `BudgetListView` DRY Violation Fix in Phase 3~~ *(Fixed by /qa on main, 2026-09-10 — see above.)*
 
 ## P3 — `approve_material_request` Lacks `transaction.atomic()`
 
@@ -92,29 +84,38 @@ Before Phase 3 planning begins, deploy a minimal Django Channels consumer to Rai
 
 *Items below added by `/qa` on 2026-06-21 (full-app browser QA pass — see `.gstack/qa-reports/qa-report-localhost-2026-06-21.md` for fix details on the 12 issues resolved in the same session):*
 
-## P3 — `tests/test_api.py` imports `djangorestframework`, which isn't installed
+~~## P3 — `tests/test_api.py` imports `djangorestframework`, which isn't installed~~ *(Resolved by /qa on main, 2026-09-10 — deleted; no API layer exists anywhere else in the codebase.)*
 
-No API views, serializers, or `rest_framework` entry in `INSTALLED_APPS`/`requirements.txt` exist anywhere else in the codebase. This test file (449 lines, added in commit `f464529` "testing") was written for an API layer that was never built. Blocks `pytest` collection entirely unless run with `--ignore=tests/test_api.py`. Decide: build the API layer, or delete the test file.
-
-## P3 — Browser tab `<title>` tags hardcoded in English
-
-`site_detail.html` ("Site Details"), `personnel_detail.html` ("Personnel Details"), `budget_list.html` ("Budgets"), and others interpolate raw English into `{% block title %}`. Low visibility (browser tab only) — deprioritized during the i18n pass in favor of in-page content. Sweep all `{% block title %}` blocks for `{% trans %}` coverage when next touching i18n.
+~~## P3 — Browser tab `<title>` tags hardcoded in English~~ *(Fixed by /qa on main, 2026-09-10 — `{% trans %}`/`{% blocktrans %}` added to all `{% block title %}` blocks across `projects/` and `personnel/` templates and `500.html`.)*
 
 ## P3 — Currency displayed as `$` throughout
 
 Budgets, expenses, and invoices all render amounts as `${{ amount }}`. Plausibly intentional (USD is commonly used for large transactions in DRC), but never confirmed with product — flag before assuming it's correct.
 
-## P3 — Seed data uses Senegal/Dakar addresses, not DRC/Goma
+~~## P3 — Seed data uses Senegal/Dakar addresses, not DRC/Goma~~ *(Fixed by /qa on main, 2026-09-10 — `seed_sample_data.py` now uses DRC (+243) phone numbers, Congolese names, and Goma neighborhoods (Himbi, Katindo, Majengo).)*
 
-`accounts/management/commands/seed_sample_data.py` generates `+221` Senegal phone numbers and Dakar addresses, despite the target market being DRC/Great Lakes per the workspace's root `CLAUDE.md`. Cosmetic for demos, but worth aligning if sample data is ever shown to a DRC-based prospect.
+~~## P2 — SSE keepalive comment (proxy 60s timeout)~~ *(Stale — no `notification_stream` generator or SSE endpoint exists anywhere in the codebase as of 2026-09-10. Feature described here was apparently never built. Nothing to fix; removing this item.)*
 
-## P2 — SSE keepalive comment (proxy 60s timeout)
+---
 
-Railway's reverse proxy closes idle SSE connections after ~60 seconds of no data. Add a keepalive comment event inside the `notification_stream` generator:
+*Items below added by `/qa` on 2026-09-10 (finish-up pass ahead of first GCP deploy):*
 
-```python
-# Inside the while True loop, before time.sleep(2):
-yield ": keepalive\n\n"
-```
+## Boilerplate contamination from the wrong starter template (mostly fixed)
 
-**Effort:** XS (5 lines of code)
+This project was bootstrapped from an unrelated "DevBoks"/"CMC"/"TicTacFlow Solutions" recruitment-portal boilerplate and the rebrand to ChantierMobile was incomplete. Found and fixed:
+
+- **Critical (was breaking production):** `templates/account/email/email_confirmation_message.html/.txt` and `password_reset_key_message.html` extended `templates/email/base.html`/`base.txt`, which never existed. Every signup email-confirmation and password-reset in production would 500. Created `templates/email/base.html` and `base.txt` with ChantierMobile branding; removed leftover "CMC Team" signature.
+- **Critical (dead but confusing):** `templates/account/profile.html` and `templates/includes/breadcrumb.html` referenced a nonexistent `recruitment` app/namespace. Confirmed both are unreachable (no view renders them) and deleted them, along with two unreferenced `activation_email.html/.txt` templates using a non-allauth template naming convention.
+- **Cosmetic (live, user-visible):** every page's navbar/footer/login-page logo pointed at `TicTacFlow_logo*.png` static assets and linked to `TicTacFlowSolutions.com`; the login page welcome text read "Assistance Technique en Genie Civil's Self Service Portal". Replaced with a ChantierMobile wordmark/mark (new SVGs at `static/app/img/chantiermobile-*.svg`) and correct copy.
+- **Not fixed — needs a designer:** the actual favicon files at `static/assets/img/favicons/cmc/*.ico`/`*.png` are still the old boilerplate's raster icons (browser tab icon). Fixing the `manifest.json` name was a one-line change and is done; regenerating the icon binaries themselves needs real image tooling this session didn't have.
+- Also removed two orphaned, unreferenced templates (`templates/landing.html`, `templates/dashboard.html`) that were a completely different unrelated recruitment-portal landing page with the wrong branding — dead code, never wired to any URL.
+
+Also worth a look next time someone's in `docker-compose.yml`: the postgres service is still named `tictacflow-postgres-service` — purely internal, not user-facing, left alone this pass.
+
+## Timezone bug: `timezone.now().date()` used instead of `timezone.localdate()`
+
+`TIME_ZONE = 'Africa/Kigali'` (UTC+2) with `USE_TZ = True`, but `Budget.is_budget_period_active()` (`finance/models.py`), `BudgetDetailView`'s burn-rate forecast (`finance/views.py`), `Site.active_assignments` (`projects/models.py`), and the daily `mark_overdue_invoices` Celery task (`revenue/tasks.py`) all computed "today" via `timezone.now().date()`, which returns the **UTC** calendar date, not the local Kigali date. Any time between 22:00–23:59 UTC (i.e. after midnight in Kigali), this silently disagreed with `date.today()` used everywhere else in the codebase (forms, seed data, tests) — causing spurious "Budget period is not active" rejections and one-day-late overdue-invoice transitions right at the daily boundary. Fixed by switching all four call sites to `timezone.localdate()`. This is what was actually causing 7 of the failures in `tests/test_critical_business_logic.py` (all now pass, 50/50).
+
+## Pre-existing test debt: 38 failing tests outside critical-business-logic scope
+
+Running the full suite surfaced 38 failures in `test_performance.py`, `test_integration.py`, `test_e2e_workflows.py`, and a few in `test_unit.py` (`test_home_view_context`, `test_expense_form_validation`, `test_budget_form_date_validation`). Sampled several: stale assertions against renamed context keys, missing `@pytest.mark.django_db`, and fixtures used incorrectly (e.g. a client fixture accessed as if it were a `.request.user`). None looked like new regressions — they predate this session. User explicitly scoped this pass to `test_critical_business_logic.py` only (now 50/50 passing) and deferred the rest. Next pass should triage `test_integration.py` first (highest count, likely same fixture-staleness pattern) before `test_performance.py`.

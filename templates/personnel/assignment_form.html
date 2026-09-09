@@ -1,7 +1,7 @@
 {% extends 'falcon_base.html' %}
 {% load static i18n %}
 
-{% block title %}Assign Personnel - ChantierMobile{% endblock %}
+{% block title %}{% trans "Assign Personnel" %} - ChantierMobile{% endblock %}
 
 {% block extra_css %}
 <link href="{% static 'vendors/flatpickr/flatpickr.min.css' %}" rel="stylesheet" />
@@ -21,6 +21,13 @@
         <!-- Main Content -->
         <div class="container-fluid py-4">
             {% include 'includes/page_header.html' %}
+            {% if no_cabinet_selected %}
+            <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                <span class="fas fa-exclamation-triangle me-1"></span>
+                {% trans "No cabinet selected — showing all sites. Use the cabinet switcher to scope to a specific firm." %}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{% trans 'Close' %}"></button>
+            </div>
+            {% endif %}
             <div class="card mb-3">
                 <div class="card-body bg-light">
                     <form method="post">

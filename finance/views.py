@@ -138,11 +138,12 @@ def mark_expense_paid(request, pk):
     return redirect('finance:expense_list')
 
 # Budget Views
-class BudgetListView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, ListView):
+class BudgetListView(LoginRequiredMixin, CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, ListView):
     model = Budget
     template_name = 'finance/budget_list.html'
     context_object_name = 'budgets'
     allowed_roles = ['DIRECTOR', 'ACCOUNTANT', 'CHIEF_ENGINEER']
+    cabinet_lookup_field = 'site__cabinet'
     header_title = _("Budgets des projets")
     header_subtitle = _("Surveillez et gérez les budgets de construction")
 
@@ -158,15 +159,6 @@ class BudgetListView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, Lis
                 'class': 'btn-falcon-primary'
             }]
         return []
-
-    def get_queryset(self):
-        if self.request.user.is_superuser:
-            active_cabinet = get_session_cabinet(self.request)
-            if active_cabinet:
-                return super().get_queryset().filter(site__cabinet=active_cabinet)
-            return super().get_queryset()
-        user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
-        return super().get_queryset().filter(site__cabinet__id__in=user_cabinet_ids)
 
 class BudgetCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, CreateView):
     model = Budget
@@ -249,7 +241,7 @@ class BudgetDetailView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin
         context['category_breakdown'] = category_breakdown
 
         # Spend rate forecast: daily burn rate × days remaining
-        today = timezone.now().date()
+        today = timezone.localdate()
         elapsed_days = max((today - budget.start_date).days, 1)
         total_days = max((budget.end_date - budget.start_date).days, 1)
         remaining_days = max((budget.end_date - today).days, 0)

@@ -285,7 +285,7 @@ class TestApprovalChainEnforcement:
         
         assert 'Cannot transition' in str(exc_info.value)
     
-    def test_approval_creates_audit_record(self, site, user, expense_category):
+    def test_approval_creates_audit_record(self, site, user, director_user, expense_category):
         """Test expense approval creates ExpenseApproval record."""
         expense = Expense.objects.create(
             site=site,
@@ -296,15 +296,15 @@ class TestApprovalChainEnforcement:
             description='Test expense',
             status=ExpenseStatus.PENDING
         )
-        
-        # Approve expense
-        expense.approve(user, comments="Looks good")
-        
+
+        # Approve expense (by a different user — self-approval is blocked)
+        expense.approve(director_user, comments="Looks good")
+
         # Check approval was recorded
         approval = ExpenseApproval.objects.filter(expense=expense).first()
         assert approval is not None
         assert approval.status == ExpenseApproval.Status.APPROVED
-        assert approval.approver == user
+        assert approval.approver == director_user
         assert approval.comments == "Looks good"
     
     def test_rejection_creates_audit_record(self, site, user, expense_category):

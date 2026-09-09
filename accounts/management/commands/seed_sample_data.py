@@ -127,43 +127,43 @@ class Command(BaseCommand):
         users_data = [
             {
                 'username': 'directeur_001',
-                'email': 'directeur@construction.sn',
-                'first_name': 'Jean',
-                'last_name': 'Diallo',
+                'email': 'directeur@construction.cd',
+                'first_name': 'Jean-Pierre',
+                'last_name': 'Mukendi',
                 'password': 'password123',
-                'phone_number': '+221 77 123 4567'
+                'phone_number': '+243 899 123 456'
             },
             {
                 'username': 'ingenieur_chef_001',
-                'email': 'chef_ingenieur@construction.sn',
+                'email': 'chef_ingenieur@construction.cd',
                 'first_name': 'Marie',
-                'last_name': 'Sow',
+                'last_name': 'Kalala',
                 'password': 'password123',
-                'phone_number': '+221 77 234 5678'
+                'phone_number': '+243 899 234 567'
             },
             {
                 'username': 'ingenieur_001',
-                'email': 'ingenieur1@construction.sn',
-                'first_name': 'Ahmed',
-                'last_name': 'Ba',
+                'email': 'ingenieur1@construction.cd',
+                'first_name': 'Emmanuel',
+                'last_name': 'Ilunga',
                 'password': 'password123',
-                'phone_number': '+221 77 345 6789'
+                'phone_number': '+243 899 345 678'
             },
             {
                 'username': 'comptable_001',
-                'email': 'comptable@construction.sn',
-                'first_name': 'Fatou',
-                'last_name': 'Ndiaye',
+                'email': 'comptable@construction.cd',
+                'first_name': 'Chantal',
+                'last_name': 'Mwamba',
                 'password': 'password123',
-                'phone_number': '+221 77 456 7890'
+                'phone_number': '+243 899 456 789'
             },
             {
                 'username': 'caissier_001',
-                'email': 'caissier@construction.sn',
-                'first_name': 'Moussa',
-                'last_name': 'Gueye',
+                'email': 'caissier@construction.cd',
+                'first_name': 'Patrick',
+                'last_name': 'Kabongo',
                 'password': 'password123',
-                'phone_number': '+221 77 567 8901'
+                'phone_number': '+243 899 567 890'
             },
         ]
         
@@ -189,14 +189,14 @@ class Command(BaseCommand):
         """Create sample construction companies"""
         cabinets_data = [
             {
-                'name': 'BTP Solutions Sénégal',
-                'address': '123 Avenue Cheikh Anta Diop, Dakar',
-                'tax_id': 'SN123456789'
+                'name': 'BTP Solutions Kivu',
+                'address': '123 Avenue du Lac, Quartier Himbi, Goma',
+                'tax_id': 'CD123456789'
             },
             {
                 'name': 'Constructions Modernes SARL',
-                'address': '456 Boulevard de l\'Indépendance, Dakar',
-                'tax_id': 'SN987654321'
+                'address': '456 Boulevard Kanyamuhanga, Goma',
+                'tax_id': 'CD987654321'
             },
         ]
         
@@ -255,12 +255,12 @@ class Command(BaseCommand):
     def create_personnel(self, cabinets, skills):
         """Create personnel for cabinets"""
         personnel_data = [
-            {'first_name': 'Samba', 'last_name': 'Sane', 'skills': [0], 'rate': 15000},  # Maçon
-            {'first_name': 'Ibrahima', 'last_name': 'Toure', 'skills': [1], 'rate': 18000},  # Ferrailleur
-            {'first_name': 'Moustapha', 'last_name': 'Camara', 'skills': [2], 'rate': 20000},  # Électricien
-            {'first_name': 'Amadou', 'last_name': 'Kone', 'skills': [3], 'rate': 19000},  # Plombier
-            {'first_name': 'Lamine', 'last_name': 'Diallo', 'skills': [4, 6], 'rate': 16000},  # Peintre + Chef d'équipe
-            {'first_name': 'Kofi', 'last_name': 'Mensah', 'skills': [5], 'rate': 17000},  # Menuisier
+            {'first_name': 'Baraka', 'last_name': 'Nzuzi', 'skills': [0], 'rate': 15000},  # Maçon
+            {'first_name': 'Justin', 'last_name': 'Kasongo', 'skills': [1], 'rate': 18000},  # Ferrailleur
+            {'first_name': 'Bienvenu', 'last_name': 'Tshimanga', 'skills': [2], 'rate': 20000},  # Électricien
+            {'first_name': 'Deo', 'last_name': 'Muyaya', 'skills': [3], 'rate': 19000},  # Plombier
+            {'first_name': 'Espoir', 'last_name': 'Lukusa', 'skills': [4, 6], 'rate': 16000},  # Peintre + Chef d'équipe
+            {'first_name': 'Amani', 'last_name': 'Mbala', 'skills': [5], 'rate': 17000},  # Menuisier
         ]
         
         personnel = []
@@ -282,24 +282,24 @@ class Command(BaseCommand):
         today = date.today()
         sites_data = [
             {
-                'name': 'Immeuble Residential Plateau',
-                'location': 'Plateau, Dakar',
+                'name': 'Immeuble Résidentiel Himbi',
+                'location': 'Himbi, Goma',
                 'status': SiteStatus.ACTIVE,
                 'start_date': today - timedelta(days=120),
                 'expected_end_date': today + timedelta(days=180),
                 'cabinet': cabinets[0]
             },
             {
-                'name': 'Centre Commercial Point E',
-                'location': 'Point E, Dakar',
+                'name': 'Centre Commercial Katindo',
+                'location': 'Katindo, Goma',
                 'status': SiteStatus.PLANNING,
                 'start_date': today + timedelta(days=30),
                 'expected_end_date': today + timedelta(days=480),
                 'cabinet': cabinets[0]
             },
             {
-                'name': 'Rénovation École Secondaire Malick Sy',
-                'location': 'Médina, Dakar',
+                'name': 'Rénovation École Secondaire Majengo',
+                'location': 'Majengo, Goma',
                 'status': SiteStatus.ACTIVE,
                 'start_date': today - timedelta(days=60),
                 'expected_end_date': today + timedelta(days=120),

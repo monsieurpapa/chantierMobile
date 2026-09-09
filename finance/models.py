@@ -18,7 +18,7 @@ class Budget(BaseModel):
         """Check if the budget period is active on given date."""
         from django.utils import timezone
         if check_date is None:
-            check_date = timezone.now().date()
+            check_date = timezone.localdate()
         return self.start_date <= check_date <= self.end_date
     
     def get_spent_amount(self):
@@ -73,8 +73,9 @@ class Expense(BaseModel):
         from django.core.exceptions import ValidationError
         from decimal import Decimal
         
-        # Validate positive amount
-        if self.amount <= 0:
+        # Validate positive amount (None means the amount field itself already
+        # failed form-level validation and is excluded from clean_fields())
+        if self.amount is not None and self.amount <= 0:
             raise ValidationError({'amount': 'Amount must be a positive number.'})
         
         # Validate status transition

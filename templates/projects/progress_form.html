@@ -1,7 +1,7 @@
 {% extends 'falcon_base.html' %}
 {% load static i18n %}
 
-{% block title %}Log Progress - {{ phase.name }} - ChantierMobile{% endblock %}
+{% block title %}{% blocktrans %}Log Progress{% endblocktrans %} - {{ phase.name }} - ChantierMobile{% endblock %}
 
 {% block extra_css %}
 <link href="{% static 'vendors/flatpickr/flatpickr.min.css' %}" rel="stylesheet" />

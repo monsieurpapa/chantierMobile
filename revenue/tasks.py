@@ -16,7 +16,7 @@ def mark_overdue_invoices():
     from .models import Invoice
     from chantiermobile.constants import InvoiceStatus
 
-    today = timezone.now().date()
+    today = timezone.localdate()
     candidates = list(Invoice.objects.filter(
         status=InvoiceStatus.SENT,
         due_date__lt=today,

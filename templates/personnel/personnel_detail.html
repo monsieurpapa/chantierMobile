@@ -1,7 +1,7 @@
 {% extends 'falcon_base.html' %}
 {% load static i18n rbac_tags %}
 
-{% block title %}{{ personnel.get_full_name }} - Personnel Details - ChantierMobile{% endblock %}
+{% block title %}{{ personnel.get_full_name }} - {% trans "Personnel Details" %} - ChantierMobile{% endblock %}
 
 {% block content %}
 <div class="container" data-layout="container-fluid">

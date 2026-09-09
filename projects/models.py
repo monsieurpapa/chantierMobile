@@ -70,7 +70,7 @@ class Site(BaseModel):
     @property
     def active_assignments(self):
         from django.utils import timezone
-        today = timezone.now().date()
+        today = timezone.localdate()
         return self.assignments.filter(
             start_date__lte=today
         ).filter(
