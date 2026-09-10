@@ -116,7 +116,7 @@ class TestProjectManagementWorkflow:
         
         # Activate site
         response = director_client.post(
-            reverse('projects:site_update', kwargs={'pk': site.pk}),
+            reverse('projects:site_update', kwargs={'unique_id': site.unique_id}),
             {
                 'name': site.name,
                 'location': site.location,
@@ -133,39 +133,39 @@ class TestProjectManagementWorkflow:
         assert site.status == SiteStatus.ACTIVE
         
         # Add project phase
-        response = director_client.get(reverse('projects:phase_create', kwargs={'site_id': site.pk}))
+        response = director_client.get(reverse('projects:phase_create', kwargs={'site_id': site.unique_id}))
         assert response.status_code == 200
-        
+
         phase_data = {
             'name': 'Foundation Phase',
             'start_date': date.today(),
             'end_date': date.today() + timedelta(days=30)
         }
-        
+
         response = director_client.post(
-            reverse('projects:phase_create', kwargs={'site_id': site.pk}),
+            reverse('projects:phase_create', kwargs={'site_id': site.unique_id}),
             phase_data,
             follow=True
         )
         assert response.status_code == 200
-        
+
         # Verify phase was created
         from projects.models import ProjectPhase
         phase = ProjectPhase.objects.get(name='Foundation Phase')
         assert phase.site == site
-        
+
         # Add progress report
-        response = director_client.get(reverse('projects:progress_create', kwargs={'phase_id': phase.pk}))
+        response = director_client.get(reverse('projects:progress_create', kwargs={'phase_id': phase.unique_id}))
         assert response.status_code == 200
-        
+
         progress_data = {
             'report_date': date.today(),
             'percentage_complete': 25,
             'description': 'Foundation work started successfully'
         }
-        
+
         response = director_client.post(
-            reverse('projects:progress_create', kwargs={'phase_id': phase.pk}),
+            reverse('projects:progress_create', kwargs={'phase_id': phase.unique_id}),
             progress_data,
             follow=True
         )
@@ -173,7 +173,7 @@ class TestProjectManagementWorkflow:
         
         # Complete the site
         response = director_client.post(
-            reverse('projects:site_update', kwargs={'pk': site.pk}),
+            reverse('projects:site_update', kwargs={'unique_id': site.unique_id}),
             {
                 'name': site.name,
                 'location': site.location,
@@ -204,6 +204,7 @@ class TestExpenseManagementWorkflow:
             'site': site.pk,
             'category': expense_category.pk,
             'amount': '1500.75',
+            'expense_date': date.today(),
             'description': 'Construction materials purchase'
         }
         
@@ -242,6 +243,7 @@ class TestExpenseManagementWorkflow:
             'site': site.pk,
             'category': expense_category.pk,
             'amount': '5000.00',
+            'expense_date': date.today(),
             'description': 'Unreasonable expense request'
         }, follow=True)
         
@@ -269,26 +271,25 @@ class TestMaterialRequestWorkflow:
         
         request_data = {
             'site': site.pk,
-            'notes': 'Materials needed for foundation work'
+            'notes': 'Materials needed for foundation work',
+            'items-TOTAL_FORMS': '1',
+            'items-INITIAL_FORMS': '0',
+            'items-MIN_NUM_FORMS': '1',
+            'items-MAX_NUM_FORMS': '1000',
+            'items-0-material': material.pk,
+            'items-0-quantity': '100',
+            'items-0-notes': 'For foundation concrete',
         }
-        
+
         response = engineer_client.post(reverse('materials:request_create'), request_data, follow=True)
         assert response.status_code == 200
         
-        # Verify request was created
+        # Verify request was created, with its item (submitted via the items formset above)
         from materials.models import MaterialRequest
         material_request = MaterialRequest.objects.get(notes='Materials needed for foundation work')
         assert material_request.status == MaterialRequestStatus.PENDING
-        
-        # Add material items to request
-        from materials.models import MaterialRequestItem
-        MaterialRequestItem.objects.create(
-            request=material_request,
-            material=material,
-            quantity=Decimal('100'),
-            notes='For foundation concrete'
-        )
-        
+        assert material_request.items.filter(material=material).exists()
+
         # Director approves request
         response = director_client.get(reverse('materials:request_detail', kwargs={'pk': material_request.pk}))
         assert response.status_code == 200
@@ -375,6 +376,7 @@ class TestPersonnelManagementWorkflow:
         # Create personnel
         from personnel.models import Personnel
         personnel = Personnel.objects.create(
+            cabinet=site.cabinet,
             first_name='John',
             last_name='Worker',
             default_daily_rate=Decimal('150.00')
@@ -407,18 +409,18 @@ class TestPersonnelManagementWorkflow:
 class TestInternationalizationWorkflow:
     """Test internationalization workflow."""
     
-    def test_language_switching_workflow(self, client):
+    def test_language_switching_workflow(self, authenticated_client):
         """Test language switching functionality."""
         # Test default language (French)
-        response = client.get(reverse('home'))
+        response = authenticated_client.get(reverse('home'))
         assert response.status_code == 200
-        
+
         # Switch to English
-        response = client.post(reverse('set_language'), {'language': 'en'}, follow=True)
+        response = authenticated_client.post(reverse('set_language'), {'language': 'en'}, follow=True)
         assert response.status_code == 200
-        
+
         # Switch back to French
-        response = client.post(reverse('set_language'), {'language': 'fr'}, follow=True)
+        response = authenticated_client.post(reverse('set_language'), {'language': 'fr'}, follow=True)
         assert response.status_code == 200
 
 
@@ -435,11 +437,10 @@ class TestDashboardWorkflow:
         response = director_client.get(reverse('home'))
         assert response.status_code == 200
         
-        # Verify dashboard contains expected data
-        assert 'sites' in response.context
+        # Verify dashboard contains expected data (core/views.py::HomeView)
+        assert 'recent_sites' in response.context
         assert 'recent_expenses' in response.context
-        assert 'material_requests' in response.context
-        assert 'invoices' in response.context
+        assert 'pending_expenses' in response.context
 
 
 @pytest.mark.e2e
@@ -448,15 +449,25 @@ class TestDashboardWorkflow:
 class TestPerformanceWorkflow:
     """Test application performance under load."""
     
-    def test_multiple_concurrent_requests(self, authenticated_client, site):
-        """Test handling multiple concurrent requests."""
+    @pytest.mark.django_db(transaction=True)
+    def test_multiple_concurrent_requests(self, director_client, site):
+        """Test handling multiple concurrent requests.
+
+        Needs transaction=True: worker threads open their own DB connections,
+        which can't see rows from the default django_db fixture's uncommitted
+        atomic() wrapper — only a real commit (transactional_db) is visible
+        across threads/connections. Needs director_client specifically:
+        authenticated_client's user has no UserCabinetRole, so
+        CabinetAccessMixin would 404 it against any site regardless of
+        threading.
+        """
         import threading
         import time
-        
+
         results = []
-        
+
         def make_request():
-            response = authenticated_client.get(reverse('projects:site_detail', kwargs={'pk': site.pk}))
+            response = director_client.get(reverse('projects:site_detail', kwargs={'unique_id': site.unique_id}))
             results.append(response.status_code)
         
         # Create multiple threads to simulate concurrent requests
