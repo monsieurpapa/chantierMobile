@@ -205,3 +205,42 @@ Key routing rules:
 | `CLOUDFARE_R2_BUCKET_URL` | `https://<account-id>.r2.cloudflarestorage.com` |
 | `EMAIL_HOST_USER` | SMTP user (optional) |
 | `EMAIL_HOST_PASSWORD` | SMTP password (optional) |
+
+## Secondary Deploy Target: Google Cloud
+
+Added alongside Railway (Railway stays primary/auto-deploy; GCP is deployed manually via the script below). Scripts live in `deploy/gcp/`.
+
+- **Platform:** Cloud Run (web) + Compute Engine e2-micro VM (Celery worker + beat)
+- **Database:** Cloud SQL for PostgreSQL (`db-f1-micro`), connected via the built-in Cloud Run ↔ Cloud SQL unix-socket integration (no VPC connector needed)
+- **Redis broker:** Upstash (external, free tier) — chosen over Memorystore because Memorystore requires a Serverless VPC Access connector (~$8-10/mo extra) just to reach it from Cloud Run/Compute Engine, which isn't worth it for a Celery broker at this scale
+- **Media storage:** same Cloudflare R2 bucket/credentials as Railway (reuse, don't duplicate)
+- **Static files:** Whitenoise, baked into the container at `collectstatic` time — no GCS bucket needed
+
+### Deploying
+
+```bash
+export PROJECT_ID=your-gcp-project-id
+export SQL_DB_PASSWORD=...        # new strong password for the Cloud SQL user
+export SECRET_KEY=...             # generate a strong random string (different from Railway's)
+export REDIS_URL=rediss://...     # Upstash connection string
+export CLOUDFARE_R2_TOKEN_NAME=...
+export CLOUDFARE_API_TOKEN=...
+export CLOUDFARE_R2_BUCKET_NAME=...
+export CLOUDFARE_R2_BUCKET_URL=...
+
+bash deploy/gcp/deploy.sh
+```
+
+The script is idempotent for the Cloud SQL instance (skips creation if it already exists) and re-runs `gcloud run deploy`/updates the worker VM's metadata + restarts it on subsequent runs — safe to re-run for redeploys.
+
+### One-time prerequisites (a human must do these)
+
+1. Create a GCP project and enable billing (console.cloud.google.com)
+2. `gcloud auth login` (interactive — run it yourself, Claude can't complete an OAuth flow)
+3. Create a free Upstash Redis database at upstash.com, copy its `rediss://` URL
+4. Reuse the existing Cloudflare R2 bucket/token from the Railway deploy, or create a new one
+
+### Known limitations of this setup
+
+- `min-instances`/`max-instances` are pinned to 1 on the Cloud Run service. The Dockerfile runs `migrate` on every container boot (matches the Railway/Render pattern); running that against more than one concurrent instance risks racing migrations. Raise `max-instances` only after moving `migrate` out of the boot command (e.g. a separate `gcloud run jobs execute` step in CI).
+- The Celery worker VM is a single e2-micro instance with no redundancy — acceptable for the current low-volume stage (matches the WebSocket/PWA TODOS.md items gated on "5-10 paying directors"), revisit if that changes.
