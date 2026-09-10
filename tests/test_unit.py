@@ -81,6 +81,7 @@ class TestForms:
             'site': site.pk,
             'category': expense_category.pk,
             'amount': '1000.00',
+            'expense_date': date.today(),
             'description': 'Valid expense'
         }
         form = ExpenseForm(data=form_data)
@@ -91,13 +92,14 @@ class TestForms:
         form = ExpenseForm(data=form_data)
         assert not form.is_valid()
     
-    def test_budget_form_date_validation(self):
+    @pytest.mark.django_db
+    def test_budget_form_date_validation(self, site):
         """Test BudgetForm date validation."""
         from finance.forms import BudgetForm
-        
+
         # Invalid date range
         form_data = {
-            'site': 1,  # Mock site ID
+            'site': site.pk,
             'total_amount': '10000.00',
             'start_date': date(2024, 1, 15),
             'end_date': date(2024, 1, 10)  # Before start date
@@ -115,7 +117,7 @@ class TestViews:
         """Test home view context data."""
         response = authenticated_client.get(reverse('home'))
         assert response.status_code == 200
-        assert 'sites' in response.context
+        assert 'recent_sites' in response.context
     
     def test_login_view_redirect(self, authenticated_client):
         """Test login view redirects authenticated users."""

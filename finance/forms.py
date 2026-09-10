@@ -61,5 +61,5 @@ class BudgetForm(forms.ModelForm):
         end_date = cleaned_data.get('end_date')
 
         if start_date and end_date and end_date <= start_date:
-            raise forms.ValidationError(ValidationMessages.END_DATE_AFTER_START)
+            raise forms.ValidationError({'end_date': ValidationMessages.END_DATE_AFTER_START})
         return cleaned_data
