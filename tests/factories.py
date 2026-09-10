@@ -3,8 +3,11 @@ Factory classes for creating test data using Factory Boy.
 """
 
 import factory
+import random
+import uuid
 from decimal import Decimal
 from datetime import date, timedelta
+from django.conf import settings
 from django.utils import timezone
 
 from accounts.models import Cabinet, UserCabinetRole
@@ -18,9 +21,13 @@ class UserFactory(factory.django.DjangoModelFactory):
     """Factory for creating User objects."""
     
     class Meta:
-        model = 'auth.User'
+        model = settings.AUTH_USER_MODEL
     
-    username = factory.Sequence(lambda n: f"user{n}")
+    # uuid4 suffix, not a bare Sequence counter: factory_boy's Sequence is a
+    # small monotonic int that collides across separate pytest processes /
+    # threaded tests hitting the DB directly (bypassing per-test rollback),
+    # both of which happen in this suite (test_performance.py in particular).
+    username = factory.LazyFunction(lambda: f"user_{uuid.uuid4().hex[:12]}")
     email = factory.LazyAttribute(lambda obj: f"{obj.username}@example.com")
     first_name = factory.Faker('first_name')
     last_name = factory.Faker('last_name')
@@ -81,7 +88,7 @@ class SiteFactory(factory.django.DjangoModelFactory):
     status = SiteStatus.PLANNING
     start_date = factory.LazyFunction(date.today)
     expected_end_date = factory.LazyAttribute(
-        lambda obj: obj.start_date + timedelta(days=factory.Faker('random_int', min=30, max=365).generate())
+        lambda obj: obj.start_date + timedelta(days=random.randint(30, 365))
     )
     cabinet = factory.SubFactory(CabinetFactory)
     created_at = factory.LazyFunction(timezone.now)
@@ -97,7 +104,7 @@ class ProjectPhaseFactory(factory.django.DjangoModelFactory):
     name = factory.Faker('sentence', nb_words=2)
     start_date = factory.LazyFunction(date.today)
     end_date = factory.LazyAttribute(
-        lambda obj: obj.start_date + timedelta(days=factory.Faker('random_int', min=7, max=90).generate())
+        lambda obj: obj.start_date + timedelta(days=random.randint(7, 90))
     )
     created_at = factory.LazyFunction(timezone.now)
 
@@ -135,6 +142,7 @@ class ExpenseFactory(factory.django.DjangoModelFactory):
     requester = factory.SubFactory(UserFactory)
     category = factory.SubFactory(ExpenseCategoryFactory)
     amount = factory.Faker('pydecimal', left_digits=4, right_digits=2, positive=True)
+    expense_date = factory.LazyFunction(date.today)
     description = factory.Faker('paragraph', nb_sentences=2)
     status = ExpenseStatus.PENDING
     receipt_image = factory.django.ImageField()
@@ -152,7 +160,7 @@ class BudgetFactory(factory.django.DjangoModelFactory):
     total_amount = factory.Faker('pydecimal', left_digits=5, right_digits=2, positive=True)
     start_date = factory.LazyFunction(date.today)
     end_date = factory.LazyAttribute(
-        lambda obj: obj.start_date + timedelta(days=factory.Faker('random_int', min=30, max=365).generate())
+        lambda obj: obj.start_date + timedelta(days=random.randint(30, 365))
     )
     created_at = factory.LazyFunction(timezone.now)
 
@@ -221,7 +229,7 @@ class SiteAssignmentFactory(factory.django.DjangoModelFactory):
     role = factory.Faker('job')
     start_date = factory.LazyFunction(date.today)
     end_date = factory.LazyAttribute(
-        lambda obj: obj.start_date + timedelta(days=factory.Faker('random_int', min=30, max=365).generate())
+        lambda obj: obj.start_date + timedelta(days=random.randint(30, 365))
     )
     daily_rate = factory.Faker('pydecimal', left_digits=3, right_digits=2, positive=True)
     created_at = factory.LazyFunction(timezone.now)
@@ -264,7 +272,7 @@ class InvoiceFactory(factory.django.DjangoModelFactory):
     amount = factory.Faker('pydecimal', left_digits=4, right_digits=2, positive=True)
     issued_date = factory.LazyFunction(date.today)
     due_date = factory.LazyAttribute(
-        lambda obj: obj.issued_date + timedelta(days=factory.Faker('random_int', min=15, max=60).generate())
+        lambda obj: obj.issued_date + timedelta(days=random.randint(15, 60))
     )
     status = InvoiceStatus.DRAFT
     created_at = factory.LazyFunction(timezone.now)

@@ -24,6 +24,9 @@ class ExpenseListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, L
     header_subtitle = _("Suivez et approuvez les dépenses du projet")
     cabinet_lookup_field = 'site__cabinet'
 
+    def get_queryset(self):
+        return super().get_queryset().select_related('site', 'category', 'requester')
+
     def get_header_actions(self):
         return [{
             'label': _("Soumettre une dépense"),
