@@ -55,7 +55,30 @@ class Invoice(BaseModel):
                     raise ValidationError({
                         'status': f'Cannot transition invoice from {original.status} to {self.status}.'
                     })
-    
+
+    def check_and_mark_paid(self, changed_by=None):
+        """Auto-transition SENT/OVERDUE → PAID once total payments cover the invoice amount.
+
+        Called from Payment.save() so this fires regardless of entry point
+        (view, admin, shell, management command) — not just the payment form.
+        """
+        if self.status not in [InvoiceStatus.SENT, InvoiceStatus.OVERDUE]:
+            return
+        total_paid = self.payments.aggregate(total=models.Sum('amount'))['total'] or 0
+        if total_paid >= self.amount:
+            from core.models import StatusChangeLog
+            old_status = self.status
+            self.status = InvoiceStatus.PAID
+            self.full_clean()
+            self.save()
+            StatusChangeLog.log(
+                self,
+                changed_by=changed_by,
+                old_status=old_status,
+                new_status=InvoiceStatus.PAID,
+                note='Auto-marked PAID — full payment received.',
+            )
+
     def __str__(self):
         return f"Invoice {self.invoice_number} ({self.status})"
 
@@ -65,6 +88,12 @@ class Payment(BaseModel):
     payment_date = models.DateField()
     method = models.CharField(max_length=50, choices=PaymentMethod.choices)
     reference = models.CharField(max_length=100, blank=True, help_text=_("Transaction ID or Check Number"))
-    
+
+    def save(self, *args, **kwargs):
+        is_new = self._state.adding
+        super().save(*args, **kwargs)
+        if is_new:
+            self.invoice.check_and_mark_paid()
+
     def __str__(self):
         return f"Payment of {self.amount} for {self.invoice.invoice_number}"

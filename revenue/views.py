@@ -284,25 +284,8 @@ class PaymentCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixi
         return form
 
     def form_valid(self, form):
-        from core.models import StatusChangeLog
-        response = super().form_valid(form)
-        # Auto-mark invoice as PAID when total payments cover the full amount.
-        # Only transitions SENT/OVERDUE → PAID (valid per state machine).
-        invoice = self.object.invoice
-        total_paid = invoice.payments.aggregate(total=Sum('amount'))['total'] or 0
-        if total_paid >= invoice.amount and invoice.status in [InvoiceStatus.SENT, InvoiceStatus.OVERDUE]:
-            old_status = invoice.status
-            invoice.status = InvoiceStatus.PAID
-            invoice.full_clean()
-            invoice.save()
-            StatusChangeLog.log(
-                invoice,
-                changed_by=self.request.user,
-                old_status=old_status,
-                new_status=InvoiceStatus.PAID,
-                note='Auto-marked PAID — full payment received.',
-            )
-        return response
+        # Payment.save() auto-marks the invoice PAID once fully covered.
+        return super().form_valid(form)
 
     def get_success_url(self):
         messages.success(self.request, _("Paiement enregistré avec succès."))
