@@ -220,12 +220,18 @@ def sample_image_file():
 
 @pytest.fixture
 def mock_file_upload():
-    """Mock file upload for testing."""
+    """Mock image upload for testing — used against ImageField fields
+    (Expense.receipt_image, Cabinet.logo), which run Pillow validation
+    and reject non-image content."""
+    import io
+    from PIL import Image
     from django.core.files.uploadedfile import SimpleUploadedFile
+    buffer = io.BytesIO()
+    Image.new('RGB', (1, 1), color='white').save(buffer, format='PNG')
     return SimpleUploadedFile(
-        "test_file.txt",
-        b"file content",
-        content_type="text/plain"
+        "test_file.png",
+        buffer.getvalue(),
+        content_type="image/png"
     )
 
 
