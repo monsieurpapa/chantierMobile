@@ -114,8 +114,8 @@
               <div class="settings mb-3">
                 <div class="card alert p-0 shadow-none bg-transparent light" role="alert">
                   <div class="card-body text-left">
-                    <!-- <img src="{% static 'falcon/assets/img/icons/spot-illustrations/navbar-vertical.png' %}" alt="" width="80" /> -->
-                    <img src="{% static 'falcon/assets/img/logos/cran/png/logo-with-grey.png' %}" alt="" width="150" />
+                    <!-- <img src="{% static 'assets/img/icons/spot-illustrations/navbar-vertical.png' %}" alt="" width="80" /> -->
+                    <img src="{% static 'assets/img/logo.png' %}" alt="" width="150" />
                   </div>                                 
                 </div>
               </div>
@@ -126,7 +126,7 @@
           <nav class="navbar navbar-light navbar-glass navbar-top navbar-expand">
             <button class="btn navbar-toggler-humburger-icon navbar-toggler me-1 me-sm-3" type="button" data-bs-toggle="collapse" data-bs-target="#navbarVerticalCollapse" aria-controls="navbarVerticalCollapse" aria-expanded="false" aria-label="Toggle Navigation"><span class="navbar-toggle-icon"><span class="toggle-line"></span></span></button>
             <a class="navbar-brand me-1 me-sm-3" href="/">
-              <div class="d-flex align-items-center py-3"><img class="me-2" src="{% static 'falcon/assets/img/icons/cmc-logo.png' %}" alt="" width="100" />
+              <div class="d-flex align-items-center py-3"><img class="me-2" src="{% static 'assets/img/icons/cmc-logo.png' %}" alt="" width="100" />
                 <!-- <span class="font-sans-serif">falcon</span> -->
               </div>
             </a>
@@ -178,7 +178,7 @@
                     {% if user.avatar %}
                     <img class="rounded-circle" src="{{ user.avatar.name | minio_presigned_get_url }}" alt="" />
                     {% else %}                    
-                    <img class="rounded-circle" src="{% static 'falcon/assets/img/team/3-thumb.png' %}" alt="" />
+                    <img class="rounded-circle" src="{% static 'assets/img/team/3-thumb.png' %}" alt="" />
                     {% endif %}  
                   </div>
                 </a>
@@ -203,7 +203,7 @@
             <div class="col-md-6 col-xxl-4">
               <div class="card h-md-100 ecommerce-card-min-width">
               <!-- <div class="card overflow-hidden" style="min-width: 12rem"> -->
-                <div class="bg-holder bg-card" style="background-image:url({% static 'falcon/assets/img/icons/spot-illustrations/corner-1.png' %});">
+                <div class="bg-holder bg-card" style="background-image:url({% static 'assets/img/icons/spot-illustrations/corner-1.png' %});">
                 </div>                
                   <div class="card-header pb-0 position-relative">
                     <h5 class="mb-0 text-nowrap py-2 py-xl-0">
@@ -230,7 +230,7 @@
             </div>
             <div class="col-md-6 col-xxl-4">
               <div class="card h-md-100 ecommerce-card-min-width">                
-                  <div class="bg-holder bg-card" style="background-image:url({% static 'falcon/assets/img/icons/spot-illustrations/corner-3.png'  %});">
+                  <div class="bg-holder bg-card" style="background-image:url({% static 'assets/img/icons/spot-illustrations/corner-3.png'  %});">
                   </div>                
                   <div class="card-header pb-0 position-relative">
                     <h5 class="mb-0 text-nowrap py-2 py-xl-0">
@@ -259,7 +259,7 @@
             </div>  
             <div class="col-md-6 col-xxl-4">
               <div class="card h-md-100 ecommerce-card-min-width">
-                <div class="bg-holder bg-card" style="background-image:url({% static 'falcon/assets/img/icons/spot-illustrations/corner-2.png' %});">
+                <div class="bg-holder bg-card" style="background-image:url({% static 'assets/img/icons/spot-illustrations/corner-2.png' %});">
                 </div>
                   <div class="card-header pb-0 position-relative">
                     <h5 class="mb-0 text-nowrap py-2 py-xl-0">
