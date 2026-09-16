@@ -1,24 +1,44 @@
-/* Fix for vertical navigation overlap issue */
-/* Ensures the vertical navbar stays in its designated area without overlapping content */
+/* Fix for vertical navigation overlap and mobile navigation access issues */
+/* Ensures the vertical navbar stays in its designated area without overlapping content,
+   and restores the mobile/tablet hamburger toggle that the theme's own CSS hides. */
 
 .navbar-vertical {
     position: fixed !important;
     left: 0 !important;
-    z-index: 1000 !important;
+    z-index: 1030 !important;
 }
 
-/* Ensure content starts after the navbar at every width — the theme's own
-   responsive collapse (navbar-expand-xl) isn't reliably initializing, so the
-   full vertical nav stays visible and overlapping content below 1200px too. */
-.content {
-    margin-left: 15.625rem !important; /* 250px, matches the expanded navbar width */
+/* Desktop (>=1200px): the sidebar is always docked and visible (Bootstrap's
+   navbar-expand-xl), so push page content over to make room for it. */
+@media (min-width: 1200px) {
+    .navbar-vertical.navbar-expand-xl {
+        width: 15.625rem; /* 250px */
+    }
+
+    .content {
+        margin-left: 15.625rem !important; /* 250px, matches the expanded navbar width */
+    }
 }
 
-.navbar-vertical.navbar-expand-xl {
-    width: 15.625rem; /* 250px */
+/* Below 1200px: Bootstrap collapses the sidebar into a hidden off-canvas drawer
+   by default, so content should use the full width (no forced margin), and the
+   drawer overlays on top of content when opened via the hamburger toggle.
+   The theme's own CSS accidentally hides that toggle at every width because
+   ".navbar-expand .navbar-toggler { display: none }" (theme.min.css) has higher
+   specificity than ".navbar-toggler-humburger-icon { display: flex }", so the
+   button never becomes visible/clickable. Restore it here. */
+@media (max-width: 1199.98px) {
+    .content {
+        margin-left: 0 !important;
+    }
+
+    .navbar-top .navbar-toggler,
+    .navbar-vertical .navbar-toggler {
+        display: flex !important;
+    }
 }
 
-/* When navbar is collapsed */
+/* When navbar is collapsed to icon-only width (desktop) */
 .navbar-vertical-collapsed .navbar-vertical {
     width: 3.125rem; /* 50px */
 }
