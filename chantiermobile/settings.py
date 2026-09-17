@@ -66,6 +66,9 @@ MIDDLEWARE = [
     
     # Allauth
     "allauth.account.middleware.AccountMiddleware",
+
+    # Force a password change for accounts flagged with must_change_password
+    'core.middleware.ForcePasswordChangeMiddleware',
 ]
 
 AUTHENTICATION_BACKENDS = [
