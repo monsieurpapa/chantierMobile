@@ -229,7 +229,7 @@
                 link.classList.add('active');
 
                 // Expand parent collapse if it's a sub-item
-                let parentCollapse = link.closest('.collapse');
+                let parentCollapse = link.closest('ul.collapse'); // scoped to submenu <ul> only — the outer '#navbarVerticalCollapse' div also matches '.collapse', which was wrongly marking it "show" (open) for every top-level active link
                 if (parentCollapse) {
                     parentCollapse.classList.add('show');
                     const toggle = document.querySelector(`[aria-controls="${parentCollapse.id}"]`);
