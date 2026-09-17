@@ -7,6 +7,10 @@ from chantiermobile.constants import UserRoles, ApprovalStatus
 class User(AbstractUser):
     # Extension of standard user
     phone_number = models.CharField(max_length=20, blank=True, null=True)
+    must_change_password = models.BooleanField(
+        default=False,
+        help_text='If true, the user is forced to change their password before using the rest of the app.',
+    )
     
     def __str__(self):
         return self.username
