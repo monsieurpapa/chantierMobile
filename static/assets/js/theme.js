@@ -10084,8 +10084,8 @@ docReady(dropzoneInit);
 docReady(choicesInit);
 docReady(formValidationInit);
 docReady(barChartInit);
-docReady(leafletTopologyInit);
-docReady(leafletActiveUserInit);
+// docReady(leafletTopologyInit); // disabled: unused demo widget, threw ReferenceError (selected_peers_geo_data undefined) on every page
+// docReady(leafletActiveUserInit); // disabled: unused demo widget, threw ReferenceError (node_geo_data undefined) on every page
 docReady(countupInit);
 docReady(copyLink);
 docReady(navbarDarkenOnScroll);
@@ -10129,7 +10129,7 @@ docReady(chartPolar);
 docReady(chartRadar);
 docReady(chartCombo);
 docReady(dropdownMenuInit);
-docReady(audienceChartInit);
+// docReady(audienceChartInit); // disabled: unused demo widget, threw ReferenceError (peer_path_bandwidth_data undefined) on every page
 docReady(sessionByBrowserChartInit);
 docReady(topSessionsChartInit);
 docReady(sessionByCountryChartInit);
