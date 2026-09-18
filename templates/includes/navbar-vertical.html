@@ -145,6 +145,14 @@
                                 </div>
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if on == 'dqe_list' %}active{% endif %}"
+                                href="{% url 'pricing:dqe_list' %}">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-text ps-1">{% trans "DQE" %}</span>
+                                </div>
+                            </a>
+                        </li>
                     </ul>
                 </li>
 
