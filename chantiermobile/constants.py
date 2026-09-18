@@ -68,6 +68,22 @@ class PaymentMethod(models.TextChoices):
     MOBILE_MONEY = 'MOBILE_MONEY', _('Mobile Money')
 
 
+class DevisStatus(models.TextChoices):
+    """Devis (quote/estimate) status choices"""
+    BROUILLON = 'BROUILLON', _('Brouillon')
+    ENVOYE = 'ENVOYE', _('Envoyé au client')
+    ACCEPTE = 'ACCEPTE', _('Accepté')
+    REFUSE = 'REFUSE', _('Refusé')
+    EXPIRE = 'EXPIRE', _('Expiré')
+
+
+class SituationStatus(models.TextChoices):
+    """Situation de travaux (progress billing statement) status choices"""
+    BROUILLON = 'BROUILLON', _('Brouillon')
+    VALIDEE = 'VALIDEE', _('Validée')
+    FACTUREE = 'FACTUREE', _('Facturée')
+
+
 # Form field placeholders and UI constants
 class FormPlaceholders:
     """Centralized placeholder text for form fields"""
@@ -87,6 +103,8 @@ class FormPlaceholders:
     CLIENT_NAME = _('Client Name')
     INVOICE_NUMBER = _('INV-000')
     TRANSACTION_REFERENCE = _('Transaction Reference')
+    DEVIS_NUMBER = _('DEV-000')
+    DESIGNATION = _('Désignation du poste')
     
     # Personnel specific
     ROLE_EXAMPLE = _("e.g. Chef d'équipe")
@@ -156,6 +174,22 @@ class StatusBadgeClasses:
         InvoiceStatus.OVERDUE: 'bg-danger',
         InvoiceStatus.DRAFT: 'bg-warning',
         InvoiceStatus.CANCELLED: 'bg-secondary',
+    }
+
+    # Devis status badge classes
+    DEVIS_STATUS = {
+        DevisStatus.ACCEPTE: 'bg-success',
+        DevisStatus.ENVOYE: 'bg-info',
+        DevisStatus.REFUSE: 'bg-danger',
+        DevisStatus.EXPIRE: 'bg-secondary',
+        DevisStatus.BROUILLON: 'bg-warning',
+    }
+
+    # Situation de travaux status badge classes
+    SITUATION_STATUS = {
+        SituationStatus.FACTUREE: 'bg-success',
+        SituationStatus.VALIDEE: 'bg-info',
+        SituationStatus.BROUILLON: 'bg-warning',
     }
 
 
@@ -234,7 +268,9 @@ __all__ = [
     'SiteStatus',
     'InvoiceStatus',
     'PaymentMethod',
-    
+    'DevisStatus',
+    'SituationStatus',
+
     # Configuration classes
     'FormPlaceholders',
     'FormHelpTexts',
