@@ -1,0 +1,88 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n rbac_tags %}
+
+{% block title %}{% trans "DQE" %} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    <!-- vertical nav -->
+    {% include 'includes/navbar-vertical.html' with on="dqe_list" %}
+    <!-- /vertical nav -->
+
+    <div class="content">
+        <!-- navbar-top -->
+        {% include 'includes/navbar-top.html' %}
+        <!-- /navbar-top -->
+
+        <!-- Main Content -->
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            <div class="card mb-3">
+                <div class="card-body p-0">
+                    <div class="table-responsive scrollbar">
+                        <table class="table table-sm table-striped fs--1 mb-0 overflow-hidden">
+                            <thead class="bg-200 text-900">
+                                <tr>
+                                    <th class="sort pe-1 align-middle white-space-nowrap">{% trans "Référence" %}</th>
+                                    <th class="sort pe-1 align-middle white-space-nowrap">{% trans "Intitulé" %}</th>
+                                    <th class="sort pe-1 align-middle white-space-nowrap">{% trans "Chantier" %}</th>
+                                    <th class="sort pe-1 align-middle white-space-nowrap text-center">{% trans "Lignes" %}</th>
+                                    <th class="sort pe-1 align-middle white-space-nowrap text-end">{% trans "Montant total" %}</th>
+                                    <th class="sort pe-1 align-middle white-space-nowrap">{% trans "Statut" %}</th>
+                                    <th class="no-sort pe-1 align-middle data-table-row-action text-end">{% trans "Actions" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody class="list">
+                                {% for dqe in dqes %}
+                                <tr class="btn-reveal-trigger">
+                                    <td class="align-middle white-space-nowrap">
+                                        <a href="{% url 'pricing:dqe_detail' dqe.pk %}"><strong>{{ dqe.reference }}</strong></a>
+                                    </td>
+                                    <td class="align-middle white-space-nowrap">{{ dqe.title }}</td>
+                                    <td class="align-middle white-space-nowrap">
+                                        {% if dqe.site %}{{ dqe.site.name }}{% else %}<span class="text-500">{% trans "Non assigné" %}</span>{% endif %}
+                                    </td>
+                                    <td class="align-middle white-space-nowrap text-center">
+                                        <span class="badge bg-info">{{ dqe.total_lines }}</span>
+                                    </td>
+                                    <td class="align-middle white-space-nowrap text-end fw-bold text-primary">{{ dqe.total_amount|floatformat:2 }}</td>
+                                    <td class="align-middle white-space-nowrap">
+                                        {% if dqe.status == 'VALIDATED' %}
+                                        <span class="badge rounded-pill badge-subtle-success">{{ dqe.get_status_display }}</span>
+                                        {% elif dqe.status == 'ARCHIVED' %}
+                                        <span class="badge rounded-pill badge-subtle-secondary">{{ dqe.get_status_display }}</span>
+                                        {% else %}
+                                        <span class="badge rounded-pill badge-subtle-warning">{{ dqe.get_status_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="align-middle white-space-nowrap text-end">
+                                        {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER' %}
+                                        <a class="btn btn-link text-600 btn-sm" href="{% url 'pricing:dqe_update' dqe.pk %}">
+                                            <span class="fas fa-edit"></span>
+                                        </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center py-5">
+                                        <span class="fas fa-file-invoice fa-2x text-300 d-block mb-2"></span>
+                                        <p class="text-600 mb-2">{% trans "Aucun DQE pour le moment." %}</p>
+                                        <a href="{% url 'pricing:dqe_create' %}" class="btn btn-falcon-primary btn-sm">
+                                            <span class="fas fa-plus me-1"></span>{% trans "Créer un DQE" %}
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}
