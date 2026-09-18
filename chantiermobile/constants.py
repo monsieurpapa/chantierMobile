@@ -77,6 +77,13 @@ class PriceItemType(models.TextChoices):
     WORK_ITEM = 'WORK_ITEM', _('Ouvrage (composite)')
 
 
+class DQEStatus(models.TextChoices):
+    """DQE (Détail Quantitatif Estimatif) status choices"""
+    DRAFT = 'DRAFT', _('Brouillon')
+    VALIDATED = 'VALIDATED', _('Validé')
+    ARCHIVED = 'ARCHIVED', _('Archivé')
+
+
 # Form field placeholders and UI constants
 class FormPlaceholders:
     """Centralized placeholder text for form fields"""
@@ -244,6 +251,7 @@ __all__ = [
     'InvoiceStatus',
     'PaymentMethod',
     'PriceItemType',
+    'DQEStatus',
 
     # Configuration classes
     'FormPlaceholders',
