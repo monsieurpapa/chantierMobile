@@ -138,10 +138,26 @@
                     </a>
                     <ul class="nav collapse" id="revenue">
                         <li class="nav-item">
+                            <a class="nav-link {% if on == 'devis_list' %}active{% endif %}"
+                                href="{% url 'revenue:devis_list' %}">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-text ps-1">{% trans "Devis" %}</span>
+                                </div>
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link {% if on == 'contract_list' %}active{% endif %}"
                                 href="{% url 'revenue:contract_list' %}">
                                 <div class="d-flex align-items-center">
                                     <span class="nav-link-text ps-1">{% trans "Client Contracts" %}</span>
+                                </div>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if on == 'situation_list' %}active{% endif %}"
+                                href="{% url 'revenue:situation_list' %}">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-text ps-1">{% trans "Situations de travaux" %}</span>
                                 </div>
                             </a>
                         </li>

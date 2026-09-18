@@ -1,0 +1,112 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Situation de travaux" %} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    <!-- vertical nav -->
+    {% include 'includes/navbar-vertical.html' with on="situation_list" %}
+    <!-- /vertical nav -->
+
+    <div class="content">
+        <!-- navbar-top -->
+        {% include 'includes/navbar-top.html' %}
+        <!-- /navbar-top -->
+
+        <!-- Main Content -->
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+            <div class="card mb-3 border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <form method="post" id="situation-form">
+                        {% csrf_token %}
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                        {% endif %}
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold" for="{{ form.contract.id_for_label }}">{% trans "Contrat" %}</label>
+                                {{ form.contract }}
+                                {% if form.contract.errors %}<div class="text-danger fs--2 mt-1">{{ form.contract.errors }}</div>{% endif %}
+                                <div class="fs--2 text-600 mt-1">{% trans "Choisissez le contrat pour charger ses lignes de devis ci-dessous." %}</div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold" for="{{ form.numero.id_for_label }}">{% trans "N° de situation" %}</label>
+                                {{ form.numero }}
+                                {% if form.numero.errors %}<div class="text-danger fs--2 mt-1">{{ form.numero.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold" for="{{ form.period_end_date.id_for_label }}">{% trans "Arrêtée au" %}</label>
+                                {{ form.period_end_date }}
+                                {% if form.period_end_date.errors %}<div class="text-danger fs--2 mt-1">{{ form.period_end_date.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <h6 class="mb-3"><i class="fas fa-percentage me-2 text-warning"></i>{% trans "Avancement cumulé par ligne de devis" %}</h6>
+                            <div id="lines-container">
+                                {{ lines_formset.management_form }}
+                                {% if lines_formset.non_form_errors %}
+                                <div class="alert alert-danger">{{ lines_formset.non_form_errors }}</div>
+                                {% endif %}
+                                {% for lform in lines_formset %}
+                                <div class="situation-line p-3 border rounded-3 border-200 mb-2">
+                                    <div class="row g-2 align-items-end">
+                                        <div class="col-md-7">
+                                            <label class="form-label fs--1 fw-semibold">{% trans "Ligne de devis" %}</label>
+                                            {{ lform.devis_line }}
+                                            {% if lform.devis_line.errors %}<div class="text-danger fs--2 mt-1">{{ lform.devis_line.errors }}</div>{% endif %}
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label fs--1 fw-semibold">{% trans "% cumulé" %}</label>
+                                            {{ lform.cumulative_percentage }}
+                                            {% if lform.cumulative_percentage.errors %}<div class="text-danger fs--2 mt-1">{{ lform.cumulative_percentage.errors }}</div>{% endif %}
+                                        </div>
+                                        <div class="col-md-2 text-end">
+                                            {% if lform.instance.pk %}<div class="form-check">{{ lform.DELETE }}<label class="form-check-label fs--2">{% trans "Suppr." %}</label></div>{% endif %}
+                                        </div>
+                                    </div>
+                                    {{ lform.id }}
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold" for="{{ form.notes.id_for_label }}">{% trans "Notes" %}</label>
+                            {{ form.notes }}
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="javascript:history.back()" class="btn btn-outline-secondary">{% trans "Annuler" %}</a>
+                            <button type="submit" class="btn btn-primary">{% trans "Enregistrer" %}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('#situation-form input, #situation-form select, #situation-form textarea').forEach(function (input) {
+        if (input.type === 'checkbox' || input.type === 'hidden') return;
+        if (input.tagName === 'SELECT') {
+            input.classList.add('form-select');
+        } else if (input.tagName === 'TEXTAREA') {
+            input.classList.add('form-control');
+            if (!input.rows) input.rows = 3;
+        } else {
+            input.classList.add('form-control');
+        }
+    });
+});
+</script>
+{% endblock %}
