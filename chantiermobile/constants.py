@@ -68,6 +68,15 @@ class PaymentMethod(models.TextChoices):
     MOBILE_MONEY = 'MOBILE_MONEY', _('Mobile Money')
 
 
+class PriceItemType(models.TextChoices):
+    """Category of a price library item (Bibliothèque de Prix)"""
+    LABOR = 'LABOR', _("Main d'œuvre")
+    MATERIAL = 'MATERIAL', _('Matériau')
+    EQUIPMENT = 'EQUIPMENT', _('Matériel')
+    SERVICE = 'SERVICE', _('Prestation')
+    WORK_ITEM = 'WORK_ITEM', _('Ouvrage (composite)')
+
+
 # Form field placeholders and UI constants
 class FormPlaceholders:
     """Centralized placeholder text for form fields"""
@@ -234,7 +243,8 @@ __all__ = [
     'SiteStatus',
     'InvoiceStatus',
     'PaymentMethod',
-    
+    'PriceItemType',
+
     # Configuration classes
     'FormPlaceholders',
     'FormHelpTexts',
