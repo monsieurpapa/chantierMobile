@@ -1,0 +1,64 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n rbac_tags %}
+
+{% block title %}{{ price_item.designation }} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    <!-- vertical nav -->
+    {% include 'includes/navbar-vertical.html' with on="price_item_list" %}
+    <!-- /vertical nav -->
+
+    <div class="content">
+        <!-- navbar-top -->
+        {% include 'includes/navbar-top.html' %}
+        <!-- /navbar-top -->
+
+        <!-- Main Content -->
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            <div class="card mb-3">
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-3">{% trans "Code" %}</dt>
+                        <dd class="col-sm-9">{{ price_item.code }}</dd>
+
+                        <dt class="col-sm-3">{% trans "Type" %}</dt>
+                        <dd class="col-sm-9">{{ price_item.get_item_type_display }}</dd>
+
+                        <dt class="col-sm-3">{% trans "Unité" %}</dt>
+                        <dd class="col-sm-9">{{ price_item.unit }}</dd>
+
+                        <dt class="col-sm-3">{% trans "Prix unitaire" %}</dt>
+                        <dd class="col-sm-9 fw-bold text-primary">{{ price_item.unit_price|floatformat:2 }}</dd>
+
+                        <dt class="col-sm-3">{% trans "Statut" %}</dt>
+                        <dd class="col-sm-9">
+                            {% if price_item.is_active %}
+                            <span class="badge rounded-pill badge-subtle-success">{% trans "Actif" %}</span>
+                            {% else %}
+                            <span class="badge rounded-pill badge-subtle-secondary">{% trans "Inactif" %}</span>
+                            {% endif %}
+                        </dd>
+
+                        {% if price_item.notes %}
+                        <dt class="col-sm-3">{% trans "Notes" %}</dt>
+                        <dd class="col-sm-9">{{ price_item.notes|linebreaksbr }}</dd>
+                        {% endif %}
+                    </dl>
+                </div>
+                {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER' %}
+                <div class="card-footer text-end">
+                    <a href="{% url 'pricing:price_item_update' price_item.pk %}" class="btn btn-falcon-default btn-sm">
+                        <span class="fas fa-edit me-1"></span>{% trans "Modifier" %}
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}
