@@ -1,0 +1,315 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "DQE" %} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    <!-- vertical nav -->
+    {% include 'includes/navbar-vertical.html' with on="dqe_list" %}
+    <!-- /vertical nav -->
+
+    <div class="content">
+        <!-- navbar-top -->
+        {% include 'includes/navbar-top.html' %}
+        <!-- /navbar-top -->
+
+        <!-- Main Content -->
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            <div class="card mb-3 border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <form method="post" id="dqe-form">
+                        {% csrf_token %}
+
+                        <!-- Header fields -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold" for="{{ form.reference.id_for_label }}">{% trans "Référence" %}</label>
+                                {{ form.reference }}
+                                {% if form.reference.errors %}<div class="text-danger fs--2 mt-1">{{ form.reference.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-8">
+                                <label class="form-label fw-semibold" for="{{ form.title.id_for_label }}">{% trans "Intitulé" %}</label>
+                                {{ form.title }}
+                                {% if form.title.errors %}<div class="text-danger fs--2 mt-1">{{ form.title.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold" for="{{ form.site.id_for_label }}">
+                                    <i class="fas fa-map-marker-alt me-1"></i>{% trans "Chantier" %}
+                                </label>
+                                {{ form.site }}
+                                {% if form.site.errors %}<div class="text-danger fs--2 mt-1">{{ form.site.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold" for="{{ form.status.id_for_label }}">{% trans "Statut" %}</label>
+                                {{ form.status }}
+                                {% if form.status.errors %}<div class="text-danger fs--2 mt-1">{{ form.status.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Lines Formset Section -->
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="mb-0"><i class="fas fa-list-ol me-2 text-warning"></i>{% trans "Lignes du DQE" %}</h6>
+                                <span class="badge bg-info" id="item-count">{{ lines_formset|length }} ligne{{ lines_formset|length|pluralize }}</span>
+                            </div>
+
+                            <div id="lines-container">
+                                {% for form in lines_formset %}
+                                <div class="dqe-line p-3 border rounded-3 border-200 mb-2" data-form-index="{{ forloop.counter0 }}">
+                                    {% if form.instance.pk %}{{ form.id }}{% endif %}
+                                    <div class="row g-2 align-items-end">
+                                        <div class="col-md-4">
+                                            <label class="form-label fs--1 fw-semibold">{% trans "Article (bibliothèque de prix)" %}</label>
+                                            {{ form.price_item }}
+                                            {% if form.price_item.errors %}<div class="text-danger fs--2 mt-1">{{ form.price_item.errors }}</div>{% endif %}
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label fs--1 fw-semibold">{% trans "Désignation (optionnel)" %}</label>
+                                            {{ form.designation }}
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label fs--1 fw-semibold">{% trans "Quantité" %}</label>
+                                            <div class="input-group">
+                                                {{ form.quantity }}
+                                                <span class="input-group-text line-unit" id="unit-{{ forloop.counter0 }}">-</span>
+                                            </div>
+                                            {% if form.quantity.errors %}<div class="text-danger fs--2 mt-1">{{ form.quantity.errors }}</div>{% endif %}
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label fs--1 fw-semibold">{% trans "Prix unitaire" %}</label>
+                                            {{ form.unit_price }}
+                                            {% if form.unit_price.errors %}<div class="text-danger fs--2 mt-1">{{ form.unit_price.errors }}</div>{% endif %}
+                                        </div>
+                                        <div class="col-md-1 d-flex align-items-end">
+                                            {% if not forloop.first %}
+                                            <button type="button" class="btn btn-sm btn-outline-danger remove-line" title="{% trans 'Supprimer cette ligne' %}">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center">
+                                        <small class="text-600">{% trans "Montant de la ligne :" %}</small>
+                                        <strong class="text-primary" id="line-total-{{ forloop.counter0 }}">0.00</strong>
+                                    </div>
+                                    {{ form.DELETE }}
+                                </div>
+                                {% endfor %}
+
+                                {{ lines_formset.management_form }}
+
+                                {% if lines_formset.non_form_errors %}
+                                <div class="alert alert-danger">{{ lines_formset.non_form_errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <button type="button" id="add-line-btn" class="btn btn-sm btn-outline-primary mt-3">
+                                <i class="fas fa-plus me-1"></i>{% trans "Ajouter une ligne" %}
+                            </button>
+                        </div>
+
+                        <!-- Summary -->
+                        <div class="p-3 bg-light rounded-3 mb-4">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <p class="fs--1 text-600 mb-1">{% trans "Nombre de lignes :" %}</p>
+                                    <h5 class="mb-0" id="total-lines">{{ lines_formset|length }}</h5>
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="fs--1 text-600 mb-1">{% trans "Montant total estimé :" %}</p>
+                                    <h5 class="mb-0 text-success" id="total-amount">0.00</h5>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold" for="{{ form.notes.id_for_label }}">{% trans "Notes" %}</label>
+                            {{ form.notes }}
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{% url 'pricing:dqe_list' %}" class="btn btn-outline-secondary">{% trans "Annuler" %}</a>
+                            <button type="submit" class="btn btn-primary">{% trans "Enregistrer" %}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const container = document.getElementById('lines-container');
+    const addBtn = document.getElementById('add-line-btn');
+    const totalLinesSpan = document.getElementById('total-lines');
+    const totalAmountSpan = document.getElementById('total-amount');
+    const itemCountBadge = document.getElementById('item-count');
+
+    let priceItemData = {};
+
+    function fetchPriceItemData() {
+        fetch('{% url "pricing:price_items_data" %}', {
+            method: 'GET',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(response => response.json())
+        .then(data => {
+            priceItemData = data;
+            document.querySelectorAll('.dqe-line').forEach(line => calculateLineTotal(line));
+            updateTotalAmount();
+        })
+        .catch(err => console.error('Error fetching price item data:', err));
+    }
+
+    function calculateLineTotal(line) {
+        const idx = line.dataset.formIndex;
+        const qtyInput = line.querySelector('input[name*="quantity"]');
+        const priceInput = line.querySelector('input[name*="unit_price"]');
+        const totalEl = document.getElementById(`line-total-${idx}`);
+        const qty = parseFloat(qtyInput ? qtyInput.value : 0) || 0;
+        const price = parseFloat(priceInput ? priceInput.value : 0) || 0;
+        if (totalEl) totalEl.textContent = (qty * price).toFixed(2);
+    }
+
+    function updateTotalAmount() {
+        let total = 0;
+        document.querySelectorAll('.dqe-line').forEach(line => {
+            const deleteCheckbox = line.querySelector('input[name*="DELETE"]');
+            if (deleteCheckbox && deleteCheckbox.checked) return;
+            const totalEl = line.querySelector('[id^="line-total-"]');
+            total += parseFloat(totalEl ? totalEl.textContent : 0) || 0;
+        });
+        totalAmountSpan.textContent = total.toFixed(2);
+    }
+
+    function onPriceItemChange(select, line) {
+        const idx = line.dataset.formIndex;
+        const priceInput = line.querySelector('input[name*="unit_price"]');
+        const unitSpan = document.getElementById(`unit-${idx}`);
+        const data = priceItemData[select.value];
+        if (data) {
+            if (priceInput && (!priceInput.value || priceInput.dataset.autoFilled !== 'false')) {
+                priceInput.value = data.unit_price.toFixed(2);
+                priceInput.dataset.autoFilled = 'true';
+            }
+            if (unitSpan) unitSpan.textContent = data.unit;
+        }
+        calculateLineTotal(line);
+        updateTotalAmount();
+    }
+
+    function setupLine(line) {
+        const select = line.querySelector('select[name*="price_item"]');
+        const qtyInput = line.querySelector('input[name*="quantity"]');
+        const priceInput = line.querySelector('input[name*="unit_price"]');
+        const removeBtn = line.querySelector('.remove-line');
+
+        if (select) {
+            select.addEventListener('change', function () { onPriceItemChange(this, line); });
+            if (select.value) onPriceItemChange(select, line);
+        }
+        if (qtyInput) qtyInput.addEventListener('input', function () { calculateLineTotal(line); updateTotalAmount(); });
+        if (priceInput) priceInput.addEventListener('input', function () {
+            priceInput.dataset.autoFilled = 'false';
+            calculateLineTotal(line);
+            updateTotalAmount();
+        });
+        if (removeBtn) removeBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            const deleteCheckbox = line.querySelector('input[name*="DELETE"]');
+            if (deleteCheckbox) {
+                deleteCheckbox.checked = true;
+                line.style.opacity = '0.5';
+                line.style.pointerEvents = 'none';
+                updateCounts();
+            }
+        });
+    }
+
+    function updateCounts() {
+        const active = Array.from(container.querySelectorAll('.dqe-line')).filter(l => {
+            const cb = l.querySelector('input[name*="DELETE"]');
+            return !(cb && cb.checked);
+        }).length;
+        totalLinesSpan.textContent = active;
+        itemCountBadge.textContent = active + ' ligne' + (active !== 1 ? 's' : '');
+        updateTotalAmount();
+    }
+
+    addBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        const totalFormsInput = document.querySelector('input[name*="TOTAL_FORMS"]');
+        const currentCount = parseInt(totalFormsInput.value);
+        const newIndex = currentCount;
+
+        let options = '<option value="">-- {% trans "Sélectionner un article" %} --</option>';
+        {% for item in lines_formset.forms.0.fields.price_item.queryset %}
+        options += '<option value="{{ item.pk }}">{{ item.code }} - {{ item.designation }}</option>';
+        {% endfor %}
+
+        const newLine = document.createElement('div');
+        newLine.className = 'dqe-line p-3 border rounded-3 border-200 mb-2';
+        newLine.dataset.formIndex = newIndex;
+        newLine.innerHTML = `
+            <div class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label fs--1 fw-semibold">{% trans "Article (bibliothèque de prix)" %}</label>
+                    <select name="lines-${newIndex}-price_item" class="form-select">${options}</select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fs--1 fw-semibold">{% trans "Désignation (optionnel)" %}</label>
+                    <input type="text" name="lines-${newIndex}-designation" class="form-control">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fs--1 fw-semibold">{% trans "Quantité" %}</label>
+                    <div class="input-group">
+                        <input type="number" name="lines-${newIndex}-quantity" step="0.01" class="form-control">
+                        <span class="input-group-text line-unit" id="unit-${newIndex}">-</span>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fs--1 fw-semibold">{% trans "Prix unitaire" %}</label>
+                    <input type="number" name="lines-${newIndex}-unit_price" step="0.01" class="form-control">
+                </div>
+                <div class="col-md-1 d-flex align-items-end">
+                    <button type="button" class="btn btn-sm btn-outline-danger remove-line" title="{% trans 'Supprimer cette ligne' %}">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center">
+                <small class="text-600">{% trans "Montant de la ligne :" %}</small>
+                <strong class="text-primary" id="line-total-${newIndex}">0.00</strong>
+            </div>
+            <input type="hidden" name="lines-${newIndex}-id" id="id_lines-${newIndex}-id">
+            <input type="hidden" name="lines-${newIndex}-DELETE" id="id_lines-${newIndex}-DELETE">
+        `;
+
+        container.appendChild(newLine);
+        totalFormsInput.value = currentCount + 1;
+        setupLine(newLine);
+        updateCounts();
+    });
+
+    document.querySelectorAll('input, select, textarea').forEach(el => {
+        if (el.type === 'checkbox' || el.type === 'hidden') return;
+        if (el.tagName === 'SELECT') {
+            el.classList.add('form-select');
+        } else {
+            el.classList.add('form-control');
+        }
+    });
+
+    document.querySelectorAll('.dqe-line').forEach(line => setupLine(line));
+    fetchPriceItemData();
+});
+</script>
+{% endblock %}
