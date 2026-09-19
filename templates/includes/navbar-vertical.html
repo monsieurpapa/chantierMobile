@@ -127,6 +127,35 @@
                     </ul>
                 </li>
 
+                <!-- Chiffrage (Pricing / DQE / Devis) -->
+                <li class="nav-item">
+                    <a class="nav-link dropdown-indicator" href="#chiffrage" role="button" data-bs-toggle="collapse"
+                        aria-expanded="false" aria-controls="chiffrage">
+                        <div class="d-flex align-items-center">
+                            <span class="nav-link-icon"><span class="fas fa-calculator fs-1"></span></span>
+                            <span class="nav-link-text ps-1">{% trans "Chiffrage" %}</span>
+                        </div>
+                    </a>
+                    <ul class="nav collapse" id="chiffrage">
+                        <li class="nav-item">
+                            <a class="nav-link {% if on == 'price_item_list' %}active{% endif %}"
+                                href="{% url 'pricing:price_item_list' %}">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-text ps-1">{% trans "Bibliothèque de Prix" %}</span>
+                                </div>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if on == 'dqe_list' %}active{% endif %}"
+                                href="{% url 'pricing:dqe_list' %}">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-text ps-1">{% trans "DQE" %}</span>
+                                </div>
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
                 <!-- Revenue -->
                 <li class="nav-item">
                     <a class="nav-link dropdown-indicator" href="#revenue" role="button" data-bs-toggle="collapse"
