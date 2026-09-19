@@ -1,0 +1,137 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Devis" %} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    <!-- vertical nav -->
+    {% include 'includes/navbar-vertical.html' with on="devis_list" %}
+    <!-- /vertical nav -->
+
+    <div class="content">
+        <!-- navbar-top -->
+        {% include 'includes/navbar-top.html' %}
+        <!-- /navbar-top -->
+
+        <!-- Main Content -->
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+            <div class="card mb-3 border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <form method="post" id="devis-form">
+                        {% csrf_token %}
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                        {% endif %}
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold" for="{{ form.site.id_for_label }}">{% trans "Chantier" %}</label>
+                                {{ form.site }}
+                                {% if form.site.errors %}<div class="text-danger fs--2 mt-1">{{ form.site.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold" for="{{ form.devis_number.id_for_label }}">{% trans "Numéro de devis" %}</label>
+                                {{ form.devis_number }}
+                                {% if form.devis_number.errors %}<div class="text-danger fs--2 mt-1">{{ form.devis_number.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold" for="{{ form.client_name.id_for_label }}">{% trans "Client" %}</label>
+                                {{ form.client_name }}
+                                {% if form.client_name.errors %}<div class="text-danger fs--2 mt-1">{{ form.client_name.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold" for="{{ form.issue_date.id_for_label }}">{% trans "Date d'émission" %}</label>
+                                {{ form.issue_date }}
+                                {% if form.issue_date.errors %}<div class="text-danger fs--2 mt-1">{{ form.issue_date.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold" for="{{ form.validity_date.id_for_label }}">{% trans "Valable jusqu'au" %}</label>
+                                {{ form.validity_date }}
+                                {% if form.validity_date.errors %}<div class="text-danger fs--2 mt-1">{{ form.validity_date.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Lines formset -->
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="mb-0"><i class="fas fa-list-ol me-2 text-warning"></i>{% trans "Lignes du devis" %}</h6>
+                            </div>
+                            <div id="lines-container">
+                                {{ lines_formset.management_form }}
+                                {% if lines_formset.non_form_errors %}
+                                <div class="alert alert-danger">{{ lines_formset.non_form_errors }}</div>
+                                {% endif %}
+                                {% for lform in lines_formset %}
+                                <div class="devis-line p-3 border rounded-3 border-200 mb-2">
+                                    <div class="row g-2 align-items-end">
+                                        <div class="col-md-4">
+                                            <label class="form-label fs--1 fw-semibold">{% trans "Désignation" %}</label>
+                                            {{ lform.designation }}
+                                            {% if lform.designation.errors %}<div class="text-danger fs--2 mt-1">{{ lform.designation.errors }}</div>{% endif %}
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label fs--1 fw-semibold">{% trans "Unité" %}</label>
+                                            {{ lform.unit }}
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label fs--1 fw-semibold">{% trans "Quantité" %}</label>
+                                            {{ lform.quantity }}
+                                            {% if lform.quantity.errors %}<div class="text-danger fs--2 mt-1">{{ lform.quantity.errors }}</div>{% endif %}
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label fs--1 fw-semibold">{% trans "Prix unitaire HT" %}</label>
+                                            {{ lform.unit_price_ht }}
+                                            {% if lform.unit_price_ht.errors %}<div class="text-danger fs--2 mt-1">{{ lform.unit_price_ht.errors }}</div>{% endif %}
+                                        </div>
+                                        <div class="col-md-1">
+                                            <label class="form-label fs--1 fw-semibold">{% trans "Ordre" %}</label>
+                                            {{ lform.order }}
+                                        </div>
+                                        <div class="col-md-1 text-end">
+                                            {% if lform.instance.pk %}<div class="form-check">{{ lform.DELETE }}<label class="form-check-label fs--2">{% trans "Suppr." %}</label></div>{% endif %}
+                                        </div>
+                                    </div>
+                                    {{ lform.id }}
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold" for="{{ form.notes.id_for_label }}">{% trans "Notes" %}</label>
+                            {{ form.notes }}
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="javascript:history.back()" class="btn btn-outline-secondary">{% trans "Annuler" %}</a>
+                            <button type="submit" class="btn btn-primary">{% trans "Enregistrer" %}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('#devis-form input, #devis-form select, #devis-form textarea').forEach(function (input) {
+        if (input.type === 'checkbox' || input.type === 'hidden') return;
+        if (input.tagName === 'SELECT') {
+            input.classList.add('form-select');
+        } else if (input.tagName === 'TEXTAREA') {
+            input.classList.add('form-control');
+            if (!input.rows) input.rows = 3;
+        } else {
+            input.classList.add('form-control');
+        }
+    });
+});
+</script>
+{% endblock %}
