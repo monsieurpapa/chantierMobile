@@ -69,6 +69,17 @@
                     </a>
                 </li>
 
+                <!-- Tasks -->
+                <li class="nav-item">
+                    <a class="nav-link {% if on == 'task_list' %}active{% endif %}"
+                        href="{% url 'tasks:task_list' %}" role="button">
+                        <div class="d-flex align-items-center">
+                            <span class="nav-link-icon"><span class="fas fa-tasks fs-1"></span></span>
+                            <span class="nav-link-text ps-1">{% trans "Tâches" %}</span>
+                        </div>
+                    </a>
+                </li>
+
                 <!-- Finance -->
                 <li class="nav-item">
                     <a class="nav-link dropdown-indicator" href="#finance" role="button" data-bs-toggle="collapse"

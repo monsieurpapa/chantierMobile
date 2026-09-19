@@ -116,6 +116,29 @@ class StockMovementType(models.TextChoices):
     ADJUSTMENT = 'ADJUSTMENT', _('Ajustement')
 
 
+class PersonnelType(models.TextChoices):
+    """Employment relationship of a Personnel record"""
+    EMPLOYE = 'EMPLOYE', _('Employé')
+    TACHERON = 'TACHERON', _('Tâcheron (journalier)')
+    PRESTATAIRE = 'PRESTATAIRE', _('Prestataire (sous-traitant)')
+
+
+class TaskStatus(models.TextChoices):
+    """Task tracking status choices"""
+    A_FAIRE = 'A_FAIRE', _('À faire')
+    EN_COURS = 'EN_COURS', _('En cours')
+    BLOQUEE = 'BLOQUEE', _('Bloquée')
+    TERMINEE = 'TERMINEE', _('Terminée')
+
+
+class TaskPriority(models.TextChoices):
+    """Task priority choices"""
+    BASSE = 'BASSE', _('Basse')
+    NORMALE = 'NORMALE', _('Normale')
+    HAUTE = 'HAUTE', _('Haute')
+    URGENTE = 'URGENTE', _('Urgente')
+
+
 # Form field placeholders and UI constants
 class FormPlaceholders:
     """Centralized placeholder text for form fields"""
@@ -139,6 +162,7 @@ class FormPlaceholders:
     DESIGNATION = _('Désignation du poste')
     PURCHASE_ORDER_NUMBER = _('BC-000')
     SUPPLIER_NAME = _('Nom du fournisseur')
+    TASK_TITLE = _('Titre de la tâche')
     
     # Personnel specific
     ROLE_EXAMPLE = _("e.g. Chef d'équipe")
@@ -235,6 +259,29 @@ class StatusBadgeClasses:
         PurchaseOrderStatus.BROUILLON: 'bg-warning',
     }
 
+    # Task status badge classes
+    TASK_STATUS = {
+        TaskStatus.TERMINEE: 'bg-success',
+        TaskStatus.EN_COURS: 'bg-info',
+        TaskStatus.BLOQUEE: 'bg-danger',
+        TaskStatus.A_FAIRE: 'bg-warning',
+    }
+
+    # Task priority badge classes
+    TASK_PRIORITY = {
+        TaskPriority.URGENTE: 'bg-danger',
+        TaskPriority.HAUTE: 'bg-warning',
+        TaskPriority.NORMALE: 'bg-info',
+        TaskPriority.BASSE: 'bg-secondary',
+    }
+
+    # Personnel type badge classes
+    PERSONNEL_TYPE = {
+        PersonnelType.EMPLOYE: 'bg-primary',
+        PersonnelType.TACHERON: 'bg-warning',
+        PersonnelType.PRESTATAIRE: 'bg-info',
+    }
+
 
 class ValidationMessages:
     """Common validation messages"""
@@ -317,6 +364,9 @@ __all__ = [
     'DQEStatus',
     'PurchaseOrderStatus',
     'StockMovementType',
+    'PersonnelType',
+    'TaskStatus',
+    'TaskPriority',
 
     # Configuration classes
     'FormPlaceholders',

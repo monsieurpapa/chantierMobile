@@ -3,6 +3,7 @@ from django.utils.translation import gettext_lazy as _
 from core.models import BaseModel
 from accounts.models import Cabinet, User
 from projects.models import Site
+from chantiermobile.constants import PersonnelType
 
 class Skill(BaseModel):
     name = models.CharField(max_length=100, verbose_name=_('Skill Name')) # e.g. Maçon, Ferrailleur
@@ -16,14 +17,24 @@ class Personnel(BaseModel):
     user = models.OneToOneField(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='personnel_profile', help_text=_("Link to system user if they have login access"))
     first_name = models.CharField(max_length=100, verbose_name=_('First Name'))
     last_name = models.CharField(max_length=100, verbose_name=_('Last Name'))
+    personnel_type = models.CharField(
+        max_length=20, choices=PersonnelType.choices, default=PersonnelType.EMPLOYE,
+        verbose_name=_('Type'),
+        help_text=_("Employé permanent, tâcheron (journalier) ou prestataire (sous-traitant)"),
+    )
     skills = models.ManyToManyField(Skill, blank=True)
     default_daily_rate = models.DecimalField(max_digits=10, decimal_places=2, help_text=_("Default daily cost"), verbose_name=_('Default Daily Rate'))
-    
+
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
 
     def get_full_name(self):
         return f"{self.first_name} {self.last_name}"
+
+    @property
+    def is_subcontractor(self):
+        """True for Tâcherons and Prestataires — non-payroll workers."""
+        return self.personnel_type in (PersonnelType.TACHERON, PersonnelType.PRESTATAIRE)
 
 class SiteAssignment(BaseModel):
     personnel = models.ForeignKey(Personnel, on_delete=models.CASCADE, related_name='assignments')

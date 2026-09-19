@@ -19,7 +19,16 @@ class PersonnelListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin,
     header_subtitle = _("Gérez le personnel et les affectations sur les chantiers")
 
     def get_queryset(self):
-        return super().get_queryset().select_related('cabinet')
+        qs = super().get_queryset().select_related('cabinet')
+        personnel_type = self.request.GET.get('type')
+        if personnel_type:
+            qs = qs.filter(personnel_type=personnel_type)
+        return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['current_type_filter'] = self.request.GET.get('type', '')
+        return context
 
     def get_header_actions(self):
         from accounts.models import UserCabinetRole
