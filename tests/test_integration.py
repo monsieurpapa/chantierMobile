@@ -265,14 +265,25 @@ class TestDashboardIntegration:
         response = director_client.get(reverse('home'))
         assert response.status_code == 200
 
-        # Verify context contains data HomeView actually exposes (core/views.py::HomeView)
-        assert 'recent_sites' in response.context
-        assert 'recent_expenses' in response.context
-        assert 'pending_expenses' in response.context
+        # Verify context contains data HomeView actually exposes
+        # (core/dashboard.py::build_dashboard_context)
+        assert 'revenue_all' in response.context
+        assert 'expense_all' in response.context
+        assert 'pending_expenses_count' in response.context
 
-        # Verify specific data appears
-        assert setup['site'] in response.context['recent_sites']
-        assert expense in response.context['recent_expenses']
+        # Verify the approved expense is aggregated into spend totals, and
+        # correctly excluded from the "pending approval" KPI since it's
+        # already APPROVED, not PENDING.
+        assert response.context['expense_all'] == Decimal('1000.00')
+        assert response.context['expense_month'] == Decimal('1000.00')
+        assert response.context['pending_expenses_count'] == 0
+
+        # The site itself is reflected in the site-portfolio KPIs.
+        assert response.context['total_sites_count'] >= 1
+
+        # The expense shows up in the recent-activity feed.
+        activity_titles = [item['title'] for item in response.context['activity_items']]
+        assert any('1000' in title for title in activity_titles)
 
 
 @pytest.mark.integration

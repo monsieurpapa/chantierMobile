@@ -320,10 +320,15 @@ class DevisListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, Lis
         if self.request.user.is_superuser:
             active_cabinet = get_session_cabinet(self.request)
             if active_cabinet:
-                return qs.filter(site__cabinet=active_cabinet)
-            return qs
-        user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
-        return qs.filter(site__cabinet__id__in=user_cabinet_ids)
+                qs = qs.filter(site__cabinet=active_cabinet)
+        else:
+            user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+            qs = qs.filter(site__cabinet__id__in=user_cabinet_ids)
+
+        status = self.request.GET.get('status')
+        if status:
+            qs = qs.filter(status=status)
+        return qs
 
 
 class DevisCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, CreateView):

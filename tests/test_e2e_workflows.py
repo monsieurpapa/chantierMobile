@@ -437,10 +437,12 @@ class TestDashboardWorkflow:
         response = director_client.get(reverse('home'))
         assert response.status_code == 200
         
-        # Verify dashboard contains expected data (core/views.py::HomeView)
-        assert 'recent_sites' in response.context
-        assert 'recent_expenses' in response.context
-        assert 'pending_expenses' in response.context
+        # Verify dashboard contains expected data (core/dashboard.py::build_dashboard_context)
+        assert 'revenue_all' in response.context
+        assert 'expense_all' in response.context
+        assert 'pending_expenses_count' in response.context
+        assert 'total_sites_count' in response.context
+        assert response.context['total_sites_count'] >= 1
 
 
 @pytest.mark.e2e

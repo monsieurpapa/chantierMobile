@@ -25,7 +25,11 @@ class ExpenseListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, L
     cabinet_lookup_field = 'site__cabinet'
 
     def get_queryset(self):
-        return super().get_queryset().select_related('site', 'category', 'requester')
+        qs = super().get_queryset().select_related('site', 'category', 'requester')
+        status = self.request.GET.get('status')
+        if status:
+            qs = qs.filter(status=status)
+        return qs
 
     def get_header_actions(self):
         return [{
