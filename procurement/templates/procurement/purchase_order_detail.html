@@ -1,0 +1,164 @@
+{% extends 'falcon_base.html' %}
+{% load i18n rbac_tags %}
+
+{% block title %}{% trans "Bon de commande" %} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    <!-- vertical nav -->
+    {% include 'includes/navbar-vertical.html' with on="purchase_order_list" %}
+    <!-- /vertical nav -->
+
+    <div class="content">
+        <!-- navbar-top -->
+        {% include 'includes/navbar-top.html' %}
+        <!-- /navbar-top -->
+
+        <!-- Main Content -->
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            <div class="row g-3">
+                <div class="col-lg-8 pe-lg-2">
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <div class="row g-0">
+                                <div class="col-sm-6 mb-3">
+                                    <label class="form-label text-600 text-uppercase fs--2 fw-bold">{% trans "Chantier" %}</label>
+                                    <p class="fs-0"><a href="{% url 'projects:site_detail' unique_id=purchase_order.site.unique_id %}">{{ purchase_order.site.name }}</a></p>
+                                </div>
+                                <div class="col-sm-6 mb-3 text-sm-end">
+                                    <label class="form-label text-600 text-uppercase fs--2 fw-bold">{% trans "Fournisseur" %}</label>
+                                    <p class="fs-0 text-900 fw-semi-bold">{{ purchase_order.supplier.name }}</p>
+                                </div>
+                            </div>
+                            <hr class="border-300" />
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label text-600 text-uppercase fs--2 fw-bold">{% trans "Total" %}</label>
+                                    <h3 class="text-primary fw-bold">${{ purchase_order.total_ht|floatformat:2 }}</h3>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label text-600 text-uppercase fs--2 fw-bold">{% trans "Commandé le" %}</label>
+                                    <p class="fs-0">{{ purchase_order.order_date }}</p>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label text-600 text-uppercase fs--2 fw-bold">{% trans "Livraison prévue" %}</label>
+                                    <p class="fs-0">{{ purchase_order.expected_delivery_date|default:"-" }}</p>
+                                </div>
+                            </div>
+                            {% if purchase_order.notes %}
+                            <div class="p-3 bg-light rounded-3">
+                                <h6 class="mb-2"><i class="fas fa-comment me-1"></i>{% trans "Notes" %}</h6>
+                                <p class="mb-0 text-700">{{ purchase_order.notes }}</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">{% trans "Articles commandés" %}</h6>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-striped mb-0 fs--1">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">{% trans "Article" %}</th>
+                                            <th scope="col" class="text-center">{% trans "Commandé" %}</th>
+                                            <th scope="col" class="text-center">{% trans "Reçu" %}</th>
+                                            <th scope="col" class="text-end">{% trans "Prix unitaire" %}</th>
+                                            <th scope="col" class="text-end">{% trans "Total" %}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for line in purchase_order.lines.all %}
+                                        <tr>
+                                            <td>{{ line.stock_item.name }}</td>
+                                            <td class="text-center">{{ line.quantity }} {{ line.stock_item.unit }}</td>
+                                            <td class="text-center">
+                                                <span class="{% if line.quantity_received >= line.quantity %}text-success{% elif line.quantity_received > 0 %}text-info{% endif %}">
+                                                    {{ line.quantity_received }} {{ line.stock_item.unit }}
+                                                </span>
+                                            </td>
+                                            <td class="text-end">${{ line.unit_price|floatformat:2 }}</td>
+                                            <td class="text-end fw-semi-bold">${{ line.line_total|floatformat:2 }}</td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr><td colspan="5" class="text-center py-3 text-500">{% trans "Aucune ligne." %}</td></tr>
+                                        {% endfor %}
+                                    </tbody>
+                                    <tfoot class="border-top bg-light">
+                                        <tr>
+                                            <td colspan="4" class="text-end fw-semibold">{% trans "Total" %}</td>
+                                            <td class="text-end fw-bold text-success">${{ purchase_order.total_ht|floatformat:2 }}</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4 ps-lg-2">
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">{% trans "Statut" %}</h6>
+                        </div>
+                        <div class="card-body">
+                            <span class="badge rounded-pill fs--1
+                            {% if purchase_order.status == 'RECUE' %}bg-success
+                            {% elif purchase_order.status == 'RECUE_PARTIELLE' %}bg-info
+                            {% elif purchase_order.status == 'ENVOYEE' %}bg-primary
+                            {% elif purchase_order.status == 'ANNULEE' %}bg-danger
+                            {% else %}bg-warning{% endif %}">
+                                {{ purchase_order.get_status_display }}
+                            </span>
+                        </div>
+                    </div>
+
+                    {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER,ACCOUNTANT' or request.user.is_superuser %}
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">{% trans "Actions" %}</h6>
+                        </div>
+                        <div class="card-body d-grid gap-2">
+                            {% if purchase_order.status == 'BROUILLON' %}
+                            <a href="{% url 'procurement:purchase_order_update' pk=purchase_order.pk %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-edit me-1"></i>{% trans "Modifier" %}
+                            </a>
+                            <form method="post" action="{% url 'procurement:purchase_order_send' pk=purchase_order.pk %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-info w-100">
+                                    <i class="fas fa-paper-plane me-1"></i>{% trans "Envoyer au fournisseur" %}
+                                </button>
+                            </form>
+                            {% endif %}
+                            {% if purchase_order.status == 'ENVOYEE' or purchase_order.status == 'RECUE_PARTIELLE' %}
+                            <form method="post" action="{% url 'procurement:purchase_order_receive' pk=purchase_order.pk %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-success w-100">
+                                    <i class="fas fa-check me-1"></i>{% trans "Réceptionner" %}
+                                </button>
+                            </form>
+                            {% endif %}
+                            {% if purchase_order.status == 'BROUILLON' or purchase_order.status == 'ENVOYEE' %}
+                            <form method="post" action="{% url 'procurement:purchase_order_cancel' pk=purchase_order.pk %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-outline-danger w-100">
+                                    <i class="fas fa-times me-1"></i>{% trans "Annuler" %}
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}

@@ -100,6 +100,22 @@ class DQEStatus(models.TextChoices):
     ARCHIVED = 'ARCHIVED', _('Archivé')
 
 
+class PurchaseOrderStatus(models.TextChoices):
+    """Purchase order (bon de commande) status choices"""
+    BROUILLON = 'BROUILLON', _('Brouillon')
+    ENVOYEE = 'ENVOYEE', _('Envoyée au fournisseur')
+    RECUE_PARTIELLE = 'RECUE_PARTIELLE', _('Reçue partiellement')
+    RECUE = 'RECUE', _('Reçue')
+    ANNULEE = 'ANNULEE', _('Annulée')
+
+
+class StockMovementType(models.TextChoices):
+    """Stock movement type choices"""
+    IN = 'IN', _('Entrée')
+    OUT = 'OUT', _('Sortie')
+    ADJUSTMENT = 'ADJUSTMENT', _('Ajustement')
+
+
 # Form field placeholders and UI constants
 class FormPlaceholders:
     """Centralized placeholder text for form fields"""
@@ -121,6 +137,8 @@ class FormPlaceholders:
     TRANSACTION_REFERENCE = _('Transaction Reference')
     DEVIS_NUMBER = _('DEV-000')
     DESIGNATION = _('Désignation du poste')
+    PURCHASE_ORDER_NUMBER = _('BC-000')
+    SUPPLIER_NAME = _('Nom du fournisseur')
     
     # Personnel specific
     ROLE_EXAMPLE = _("e.g. Chef d'équipe")
@@ -208,6 +226,15 @@ class StatusBadgeClasses:
         SituationStatus.BROUILLON: 'bg-warning',
     }
 
+    # Purchase order status badge classes
+    PURCHASE_ORDER_STATUS = {
+        PurchaseOrderStatus.RECUE: 'bg-success',
+        PurchaseOrderStatus.RECUE_PARTIELLE: 'bg-info',
+        PurchaseOrderStatus.ENVOYEE: 'bg-primary',
+        PurchaseOrderStatus.ANNULEE: 'bg-danger',
+        PurchaseOrderStatus.BROUILLON: 'bg-warning',
+    }
+
 
 class ValidationMessages:
     """Common validation messages"""
@@ -288,6 +315,8 @@ __all__ = [
     'SituationStatus',
     'PriceItemType',
     'DQEStatus',
+    'PurchaseOrderStatus',
+    'StockMovementType',
 
     # Configuration classes
     'FormPlaceholders',
