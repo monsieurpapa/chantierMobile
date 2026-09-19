@@ -18,6 +18,16 @@
         <div class="container-fluid py-4">
             {% include 'includes/page_header.html' %}
 
+            <!-- Status filter -->
+            <div class="mb-3 d-flex flex-wrap gap-2">
+                <a href="{% url 'revenue:devis_list' %}" class="btn btn-sm {% if not request.GET.status %}btn-falcon-primary{% else %}btn-falcon-default{% endif %}">{% trans "Tous" %}</a>
+                <a href="{% querystring status='BROUILLON' %}" class="btn btn-sm {% if request.GET.status == 'BROUILLON' %}btn-falcon-primary{% else %}btn-falcon-default{% endif %}">{% trans "Brouillon" %}</a>
+                <a href="{% querystring status='ENVOYE' %}" class="btn btn-sm {% if request.GET.status == 'ENVOYE' %}btn-falcon-primary{% else %}btn-falcon-default{% endif %}">{% trans "Envoyé" %}</a>
+                <a href="{% querystring status='ACCEPTE' %}" class="btn btn-sm {% if request.GET.status == 'ACCEPTE' %}btn-falcon-primary{% else %}btn-falcon-default{% endif %}">{% trans "Accepté" %}</a>
+                <a href="{% querystring status='REFUSE' %}" class="btn btn-sm {% if request.GET.status == 'REFUSE' %}btn-falcon-primary{% else %}btn-falcon-default{% endif %}">{% trans "Refusé" %}</a>
+                <a href="{% querystring status='EXPIRE' %}" class="btn btn-sm {% if request.GET.status == 'EXPIRE' %}btn-falcon-primary{% else %}btn-falcon-default{% endif %}">{% trans "Expiré" %}</a>
+            </div>
+
             <div class="card mb-3">
                 <div class="card-body p-0">
                     <div class="table-responsive scrollbar">

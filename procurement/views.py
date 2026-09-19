@@ -14,9 +14,14 @@ from .forms import (
     PurchaseOrderForm, PurchaseOrderLineFormSet,
     StockMovementForm,
 )
-from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet
+from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet, can_act_for_cabinet
 from projects.models import Site
 from chantiermobile.constants import PurchaseOrderStatus, UserRoles
+
+# Mirrors StockItemCreateView/PurchaseOrderCreateView's allowed_roles and
+# the has_role gate on the corresponding detail templates.
+STOCK_ACTION_ROLES = ['DIRECTOR', 'CHIEF_ENGINEER']
+PURCHASE_ORDER_ACTION_ROLES = ['DIRECTOR', 'CHIEF_ENGINEER', 'ACCOUNTANT']
 
 
 # --- Supplier views ---
@@ -245,6 +250,9 @@ def stock_movement_create(request, pk):
     PurchaseOrder.receive() instead."""
     stock_item = get_object_or_404(StockItem, pk=pk)
     if request.method == 'POST':
+        if not can_act_for_cabinet(request, stock_item.site.cabinet, STOCK_ACTION_ROLES):
+            messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+            return redirect('procurement:stock_item_detail', pk=pk)
         form = StockMovementForm(request.POST)
         if form.is_valid():
             movement = form.save(commit=False)
@@ -471,6 +479,9 @@ class PurchaseOrderDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeader
 def purchase_order_send(request, pk):
     po = get_object_or_404(PurchaseOrder, pk=pk)
     if request.method == 'POST':
+        if not can_act_for_cabinet(request, po.site.cabinet, PURCHASE_ORDER_ACTION_ROLES):
+            messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+            return redirect('procurement:purchase_order_detail', pk=pk)
         if po.status == PurchaseOrderStatus.BROUILLON:
             po.status = PurchaseOrderStatus.ENVOYEE
             try:
@@ -488,6 +499,9 @@ def purchase_order_send(request, pk):
 def purchase_order_receive(request, pk):
     po = get_object_or_404(PurchaseOrder, pk=pk)
     if request.method == 'POST':
+        if not can_act_for_cabinet(request, po.site.cabinet, PURCHASE_ORDER_ACTION_ROLES):
+            messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+            return redirect('procurement:purchase_order_detail', pk=pk)
         try:
             po.receive(changed_by=request.user)
             messages.success(request, _("Réception enregistrée pour la commande %(num)s.") % {'num': po.order_number})
@@ -500,6 +514,9 @@ def purchase_order_receive(request, pk):
 def purchase_order_cancel(request, pk):
     po = get_object_or_404(PurchaseOrder, pk=pk)
     if request.method == 'POST':
+        if not can_act_for_cabinet(request, po.site.cabinet, PURCHASE_ORDER_ACTION_ROLES):
+            messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+            return redirect('procurement:purchase_order_detail', pk=pk)
         if po.status in [PurchaseOrderStatus.BROUILLON, PurchaseOrderStatus.ENVOYEE]:
             po.status = PurchaseOrderStatus.ANNULEE
             try:

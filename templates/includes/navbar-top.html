@@ -22,6 +22,27 @@
       </div>
     </li>
 
+    <!-- RBAC: current role, always visible so the user knows what permissions they're acting under -->
+    {% if request.user.is_superuser %}
+    <li class="nav-item ms-2">
+      <span class="badge badge-subtle-dark" data-bs-toggle="tooltip"
+            title="{% trans 'Super Admin has full access across every cabinet.' %}">
+        <span class="fas fa-user-shield me-1"></span>{% trans "Super Admin" %}
+      </span>
+    </li>
+    {% else %}
+    {% with primary_role=request.user.cabinet_roles.first %}
+    {% if primary_role %}
+    <li class="nav-item ms-2">
+      <span class="badge badge-subtle-info" data-bs-toggle="tooltip"
+            title="{% trans 'Your role determines which actions you can take.' %}">
+        <span class="fas fa-id-badge me-1"></span>{{ primary_role.get_role_display }}
+      </span>
+    </li>
+    {% endif %}
+    {% endwith %}
+    {% endif %}
+
     <!-- Cabinet Display / Switcher -->
     {% if request.user.is_superuser %}
     <li class="nav-item ms-2 dropdown">
@@ -110,6 +131,17 @@
           <div class="dropdown-item fw-bold text-primary">
             <span class="fas fa-user-circle me-1"></span>
             {{ request.user.username }}
+          </div>
+          <div class="dropdown-item fs--1 text-600 pt-0">
+            {% if request.user.is_superuser %}
+            <span class="fas fa-user-shield me-1"></span>{% trans "Super Admin" %}
+            {% else %}
+            {% with primary_role=request.user.cabinet_roles.first %}
+            {% if primary_role %}
+            <span class="fas fa-id-badge me-1"></span>{{ primary_role.get_role_display }} — {{ primary_role.cabinet.name }}
+            {% endif %}
+            {% endwith %}
+            {% endif %}
           </div>
           <div class="dropdown-divider"></div>
           <!-- RBAC: Profile link - Users can edit their own profile -->

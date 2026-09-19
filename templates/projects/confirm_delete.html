@@ -13,7 +13,7 @@
 <div class="card mb-3">
     <div class="card-body bg-light">
         <p class="fs-0">
-            Are you sure you want to delete "{{ object }}"?
+            {% blocktrans %}Are you sure you want to delete "{{ object }}"?{% endblocktrans %}
         </p>
         <p class="text-danger border-start border-danger ps-2">
             <strong>{% trans "Warning:" %}</strong> {% trans "This action cannot be undone. All related data will also be deleted." %}

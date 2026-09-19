@@ -14,8 +14,13 @@ from .forms import (
     ContractForm, InvoiceForm, PaymentForm,
     DevisForm, DevisLineFormSet, SituationTravauxForm, SituationLineFormSet,
 )
-from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet
+from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet, can_act_for_cabinet
 from projects.models import Site
+
+# Roles allowed to send/accept/reject a Devis or validate/invoice a
+# Situation de travaux — mirrors DevisCreateView/SituationTravauxCreateView's
+# allowed_roles and the has_role gate on the corresponding detail templates.
+DEVIS_ACTION_ROLES = ['DIRECTOR', 'CHIEF_ENGINEER', 'ACCOUNTANT']
 
 class ContractListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
     model = Contract
@@ -491,6 +496,9 @@ class DevisDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, D
 def devis_send(request, pk):
     devis = get_object_or_404(Devis, pk=pk)
     if request.method == 'POST':
+        if not can_act_for_cabinet(request, devis.site.cabinet, DEVIS_ACTION_ROLES):
+            messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+            return redirect('revenue:devis_detail', pk=pk)
         if devis.status == DevisStatus.BROUILLON:
             devis.status = DevisStatus.ENVOYE
             try:
@@ -508,6 +516,9 @@ def devis_send(request, pk):
 def devis_accept(request, pk):
     devis = get_object_or_404(Devis, pk=pk)
     if request.method == 'POST':
+        if not can_act_for_cabinet(request, devis.site.cabinet, DEVIS_ACTION_ROLES):
+            messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+            return redirect('revenue:devis_detail', pk=pk)
         try:
             contract = devis.accept_and_create_contract(changed_by=request.user)
             messages.success(request, _("Devis accepté — contrat créé pour %(site)s.") % {'site': devis.site.name})
@@ -521,6 +532,9 @@ def devis_accept(request, pk):
 def devis_reject(request, pk):
     devis = get_object_or_404(Devis, pk=pk)
     if request.method == 'POST':
+        if not can_act_for_cabinet(request, devis.site.cabinet, DEVIS_ACTION_ROLES):
+            messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+            return redirect('revenue:devis_detail', pk=pk)
         if devis.status in [DevisStatus.BROUILLON, DevisStatus.ENVOYE]:
             devis.status = DevisStatus.REFUSE
             try:
@@ -679,6 +693,9 @@ class SituationTravauxDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHea
 def situation_validate(request, pk):
     situation = get_object_or_404(SituationTravaux, pk=pk)
     if request.method == 'POST':
+        if not can_act_for_cabinet(request, situation.contract.site.cabinet, DEVIS_ACTION_ROLES):
+            messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+            return redirect('revenue:situation_detail', pk=pk)
         if situation.status == SituationStatus.BROUILLON:
             situation.status = SituationStatus.VALIDEE
             try:
@@ -696,6 +713,9 @@ def situation_validate(request, pk):
 def situation_generate_invoice(request, pk):
     situation = get_object_or_404(SituationTravaux, pk=pk)
     if request.method == 'POST':
+        if not can_act_for_cabinet(request, situation.contract.site.cabinet, DEVIS_ACTION_ROLES):
+            messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+            return redirect('revenue:situation_detail', pk=pk)
         try:
             invoice = situation.generate_invoice(changed_by=request.user)
             messages.success(request, _("Facture %(num)s générée.") % {'num': invoice.invoice_number})

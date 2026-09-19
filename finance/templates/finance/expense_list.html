@@ -18,6 +18,15 @@
         <div class="container-fluid py-4">
             {% include 'includes/page_header.html' %}
 
+            <!-- Status filter -->
+            <div class="mb-3 d-flex flex-wrap gap-2">
+                <a href="{% url 'finance:expense_list' %}" class="btn btn-sm {% if not request.GET.status %}btn-falcon-primary{% else %}btn-falcon-default{% endif %}">{% trans "Toutes" %}</a>
+                <a href="{% querystring status='PENDING' %}" class="btn btn-sm {% if request.GET.status == 'PENDING' %}btn-falcon-primary{% else %}btn-falcon-default{% endif %}">{% trans "En attente" %}</a>
+                <a href="{% querystring status='APPROVED' %}" class="btn btn-sm {% if request.GET.status == 'APPROVED' %}btn-falcon-primary{% else %}btn-falcon-default{% endif %}">{% trans "Approuvées" %}</a>
+                <a href="{% querystring status='REJECTED' %}" class="btn btn-sm {% if request.GET.status == 'REJECTED' %}btn-falcon-primary{% else %}btn-falcon-default{% endif %}">{% trans "Rejetées" %}</a>
+                <a href="{% querystring status='PAID' %}" class="btn btn-sm {% if request.GET.status == 'PAID' %}btn-falcon-primary{% else %}btn-falcon-default{% endif %}">{% trans "Payées" %}</a>
+            </div>
+
             <div class="card mb-3">
                 <div class="card-body p-0">
                     <div class="table-responsive scrollbar">
@@ -73,6 +82,8 @@
                     </div>
                 </div>
             </div>
+
+            {% include 'includes/pagination.html' %}
         </div>
         <!-- Footer -->
         {% include 'includes/footer.html' %}
