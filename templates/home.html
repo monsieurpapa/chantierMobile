@@ -1,5 +1,8 @@
 {% extends 'falcon_base.html' %}
 {% load static i18n humanize %}
+{# can_view_financials: RBAC gate computed in core.dashboard.build_dashboard_context — #}
+{# DIRECTOR/ACCOUNTANT/CASHIER (and superusers) see revenue, expenses, margin, #}
+{# invoices and budgets; other roles see the same operational widgets without them. #}
 
 {% block title %}{% trans "Dashboard" %} - ChantierMobile{% endblock %}
 
@@ -43,6 +46,7 @@
   <!-- Hero KPIs -->
   <!-- ============================================================ -->
   <div class="row g-3 mb-3">
+    {% if can_view_financials %}
     <div class="col-sm-6 col-xxl-3">
       <div class="card h-100">
         <div class="card-body">
@@ -108,6 +112,59 @@
         </div>
       </div>
     </div>
+    {% else %}
+    <div class="col-sm-6 col-xxl-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <p class="fs--1 text-600 text-uppercase fw-bold mb-1">{% trans "Tâches en retard" %}</p>
+              <h4 class="mb-0 {% if overdue_tasks_count %}text-danger{% else %}text-800{% endif %} fw-bold">{{ overdue_tasks_count }}</h4>
+              <span class="badge badge-subtle-{% if overdue_tasks_count %}danger{% else %}success{% endif %} rounded-pill fs--2 mt-2">
+                {% if overdue_tasks_count %}{% trans "À traiter" %}{% else %}{% trans "À jour" %}{% endif %}
+              </span>
+            </div>
+            <div class="icon-item icon-item-sm bg-danger-subtle"><span class="text-danger fas fa-tasks"></span></div>
+          </div>
+          <p class="fs--2 text-500 mt-3 mb-0 border-top pt-2">{% trans "Sur l'ensemble de vos chantiers" %}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-sm-6 col-xxl-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <p class="fs--1 text-600 text-uppercase fw-bold mb-1">{% trans "Stock sous seuil" %}</p>
+              <h4 class="mb-0 {% if low_stock_count %}text-warning{% else %}text-800{% endif %} fw-bold">{{ low_stock_count }}</h4>
+              <span class="badge badge-subtle-{% if low_stock_count %}warning{% else %}success{% endif %} rounded-pill fs--2 mt-2">
+                {% if low_stock_count %}{% trans "À réapprovisionner" %}{% else %}{% trans "À jour" %}{% endif %}
+              </span>
+            </div>
+            <div class="icon-item icon-item-sm bg-warning-subtle"><span class="text-warning fas fa-boxes"></span></div>
+          </div>
+          <p class="fs--2 text-500 mt-3 mb-0 border-top pt-2">{% trans "Articles sous le seuil de réapprovisionnement" %}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-sm-6 col-xxl-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <p class="fs--1 text-600 text-uppercase fw-bold mb-1">{% trans "Effectif mobilisé" %}</p>
+              <h4 class="mb-0 text-primary fw-bold">{{ mobilized_count }} <span class="fs--1 text-500 fw-normal">/ {{ total_personnel_count }}</span></h4>
+              <span class="badge badge-subtle-secondary rounded-pill fs--2 mt-2">{% trans "Aujourd'hui" %}</span>
+            </div>
+            <div class="icon-item icon-item-sm bg-primary-subtle"><span class="text-primary fas fa-users"></span></div>
+          </div>
+          <p class="fs--2 text-500 mt-3 mb-0 border-top pt-2">{% trans "Personnel actif sur site" %}</p>
+        </div>
+      </div>
+    </div>
+    {% endif %}
 
     <div class="col-sm-6 col-xxl-3">
       <div class="card h-100">
@@ -132,6 +189,7 @@
   <!-- Secondary KPI chips -->
   <!-- ============================================================ -->
   <div class="row g-3 mb-3">
+    {% if can_view_financials %}
     <div class="col-6 col-md-4 col-xxl-2">
       <a href="{% url 'revenue:devis_list' %}?status=ENVOYE" class="text-decoration-none">
         <div class="card h-100 hover-shadow">
@@ -163,6 +221,7 @@
         </div>
       </a>
     </div>
+    {% endif %}
     <div class="col-6 col-md-4 col-xxl-2">
       <a href="{% url 'tasks:task_list' %}" class="text-decoration-none">
         <div class="card h-100 hover-shadow {% if overdue_tasks_count %}border-danger border-opacity-25{% endif %}">
@@ -185,6 +244,7 @@
         </div>
       </a>
     </div>
+    {% if can_view_financials %}
     <div class="col-6 col-md-4 col-xxl-2">
       <a href="{% url 'finance:expense_list' %}?status=PENDING" class="text-decoration-none">
         <div class="card h-100 hover-shadow {% if pending_expenses_count %}border-warning border-opacity-25{% endif %}">
@@ -196,11 +256,13 @@
         </div>
       </a>
     </div>
+    {% endif %}
   </div>
 
   <!-- ============================================================ -->
   <!-- Charts row 1: Cash flow + Devis pipeline -->
   <!-- ============================================================ -->
+  {% if can_view_financials %}
   <div class="row g-3 mb-3">
     <div class="col-lg-8">
       <div class="card h-100">
@@ -223,11 +285,13 @@
       </div>
     </div>
   </div>
+  {% endif %}
 
   <!-- ============================================================ -->
   <!-- Charts row 2: Budget usage, tasks, personnel -->
   <!-- ============================================================ -->
   <div class="row g-3 mb-3">
+    {% if can_view_financials %}
     <div class="col-lg-6">
       <div class="card h-100">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
@@ -274,12 +338,36 @@
         </div>
       </div>
     </div>
+    {% else %}
+    <div class="col-lg-6">
+      <div class="card h-100">
+        <div class="card-header bg-light">
+          <h6 class="mb-0"><i class="fas fa-tasks me-2 text-info"></i>{% trans "Répartition des tâches" %}</h6>
+        </div>
+        <div class="card-body">
+          <div id="dashboard-task-chart" style="min-height: 260px;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card h-100">
+        <div class="card-header bg-light">
+          <h6 class="mb-0"><i class="fas fa-users me-2 text-primary"></i>{% trans "Effectif mobilisé" %}</h6>
+        </div>
+        <div class="card-body">
+          <div id="dashboard-personnel-chart" style="min-height: 220px;"></div>
+          <p class="text-center fs--2 text-500 mb-0">{{ mobilized_count }} / {{ total_personnel_count }} {% trans "mobilisés aujourd'hui" %}</p>
+        </div>
+      </div>
+    </div>
+    {% endif %}
   </div>
 
   <!-- ============================================================ -->
   <!-- Watchlists -->
   <!-- ============================================================ -->
   <div class="row g-3 mb-3">
+    {% if can_view_financials %}
     <div class="col-lg-4">
       <div class="card h-100">
         <div class="card-header bg-light">
@@ -352,6 +440,56 @@
         </div>
       </div>
     </div>
+    {% else %}
+    <div class="col-lg-6">
+      <div class="card h-100">
+        <div class="card-header bg-light">
+          <h6 class="mb-0 text-danger"><i class="fas fa-exclamation-triangle me-2"></i>{% trans "Tâches en retard" %}</h6>
+        </div>
+        <div class="card-body p-0">
+          <div class="list-group list-group-flush">
+            {% for task in overdue_tasks %}
+            <a href="{% url 'tasks:task_detail' pk=task.pk %}" class="list-group-item list-group-item-action py-2 px-3">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <p class="mb-0 fs--1 fw-semibold text-800">{{ task.title }}</p>
+                  <p class="mb-0 fs--2 text-500">{{ task.site.name }} · {% if task.assigned_to %}{{ task.assigned_to.get_full_name }}{% else %}{% trans "non assignée" %}{% endif %}</p>
+                </div>
+                <span class="fs--2 fw-bold text-danger">{{ task.due_date }}</span>
+              </div>
+            </a>
+            {% empty %}
+            <p class="text-center text-500 fs--1 py-4 mb-0"><i class="fas fa-check-circle me-2 text-success"></i>{% trans "Aucune tâche en retard." %}</p>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card h-100">
+        <div class="card-header bg-light">
+          <h6 class="mb-0 text-warning"><i class="fas fa-boxes me-2"></i>{% trans "Stock à réapprovisionner" %}</h6>
+        </div>
+        <div class="card-body p-0">
+          <div class="list-group list-group-flush">
+            {% for item in low_stock_items %}
+            <a href="{% url 'procurement:stock_item_detail' pk=item.pk %}" class="list-group-item list-group-item-action py-2 px-3">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <p class="mb-0 fs--1 fw-semibold text-800">{{ item.name }}</p>
+                  <p class="mb-0 fs--2 text-500">{{ item.site.name }}</p>
+                </div>
+                <span class="fs--2 fw-bold text-warning">{{ item.quantity_on_hand }} / {{ item.reorder_threshold }} {{ item.unit }}</span>
+              </div>
+            </a>
+            {% empty %}
+            <p class="text-center text-500 fs--1 py-4 mb-0"><i class="fas fa-check-circle me-2 text-success"></i>{% trans "Aucune alerte de stock." %}</p>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
   </div>
 
   <!-- ============================================================ -->
@@ -483,6 +621,7 @@
       </div>
     </div>
 
+    {% if request.user.is_superuser %}
     <!-- Administration -->
     <div class="col-md-6 col-xxl-4">
       <div class="card h-100">
@@ -496,6 +635,7 @@
         </div>
       </div>
     </div>
+    {% endif %}
   </div>
 
         </div>

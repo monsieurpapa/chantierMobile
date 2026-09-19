@@ -86,6 +86,7 @@ AUTHENTICATION_BACKENDS = [
 SITE_ID = 1
 
 # Allauth configuration (django-allauth >= 0.56 / Django 6 compatible)
+ACCOUNT_ADAPTER = 'accounts.adapter.AccountAdapter'
 ACCOUNT_LOGIN_METHODS = {'username', 'email'}
 ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
 ACCOUNT_EMAIL_VERIFICATION = 'none'
