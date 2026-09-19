@@ -84,6 +84,22 @@ class SituationStatus(models.TextChoices):
     FACTUREE = 'FACTUREE', _('Facturée')
 
 
+class PriceItemType(models.TextChoices):
+    """Category of a price library item (Bibliothèque de Prix)"""
+    LABOR = 'LABOR', _("Main d'œuvre")
+    MATERIAL = 'MATERIAL', _('Matériau')
+    EQUIPMENT = 'EQUIPMENT', _('Matériel')
+    SERVICE = 'SERVICE', _('Prestation')
+    WORK_ITEM = 'WORK_ITEM', _('Ouvrage (composite)')
+
+
+class DQEStatus(models.TextChoices):
+    """DQE (Détail Quantitatif Estimatif) status choices"""
+    DRAFT = 'DRAFT', _('Brouillon')
+    VALIDATED = 'VALIDATED', _('Validé')
+    ARCHIVED = 'ARCHIVED', _('Archivé')
+
+
 # Form field placeholders and UI constants
 class FormPlaceholders:
     """Centralized placeholder text for form fields"""
@@ -270,6 +286,8 @@ __all__ = [
     'PaymentMethod',
     'DevisStatus',
     'SituationStatus',
+    'PriceItemType',
+    'DQEStatus',
 
     # Configuration classes
     'FormPlaceholders',

@@ -14,7 +14,8 @@ urlpatterns = [
     path('personnel/', include('personnel.urls'), name='personnel'),
     path('materials/', include('materials.urls'), name='materials'),
     path('revenue/', include('revenue.urls'), name='revenue'),
-    
+    path('pricing/', include('pricing.urls'), name='pricing'),
+
     # User accounts
     path('user/', include('accounts.urls')),
     
