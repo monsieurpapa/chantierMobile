@@ -1,0 +1,82 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Bons de commande" %} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    <!-- vertical nav -->
+    {% include 'includes/navbar-vertical.html' with on="purchase_order_list" %}
+    <!-- /vertical nav -->
+
+    <div class="content">
+        <!-- navbar-top -->
+        {% include 'includes/navbar-top.html' %}
+        <!-- /navbar-top -->
+
+        <!-- Main Content -->
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            <div class="card mb-3">
+                <div class="card-body p-0">
+                    <div class="table-responsive scrollbar">
+                        <table class="table table-sm table-striped fs--1 mb-0">
+                            <thead class="bg-200 text-900">
+                                <tr>
+                                    <th scope="col">{% trans "N° Commande" %}</th>
+                                    <th scope="col">{% trans "Chantier" %}</th>
+                                    <th scope="col">{% trans "Fournisseur" %}</th>
+                                    <th scope="col" class="text-end">{% trans "Total" %}</th>
+                                    <th scope="col">{% trans "Commandé le" %}</th>
+                                    <th scope="col" class="text-center">{% trans "Statut" %}</th>
+                                    <th scope="col" class="text-end">{% trans "Actions" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for po in purchase_orders %}
+                                <tr class="align-middle">
+                                    <td><a href="{% url 'procurement:purchase_order_detail' pk=po.pk %}"><strong>{{ po.order_number }}</strong></a></td>
+                                    <td><a href="{% url 'projects:site_detail' unique_id=po.site.unique_id %}">{{ po.site.name }}</a></td>
+                                    <td>{{ po.supplier.name }}</td>
+                                    <td class="text-end fw-semi-bold">${{ po.total_ht|floatformat:2 }}</td>
+                                    <td>{{ po.order_date }}</td>
+                                    <td class="text-center">
+                                        <span class="badge rounded-pill
+                                        {% if po.status == 'RECUE' %}bg-success
+                                        {% elif po.status == 'RECUE_PARTIELLE' %}bg-info
+                                        {% elif po.status == 'ENVOYEE' %}bg-primary
+                                        {% elif po.status == 'ANNULEE' %}bg-danger
+                                        {% else %}bg-warning{% endif %}">
+                                            {{ po.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        <a class="btn btn-falcon-default btn-sm"
+                                            href="{% url 'procurement:purchase_order_detail' pk=po.pk %}">
+                                            <span class="fas fa-eye me-1"></span>{% trans "Voir" %}
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center py-5">
+                                        <span class="fas fa-file-invoice fa-2x text-300 d-block mb-2"></span>
+                                        <p class="text-600 mb-2">{% trans "Aucune commande trouvée." %}</p>
+                                        <a href="{% url 'procurement:purchase_order_create' %}" class="btn btn-falcon-primary btn-sm">
+                                            <span class="fas fa-plus me-1"></span>{% trans "Nouvelle commande" %}
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}
