@@ -1,0 +1,118 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Tâches" %} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    <!-- vertical nav -->
+    {% include 'includes/navbar-vertical.html' with on="task_list" %}
+    <!-- /vertical nav -->
+
+    <div class="content">
+        <!-- navbar-top -->
+        {% include 'includes/navbar-top.html' %}
+        <!-- /navbar-top -->
+
+        <!-- Main Content -->
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                <ul class="nav nav-pills mb-0">
+                    <li class="nav-item">
+                        <a class="nav-link {% if not current_status_filter %}active{% endif %}" href="?{% if mine_filter %}mine=1{% endif %}">{% trans "Toutes" %}</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if current_status_filter == 'A_FAIRE' %}active{% endif %}" href="?status=A_FAIRE{% if mine_filter %}&mine=1{% endif %}">{% trans "À faire" %}</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if current_status_filter == 'EN_COURS' %}active{% endif %}" href="?status=EN_COURS{% if mine_filter %}&mine=1{% endif %}">{% trans "En cours" %}</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if current_status_filter == 'BLOQUEE' %}active{% endif %}" href="?status=BLOQUEE{% if mine_filter %}&mine=1{% endif %}">{% trans "Bloquées" %}</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if current_status_filter == 'TERMINEE' %}active{% endif %}" href="?status=TERMINEE{% if mine_filter %}&mine=1{% endif %}">{% trans "Terminées" %}</a>
+                    </li>
+                </ul>
+                <a class="btn btn-sm {% if mine_filter %}btn-primary{% else %}btn-outline-primary{% endif %}"
+                    href="?{% if current_status_filter %}status={{ current_status_filter }}&{% endif %}{% if not mine_filter %}mine=1{% endif %}">
+                    <i class="fas fa-user me-1"></i>{% trans "Mes tâches" %}
+                </a>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-body p-0">
+                    <div class="table-responsive scrollbar">
+                        <table class="table table-sm table-striped fs--1 mb-0">
+                            <thead class="bg-200 text-900">
+                                <tr>
+                                    <th scope="col">{% trans "Titre" %}</th>
+                                    <th scope="col">{% trans "Chantier" %}</th>
+                                    <th scope="col">{% trans "Assigné à" %}</th>
+                                    <th scope="col" class="text-center">{% trans "Priorité" %}</th>
+                                    <th scope="col">{% trans "Échéance" %}</th>
+                                    <th scope="col" class="text-center">{% trans "Statut" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for task in tasks %}
+                                <tr class="align-middle">
+                                    <td><a href="{% url 'tasks:task_detail' pk=task.pk %}"><strong>{{ task.title }}</strong></a></td>
+                                    <td><a href="{% url 'projects:site_detail' unique_id=task.site.unique_id %}">{{ task.site.name }}</a></td>
+                                    <td>
+                                        {% if task.assigned_to %}
+                                        {{ task.assigned_to.get_full_name }}
+                                        {% if task.assigned_to.personnel_type != 'EMPLOYE' %}
+                                        <span class="badge badge-subtle-warning rounded-pill fs--2">{{ task.assigned_to.get_personnel_type_display }}</span>
+                                        {% endif %}
+                                        {% else %}
+                                        <span class="text-400">{% trans "Non assignée" %}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge rounded-pill
+                                        {% if task.priority == 'URGENTE' %}bg-danger
+                                        {% elif task.priority == 'HAUTE' %}bg-warning
+                                        {% elif task.priority == 'BASSE' %}bg-secondary
+                                        {% else %}bg-info{% endif %}">
+                                            {{ task.get_priority_display }}
+                                        </span>
+                                    </td>
+                                    <td class="{% if task.is_overdue %}text-danger fw-semibold{% endif %}">
+                                        {{ task.due_date|default:"-" }}
+                                        {% if task.is_overdue %}<i class="fas fa-exclamation-triangle ms-1" title="{% trans 'En retard' %}"></i>{% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge rounded-pill
+                                        {% if task.status == 'TERMINEE' %}bg-success
+                                        {% elif task.status == 'EN_COURS' %}bg-info
+                                        {% elif task.status == 'BLOQUEE' %}bg-danger
+                                        {% else %}bg-warning{% endif %}">
+                                            {{ task.get_status_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center py-5">
+                                        <span class="fas fa-tasks fa-2x text-300 d-block mb-2"></span>
+                                        <p class="text-600 mb-2">{% trans "Aucune tâche trouvée." %}</p>
+                                        <a href="{% url 'tasks:task_create' %}" class="btn btn-falcon-primary btn-sm">
+                                            <span class="fas fa-plus me-1"></span>{% trans "Nouvelle tâche" %}
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}

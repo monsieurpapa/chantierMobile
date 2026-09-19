@@ -1,0 +1,145 @@
+{% extends 'falcon_base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Tâche" %} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    <!-- vertical nav -->
+    {% include 'includes/navbar-vertical.html' with on="task_list" %}
+    <!-- /vertical nav -->
+
+    <div class="content">
+        <!-- navbar-top -->
+        {% include 'includes/navbar-top.html' %}
+        <!-- /navbar-top -->
+
+        <!-- Main Content -->
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            <div class="row g-3">
+                <div class="col-lg-8 pe-lg-2">
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <div class="row g-0">
+                                <div class="col-sm-6 mb-3">
+                                    <label class="form-label text-600 text-uppercase fs--2 fw-bold">{% trans "Chantier" %}</label>
+                                    <p class="fs-0"><a href="{% url 'projects:site_detail' unique_id=task.site.unique_id %}">{{ task.site.name }}</a></p>
+                                </div>
+                                <div class="col-sm-6 mb-3 text-sm-end">
+                                    <label class="form-label text-600 text-uppercase fs--2 fw-bold">{% trans "Phase" %}</label>
+                                    <p class="fs-0">{{ task.phase.name|default:"-" }}</p>
+                                </div>
+                            </div>
+                            <hr class="border-300" />
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label text-600 text-uppercase fs--2 fw-bold">{% trans "Priorité" %}</label>
+                                    <p class="fs-0">
+                                        <span class="badge rounded-pill
+                                        {% if task.priority == 'URGENTE' %}bg-danger
+                                        {% elif task.priority == 'HAUTE' %}bg-warning
+                                        {% elif task.priority == 'BASSE' %}bg-secondary
+                                        {% else %}bg-info{% endif %}">
+                                            {{ task.get_priority_display }}
+                                        </span>
+                                    </p>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label text-600 text-uppercase fs--2 fw-bold">{% trans "Échéance" %}</label>
+                                    <p class="fs-0 {% if task.is_overdue %}text-danger fw-semibold{% endif %}">
+                                        {{ task.due_date|default:"-" }}
+                                        {% if task.is_overdue %}<i class="fas fa-exclamation-triangle ms-1"></i>{% endif %}
+                                    </p>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label text-600 text-uppercase fs--2 fw-bold">{% trans "Assigné à" %}</label>
+                                    <p class="fs-0">
+                                        {% if task.assigned_to %}
+                                        <a href="{% url 'personnel:personnel_detail' unique_id=task.assigned_to.unique_id %}">{{ task.assigned_to.get_full_name }}</a>
+                                        {% else %}
+                                        <span class="text-400">{% trans "Non assignée" %}</span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                            {% if task.description %}
+                            <div class="p-3 bg-light rounded-3">
+                                <h6 class="mb-2"><i class="fas fa-align-left me-1"></i>{% trans "Description" %}</h6>
+                                <p class="mb-0 text-700">{{ task.description }}</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4 ps-lg-2">
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">{% trans "Statut" %}</h6>
+                        </div>
+                        <div class="card-body">
+                            <span class="badge rounded-pill fs--1
+                            {% if task.status == 'TERMINEE' %}bg-success
+                            {% elif task.status == 'EN_COURS' %}bg-info
+                            {% elif task.status == 'BLOQUEE' %}bg-danger
+                            {% else %}bg-warning{% endif %}">
+                                {{ task.get_status_display }}
+                            </span>
+                            {% if task.completed_at %}
+                            <p class="fs--2 text-600 mt-2 mb-0">{% trans "Terminée le" %} {{ task.completed_at|date:"d/m/Y H:i" }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if can_manage %}
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">{% trans "Actions" %}</h6>
+                        </div>
+                        <div class="card-body d-grid gap-2">
+                            {% if task.status == 'A_FAIRE' or task.status == 'BLOQUEE' %}
+                            <form method="post" action="{% url 'tasks:task_start' pk=task.pk %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-info w-100">
+                                    <i class="fas fa-play me-1"></i>{% trans "Démarrer" %}
+                                </button>
+                            </form>
+                            {% endif %}
+                            {% if task.status == 'EN_COURS' %}
+                            <form method="post" action="{% url 'tasks:task_complete' pk=task.pk %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-success w-100">
+                                    <i class="fas fa-check me-1"></i>{% trans "Marquer terminée" %}
+                                </button>
+                            </form>
+                            {% endif %}
+                            {% if task.status == 'A_FAIRE' or task.status == 'EN_COURS' %}
+                            <form method="post" action="{% url 'tasks:task_block' pk=task.pk %}">
+                                {% csrf_token %}
+                                <input type="text" name="reason" class="form-control form-control-sm mb-2" placeholder="{% trans 'Raison du blocage (facultatif)' %}">
+                                <button type="submit" class="btn btn-outline-danger w-100">
+                                    <i class="fas fa-hand-paper me-1"></i>{% trans "Bloquer" %}
+                                </button>
+                            </form>
+                            {% endif %}
+                            {% if task.status == 'BLOQUEE' or task.status == 'TERMINEE' %}
+                            <form method="post" action="{% url 'tasks:task_reopen' pk=task.pk %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-outline-secondary w-100">
+                                    <i class="fas fa-undo me-1"></i>{% trans "Réouvrir" %}
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}

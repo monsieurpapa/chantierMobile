@@ -16,6 +16,7 @@ urlpatterns = [
     path('revenue/', include('revenue.urls'), name='revenue'),
     path('pricing/', include('pricing.urls'), name='pricing'),
     path('procurement/', include('procurement.urls'), name='procurement'),
+    path('tasks/', include('tasks.urls'), name='tasks'),
 
     # User accounts
     path('user/', include('accounts.urls')),

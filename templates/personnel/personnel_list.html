@@ -18,6 +18,21 @@
         <div class="container-fluid py-4">
             {% include 'includes/page_header.html' %}
 
+            <ul class="nav nav-pills mb-3">
+                <li class="nav-item">
+                    <a class="nav-link {% if not current_type_filter %}active{% endif %}" href="{% url 'personnel:personnel_list' %}">{% trans "Tous" %}</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if current_type_filter == 'EMPLOYE' %}active{% endif %}" href="?type=EMPLOYE">{% trans "Employés" %}</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if current_type_filter == 'TACHERON' %}active{% endif %}" href="?type=TACHERON">{% trans "Tâcherons" %}</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if current_type_filter == 'PRESTATAIRE' %}active{% endif %}" href="?type=PRESTATAIRE">{% trans "Prestataires" %}</a>
+                </li>
+            </ul>
+
             <div class="card mb-3">
                 <div class="card-body p-0">
                     <div class="table-responsive scrollbar">
@@ -25,6 +40,7 @@
                             <thead class="bg-200 text-900">
                                 <tr>
                                     <th scope="col" class="sort pe-1 align-middle white-space-nowrap">{% trans "Name" %}</th>
+                                    <th scope="col" class="sort pe-1 align-middle white-space-nowrap">{% trans "Type" %}</th>
                                     <th scope="col" class="sort pe-1 align-middle white-space-nowrap">{% trans "Skills" %}</th>
                                     <th scope="col" class="sort pe-1 align-middle white-space-nowrap text-end">{% trans "Default Rate" %}</th>
                                     <th scope="col" class="no-sort pe-1 align-middle data-table-row-action"></th>
@@ -37,6 +53,14 @@
                                         <a href="{% url 'personnel:personnel_detail' unique_id=person.unique_id %}">
                                             <strong>{{ person.first_name }} {{ person.last_name }}</strong>
                                         </a>
+                                    </td>
+                                    <td class="py-2 align-middle white-space-nowrap">
+                                        <span class="badge rounded-pill
+                                        {% if person.personnel_type == 'TACHERON' %}bg-warning
+                                        {% elif person.personnel_type == 'PRESTATAIRE' %}bg-info
+                                        {% else %}bg-primary{% endif %}">
+                                            {{ person.get_personnel_type_display }}
+                                        </span>
                                     </td>
                                     <td class="skills py-2 align-middle">
                                         {% for skill in person.skills.all %}
@@ -78,7 +102,7 @@
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="4" class="text-center py-5">
+                                    <td colspan="5" class="text-center py-5">
                                         <span class="fas fa-users fa-2x text-300 d-block mb-2"></span>
                                         <p class="text-600 mb-2">{% trans "No personnel registered yet." %}</p>
                                         <a href="{% url 'personnel:personnel_create' %}" class="btn btn-falcon-primary btn-sm">
