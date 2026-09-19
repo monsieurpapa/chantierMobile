@@ -146,7 +146,8 @@
                             {% if purchase_order.status == 'BROUILLON' or purchase_order.status == 'ENVOYEE' %}
                             <form method="post" action="{% url 'procurement:purchase_order_cancel' pk=purchase_order.pk %}">
                                 {% csrf_token %}
-                                <button type="submit" class="btn btn-outline-danger w-100">
+                                <button type="submit" class="btn btn-outline-danger w-100"
+                                    data-confirm="{% trans 'Annuler cette commande ? Cette action est définitive.' %}">
                                     <i class="fas fa-times me-1"></i>{% trans "Annuler" %}
                                 </button>
                             </form>

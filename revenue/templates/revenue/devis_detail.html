@@ -142,7 +142,8 @@
                             {% if devis.status == 'BROUILLON' or devis.status == 'ENVOYE' %}
                             <form method="post" action="{% url 'revenue:devis_reject' pk=devis.pk %}">
                                 {% csrf_token %}
-                                <button type="submit" class="btn btn-outline-danger w-100">
+                                <button type="submit" class="btn btn-outline-danger w-100"
+                                    data-confirm="{% trans 'Refuser ce devis ? Cette action est définitive.' %}">
                                     <i class="fas fa-times me-1"></i>{% trans "Refuser" %}
                                 </button>
                             </form>

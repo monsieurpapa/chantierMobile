@@ -1,6 +1,7 @@
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect
 from django.contrib import messages
+from django.utils.translation import gettext_lazy as _
 from accounts.models import UserCabinetRole
 
 
@@ -23,6 +24,39 @@ def get_session_cabinet(request):
         except KeyError:
             pass
         return None
+
+
+def can_act_for_cabinet(request, cabinet, allowed_roles):
+    """
+    Server-side authorization check for a role-gated, state-changing
+    action (approve/send/accept/reject/validate/receive/cancel/...)
+    scoped to a specific cabinet's resource.
+
+    This is the function-based-view counterpart to RoleRequiredMixin +
+    get_role_cabinet(): every such action view MUST call this (or an
+    equivalent explicit check) before mutating data, because @login_required
+    alone only proves the user is signed in — it says nothing about their
+    role or which cabinet the resource belongs to. Without this, any
+    authenticated user of any role, in any cabinet, could POST directly to
+    the action URL and bypass the UI's has_role-gated button.
+
+    A superuser passes unless they have switched their session into a
+    *different* specific cabinet (so a superuser working "as" Cabinet A
+    doesn't silently act on Cabinet B's data). A regular user must hold one
+    of `allowed_roles` within that exact cabinet — a DIRECTOR in Cabinet A
+    has no special rights in Cabinet B.
+    """
+    user = request.user
+    if not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        active_cabinet = get_session_cabinet(request)
+        if active_cabinet and cabinet != active_cabinet:
+            return False
+        return True
+    return UserCabinetRole.objects.filter(
+        user=user, cabinet=cabinet, role__in=allowed_roles
+    ).exists()
 
 
 class CabinetAccessMixin:
@@ -100,7 +134,7 @@ class RoleRequiredMixin:
         has_role = qs.exists()
 
         if not has_role:
-            messages.error(request, "You do not have permission to perform this action.")
+            messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
             return redirect(request.META.get('HTTP_REFERER', 'home'))
 
         return super().dispatch(request, *args, **kwargs)

@@ -299,6 +299,9 @@
   {% block extra_js %}{% endblock %}
   {% include 'includes/base.toggle.main.logo.js.html' %}
 
+  {% comment %} "Are you sure?" guard for irreversible actions (data-confirm="...") {% endcomment %}
+  {% include 'includes/confirm-submit.js.html' %}
+
   {% comment %} Django Messages Toast Notifications {% endcomment %}
   {% include 'includes/messages_toast.html' %}
 </body>

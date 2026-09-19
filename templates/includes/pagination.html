@@ -1,0 +1,42 @@
+{% load i18n %}
+{% comment %}
+Reusable pagination controls for any ListView with paginate_by set.
+Include after the list content: {% include 'includes/pagination.html' %}
+Requires `is_paginated` and `page_obj` in context (Django's ListView
+provides both automatically once paginate_by is set).
+Uses Django's built-in {% querystring %} tag so existing filters
+(?status=..., ?mine=1, etc.) are preserved across page links.
+{% endcomment %}
+{% if is_paginated %}
+<nav aria-label="{% trans 'Pagination' %}" class="d-flex justify-content-center mt-3">
+  <ul class="pagination">
+    {% if page_obj.has_previous %}
+    <li class="page-item">
+      <a class="page-link" href="{% querystring page=1 %}">{% trans "First" %}</a>
+    </li>
+    <li class="page-item">
+      <a class="page-link" href="{% querystring page=page_obj.previous_page_number %}">
+        <span class="fas fa-chevron-left fs--2"></span> {% trans "Previous" %}
+      </a>
+    </li>
+    {% endif %}
+
+    <li class="page-item active">
+      <span class="page-link">
+        {% blocktrans with current=page_obj.number total=page_obj.paginator.num_pages %}Page {{ current }} of {{ total }}{% endblocktrans %}
+      </span>
+    </li>
+
+    {% if page_obj.has_next %}
+    <li class="page-item">
+      <a class="page-link" href="{% querystring page=page_obj.next_page_number %}">
+        {% trans "Next" %} <span class="fas fa-chevron-right fs--2"></span>
+      </a>
+    </li>
+    <li class="page-item">
+      <a class="page-link" href="{% querystring page=page_obj.paginator.num_pages %}">{% trans "Last" %}</a>
+    </li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
