@@ -68,6 +68,77 @@ class PaymentMethod(models.TextChoices):
     MOBILE_MONEY = 'MOBILE_MONEY', _('Mobile Money')
 
 
+class DevisStatus(models.TextChoices):
+    """Devis (quote/estimate) status choices"""
+    BROUILLON = 'BROUILLON', _('Brouillon')
+    ENVOYE = 'ENVOYE', _('Envoyé au client')
+    ACCEPTE = 'ACCEPTE', _('Accepté')
+    REFUSE = 'REFUSE', _('Refusé')
+    EXPIRE = 'EXPIRE', _('Expiré')
+
+
+class SituationStatus(models.TextChoices):
+    """Situation de travaux (progress billing statement) status choices"""
+    BROUILLON = 'BROUILLON', _('Brouillon')
+    VALIDEE = 'VALIDEE', _('Validée')
+    FACTUREE = 'FACTUREE', _('Facturée')
+
+
+class PriceItemType(models.TextChoices):
+    """Category of a price library item (Bibliothèque de Prix)"""
+    LABOR = 'LABOR', _("Main d'œuvre")
+    MATERIAL = 'MATERIAL', _('Matériau')
+    EQUIPMENT = 'EQUIPMENT', _('Matériel')
+    SERVICE = 'SERVICE', _('Prestation')
+    WORK_ITEM = 'WORK_ITEM', _('Ouvrage (composite)')
+
+
+class DQEStatus(models.TextChoices):
+    """DQE (Détail Quantitatif Estimatif) status choices"""
+    DRAFT = 'DRAFT', _('Brouillon')
+    VALIDATED = 'VALIDATED', _('Validé')
+    ARCHIVED = 'ARCHIVED', _('Archivé')
+
+
+class PurchaseOrderStatus(models.TextChoices):
+    """Purchase order (bon de commande) status choices"""
+    BROUILLON = 'BROUILLON', _('Brouillon')
+    ENVOYEE = 'ENVOYEE', _('Envoyée au fournisseur')
+    RECUE_PARTIELLE = 'RECUE_PARTIELLE', _('Reçue partiellement')
+    RECUE = 'RECUE', _('Reçue')
+    ANNULEE = 'ANNULEE', _('Annulée')
+
+
+class StockMovementType(models.TextChoices):
+    """Stock movement type choices"""
+    IN = 'IN', _('Entrée')
+    OUT = 'OUT', _('Sortie')
+    ADJUSTMENT = 'ADJUSTMENT', _('Ajustement')
+
+
+class PersonnelType(models.TextChoices):
+    """Employment relationship of a Personnel record"""
+    EMPLOYE = 'EMPLOYE', _('Employé')
+    TACHERON = 'TACHERON', _('Tâcheron (journalier)')
+    PRESTATAIRE = 'PRESTATAIRE', _('Prestataire (sous-traitant)')
+
+
+class TaskStatus(models.TextChoices):
+    """Task tracking status choices"""
+    A_FAIRE = 'A_FAIRE', _('À faire')
+    EN_COURS = 'EN_COURS', _('En cours')
+    BLOQUEE = 'BLOQUEE', _('Bloquée')
+    TERMINEE = 'TERMINEE', _('Terminée')
+
+
+class TaskPriority(models.TextChoices):
+    """Task priority choices"""
+    BASSE = 'BASSE', _('Basse')
+    NORMALE = 'NORMALE', _('Normale')
+    HAUTE = 'HAUTE', _('Haute')
+    URGENTE = 'URGENTE', _('Urgente')
+
+
 # Form field placeholders and UI constants
 class FormPlaceholders:
     """Centralized placeholder text for form fields"""
@@ -87,6 +158,11 @@ class FormPlaceholders:
     CLIENT_NAME = _('Client Name')
     INVOICE_NUMBER = _('INV-000')
     TRANSACTION_REFERENCE = _('Transaction Reference')
+    DEVIS_NUMBER = _('DEV-000')
+    DESIGNATION = _('Désignation du poste')
+    PURCHASE_ORDER_NUMBER = _('BC-000')
+    SUPPLIER_NAME = _('Nom du fournisseur')
+    TASK_TITLE = _('Titre de la tâche')
     
     # Personnel specific
     ROLE_EXAMPLE = _("e.g. Chef d'équipe")
@@ -156,6 +232,54 @@ class StatusBadgeClasses:
         InvoiceStatus.OVERDUE: 'bg-danger',
         InvoiceStatus.DRAFT: 'bg-warning',
         InvoiceStatus.CANCELLED: 'bg-secondary',
+    }
+
+    # Devis status badge classes
+    DEVIS_STATUS = {
+        DevisStatus.ACCEPTE: 'bg-success',
+        DevisStatus.ENVOYE: 'bg-info',
+        DevisStatus.REFUSE: 'bg-danger',
+        DevisStatus.EXPIRE: 'bg-secondary',
+        DevisStatus.BROUILLON: 'bg-warning',
+    }
+
+    # Situation de travaux status badge classes
+    SITUATION_STATUS = {
+        SituationStatus.FACTUREE: 'bg-success',
+        SituationStatus.VALIDEE: 'bg-info',
+        SituationStatus.BROUILLON: 'bg-warning',
+    }
+
+    # Purchase order status badge classes
+    PURCHASE_ORDER_STATUS = {
+        PurchaseOrderStatus.RECUE: 'bg-success',
+        PurchaseOrderStatus.RECUE_PARTIELLE: 'bg-info',
+        PurchaseOrderStatus.ENVOYEE: 'bg-primary',
+        PurchaseOrderStatus.ANNULEE: 'bg-danger',
+        PurchaseOrderStatus.BROUILLON: 'bg-warning',
+    }
+
+    # Task status badge classes
+    TASK_STATUS = {
+        TaskStatus.TERMINEE: 'bg-success',
+        TaskStatus.EN_COURS: 'bg-info',
+        TaskStatus.BLOQUEE: 'bg-danger',
+        TaskStatus.A_FAIRE: 'bg-warning',
+    }
+
+    # Task priority badge classes
+    TASK_PRIORITY = {
+        TaskPriority.URGENTE: 'bg-danger',
+        TaskPriority.HAUTE: 'bg-warning',
+        TaskPriority.NORMALE: 'bg-info',
+        TaskPriority.BASSE: 'bg-secondary',
+    }
+
+    # Personnel type badge classes
+    PERSONNEL_TYPE = {
+        PersonnelType.EMPLOYE: 'bg-primary',
+        PersonnelType.TACHERON: 'bg-warning',
+        PersonnelType.PRESTATAIRE: 'bg-info',
     }
 
 
@@ -234,7 +358,16 @@ __all__ = [
     'SiteStatus',
     'InvoiceStatus',
     'PaymentMethod',
-    
+    'DevisStatus',
+    'SituationStatus',
+    'PriceItemType',
+    'DQEStatus',
+    'PurchaseOrderStatus',
+    'StockMovementType',
+    'PersonnelType',
+    'TaskStatus',
+    'TaskPriority',
+
     # Configuration classes
     'FormPlaceholders',
     'FormHelpTexts',

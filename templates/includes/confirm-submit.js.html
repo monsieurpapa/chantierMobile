@@ -1,0 +1,24 @@
+{% comment %}
+Global "confirm before you submit" behavior for irreversible actions
+(reject, cancel, pay, delete-like status changes, etc.).
+
+Usage: add data-confirm="Some question?" to any <button type="submit">
+or <input type="submit"> — including one that targets a different form via
+the `form="other-form-id"` attribute. The click is intercepted, the browser's
+native confirm() dialog is shown, and the submit only proceeds if the user
+accepts. This gives every destructive/one-way action in the app a consistent
+"are you sure?" guard without each template re-implementing its own JS.
+{% endcomment %}
+<script>
+  document.addEventListener('click', function (event) {
+    var trigger = event.target.closest('[data-confirm]');
+    if (!trigger) {
+      return;
+    }
+    var message = trigger.getAttribute('data-confirm');
+    if (message && !window.confirm(message)) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  }, true);
+</script>

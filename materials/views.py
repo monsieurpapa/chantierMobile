@@ -9,7 +9,7 @@ from django.utils.translation import gettext_lazy as _
 from .models import Material, MaterialRequest
 from .forms import MaterialForm, MaterialRequestForm, MaterialRequestItemFormSet
 from projects.models import Site
-from core.mixins import RoleRequiredMixin, PageHeaderMixin, get_session_cabinet
+from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet
 from chantiermobile.constants import UserRoles
 
 # Material Catalog Views
@@ -20,6 +20,9 @@ class MaterialListView(LoginRequiredMixin, PageHeaderMixin, ListView):
     paginate_by = 50
     header_title = _("Catalogue des matériaux")
     header_subtitle = _("Parcourez et gérez les matériaux de construction disponibles")
+
+    def get_queryset(self):
+        return super().get_queryset().order_by('name')
 
     def get_header_actions(self):
         from accounts.models import UserCabinetRole
@@ -155,12 +158,13 @@ class MaterialRequestCreateView(LoginRequiredMixin, PageHeaderMixin, CreateView)
         else:
             return self.form_invalid(form)
 
-class MaterialRequestUpdateView(LoginRequiredMixin, PageHeaderMixin, UpdateView):
+class MaterialRequestUpdateView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, UpdateView):
     model = MaterialRequest
     form_class = MaterialRequestForm
     template_name = 'materials/request_form.html'
     success_url = reverse_lazy('materials:request_list')
-    
+    cabinet_lookup_field = 'site__cabinet'
+
     def get_header_title(self):
         return _("Modifier la demande n°%(id)s") % {'id': self.object.id}
 
@@ -176,7 +180,16 @@ class MaterialRequestUpdateView(LoginRequiredMixin, PageHeaderMixin, UpdateView)
             {'title': f"REQ-{self.object.id}", 'url': str(reverse_lazy('materials:request_detail', kwargs={'pk': self.object.pk}))},
             {'title': _("Modifier"), 'url': None},
         ]
-    
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        if self.request.user.is_superuser:
+            form.fields['site'].queryset = Site.objects.all()
+        else:
+            user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+            form.fields['site'].queryset = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
+        return form
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         if self.request.POST:
@@ -188,7 +201,7 @@ class MaterialRequestUpdateView(LoginRequiredMixin, PageHeaderMixin, UpdateView)
     def form_valid(self, form):
         context = self.get_context_data()
         items_formset = context['items_formset']
-        
+
         if items_formset.is_valid():
             self.object = form.save()
             items_formset.instance = self.object
@@ -198,11 +211,12 @@ class MaterialRequestUpdateView(LoginRequiredMixin, PageHeaderMixin, UpdateView)
         else:
             return self.form_invalid(form)
 
-class MaterialRequestDetailView(LoginRequiredMixin, PageHeaderMixin, DetailView):
+class MaterialRequestDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, DetailView):
     model = MaterialRequest
     template_name = 'materials/request_detail.html'
     context_object_name = 'req'
-    
+    cabinet_lookup_field = 'site__cabinet'
+
     def get_queryset(self):
         return super().get_queryset().prefetch_related('items__material')
 
@@ -231,23 +245,24 @@ def approve_material_request(request, pk):
         mat_request = get_object_or_404(MaterialRequest, pk=pk)
         active_cabinet = get_session_cabinet(request)
         if active_cabinet and mat_request.site.cabinet != active_cabinet:
-            messages.error(request, "This material request belongs to a different cabinet than your active session.")
+            messages.error(request, _("Cette demande appartient à un autre cabinet que votre session active."))
             return redirect('materials:request_list')
         if request.user.is_superuser or request.user.cabinet_roles.filter(cabinet=mat_request.site.cabinet, role__in=[UserRoles.DIRECTOR, UserRoles.CHIEF_ENGINEER]).exists():
             action = request.POST.get('action')
             if action == 'approve':
                 mat_request.status = MaterialRequest.Status.APPROVED
-                messages.success(request, "Material request approved.")
+                messages.success(request, _("Demande de matériaux approuvée."))
             elif action == 'reject':
                 mat_request.status = MaterialRequest.Status.REJECTED
-                messages.error(request, "Material request rejected.")
+                messages.error(request, _("Demande de matériaux rejetée."))
             mat_request.save()
         else:
-            messages.error(request, "Unauthorized.")
+            messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
         return redirect('materials:request_detail', pk=pk)
     return redirect('materials:request_list')
 
 
+@login_required
 def materials_data_api(request):
     """API endpoint to fetch material data (units and costs) for dynamic form"""
     from django.http import JsonResponse

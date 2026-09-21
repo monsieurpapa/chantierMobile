@@ -114,10 +114,22 @@ class TestViews:
     """Test view logic and responses."""
     
     def test_home_view_context(self, authenticated_client):
-        """Test home view context data."""
+        """Test home view (dashboard) context data — core/dashboard.py::build_dashboard_context."""
         response = authenticated_client.get(reverse('home'))
         assert response.status_code == 200
-        assert 'recent_sites' in response.context
+        # Hero KPIs
+        assert 'revenue_all' in response.context
+        assert 'expense_all' in response.context
+        assert 'net_margin' in response.context
+        assert 'active_sites_count' in response.context
+        # Charts
+        assert 'cashflow_labels' in response.context
+        assert 'devis_chart' in response.context
+        assert 'task_chart' in response.context
+        # Watchlists + activity feed
+        assert 'overdue_invoices' in response.context
+        assert 'overdue_tasks' in response.context
+        assert 'activity_items' in response.context
     
     def test_login_view_redirect(self, authenticated_client):
         """Test login view redirects authenticated users."""

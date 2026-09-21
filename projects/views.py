@@ -144,11 +144,12 @@ class SiteDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, De
     slug_field = 'unique_id'
     slug_url_kwarg = 'unique_id'
 
-    def get_header_title(self):
-        return self.object.name
-
-    def get_header_subtitle(self):
-        return self.object.location
+    # header_title/header_subtitle/header_actions are intentionally left at
+    # their PageHeaderMixin defaults (blank / empty list): this page renders
+    # its own rich hero card just below the page_header include — name,
+    # location, status, and the same role-gated Modifier/Supprimer buttons —
+    # so repeating any of that here would just duplicate it. Only the
+    # breadcrumb + back link are wanted from page_header.html on this page.
 
     def get_back_url(self):
         return str(reverse_lazy('projects:site_list'))
@@ -158,37 +159,6 @@ class SiteDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, De
             {'title': _("Projets & Chantiers"), 'url': str(reverse_lazy('projects:site_list'))},
             {'title': self.object.name, 'url': None},
         ]
-
-    def get_header_actions(self):
-        from accounts.models import UserCabinetRole
-        user = self.request.user
-        actions = []
-
-        is_admin = user.is_superuser or UserCabinetRole.objects.filter(
-            user=user, role__in=[UserRoles.DIRECTOR, UserRoles.CHIEF_ENGINEER]
-        ).exists()
-
-        is_director = user.is_superuser or UserCabinetRole.objects.filter(
-            user=user, role='DIRECTOR'
-        ).exists()
-
-        if is_admin:
-            actions.append({
-                'label': _("Modifier"),
-                'url': str(reverse_lazy('projects:site_update', kwargs={'unique_id': self.object.unique_id})),
-                'icon': 'edit',
-                'class': 'btn-falcon-default'
-            })
-        
-        if is_director:
-            actions.append({
-                'label': _("Supprimer"),
-                'url': str(reverse_lazy('projects:site_delete', kwargs={'unique_id': self.object.unique_id})),
-                'icon': 'trash-alt',
-                'class': 'btn-falcon-danger'
-            })
-            
-        return actions
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

@@ -1,0 +1,83 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n rbac_tags %}
+
+{% block title %}{% trans "Bibliothèque de Prix" %} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    <!-- vertical nav -->
+    {% include 'includes/navbar-vertical.html' with on="price_item_list" %}
+    <!-- /vertical nav -->
+
+    <div class="content">
+        <!-- navbar-top -->
+        {% include 'includes/navbar-top.html' %}
+        <!-- /navbar-top -->
+
+        <!-- Main Content -->
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            <div class="card mb-3">
+                <div class="card-body p-0">
+                    <div class="table-responsive scrollbar">
+                        <table class="table table-sm table-striped fs--1 mb-0 overflow-hidden">
+                            <thead class="bg-200 text-900">
+                                <tr>
+                                    <th class="sort pe-1 align-middle white-space-nowrap">{% trans "Code" %}</th>
+                                    <th class="sort pe-1 align-middle white-space-nowrap">{% trans "Désignation" %}</th>
+                                    <th class="sort pe-1 align-middle white-space-nowrap">{% trans "Type" %}</th>
+                                    <th class="sort pe-1 align-middle white-space-nowrap">{% trans "Unité" %}</th>
+                                    <th class="sort pe-1 align-middle white-space-nowrap text-end">{% trans "Prix unitaire" %}</th>
+                                    <th class="sort pe-1 align-middle white-space-nowrap">{% trans "Statut" %}</th>
+                                    <th class="no-sort pe-1 align-middle data-table-row-action text-end">{% trans "Actions" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody class="list">
+                                {% for item in price_items %}
+                                <tr class="btn-reveal-trigger">
+                                    <td class="align-middle white-space-nowrap"><strong>{{ item.code }}</strong></td>
+                                    <td class="align-middle white-space-nowrap">
+                                        <a href="{% url 'pricing:price_item_detail' item.pk %}">{{ item.designation }}</a>
+                                    </td>
+                                    <td class="align-middle white-space-nowrap">{{ item.get_item_type_display }}</td>
+                                    <td class="align-middle white-space-nowrap">{{ item.unit }}</td>
+                                    <td class="align-middle white-space-nowrap text-end fw-bold text-primary">{{ item.unit_price|floatformat:2 }}</td>
+                                    <td class="align-middle white-space-nowrap">
+                                        {% if item.is_active %}
+                                        <span class="badge rounded-pill badge-subtle-success">{% trans "Actif" %}</span>
+                                        {% else %}
+                                        <span class="badge rounded-pill badge-subtle-secondary">{% trans "Inactif" %}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="align-middle white-space-nowrap text-end">
+                                        {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER' %}
+                                        <a class="btn btn-link text-600 btn-sm" href="{% url 'pricing:price_item_update' item.pk %}">
+                                            <span class="fas fa-edit"></span>
+                                        </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center py-5">
+                                        <span class="fas fa-book fa-2x text-300 d-block mb-2"></span>
+                                        <p class="text-600 mb-2">{% trans "Aucun article dans la bibliothèque de prix." %}</p>
+                                        <a href="{% url 'pricing:price_item_create' %}" class="btn btn-falcon-primary btn-sm">
+                                            <span class="fas fa-plus me-1"></span>{% trans "Ajouter un article" %}
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                </div>
+            </div>
+
+            {% include 'includes/pagination.html' %}
+        </div>
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}

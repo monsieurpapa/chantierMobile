@@ -156,7 +156,8 @@
                                     <button type="submit" name="action" value="approve" class="btn btn-success">
                                         <i class="fas fa-check me-1"></i>{% trans "Approve" %}
                                     </button>
-                                    <button type="submit" name="action" value="reject" class="btn btn-danger">
+                                    <button type="submit" name="action" value="reject" class="btn btn-danger"
+                                        data-confirm="{% trans 'Reject this material request? This cannot be undone.' %}">
                                         <i class="fas fa-times me-1"></i>{% trans "Reject" %}
                                     </button>
                                 </div>

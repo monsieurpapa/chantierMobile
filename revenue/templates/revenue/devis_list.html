@@ -1,0 +1,92 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Devis" %} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    <!-- vertical nav -->
+    {% include 'includes/navbar-vertical.html' with on="devis_list" %}
+    <!-- /vertical nav -->
+
+    <div class="content">
+        <!-- navbar-top -->
+        {% include 'includes/navbar-top.html' %}
+        <!-- /navbar-top -->
+
+        <!-- Main Content -->
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            <!-- Status filter -->
+            <div class="mb-3 d-flex flex-wrap gap-2">
+                <a href="{% url 'revenue:devis_list' %}" class="btn btn-sm {% if not request.GET.status %}btn-falcon-primary{% else %}btn-falcon-default{% endif %}">{% trans "Tous" %}</a>
+                <a href="{% querystring status='BROUILLON' %}" class="btn btn-sm {% if request.GET.status == 'BROUILLON' %}btn-falcon-primary{% else %}btn-falcon-default{% endif %}">{% trans "Brouillon" %}</a>
+                <a href="{% querystring status='ENVOYE' %}" class="btn btn-sm {% if request.GET.status == 'ENVOYE' %}btn-falcon-primary{% else %}btn-falcon-default{% endif %}">{% trans "Envoyé" %}</a>
+                <a href="{% querystring status='ACCEPTE' %}" class="btn btn-sm {% if request.GET.status == 'ACCEPTE' %}btn-falcon-primary{% else %}btn-falcon-default{% endif %}">{% trans "Accepté" %}</a>
+                <a href="{% querystring status='REFUSE' %}" class="btn btn-sm {% if request.GET.status == 'REFUSE' %}btn-falcon-primary{% else %}btn-falcon-default{% endif %}">{% trans "Refusé" %}</a>
+                <a href="{% querystring status='EXPIRE' %}" class="btn btn-sm {% if request.GET.status == 'EXPIRE' %}btn-falcon-primary{% else %}btn-falcon-default{% endif %}">{% trans "Expiré" %}</a>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-body p-0">
+                    <div class="table-responsive scrollbar">
+                        <table class="table table-sm table-striped fs--1 mb-0">
+                            <thead class="bg-200 text-900">
+                                <tr>
+                                    <th scope="col">{% trans "N° Devis" %}</th>
+                                    <th scope="col">{% trans "Chantier" %}</th>
+                                    <th scope="col">{% trans "Client" %}</th>
+                                    <th scope="col" class="text-end">{% trans "Total HT" %}</th>
+                                    <th scope="col">{% trans "Émis le" %}</th>
+                                    <th scope="col" class="text-center">{% trans "Statut" %}</th>
+                                    <th scope="col" class="text-end">{% trans "Actions" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for devis in devis_list %}
+                                <tr class="align-middle">
+                                    <td><a href="{% url 'revenue:devis_detail' pk=devis.pk %}"><strong>{{ devis.devis_number }}</strong></a></td>
+                                    <td><a href="{% url 'projects:site_detail' unique_id=devis.site.unique_id %}">{{ devis.site.name }}</a></td>
+                                    <td>{{ devis.client_name }}</td>
+                                    <td class="text-end fw-semi-bold">${{ devis.total_ht|floatformat:2 }}</td>
+                                    <td>{{ devis.issue_date }}</td>
+                                    <td class="text-center">
+                                        <span class="badge rounded-pill
+                                        {% if devis.status == 'ACCEPTE' %}bg-success
+                                        {% elif devis.status == 'ENVOYE' %}bg-info
+                                        {% elif devis.status == 'REFUSE' %}bg-danger
+                                        {% elif devis.status == 'EXPIRE' %}bg-secondary
+                                        {% else %}bg-warning{% endif %}">
+                                            {{ devis.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        <a class="btn btn-falcon-default btn-sm"
+                                            href="{% url 'revenue:devis_detail' pk=devis.pk %}">
+                                            <span class="fas fa-eye me-1"></span>{% trans "Voir" %}
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center py-5">
+                                        <span class="fas fa-file-signature fa-2x text-300 d-block mb-2"></span>
+                                        <p class="text-600 mb-2">{% trans "Aucun devis trouvé." %}</p>
+                                        <a href="{% url 'revenue:devis_create' %}" class="btn btn-falcon-primary btn-sm">
+                                            <span class="fas fa-plus me-1"></span>{% trans "Nouveau devis" %}
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}

@@ -33,7 +33,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    
+    'django.contrib.humanize',
+
     # Third party
     'django_celery_results',
     'django_celery_beat',
@@ -51,6 +52,9 @@ INSTALLED_APPS = [
     'finance',
     'materials',
     'revenue',
+    'pricing',
+    'procurement',
+    'tasks',
 ]
 
 MIDDLEWARE = [
@@ -66,6 +70,9 @@ MIDDLEWARE = [
     
     # Allauth
     "allauth.account.middleware.AccountMiddleware",
+
+    # Force a password change for accounts flagged with must_change_password
+    'core.middleware.ForcePasswordChangeMiddleware',
 ]
 
 AUTHENTICATION_BACKENDS = [
@@ -81,7 +88,7 @@ SITE_ID = 1
 # Allauth configuration (django-allauth >= 0.56 / Django 6 compatible)
 ACCOUNT_LOGIN_METHODS = {'username', 'email'}
 ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
-ACCOUNT_EMAIL_VERIFICATION = 'optional'
+ACCOUNT_EMAIL_VERIFICATION = 'none'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'
 

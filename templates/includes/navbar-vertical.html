@@ -69,6 +69,17 @@
                     </a>
                 </li>
 
+                <!-- Tasks -->
+                <li class="nav-item">
+                    <a class="nav-link {% if on == 'task_list' %}active{% endif %}"
+                        href="{% url 'tasks:task_list' %}" role="button">
+                        <div class="d-flex align-items-center">
+                            <span class="nav-link-icon"><span class="fas fa-tasks fs-1"></span></span>
+                            <span class="nav-link-text ps-1">{% trans "Tâches" %}</span>
+                        </div>
+                    </a>
+                </li>
+
                 <!-- Finance -->
                 <li class="nav-item">
                     <a class="nav-link dropdown-indicator" href="#finance" role="button" data-bs-toggle="collapse"
@@ -127,6 +138,72 @@
                     </ul>
                 </li>
 
+                <!-- Achats & Stocks (Procurement) -->
+                <li class="nav-item">
+                    <a class="nav-link dropdown-indicator" href="#achats" role="button" data-bs-toggle="collapse"
+                        aria-expanded="false" aria-controls="achats">
+                        <div class="d-flex align-items-center">
+                            <span class="nav-link-icon"><span class="fas fa-truck-loading fs-1"></span></span>
+                            <span class="nav-link-text ps-1">{% trans "Achats & Stocks" %}</span>
+                        </div>
+                    </a>
+                    <ul class="nav collapse" id="achats">
+                        <li class="nav-item">
+                            <a class="nav-link {% if on == 'purchase_order_list' %}active{% endif %}"
+                                href="{% url 'procurement:purchase_order_list' %}">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-text ps-1">{% trans "Bons de commande" %}</span>
+                                </div>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if on == 'supplier_list' %}active{% endif %}"
+                                href="{% url 'procurement:supplier_list' %}">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-text ps-1">{% trans "Fournisseurs" %}</span>
+                                </div>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if on == 'stock_item_list' %}active{% endif %}"
+                                href="{% url 'procurement:stock_item_list' %}">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-text ps-1">{% trans "Stock" %}</span>
+                                </div>
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <!-- Chiffrage (Pricing / DQE / Devis) -->
+                <li class="nav-item">
+                    <a class="nav-link dropdown-indicator" href="#chiffrage" role="button" data-bs-toggle="collapse"
+                        aria-expanded="false" aria-controls="chiffrage">
+                        <div class="d-flex align-items-center">
+                            <span class="nav-link-icon"><span class="fas fa-calculator fs-1"></span></span>
+                            <span class="nav-link-text ps-1">{% trans "Chiffrage" %}</span>
+                        </div>
+                    </a>
+                    <ul class="nav collapse" id="chiffrage">
+                        <li class="nav-item">
+                            <a class="nav-link {% if on == 'price_item_list' %}active{% endif %}"
+                                href="{% url 'pricing:price_item_list' %}">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-text ps-1">{% trans "Bibliothèque de Prix" %}</span>
+                                </div>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if on == 'dqe_list' %}active{% endif %}"
+                                href="{% url 'pricing:dqe_list' %}">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-text ps-1">{% trans "DQE" %}</span>
+                                </div>
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
                 <!-- Revenue -->
                 <li class="nav-item">
                     <a class="nav-link dropdown-indicator" href="#revenue" role="button" data-bs-toggle="collapse"
@@ -138,10 +215,26 @@
                     </a>
                     <ul class="nav collapse" id="revenue">
                         <li class="nav-item">
+                            <a class="nav-link {% if on == 'devis_list' %}active{% endif %}"
+                                href="{% url 'revenue:devis_list' %}">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-text ps-1">{% trans "Devis" %}</span>
+                                </div>
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link {% if on == 'contract_list' %}active{% endif %}"
                                 href="{% url 'revenue:contract_list' %}">
                                 <div class="d-flex align-items-center">
                                     <span class="nav-link-text ps-1">{% trans "Client Contracts" %}</span>
+                                </div>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if on == 'situation_list' %}active{% endif %}"
+                                href="{% url 'revenue:situation_list' %}">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-text ps-1">{% trans "Situations de travaux" %}</span>
                                 </div>
                             </a>
                         </li>
@@ -229,7 +322,7 @@
                 link.classList.add('active');
 
                 // Expand parent collapse if it's a sub-item
-                let parentCollapse = link.closest('.collapse');
+                let parentCollapse = link.closest('ul.collapse'); // scoped to submenu <ul> only — the outer '#navbarVerticalCollapse' div also matches '.collapse', which was wrongly marking it "show" (open) for every top-level active link
                 if (parentCollapse) {
                     parentCollapse.classList.add('show');
                     const toggle = document.querySelector(`[aria-controls="${parentCollapse.id}"]`);

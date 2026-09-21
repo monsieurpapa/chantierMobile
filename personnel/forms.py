@@ -6,10 +6,11 @@ from chantiermobile.constants import FormPlaceholders, FormHelpTexts, DatePicker
 class PersonnelForm(forms.ModelForm):
     class Meta:
         model = Personnel
-        fields = ['first_name', 'last_name', 'skills', 'default_daily_rate', 'user']
+        fields = ['first_name', 'last_name', 'personnel_type', 'skills', 'default_daily_rate', 'user']
         widgets = {
             'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.FIRST_NAME}),
             'last_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.LAST_NAME}),
+            'personnel_type': forms.Select(attrs={'class': 'form-select'}),
             'skills': forms.SelectMultiple(attrs={'class': 'form-select js-choice', 'multiple': 'multiple'}),
             'default_daily_rate': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.AMOUNT}),
             'user': forms.Select(attrs={'class': 'form-select'}),

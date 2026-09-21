@@ -8,6 +8,7 @@ urlpatterns = [
     path('expenses/add/', views.ExpenseCreateView.as_view(), name='expense_create'),
     path('expenses/<int:pk>/', views.ExpenseDetailView.as_view(), name='expense_detail'),
     path('expenses/<int:pk>/approve/', views.approve_expense, name='expense_approve'),
+    path('expenses/<int:pk>/reject/', views.reject_expense, name='expense_reject'),
     path('expenses/<int:pk>/pay/', views.mark_expense_paid, name='expense_pay'),
     
     # Budgets

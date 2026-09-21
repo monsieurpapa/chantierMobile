@@ -1,5 +1,5 @@
 {% extends 'falcon_base.html' %}
-{% load static i18n %}
+{% load static i18n humanize %}
 
 {% block title %}{% trans "Dashboard" %} - ChantierMobile{% endblock %}
 
@@ -11,9 +11,11 @@
         {% include 'includes/navbar-top.html' %}
 
         <div class="container-fluid py-4">
+
+  <!-- Welcome banner -->
   <div class="row g-3 mb-3">
     <div class="col-12">
-      <div class="card mb-3">
+      <div class="card mb-0">
         <div class="bg-holder d-none d-lg-block bg-card"
           style="background-image:url('{% static 'assets/img/icons/spot-illustrations/corner-4.png' %}');">
         </div>
@@ -23,6 +25,9 @@
             <div class="col-lg-8">
               <h3 class="mb-0 text-primary">{% trans "Chantier Mobile Dashboard" %}</h3>
               <p class="mt-2 text-600">{% trans "Enterprise Resource Planning for Construction Sites. Monitor progress, manage personnel, and track finances in real-time." %}</p>
+              {% if dashboard_all_cabinets %}
+              <p class="fs--1 text-500 mb-0"><i class="fas fa-info-circle me-1"></i>{% trans "Vue consolidée sur tous les cabinets. Sélectionnez un cabinet dans le menu superadmin pour une vue dédiée." %}</p>
+              {% endif %}
               <div class="mt-3">
                 <a class="btn btn-falcon-primary btn-sm me-2" href="{% url 'projects:site_list' %}">{% trans "View Projects" %}</a>
                 <a class="btn btn-falcon-default btn-sm" href="{% url 'projects:site_create' %}">{% trans "New Project" %}</a>
@@ -34,7 +39,378 @@
     </div>
   </div>
 
+  <!-- ============================================================ -->
+  <!-- Hero KPIs -->
+  <!-- ============================================================ -->
   <div class="row g-3 mb-3">
+    <div class="col-sm-6 col-xxl-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <p class="fs--1 text-600 text-uppercase fw-bold mb-1">{% trans "Encaissé ce mois-ci" %}</p>
+              <h4 class="mb-0 text-success fw-bold">${{ revenue_month|floatformat:0|intcomma }}</h4>
+              {% if revenue_trend is not None %}
+              <span class="badge badge-subtle-{% if revenue_trend >= 0 %}success{% else %}danger{% endif %} rounded-pill fs--2 mt-2">
+                <i class="fas fa-arrow-{% if revenue_trend >= 0 %}up{% else %}down{% endif %} me-1"></i>{{ revenue_trend|floatformat:1 }}% {% trans "vs mois dernier" %}
+              </span>
+              {% else %}
+              <span class="badge badge-subtle-secondary rounded-pill fs--2 mt-2">{% trans "Pas de comparaison" %}</span>
+              {% endif %}
+            </div>
+            <div class="icon-item icon-item-sm bg-success-subtle"><span class="text-success fas fa-file-invoice-dollar"></span></div>
+          </div>
+          <p class="fs--2 text-500 mt-3 mb-0 border-top pt-2">{% trans "Cumul encaissé" %}: <strong class="text-700">${{ revenue_all|floatformat:0|intcomma }}</strong></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-sm-6 col-xxl-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <p class="fs--1 text-600 text-uppercase fw-bold mb-1">{% trans "Dépenses ce mois-ci" %}</p>
+              <h4 class="mb-0 text-warning fw-bold">${{ expense_month|floatformat:0|intcomma }}</h4>
+              {% if expense_trend is not None %}
+              <span class="badge badge-subtle-{% if expense_trend <= 0 %}success{% else %}warning{% endif %} rounded-pill fs--2 mt-2">
+                <i class="fas fa-arrow-{% if expense_trend >= 0 %}up{% else %}down{% endif %} me-1"></i>{{ expense_trend|floatformat:1 }}% {% trans "vs mois dernier" %}
+              </span>
+              {% else %}
+              <span class="badge badge-subtle-secondary rounded-pill fs--2 mt-2">{% trans "Pas de comparaison" %}</span>
+              {% endif %}
+            </div>
+            <div class="icon-item icon-item-sm bg-warning-subtle"><span class="text-warning fas fa-money-bill-wave"></span></div>
+          </div>
+          <p class="fs--2 text-500 mt-3 mb-0 border-top pt-2">{% trans "Cumul dépensé" %}: <strong class="text-700">${{ expense_all|floatformat:0|intcomma }}</strong></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-sm-6 col-xxl-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <p class="fs--1 text-600 text-uppercase fw-bold mb-1">{% trans "Marge nette (cumul)" %}</p>
+              <h4 class="mb-0 fw-bold {% if net_margin >= 0 %}text-primary{% else %}text-danger{% endif %}">${{ net_margin|floatformat:0|intcomma }}</h4>
+              {% if margin_pct is not None %}
+              <span class="badge badge-subtle-{% if margin_pct >= 15 %}success{% elif margin_pct >= 0 %}warning{% else %}danger{% endif %} rounded-pill fs--2 mt-2">
+                {{ margin_pct|floatformat:1 }}% {% trans "de marge" %}
+              </span>
+              {% else %}
+              <span class="badge badge-subtle-secondary rounded-pill fs--2 mt-2">{% trans "Pas encore d'encaissement" %}</span>
+              {% endif %}
+            </div>
+            <div class="icon-item icon-item-sm bg-primary-subtle"><span class="text-primary fas fa-chart-line"></span></div>
+          </div>
+          <p class="fs--2 text-500 mt-3 mb-0 border-top pt-2">{% trans "Revenus" %} − {% trans "dépenses approuvées" %}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-sm-6 col-xxl-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <p class="fs--1 text-600 text-uppercase fw-bold mb-1">{% trans "Chantiers actifs" %}</p>
+              <h4 class="mb-0 text-info fw-bold">{{ active_sites_count }} <span class="fs--1 text-500 fw-normal">/ {{ total_sites_count }}</span></h4>
+              <span class="badge badge-subtle-secondary rounded-pill fs--2 mt-2">
+                {{ planning_sites_count }} {% trans "en planification" %} · {{ paused_sites_count }} {% trans "en pause" %}
+              </span>
+            </div>
+            <div class="icon-item icon-item-sm bg-info-subtle"><span class="text-info fas fa-project-diagram"></span></div>
+          </div>
+          <p class="fs--2 text-500 mt-3 mb-0 border-top pt-2">{{ completed_sites_count }} {% trans "chantier(s) complété(s)" %}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- Secondary KPI chips -->
+  <!-- ============================================================ -->
+  <div class="row g-3 mb-3">
+    <div class="col-6 col-md-4 col-xxl-2">
+      <a href="{% url 'revenue:devis_list' %}?status=ENVOYE" class="text-decoration-none">
+        <div class="card h-100 hover-shadow">
+          <div class="card-body text-center py-3">
+            <span class="fas fa-file-signature fs-4 text-secondary mb-2 d-block"></span>
+            <h6 class="mb-0 text-800">${{ pipeline_value|floatformat:0|intcomma }}</h6>
+            <p class="fs--2 text-500 mb-0">{% trans "Pipeline devis" %} ({{ pipeline_count }})</p>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col-6 col-md-4 col-xxl-2">
+      <div class="card h-100">
+        <div class="card-body text-center py-3">
+          <span class="fas fa-percentage fs-4 text-primary mb-2 d-block"></span>
+          <h6 class="mb-0 text-800">{% if conversion_rate is not None %}{{ conversion_rate|floatformat:0 }}%{% else %}—{% endif %}</h6>
+          <p class="fs--2 text-500 mb-0">{% trans "Taux de transformation" %}</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4 col-xxl-2">
+      <a href="{% url 'revenue:invoice_list' %}" class="text-decoration-none">
+        <div class="card h-100 hover-shadow {% if overdue_invoices_count %}border-danger border-opacity-25{% endif %}">
+          <div class="card-body text-center py-3">
+            <span class="fas fa-file-invoice-dollar fs-4 {% if overdue_invoices_count %}text-danger{% else %}text-secondary{% endif %} mb-2 d-block"></span>
+            <h6 class="mb-0 {% if overdue_invoices_count %}text-danger{% else %}text-800{% endif %}">{{ overdue_invoices_count }}</h6>
+            <p class="fs--2 text-500 mb-0">{% trans "Factures en retard" %}</p>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col-6 col-md-4 col-xxl-2">
+      <a href="{% url 'tasks:task_list' %}" class="text-decoration-none">
+        <div class="card h-100 hover-shadow {% if overdue_tasks_count %}border-danger border-opacity-25{% endif %}">
+          <div class="card-body text-center py-3">
+            <span class="fas fa-tasks fs-4 {% if overdue_tasks_count %}text-danger{% else %}text-secondary{% endif %} mb-2 d-block"></span>
+            <h6 class="mb-0 {% if overdue_tasks_count %}text-danger{% else %}text-800{% endif %}">{{ overdue_tasks_count }}</h6>
+            <p class="fs--2 text-500 mb-0">{% trans "Tâches en retard" %}</p>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col-6 col-md-4 col-xxl-2">
+      <a href="{% url 'procurement:stock_item_list' %}" class="text-decoration-none">
+        <div class="card h-100 hover-shadow {% if low_stock_count %}border-warning border-opacity-25{% endif %}">
+          <div class="card-body text-center py-3">
+            <span class="fas fa-boxes fs-4 {% if low_stock_count %}text-warning{% else %}text-secondary{% endif %} mb-2 d-block"></span>
+            <h6 class="mb-0 {% if low_stock_count %}text-warning{% else %}text-800{% endif %}">{{ low_stock_count }}</h6>
+            <p class="fs--2 text-500 mb-0">{% trans "Stock sous seuil" %}</p>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col-6 col-md-4 col-xxl-2">
+      <a href="{% url 'finance:expense_list' %}?status=PENDING" class="text-decoration-none">
+        <div class="card h-100 hover-shadow {% if pending_expenses_count %}border-warning border-opacity-25{% endif %}">
+          <div class="card-body text-center py-3">
+            <span class="fas fa-stamp fs-4 {% if pending_expenses_count %}text-warning{% else %}text-secondary{% endif %} mb-2 d-block"></span>
+            <h6 class="mb-0 {% if pending_expenses_count %}text-warning{% else %}text-800{% endif %}">{{ pending_expenses_count }}</h6>
+            <p class="fs--2 text-500 mb-0">{% trans "Dépenses à approuver" %}</p>
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- Charts row 1: Cash flow + Devis pipeline -->
+  <!-- ============================================================ -->
+  <div class="row g-3 mb-3">
+    <div class="col-lg-8">
+      <div class="card h-100">
+        <div class="card-header bg-light">
+          <h6 class="mb-0"><i class="fas fa-chart-line me-2 text-primary"></i>{% trans "Trésorerie — 6 derniers mois" %}</h6>
+        </div>
+        <div class="card-body">
+          <div id="dashboard-cashflow-chart" style="min-height: 320px;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card h-100">
+        <div class="card-header bg-light">
+          <h6 class="mb-0"><i class="fas fa-file-signature me-2 text-info"></i>{% trans "Pipeline commercial (Devis)" %}</h6>
+        </div>
+        <div class="card-body">
+          <div id="dashboard-devis-chart" style="min-height: 320px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- Charts row 2: Budget usage, tasks, personnel -->
+  <!-- ============================================================ -->
+  <div class="row g-3 mb-3">
+    <div class="col-lg-6">
+      <div class="card h-100">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+          <h6 class="mb-0"><i class="fas fa-chart-pie me-2 text-warning"></i>{% trans "Utilisation budgétaire par chantier" %}</h6>
+          <a href="{% url 'finance:budget_list' %}" class="fs--2">{% trans "Voir tout" %}</a>
+        </div>
+        <div class="card-body">
+          {% for row in budget_rows %}
+          <div class="mb-3 {% if forloop.last %}mb-0{% endif %}">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <a href="{{ row.url }}" class="fs--1 fw-semibold text-800 hover-primary text-truncate me-2">{{ row.name }}</a>
+              <span class="badge rounded-pill fs--2 {% if row.usage > 80 %}bg-danger{% elif row.usage > 60 %}bg-warning{% else %}bg-success{% endif %}">{{ row.usage }}%</span>
+            </div>
+            <div class="progress" style="height: 8px;">
+              <div class="progress-bar {% if row.usage > 80 %}bg-danger{% elif row.usage > 60 %}bg-warning{% else %}bg-success{% endif %} rounded-pill" role="progressbar"
+                style="width: {{ row.usage }}%" aria-valuenow="{{ row.usage }}" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+            <p class="fs--2 text-500 mt-1 mb-0">${{ row.spent|floatformat:0|intcomma }} {% trans "sur" %} ${{ row.total|floatformat:0|intcomma }}</p>
+          </div>
+          {% empty %}
+          <p class="text-center text-500 fs--1 py-5 mb-0"><i class="fas fa-inbox me-2"></i>{% trans "Aucun chantier actif avec budget défini." %}</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3">
+      <div class="card h-100">
+        <div class="card-header bg-light">
+          <h6 class="mb-0"><i class="fas fa-tasks me-2 text-info"></i>{% trans "Répartition des tâches" %}</h6>
+        </div>
+        <div class="card-body">
+          <div id="dashboard-task-chart" style="min-height: 260px;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3">
+      <div class="card h-100">
+        <div class="card-header bg-light">
+          <h6 class="mb-0"><i class="fas fa-users me-2 text-primary"></i>{% trans "Effectif mobilisé" %}</h6>
+        </div>
+        <div class="card-body">
+          <div id="dashboard-personnel-chart" style="min-height: 220px;"></div>
+          <p class="text-center fs--2 text-500 mb-0">{{ mobilized_count }} / {{ total_personnel_count }} {% trans "mobilisés aujourd'hui" %}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- Watchlists -->
+  <!-- ============================================================ -->
+  <div class="row g-3 mb-3">
+    <div class="col-lg-4">
+      <div class="card h-100">
+        <div class="card-header bg-light">
+          <h6 class="mb-0 text-danger"><i class="fas fa-exclamation-triangle me-2"></i>{% trans "Factures en retard" %}</h6>
+        </div>
+        <div class="card-body p-0">
+          <div class="list-group list-group-flush">
+            {% for invoice in overdue_invoices %}
+            <a href="{% url 'revenue:invoice_detail' pk=invoice.pk %}" class="list-group-item list-group-item-action py-2 px-3">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <p class="mb-0 fs--1 fw-semibold text-800">{{ invoice.invoice_number }}</p>
+                  <p class="mb-0 fs--2 text-500">{{ invoice.contract.site.name }} · {% trans "échéance" %} {{ invoice.due_date }}</p>
+                </div>
+                <span class="fs--1 fw-bold text-danger">${{ invoice.amount|floatformat:0|intcomma }}</span>
+              </div>
+            </a>
+            {% empty %}
+            <p class="text-center text-500 fs--1 py-4 mb-0"><i class="fas fa-check-circle me-2 text-success"></i>{% trans "Aucune facture en retard." %}</p>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card h-100">
+        <div class="card-header bg-light">
+          <h6 class="mb-0 text-danger"><i class="fas fa-exclamation-triangle me-2"></i>{% trans "Tâches en retard" %}</h6>
+        </div>
+        <div class="card-body p-0">
+          <div class="list-group list-group-flush">
+            {% for task in overdue_tasks %}
+            <a href="{% url 'tasks:task_detail' pk=task.pk %}" class="list-group-item list-group-item-action py-2 px-3">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <p class="mb-0 fs--1 fw-semibold text-800">{{ task.title }}</p>
+                  <p class="mb-0 fs--2 text-500">{{ task.site.name }} · {% if task.assigned_to %}{{ task.assigned_to.get_full_name }}{% else %}{% trans "non assignée" %}{% endif %}</p>
+                </div>
+                <span class="fs--2 fw-bold text-danger">{{ task.due_date }}</span>
+              </div>
+            </a>
+            {% empty %}
+            <p class="text-center text-500 fs--1 py-4 mb-0"><i class="fas fa-check-circle me-2 text-success"></i>{% trans "Aucune tâche en retard." %}</p>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card h-100">
+        <div class="card-header bg-light">
+          <h6 class="mb-0 text-warning"><i class="fas fa-boxes me-2"></i>{% trans "Stock à réapprovisionner" %}</h6>
+        </div>
+        <div class="card-body p-0">
+          <div class="list-group list-group-flush">
+            {% for item in low_stock_items %}
+            <a href="{% url 'procurement:stock_item_detail' pk=item.pk %}" class="list-group-item list-group-item-action py-2 px-3">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <p class="mb-0 fs--1 fw-semibold text-800">{{ item.name }}</p>
+                  <p class="mb-0 fs--2 text-500">{{ item.site.name }}</p>
+                </div>
+                <span class="fs--2 fw-bold text-warning">{{ item.quantity_on_hand }} / {{ item.reorder_threshold }} {{ item.unit }}</span>
+              </div>
+            </a>
+            {% empty %}
+            <p class="text-center text-500 fs--1 py-4 mb-0"><i class="fas fa-check-circle me-2 text-success"></i>{% trans "Aucune alerte de stock." %}</p>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- Activity feed + Cabinet info -->
+  <!-- ============================================================ -->
+  <div class="row g-3">
+    <div class="col-lg-7">
+      <div class="card h-100">
+        <div class="card-header bg-light">
+          <h5 class="mb-0">{% trans "Activité récente" %}</h5>
+        </div>
+        <div class="card-body">
+          {% if activity_items %}
+          <div class="timeline-vertical">
+            {% for item in activity_items %}
+            <div class="d-flex mb-3 {% if forloop.last %}mb-0{% endif %}">
+              <div class="icon-item icon-item-sm me-3 flex-shrink-0" style="background-color: {{ item.color }}22; color: {{ item.color }};">
+                <span class="fas fa-{{ item.icon }}"></span>
+              </div>
+              <div class="flex-1 border-bottom pb-2 {% if forloop.last %}border-0 pb-0{% endif %}">
+                <a href="{{ item.url }}" class="fs--1 fw-semibold text-800 hover-primary">{{ item.title }}</a>
+                <p class="mb-0 fs--2 text-500">{{ item.subtitle }} · {{ item.timestamp|timesince }} {% trans "auparavant" %}</p>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <p class="text-center py-4 text-500 fs--1">{% trans "Aucune activité récente. Les mises à jour de devis, factures, commandes et tâches apparaîtront ici." %}</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-5">
+      <div class="card h-100">
+        <div class="card-header bg-light">
+          <h5 class="mb-0">{% trans "Cabinet Information" %}</h5>
+        </div>
+        <div class="card-body">
+          <div class="d-flex align-items-center mb-3">
+            <div class="avatar avatar-2xl me-3">
+              <img class="rounded-circle" src="{% static 'app/img/chantiermobile-mark.svg' %}" alt="Logo" />
+            </div>
+            <div class="flex-1">
+              <h6 class="mb-0">{{ user.email }}</h6>
+              <p class="fs--1 text-600 mb-0">{% trans "Active Session" %}</p>
+            </div>
+          </div>
+          <hr>
+          <p class="fs--1 text-600">{% trans "Ensure all daily reports are submitted before the end of the business day for accurate tracking." %}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- Quick access to modules -->
+  <!-- ============================================================ -->
+  <h5 class="mt-4 mb-3">{% trans "Accès rapide" %}</h5>
+  <div class="row g-3">
     <!-- Projects & Sites -->
     <div class="col-md-6 col-xxl-4">
       <div class="card h-100">
@@ -122,41 +498,106 @@
     </div>
   </div>
 
-  <div class="row g-3">
-    <div class="col-lg-7">
-      <div class="card h-100">
-        <div class="card-header bg-light">
-          <h5 class="mb-0">{% trans "System Activity" %}</h5>
-        </div>
-        <div class="card-body">
-          <p class="text-center py-4 text-500 fs--1">{% trans "Real-time activity logs will appear here as projects progress." %}
-          </p>
-        </div>
-      </div>
-    </div>
-    <div class="col-lg-5">
-      <div class="card h-100">
-        <div class="card-header bg-light">
-          <h5 class="mb-0">{% trans "Cabinet Information" %}</h5>
-        </div>
-        <div class="card-body">
-          <div class="d-flex align-items-center mb-3">
-            <div class="avatar avatar-2xl me-3">
-              <img class="rounded-circle" src="{% static 'app/img/chantiermobile-mark.svg' %}" alt="Logo" />
-            </div>
-            <div class="flex-1">
-              <h6 class="mb-0">{{ user.email }}</h6>
-              <p class="fs--1 text-600 mb-0">{% trans "Active Session" %}</p>
-            </div>
-          </div>
-          <hr>
-          <p class="fs--1 text-600">{% trans "Ensure all daily reports are submitted before the end of the business day for accurate tracking." %}</p>
-        </div>
-      </div>
-    </div>
-  </div>
         </div>
         {% include 'includes/footer.html' %}
     </div>
 </div>
+{% endblock %}
+
+{% block echarts %}
+{{ cashflow_labels|json_script:"cashflow-labels-data" }}
+{{ cashflow_revenue|json_script:"cashflow-revenue-data" }}
+{{ cashflow_expense|json_script:"cashflow-expense-data" }}
+{{ cashflow_margin|json_script:"cashflow-margin-data" }}
+{{ devis_chart|json_script:"devis-chart-data" }}
+{{ task_chart|json_script:"task-chart-data" }}
+{{ personnel_chart|json_script:"personnel-chart-data" }}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  function readJSON(id) {
+    var el = document.getElementById(id);
+    return el ? JSON.parse(el.textContent) : null;
+  }
+
+  function showEmpty(dom) {
+    dom.innerHTML = '<div class="d-flex align-items-center justify-content-center h-100 text-500 fs--1" style="min-height:200px;">'
+      + '<i class="fas fa-inbox me-2"></i>{% trans "Aucune donnée pour le moment" %}</div>';
+  }
+
+  var falconColors = {
+    primary: '#2c7be5', secondary: '#748194', success: '#00d27a',
+    info: '#27bcfd', warning: '#f5803e', danger: '#e63757'
+  };
+
+  // ---------------------------------------------------------------
+  // Cash flow trend (bar: revenue vs expense, line: margin)
+  // ---------------------------------------------------------------
+  var cfDom = document.getElementById('dashboard-cashflow-chart');
+  if (cfDom) {
+    var cfLabels = readJSON('cashflow-labels-data') || [];
+    var cfRevenue = readJSON('cashflow-revenue-data') || [];
+    var cfExpense = readJSON('cashflow-expense-data') || [];
+    var cfMargin = readJSON('cashflow-margin-data') || [];
+    var cfHasData = cfRevenue.some(function (v) { return v !== 0; }) || cfExpense.some(function (v) { return v !== 0; });
+
+    if (!cfHasData) {
+      showEmpty(cfDom);
+    } else {
+      var cfChart = echarts.init(cfDom);
+      cfChart.setOption({
+        color: [falconColors.success, falconColors.danger, falconColors.primary],
+        tooltip: {
+          trigger: 'axis',
+          valueFormatter: function (v) { return '$' + Number(v).toLocaleString(); }
+        },
+        legend: { data: ['{% trans "Encaissements" %}', '{% trans "Dépenses" %}', '{% trans "Marge" %}'], bottom: 0 },
+        grid: { left: 55, right: 20, top: 20, bottom: 45, containLabel: false },
+        xAxis: { type: 'category', data: cfLabels, axisTick: { alignWithLabel: true } },
+        yAxis: {
+          type: 'value',
+          axisLabel: { formatter: function (v) { return '$' + Math.round(v / 1000) + 'k'; } },
+          splitLine: { lineStyle: { type: 'dashed' } }
+        },
+        series: [
+          { name: '{% trans "Encaissements" %}', type: 'bar', data: cfRevenue, barMaxWidth: 26 },
+          { name: '{% trans "Dépenses" %}', type: 'bar', data: cfExpense, barMaxWidth: 26 },
+          { name: '{% trans "Marge" %}', type: 'line', data: cfMargin, smooth: true, symbolSize: 6 }
+        ]
+      });
+      window.addEventListener('resize', function () { cfChart.resize(); });
+    }
+  }
+
+  // ---------------------------------------------------------------
+  // Donut helper, reused for Devis / Tasks / Personnel
+  // ---------------------------------------------------------------
+  function donutChart(domId, data) {
+    var dom = document.getElementById(domId);
+    if (!dom || !data) return;
+    var total = data.reduce(function (s, d) { return s + d.value; }, 0);
+    if (!total) { showEmpty(dom); return; }
+    var chart = echarts.init(dom);
+    chart.setOption({
+      tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+      legend: { bottom: 0, itemWidth: 10, itemHeight: 10, textStyle: { fontSize: 11 } },
+      series: [{
+        type: 'pie',
+        radius: ['52%', '78%'],
+        avoidLabelOverlap: true,
+        itemStyle: { borderColor: '#fff', borderWidth: 2 },
+        label: { show: false },
+        labelLine: { show: false },
+        data: data.filter(function (d) { return d.value > 0; }).map(function (d) {
+          return { name: d.name, value: d.value, itemStyle: { color: d.color } };
+        })
+      }]
+    });
+    window.addEventListener('resize', function () { chart.resize(); });
+  }
+
+  donutChart('dashboard-devis-chart', readJSON('devis-chart-data'));
+  donutChart('dashboard-task-chart', readJSON('task-chart-data'));
+  donutChart('dashboard-personnel-chart', readJSON('personnel-chart-data'));
+});
+</script>
 {% endblock %}

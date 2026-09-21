@@ -25,7 +25,11 @@ class ExpenseListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, L
     cabinet_lookup_field = 'site__cabinet'
 
     def get_queryset(self):
-        return super().get_queryset().select_related('site', 'category', 'requester')
+        qs = super().get_queryset().select_related('site', 'category', 'requester').order_by('-created_at')
+        status = self.request.GET.get('status')
+        if status:
+            qs = qs.filter(status=status)
+        return qs
 
     def get_header_actions(self):
         return [{
@@ -102,16 +106,38 @@ def approve_expense(request, pk):
         expense = get_object_or_404(Expense, pk=pk)
         active_cabinet = get_session_cabinet(request)
         if active_cabinet and expense.site.cabinet != active_cabinet:
-            messages.error(request, "This expense belongs to a different cabinet than your active session.")
+            messages.error(request, _("Cette dépense appartient à un autre cabinet que votre session active."))
             return redirect('finance:expense_list')
         if request.user.is_superuser or request.user.cabinet_roles.filter(cabinet=expense.site.cabinet, role__in=[UserRoles.DIRECTOR, UserRoles.ACCOUNTANT]).exists():
             try:
                 expense.approve(request.user, comments=request.POST.get('comments', ''))
-                messages.success(request, "Expense approved.")
+                messages.success(request, _("Dépense approuvée."))
             except ValidationError as e:
-                messages.error(request, f"Could not approve expense: {e}")
+                messages.error(request, _("Impossible d'approuver la dépense : %(error)s") % {'error': e})
         else:
-            messages.error(request, "Unauthorized.")
+            messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+        return redirect('finance:expense_detail', pk=pk)
+    return redirect('finance:expense_list')
+
+@login_required
+def reject_expense(request, pk):
+    if request.method == 'POST':
+        expense = get_object_or_404(Expense, pk=pk)
+        active_cabinet = get_session_cabinet(request)
+        if active_cabinet and expense.site.cabinet != active_cabinet:
+            messages.error(request, _("Cette dépense appartient à un autre cabinet que votre session active."))
+            return redirect('finance:expense_list')
+        if request.user.is_superuser or request.user.cabinet_roles.filter(cabinet=expense.site.cabinet, role__in=[UserRoles.DIRECTOR, UserRoles.ACCOUNTANT]).exists():
+            if expense.status != ExpenseStatus.PENDING:
+                messages.error(request, _("Seule une dépense en attente peut être rejetée."))
+            else:
+                try:
+                    expense.reject(request.user, comments=request.POST.get('comments', ''))
+                    messages.success(request, _("Dépense rejetée."))
+                except ValidationError as e:
+                    messages.error(request, _("Impossible de rejeter la dépense : %(error)s") % {'error': e})
+        else:
+            messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
         return redirect('finance:expense_detail', pk=pk)
     return redirect('finance:expense_list')
 
@@ -121,22 +147,22 @@ def mark_expense_paid(request, pk):
         expense = get_object_or_404(Expense, pk=pk)
         active_cabinet = get_session_cabinet(request)
         if active_cabinet and expense.site.cabinet != active_cabinet:
-            messages.error(request, "This expense belongs to a different cabinet than your active session.")
+            messages.error(request, _("Cette dépense appartient à un autre cabinet que votre session active."))
             return redirect('finance:expense_list')
         if request.user.is_superuser or request.user.cabinet_roles.filter(cabinet=expense.site.cabinet, role__in=[UserRoles.DIRECTOR, UserRoles.CASHIER]).exists():
             # Validate expense can be paid
             if not expense.can_be_paid():
-                messages.error(request, f"Only approved expenses can be paid. Current status: {expense.status}.")
+                messages.error(request, _("Seules les dépenses approuvées peuvent être payées. Statut actuel : %(status)s.") % {'status': expense.get_status_display()})
             else:
                 try:
                     expense.status = ExpenseStatus.PAID
                     expense.full_clean()
                     expense.save()
-                    messages.success(request, "Expense marked as PAID.")
+                    messages.success(request, _("Dépense marquée comme PAYÉE."))
                 except ValidationError as e:
-                    messages.error(request, f"Error marking expense as paid: {str(e)}")
+                    messages.error(request, _("Erreur lors du paiement de la dépense : %(error)s") % {'error': str(e)})
         else:
-            messages.error(request, "Unauthorized.")
+            messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
         return redirect('finance:expense_detail', pk=pk)
     return redirect('finance:expense_list')
 
