@@ -96,6 +96,12 @@ class CaisseType(models.TextChoices):
     SECONDAIRE = 'SECONDAIRE', _('Caisse secondaire')
 
 
+class CaisseTransactionType(models.TextChoices):
+    """Movement direction on a balance-tracked Caisse ledger entry."""
+    ENTREE = 'ENTREE', _('Entrée')
+    SORTIE = 'SORTIE', _('Sortie')
+
+
 class DevisStatus(models.TextChoices):
     """Devis (quote/estimate) status choices"""
     BROUILLON = 'BROUILLON', _('Brouillon')
@@ -438,6 +444,7 @@ __all__ = [
     'PaymentMethod',
     'ExpenseNature',
     'CaisseType',
+    'CaisseTransactionType',
     'DevisStatus',
     'SituationStatus',
     'PriceItemType',

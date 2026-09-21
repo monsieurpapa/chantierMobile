@@ -19,4 +19,18 @@ urlpatterns = [
     path('budgets/add/', views.BudgetCreateView.as_view(), name='budget_create'),
     path('budgets/<int:pk>/', views.BudgetDetailView.as_view(), name='budget_detail'),
     path('budgets/<int:pk>/edit/', views.BudgetUpdateView.as_view(), name='budget_update'),
+
+    # Caisses (livre de caisse, prêts, virements)
+    path('caisses/', views.CaisseListView.as_view(), name='caisse_list'),
+    path('caisses/add/', views.CaisseCreateView.as_view(), name='caisse_create'),
+    path('caisses/<int:pk>/', views.CaisseDetailView.as_view(), name='caisse_detail'),
+    path('caisses/<int:pk>/transactions/add/', views.CaisseTransactionCreateView.as_view(), name='caisse_transaction_create'),
+    path('caisses/<int:pk>/transfer/', views.caisse_transfer, name='caisse_transfer'),
+    path('caisses/report/', views.CaisseReportView.as_view(), name='caisse_report'),
+    path('caisses/report/pdf/', views.caisse_report_pdf, name='caisse_report_pdf'),
+
+    # Prêts entre caisses
+    path('caisse-loans/', views.CaisseLoanListView.as_view(), name='caisse_loan_list'),
+    path('caisse-loans/add/', views.CaisseLoanCreateView.as_view(), name='caisse_loan_create'),
+    path('caisse-loans/<int:pk>/repay/', views.caisse_loan_repay, name='caisse_loan_repay'),
 ]

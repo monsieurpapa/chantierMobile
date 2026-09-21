@@ -5,20 +5,23 @@ from django.core.exceptions import ValidationError
 from django.urls import reverse_lazy
 from django.shortcuts import redirect, get_object_or_404
 from django.contrib import messages
-from django.db.models import Sum, Count
+from django.db.models import Sum, Count, Q
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from decimal import Decimal
-from .models import Expense, ExpenseApproval, Budget
-from .forms import ExpenseForm, BudgetForm
+from .models import Expense, ExpenseApproval, Budget, Caisse, CaisseTransaction, CaisseLoan
+from .forms import ExpenseForm, BudgetForm, CaisseForm, CaisseTransactionForm, CaisseTransferForm, CaisseLoanForm, CaisseLoanRepayForm
 from projects.models import Site
-from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet
-from chantiermobile.constants import ExpenseStatus, UserRoles
+from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet, can_act_for_cabinet
+from chantiermobile.constants import ExpenseStatus, UserRoles, CaisseTransactionType
 
 # Roles that may view the expenses report / export it to PDF — mirrors
 # core.dashboard.FINANCIAL_ROLES (the same audience that sees the
 # dashboard's money widgets).
 EXPENSE_REPORT_ROLES = ['DIRECTOR', 'ACCOUNTANT', 'CASHIER']
+
+# Roles that may manage caisses and record ledger movements.
+CAISSE_MANAGE_ROLES = ['DIRECTOR', 'ACCOUNTANT', 'CASHIER', 'FINANCIER']
 
 class ExpenseListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
     model = Expense
@@ -487,5 +490,375 @@ def expense_report_pdf(request):
         columns=["Date", "Chantier", "Catégorie", "Nature", "Personnel", "Désignation", "Montant", "Statut"],
         rows=rows,
         totals_row=["", "", "", "", "", "Total", f"{total:.2f} $", ""],
+        generated_by=request.user.get_full_name() or request.user.username,
+    )
+
+
+# ---------------------------------------------------------------------
+# Caisse (livre de caisse quotidien, prêts entre caisses, virements)
+# ---------------------------------------------------------------------
+
+class CaisseListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
+    model = Caisse
+    template_name = 'finance/caisse_list.html'
+    context_object_name = 'caisses'
+    header_title = _("Caisses")
+    header_subtitle = _("Gérez les caisses et leur solde")
+
+    def get_queryset(self):
+        return super().get_queryset().select_related('site')
+
+    def get_header_actions(self):
+        from accounts.models import UserCabinetRole
+        if self.request.user.is_superuser or UserCabinetRole.objects.filter(
+            user=self.request.user, role__in=CAISSE_MANAGE_ROLES
+        ).exists():
+            return [{
+                'label': _("Nouvelle caisse"),
+                'url': str(reverse_lazy('finance:caisse_create')),
+                'icon': 'plus',
+                'class': 'btn-falcon-primary',
+            }]
+        return []
+
+
+class CaisseCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, CreateView):
+    model = Caisse
+    form_class = CaisseForm
+    template_name = 'finance/caisse_form.html'
+    allowed_roles = ['DIRECTOR', 'ACCOUNTANT']
+    success_url = reverse_lazy('finance:caisse_list')
+    header_title = _("Nouvelle caisse")
+    back_url = reverse_lazy('finance:caisse_list')
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        cabinet = self.get_user_cabinet()
+        form.fields['site'].queryset = Site.objects.filter(cabinet=cabinet) if cabinet else Site.objects.none()
+        return form
+
+    def form_valid(self, form):
+        cabinet = self.get_user_cabinet()
+        if not cabinet:
+            messages.error(self.request, _("Identification du cabinet échouée."))
+            return self.form_invalid(form)
+        form.instance.cabinet = cabinet
+        messages.success(self.request, _("Caisse créée."))
+        return super().form_valid(form)
+
+
+class CaisseDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, DetailView):
+    """The livre de caisse: chronological ledger with a running balance,
+    optionally filtered to a date range (day/week/month/year)."""
+    model = Caisse
+    template_name = 'finance/caisse_detail.html'
+    context_object_name = 'caisse'
+
+    def get_header_title(self):
+        return self.object.name
+
+    def get_back_url(self):
+        return str(reverse_lazy('finance:caisse_list'))
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        caisse = self.object
+        qs = caisse.transactions.select_related('site', 'phase', 'expense').order_by('date', 'created_at')
+
+        date_from = self.request.GET.get('date_from')
+        date_to = self.request.GET.get('date_to')
+        period = self.request.GET.get('period')
+        today = timezone.localdate()
+        if period == 'day':
+            qs = qs.filter(date=today)
+        elif period == 'week':
+            qs = qs.filter(date__gte=today - timezone.timedelta(days=7))
+        elif period == 'month':
+            qs = qs.filter(date__gte=today.replace(day=1))
+        elif period == 'year':
+            qs = qs.filter(date__gte=today.replace(month=1, day=1))
+        if date_from:
+            qs = qs.filter(date__gte=date_from)
+        if date_to:
+            qs = qs.filter(date__lte=date_to)
+
+        # Running balance across the filtered rows, seeded with the balance
+        # carried in from before the range so the ledger reads like a bank
+        # statement rather than resetting to zero.
+        opening = caisse.transactions.filter(date__lt=(qs.first().date if qs.exists() else today)).aggregate(
+            entrees=Sum('amount', filter=Q(transaction_type=CaisseTransactionType.ENTREE)),
+            sorties=Sum('amount', filter=Q(transaction_type=CaisseTransactionType.SORTIE)),
+        )
+        running = (opening['entrees'] or 0) - (opening['sorties'] or 0)
+        rows = []
+        for tx in qs:
+            running += tx.amount if tx.transaction_type == CaisseTransactionType.ENTREE else -tx.amount
+            rows.append({'tx': tx, 'running_balance': running})
+
+        context['ledger_rows'] = rows
+        context['opening_balance'] = (opening['entrees'] or 0) - (opening['sorties'] or 0)
+        context['closing_balance'] = running
+        context['period'] = period or ''
+        context['date_from'] = date_from or ''
+        context['date_to'] = date_to or ''
+        context['can_manage'] = can_act_for_cabinet(self.request, caisse.cabinet, CAISSE_MANAGE_ROLES)
+        context['other_caisses'] = Caisse.objects.filter(cabinet=caisse.cabinet).exclude(pk=caisse.pk)
+        context['transfer_form'] = CaisseTransferForm()
+        context['transfer_form'].fields['target_caisse'].queryset = context['other_caisses']
+        return context
+
+
+class CaisseTransactionCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, CreateView):
+    model = CaisseTransaction
+    form_class = CaisseTransactionForm
+    template_name = 'finance/caisse_transaction_form.html'
+    allowed_roles = CAISSE_MANAGE_ROLES
+    header_title = _("Enregistrer un mouvement de caisse")
+
+    def dispatch(self, request, *args, **kwargs):
+        self.caisse = get_object_or_404(Caisse, pk=kwargs['pk'])
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_role_cabinet(self):
+        return self.caisse.cabinet
+
+    def get_back_url(self):
+        return str(reverse_lazy('finance:caisse_detail', kwargs={'pk': self.caisse.pk}))
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['caisse'] = self.caisse
+        return context
+
+    def form_valid(self, form):
+        form.instance.caisse = self.caisse
+        form.instance.recorded_by = self.request.user
+        messages.success(self.request, _("Mouvement enregistré."))
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse_lazy('finance:caisse_detail', kwargs={'pk': self.caisse.pk})
+
+
+@login_required
+def caisse_transfer(request, pk):
+    """Daily remittance from a caisse to another (e.g. to the caisse de
+    gestion administrative) — not a loan, no repayment tracked."""
+    caisse = get_object_or_404(Caisse, pk=pk)
+    if request.method != 'POST':
+        return redirect('finance:caisse_detail', pk=pk)
+    if not can_act_for_cabinet(request, caisse.cabinet, CAISSE_MANAGE_ROLES):
+        messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+        return redirect('finance:caisse_detail', pk=pk)
+
+    form = CaisseTransferForm(request.POST)
+    form.fields['target_caisse'].queryset = Caisse.objects.filter(cabinet=caisse.cabinet).exclude(pk=caisse.pk)
+    if form.is_valid():
+        target = form.cleaned_data['target_caisse']
+        amount = form.cleaned_data['amount']
+        if amount > caisse.balance:
+            messages.error(request, _("Solde insuffisant pour ce transfert."))
+        else:
+            caisse.transfer_to(target, amount, request.user, description=form.cleaned_data.get('description', ''))
+            messages.success(request, _("Transfert de %(amount)s vers %(target)s effectué.") % {'amount': amount, 'target': target})
+    else:
+        messages.error(request, _("Transfert invalide : %(errors)s") % {'errors': form.errors.as_text()})
+    return redirect('finance:caisse_detail', pk=pk)
+
+
+class CaisseLoanListView(LoginRequiredMixin, PageHeaderMixin, ListView):
+    model = CaisseLoan
+    template_name = 'finance/caisse_loan_list.html'
+    context_object_name = 'loans'
+    header_title = _("Prêts entre caisses")
+    back_url = reverse_lazy('finance:caisse_list')
+
+    def get_queryset(self):
+        qs = CaisseLoan.objects.select_related('lender_caisse', 'borrower_caisse').order_by('-date')
+        user = self.request.user
+        if not user.is_superuser:
+            cabinets = user.cabinet_roles.values_list('cabinet', flat=True) if hasattr(user, 'cabinet_roles') else []
+            qs = qs.filter(lender_caisse__cabinet__in=cabinets)
+        else:
+            active_cabinet = get_session_cabinet(self.request)
+            if active_cabinet:
+                qs = qs.filter(lender_caisse__cabinet=active_cabinet)
+        return qs
+
+
+class CaisseLoanCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, CreateView):
+    model = CaisseLoan
+    form_class = CaisseLoanForm
+    template_name = 'finance/caisse_loan_form.html'
+    allowed_roles = CAISSE_MANAGE_ROLES
+    success_url = reverse_lazy('finance:caisse_loan_list')
+    header_title = _("Nouveau prêt entre caisses")
+    back_url = reverse_lazy('finance:caisse_loan_list')
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        user = self.request.user
+        if user.is_superuser:
+            active_cabinet = get_session_cabinet(self.request)
+            qs = Caisse.objects.filter(cabinet=active_cabinet) if active_cabinet else Caisse.objects.all()
+        else:
+            cabinets = user.cabinet_roles.values_list('cabinet', flat=True)
+            qs = Caisse.objects.filter(cabinet__in=cabinets)
+        form.fields['lender_caisse'].queryset = qs
+        form.fields['borrower_caisse'].queryset = qs
+        return form
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        self.object.disburse(self.request.user)
+        messages.success(self.request, _("Prêt de %(amount)s décaissé de %(lender)s vers %(borrower)s.") % {
+            'amount': self.object.amount, 'lender': self.object.lender_caisse, 'borrower': self.object.borrower_caisse,
+        })
+        return response
+
+
+@login_required
+def caisse_loan_repay(request, pk):
+    loan = get_object_or_404(CaisseLoan, pk=pk)
+    if request.method != 'POST':
+        return redirect('finance:caisse_loan_list')
+    if not can_act_for_cabinet(request, loan.lender_caisse.cabinet, CAISSE_MANAGE_ROLES):
+        messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+        return redirect('finance:caisse_loan_list')
+
+    form = CaisseLoanRepayForm(request.POST)
+    if form.is_valid():
+        try:
+            loan.repay(form.cleaned_data['amount'], request.user)
+            messages.success(request, _("Remboursement enregistré."))
+        except ValidationError as e:
+            messages.error(request, str(e))
+    else:
+        messages.error(request, _("Montant invalide."))
+    return redirect('finance:caisse_loan_list')
+
+
+def _caisse_ledger_queryset(request):
+    """Shared filtering for the combined caisse (livre de caisse) report
+    and its PDF export — cabinet-scoped, filterable by caisse/site/phase and
+    by date range or period (jour/semaine/mois/an)."""
+    qs = CaisseTransaction.objects.select_related('caisse', 'site', 'phase').order_by('-date', '-id')
+    if request.user.is_superuser:
+        active_cabinet = get_session_cabinet(request)
+        if active_cabinet:
+            qs = qs.filter(caisse__cabinet=active_cabinet)
+    else:
+        user_cabinet_ids = request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+        qs = qs.filter(caisse__cabinet__id__in=user_cabinet_ids)
+
+    caisse_id = request.GET.get('caisse')
+    if caisse_id:
+        qs = qs.filter(caisse_id=caisse_id)
+    site_id = request.GET.get('site')
+    if site_id:
+        qs = qs.filter(site_id=site_id)
+    phase_id = request.GET.get('phase')
+    if phase_id:
+        qs = qs.filter(phase_id=phase_id)
+
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+    if date_from:
+        qs = qs.filter(date__gte=date_from)
+    if date_to:
+        qs = qs.filter(date__lte=date_to)
+
+    period = request.GET.get('period')
+    today = timezone.localdate()
+    if period == 'day':
+        qs = qs.filter(date=today)
+    elif period == 'week':
+        qs = qs.filter(date__gte=today - timezone.timedelta(days=7))
+    elif period == 'month':
+        qs = qs.filter(date__gte=today.replace(day=1))
+    elif period == 'year':
+        qs = qs.filter(date__gte=today.replace(month=1, day=1))
+
+    return qs
+
+
+class CaisseReportView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, ListView):
+    """Combined entrées/sorties report across caisses — filterable by
+    caisse, chantier, étape, and by day/week/month/year/date-range, with
+    a PDF export (livre de caisse)."""
+    model = CaisseTransaction
+    template_name = 'finance/caisse_report.html'
+    context_object_name = 'transactions'
+    allowed_roles = CAISSE_MANAGE_ROLES
+    header_title = _("Rapport de caisse (livre de caisse)")
+    back_url = reverse_lazy('finance:caisse_list')
+
+    def get_queryset(self):
+        return _caisse_ledger_queryset(self.request)
+
+    def get_header_actions(self):
+        return [{
+            'label': _("Exporter en PDF"),
+            'url': f"{reverse_lazy('finance:caisse_report_pdf')}?{self.request.GET.urlencode()}",
+            'icon': 'file-pdf',
+            'class': 'btn-falcon-danger',
+        }]
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        qs = context['transactions']
+        context['total_entrees'] = qs.filter(transaction_type=CaisseTransactionType.ENTREE).aggregate(t=Sum('amount'))['t'] or 0
+        context['total_sorties'] = qs.filter(transaction_type=CaisseTransactionType.SORTIE).aggregate(t=Sum('amount'))['t'] or 0
+        if self.request.user.is_superuser:
+            active_cabinet = get_session_cabinet(self.request)
+            context['caisses'] = Caisse.objects.filter(cabinet=active_cabinet) if active_cabinet else Caisse.objects.all()
+            context['sites'] = Site.objects.filter(cabinet=active_cabinet) if active_cabinet else Site.objects.all()
+        else:
+            user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+            context['caisses'] = Caisse.objects.filter(cabinet__id__in=user_cabinet_ids)
+            context['sites'] = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
+        context['selected_caisse'] = self.request.GET.get('caisse', '')
+        context['selected_site'] = self.request.GET.get('site', '')
+        context['date_from'] = self.request.GET.get('date_from', '')
+        context['date_to'] = self.request.GET.get('date_to', '')
+        context['period'] = self.request.GET.get('period', '')
+        return context
+
+
+@login_required
+def caisse_report_pdf(request):
+    from accounts.models import UserCabinetRole
+    if not (request.user.is_superuser or UserCabinetRole.objects.filter(
+        user=request.user, role__in=CAISSE_MANAGE_ROLES
+    ).exists()):
+        messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+        return redirect('finance:caisse_report')
+
+    from core.pdf_utils import render_table_report_pdf
+
+    qs = _caisse_ledger_queryset(request)
+    rows = [
+        (
+            tx.date.strftime('%d/%m/%Y'),
+            tx.caisse.name,
+            tx.get_transaction_type_display(),
+            tx.site.name if tx.site else '-',
+            tx.phase.name if tx.phase else '-',
+            tx.description[:50],
+            f"{tx.amount:.2f} $",
+        )
+        for tx in qs
+    ]
+    total_entrees = qs.filter(transaction_type=CaisseTransactionType.ENTREE).aggregate(t=Sum('amount'))['t'] or 0
+    total_sorties = qs.filter(transaction_type=CaisseTransactionType.SORTIE).aggregate(t=Sum('amount'))['t'] or 0
+    return render_table_report_pdf(
+        filename=f"livre-de-caisse-{timezone.localdate().isoformat()}.pdf",
+        title="Livre de caisse",
+        subtitle=_("%(count)s mouvement(s) — Entrées: %(in)s $ · Sorties: %(out)s $") % {
+            'count': qs.count(), 'in': f"{total_entrees:.2f}", 'out': f"{total_sorties:.2f}",
+        },
+        columns=["Date", "Caisse", "Type", "Chantier", "Étape", "Description", "Montant"],
+        rows=rows,
+        totals_row=["", "", "", "", "", "Solde net", f"{(total_entrees - total_sorties):.2f} $"],
         generated_by=request.user.get_full_name() or request.user.username,
     )

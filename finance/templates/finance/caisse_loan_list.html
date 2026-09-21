@@ -1,0 +1,76 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n humanize %}
+
+{% block title %}{% trans "Prêts entre caisses" %} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    {% include 'includes/navbar-vertical.html' with on="caisse_list" %}
+
+    <div class="content">
+        {% include 'includes/navbar-top.html' %}
+
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            <div class="d-flex justify-content-end mb-3">
+                <a href="{% url 'finance:caisse_loan_create' %}" class="btn btn-falcon-primary btn-sm">
+                    <span class="fas fa-plus me-1"></span>{% trans "Nouveau prêt" %}
+                </a>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped mb-0 fs--1">
+                            <thead>
+                                <tr>
+                                    <th>{% trans "Date" %}</th>
+                                    <th>{% trans "De" %}</th>
+                                    <th>{% trans "Vers" %}</th>
+                                    <th class="text-end">{% trans "Montant" %}</th>
+                                    <th class="text-end">{% trans "Remboursé" %}</th>
+                                    <th class="text-end">{% trans "Restant dû" %}</th>
+                                    <th>{% trans "Statut" %}</th>
+                                    <th class="text-end">{% trans "Actions" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for loan in loans %}
+                                <tr>
+                                    <td>{{ loan.date }}</td>
+                                    <td>{{ loan.lender_caisse.name }}</td>
+                                    <td>{{ loan.borrower_caisse.name }}</td>
+                                    <td class="text-end">${{ loan.amount|floatformat:2|intcomma }}</td>
+                                    <td class="text-end">${{ loan.repaid_amount|floatformat:2|intcomma }}</td>
+                                    <td class="text-end fw-semibold">${{ loan.outstanding_balance|floatformat:2|intcomma }}</td>
+                                    <td>
+                                        {% if loan.is_fully_repaid %}
+                                        <span class="badge bg-success">{% trans "Remboursé" %}</span>
+                                        {% else %}
+                                        <span class="badge bg-warning">{% trans "En cours" %}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        {% if not loan.is_fully_repaid %}
+                                        <form method="post" action="{% url 'finance:caisse_loan_repay' pk=loan.pk %}" class="d-flex gap-1 justify-content-end">
+                                            {% csrf_token %}
+                                            <input type="number" step="0.01" name="amount" class="form-control form-control-sm" style="width: 100px" placeholder="0.00" required>
+                                            <button type="submit" class="btn btn-falcon-success btn-sm">{% trans "Rembourser" %}</button>
+                                        </form>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="8" class="text-center py-4 text-500">{% trans "Aucun prêt entre caisses." %}</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}

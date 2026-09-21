@@ -1,0 +1,72 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n humanize %}
+
+{% block title %}{% trans "Caisses" %} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    <!-- vertical nav -->
+    {% include 'includes/navbar-vertical.html' with on="caisse_list" %}
+    <!-- /vertical nav -->
+
+    <div class="content">
+        <!-- navbar-top -->
+        {% include 'includes/navbar-top.html' %}
+        <!-- /navbar-top -->
+
+        <!-- Main Content -->
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            <div class="d-flex justify-content-end gap-2 mb-3">
+                <a href="{% url 'finance:caisse_report' %}" class="btn btn-falcon-default btn-sm">
+                    <span class="fas fa-file-alt me-1"></span>{% trans "Livre de caisse" %}
+                </a>
+                <a href="{% url 'finance:caisse_loan_list' %}" class="btn btn-falcon-default btn-sm">
+                    <span class="fas fa-hand-holding-usd me-1"></span>{% trans "Prêts entre caisses" %}
+                </a>
+            </div>
+
+            <div class="row g-3">
+                {% for caisse in caisses %}
+                <div class="col-md-4">
+                    <a href="{% url 'finance:caisse_detail' pk=caisse.pk %}" class="text-decoration-none">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <h6 class="mb-1">{{ caisse.name }}</h6>
+                                    {% if caisse.is_administrative %}
+                                    <span class="badge bg-primary">{% trans "Administrative" %}</span>
+                                    {% endif %}
+                                </div>
+                                <p class="fs--1 text-600 mb-2">
+                                    {{ caisse.get_caisse_type_display }}
+                                    {% if caisse.site %} · {{ caisse.site.name }}{% endif %}
+                                </p>
+                                <p class="fs-2 fw-bold {% if caisse.balance < 0 %}text-danger{% else %}text-success{% endif %} mb-0">
+                                    ${{ caisse.balance|floatformat:2|intcomma }}
+                                </p>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                {% empty %}
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body text-center py-5">
+                            <span class="fas fa-cash-register fa-2x text-300 d-block mb-2"></span>
+                            <p class="text-600 mb-2">{% trans "Aucune caisse enregistrée." %}</p>
+                            <a href="{% url 'finance:caisse_create' %}" class="btn btn-falcon-primary btn-sm">
+                                <span class="fas fa-plus me-1"></span>{% trans "Nouvelle caisse" %}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}
