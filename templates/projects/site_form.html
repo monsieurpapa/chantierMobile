@@ -69,6 +69,16 @@
                             </div>
                         </div>
 
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label" for="{{ form.lead_engineer.id_for_label }}">{% trans "Ingénieur principal" %}</label>
+                                {{ form.lead_engineer }}
+                                {% if form.lead_engineer.errors %}
+                                <div class="invalid-feedback d-block">{{ form.lead_engineer.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
                         <div class="col-12 d-flex justify-content-end">
                             <button class="btn btn-primary" type="submit">{% trans "Save Site" %}</button>
                         </div>

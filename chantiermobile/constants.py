@@ -231,6 +231,23 @@ class TaskPriority(models.TextChoices):
     URGENTE = 'URGENTE', _('Urgente')
 
 
+class PlanningStatus(models.TextChoices):
+    """Status of a site/phase planning submission awaiting review by the
+    concerned engineer(s) — "Soumettre la planification aux ingénieurs
+    concernés" from the client's spec."""
+    BROUILLON = 'BROUILLON', _('Brouillon')
+    SOUMISE = 'SOUMISE', _('Soumise')
+    APPROUVEE = 'APPROUVEE', _('Approuvée')
+    REJETEE = 'REJETEE', _('Rejetée')
+
+
+class PhaseStatus(models.TextChoices):
+    """Status of a ProjectPhase (étape) — closed by the site's lead
+    engineer ("l'ingénieur principal clôture les étapes du projet")."""
+    EN_COURS = 'EN_COURS', _('En cours')
+    CLOTUREE = 'CLOTUREE', _('Clôturée')
+
+
 # Form field placeholders and UI constants
 class FormPlaceholders:
     """Centralized placeholder text for form fields"""
@@ -388,6 +405,20 @@ class StatusBadgeClasses:
         ApprovalStatus.PENDING: 'bg-warning',
     }
 
+    # Planning submission status badge classes
+    PLANNING_STATUS = {
+        PlanningStatus.APPROUVEE: 'bg-success',
+        PlanningStatus.REJETEE: 'bg-danger',
+        PlanningStatus.SOUMISE: 'bg-info',
+        PlanningStatus.BROUILLON: 'bg-warning',
+    }
+
+    # Project phase status badge classes
+    PHASE_STATUS = {
+        PhaseStatus.CLOTUREE: 'bg-secondary',
+        PhaseStatus.EN_COURS: 'bg-info',
+    }
+
 
 class ValidationMessages:
     """Common validation messages"""
@@ -484,6 +515,8 @@ __all__ = [
     'FINAL_AUTHORIZATION_ROLES',
     'TaskStatus',
     'TaskPriority',
+    'PlanningStatus',
+    'PhaseStatus',
 
     # Configuration classes
     'FormPlaceholders',
