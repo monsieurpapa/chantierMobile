@@ -20,6 +20,13 @@ urlpatterns = [
     path('orders/<int:pk>/annuler/', views.purchase_order_cancel, name='purchase_order_cancel'),
     path('orders/rapport/', views.AchatsReportView.as_view(), name='achats_report'),
     path('orders/rapport/pdf/', views.achats_report_pdf, name='achats_report_pdf'),
+    path('orders/<int:pk>/transfer-proof/', views.purchase_order_submit_transfer_proof, name='purchase_order_submit_transfer_proof'),
+    path('orders/<int:pk>/transfer-validate/', views.purchase_order_validate_transfer, name='purchase_order_validate_transfer'),
+
+    # Crédits fournisseurs
+    path('credits/', views.SupplierCreditListView.as_view(), name='supplier_credit_list'),
+    path('credits/add/', views.SupplierCreditCreateView.as_view(), name='supplier_credit_create'),
+    path('credits/<int:pk>/repay/', views.supplier_credit_repay, name='supplier_credit_repay'),
 
     # Stock
     path('stock/', views.StockItemListView.as_view(), name='stock_item_list'),
