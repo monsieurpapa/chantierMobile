@@ -10,7 +10,10 @@ urlpatterns = [
     path('expenses/<int:pk>/approve/', views.approve_expense, name='expense_approve'),
     path('expenses/<int:pk>/reject/', views.reject_expense, name='expense_reject'),
     path('expenses/<int:pk>/pay/', views.mark_expense_paid, name='expense_pay'),
-    
+    path('expenses/report/', views.ExpenseReportView.as_view(), name='expense_report'),
+    path('expenses/report/pdf/', views.expense_report_pdf, name='expense_report_pdf'),
+    path('api/site-personnel/', views.site_personnel_data, name='site_personnel_data'),
+
     # Budgets
     path('budgets/', views.BudgetListView.as_view(), name='budget_list'),
     path('budgets/add/', views.BudgetCreateView.as_view(), name='budget_create'),

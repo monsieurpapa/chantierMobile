@@ -28,12 +28,18 @@ class MaterialRequestForm(forms.ModelForm):
         }
 
 class MaterialRequestItemForm(forms.ModelForm):
-    """Form for individual material items in a request"""
+    """Form for individual material items in a request. Either `material`
+    (catalog) or `material_name` (free text) must be filled — not both;
+    enforced by MaterialRequestItem.clean()."""
     class Meta:
         model = MaterialRequestItem
-        fields = ['material', 'quantity', 'notes']
+        fields = ['material', 'material_name', 'quantity', 'notes']
         widgets = {
             'material': forms.Select(attrs={'class': 'form-select', 'data-control': 'select2'}),
+            'material_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': _("Ou écrire le nom du matériel..."),
+            }),
             'quantity': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'placeholder': '0.00',
@@ -46,6 +52,11 @@ class MaterialRequestItemForm(forms.ModelForm):
             }),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['material'].required = False
+        self.fields['material_name'].required = False
+
 # Formset for handling multiple materials per request
 MaterialRequestItemFormSet = inlineformset_factory(
     MaterialRequest,
@@ -57,6 +68,7 @@ MaterialRequestItemFormSet = inlineformset_factory(
     can_delete=True,
     widgets={
         'material': forms.Select(attrs={'class': 'form-select'}),
+        'material_name': forms.TextInput(attrs={'class': 'form-control'}),
         'quantity': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
         'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
     }

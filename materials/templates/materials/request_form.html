@@ -51,11 +51,18 @@
                                     <div class="row g-2 align-items-end">
                                         <!-- Material Selection -->
                                         <div class="col-md-5">
-                                            <label class="form-label fs--1 fw-semibold">Material</label>
+                                            <label class="form-label fs--1 fw-semibold">{% trans "Material" %}</label>
                                             {{ form.material }}
+                                            <div class="fs--2 text-500 my-1 text-center">{% trans "ou" %}</div>
+                                            {{ form.material_name }}
                                             {% if form.material.errors %}
                                             <div class="text-danger fs--2 mt-1">
                                                 {{ form.material.errors }}
+                                            </div>
+                                            {% endif %}
+                                            {% if form.material_name.errors %}
+                                            <div class="text-danger fs--2 mt-1">
+                                                {{ form.material_name.errors }}
                                             </div>
                                             {% endif %}
                                         </div>
@@ -340,6 +347,8 @@ document.addEventListener('DOMContentLoaded', function () {
                         <option value="${material.id}" data-unit="${material.unit}" data-cost="${material.estimated_cost_per_unit|default:0}">${material.name} (${material.unit})</option>
                         {% endfor %}
                     </select>
+                    <div class="fs--2 text-500 my-1 text-center">ou</div>
+                    <input type="text" name="items-${newIndex}-material_name" class="form-control" placeholder="Ou écrire le nom du matériel...">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label fs--1 fw-semibold">Quantity</label>

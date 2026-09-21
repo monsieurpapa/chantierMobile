@@ -15,6 +15,11 @@ from projects.models import Site
 from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet
 from chantiermobile.constants import ExpenseStatus, UserRoles
 
+# Roles that may view the expenses report / export it to PDF — mirrors
+# core.dashboard.FINANCIAL_ROLES (the same audience that sees the
+# dashboard's money widgets).
+EXPENSE_REPORT_ROLES = ['DIRECTOR', 'ACCOUNTANT', 'CASHIER']
+
 class ExpenseListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
     model = Expense
     context_object_name = 'expenses'
@@ -32,12 +37,23 @@ class ExpenseListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, L
         return qs
 
     def get_header_actions(self):
-        return [{
+        actions = [{
             'label': _("Soumettre une dépense"),
             'url': str(reverse_lazy('finance:expense_create')),
             'icon': 'plus',
             'class': 'btn-falcon-primary'
         }]
+        from accounts.models import UserCabinetRole
+        if self.request.user.is_superuser or UserCabinetRole.objects.filter(
+            user=self.request.user, role__in=EXPENSE_REPORT_ROLES
+        ).exists():
+            actions.append({
+                'label': _("Rapport"),
+                'url': str(reverse_lazy('finance:expense_report')),
+                'icon': 'file-alt',
+                'class': 'btn-falcon-default'
+            })
+        return actions
 
 class ExpenseCreateView(LoginRequiredMixin, PageHeaderMixin, CreateView):
     model = Expense
@@ -328,3 +344,148 @@ class BudgetUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin
             user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
             form.fields['site'].queryset = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
         return form
+
+
+@login_required
+def site_personnel_data(request):
+    """JSON endpoint used by the expense form's "Main d'œuvre" personnel
+    picker: given a ?site=<id>, returns the personnel currently assigned to
+    that site, so the dropdown only proposes people actually working there
+    (mirrors materials.views.materials_data_api's role as a dynamic-select
+    data source)."""
+    from django.http import JsonResponse
+    from personnel.models import Personnel
+
+    site_id = request.GET.get('site')
+    if not site_id:
+        return JsonResponse({'results': []})
+
+    site_qs = Site.objects.filter(pk=site_id)
+    if not request.user.is_superuser:
+        user_cabinet_ids = request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+        site_qs = site_qs.filter(cabinet__id__in=user_cabinet_ids)
+    site = site_qs.first()
+    if not site:
+        return JsonResponse({'results': []})
+
+    personnel = Personnel.objects.filter(assignments__site=site).distinct().order_by('first_name', 'last_name')
+    return JsonResponse({
+        'results': [{'id': p.id, 'text': p.get_full_name()} for p in personnel]
+    })
+
+
+def _expense_report_queryset(request):
+    """Shared filtering for the expense report view and its PDF export:
+    cabinet-scoped, optionally filtered by site and by expense_date range."""
+    qs = Expense.objects.select_related('site', 'category', 'requester', 'personnel').order_by('-expense_date', '-id')
+    if request.user.is_superuser:
+        active_cabinet = get_session_cabinet(request)
+        if active_cabinet:
+            qs = qs.filter(site__cabinet=active_cabinet)
+    else:
+        user_cabinet_ids = request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+        qs = qs.filter(site__cabinet__id__in=user_cabinet_ids)
+
+    site_id = request.GET.get('site')
+    if site_id:
+        qs = qs.filter(site_id=site_id)
+
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+    if date_from:
+        qs = qs.filter(expense_date__gte=date_from)
+    if date_to:
+        qs = qs.filter(expense_date__lte=date_to)
+
+    period = request.GET.get('period')
+    today = timezone.localdate()
+    if period == 'week':
+        qs = qs.filter(expense_date__gte=today - timezone.timedelta(days=7))
+    elif period == 'month':
+        qs = qs.filter(expense_date__gte=today.replace(day=1))
+
+    return qs
+
+
+class ExpenseReportView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, ListView):
+    """Filterable expense report (by chantier, by date range/period) with a
+    PDF export — the "Rapport" the cashier asked for alongside the
+    dépenses form."""
+    model = Expense
+    template_name = 'finance/expense_report.html'
+    context_object_name = 'expenses'
+    allowed_roles = EXPENSE_REPORT_ROLES
+    header_title = _("Rapport des dépenses")
+    header_subtitle = _("Filtrez par chantier, période ou plage de dates et exportez en PDF")
+    back_url = reverse_lazy('finance:expense_list')
+
+    def get_breadcrumb_items(self):
+        return [
+            {'title': _("Finance"), 'url': str(reverse_lazy('finance:expense_list'))},
+            {'title': _("Rapport"), 'url': None},
+        ]
+
+    def get_queryset(self):
+        return _expense_report_queryset(self.request)
+
+    def get_header_actions(self):
+        return [{
+            'label': _("Exporter en PDF"),
+            'url': f"{reverse_lazy('finance:expense_report_pdf')}?{self.request.GET.urlencode()}",
+            'icon': 'file-pdf',
+            'class': 'btn-falcon-danger',
+        }]
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        qs = context['expenses']
+        context['total_amount'] = qs.aggregate(total=Sum('amount'))['total'] or 0
+        if self.request.user.is_superuser:
+            active_cabinet = get_session_cabinet(self.request)
+            context['sites'] = Site.objects.filter(cabinet=active_cabinet) if active_cabinet else Site.objects.all()
+        else:
+            user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+            context['sites'] = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
+        context['selected_site'] = self.request.GET.get('site', '')
+        context['date_from'] = self.request.GET.get('date_from', '')
+        context['date_to'] = self.request.GET.get('date_to', '')
+        context['period'] = self.request.GET.get('period', '')
+        return context
+
+
+@login_required
+def expense_report_pdf(request):
+    """PDF export of the same filtered expense report."""
+    from accounts.models import UserCabinetRole
+    if not (request.user.is_superuser or UserCabinetRole.objects.filter(
+        user=request.user, role__in=EXPENSE_REPORT_ROLES
+    ).exists()):
+        messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+        return redirect('finance:expense_report')
+
+    from core.pdf_utils import render_table_report_pdf
+
+    qs = _expense_report_queryset(request)
+    rows = [
+        (
+            e.expense_date.strftime('%d/%m/%Y'),
+            e.site.name,
+            e.category.name,
+            e.get_nature_display(),
+            (e.personnel.get_full_name() if e.personnel else '-'),
+            e.description[:60],
+            f"{e.amount:.2f} $",
+            e.get_status_display(),
+        )
+        for e in qs
+    ]
+    total = qs.aggregate(total=Sum('amount'))['total'] or 0
+    return render_table_report_pdf(
+        filename=f"depenses-{timezone.localdate().isoformat()}.pdf",
+        title="Rapport des dépenses",
+        subtitle=_("%(count)s dépense(s)") % {'count': qs.count()},
+        columns=["Date", "Chantier", "Catégorie", "Nature", "Personnel", "Désignation", "Montant", "Statut"],
+        rows=rows,
+        totals_row=["", "", "", "", "", "Total", f"{total:.2f} $", ""],
+        generated_by=request.user.get_full_name() or request.user.username,
+    )

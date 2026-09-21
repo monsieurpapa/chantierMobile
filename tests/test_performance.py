@@ -55,7 +55,10 @@ class TestDatabasePerformance:
         with CaptureQueriesContext(connection) as ctx:
             response = accountant_client.get(reverse('finance:expense_list'))
             assert response.status_code == 200
-        assert len(ctx.captured_queries) < 10  # select_related keeps this flat per page
+        # select_related keeps this flat per page regardless of row count (no
+        # N+1) — the exact ceiling just needs headroom for flat, one-per-request
+        # checks like the header's role-gated "Rapport" link visibility query.
+        assert len(ctx.captured_queries) < 12
     
     def test_dashboard_query_performance(self, director_client, user):
         """Test dashboard query performance."""

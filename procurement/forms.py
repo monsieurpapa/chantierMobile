@@ -45,7 +45,7 @@ class StockItemForm(forms.ModelForm):
 class PurchaseOrderForm(forms.ModelForm):
     class Meta:
         model = PurchaseOrder
-        fields = ['site', 'supplier', 'order_number', 'order_date', 'expected_delivery_date', 'notes']
+        fields = ['site', 'supplier', 'order_number', 'order_date', 'expected_delivery_date', 'caisse', 'notes']
         widgets = {
             'site': forms.Select(attrs={'class': 'form-select'}),
             'supplier': forms.Select(attrs={'class': 'form-select'}),
@@ -60,6 +60,7 @@ class PurchaseOrderForm(forms.ModelForm):
                 'placeholder': DatePickerConfig.DATE_FORMAT,
                 'data-options': DatePickerConfig.OPTIONS
             }),
+            'caisse': forms.Select(attrs={'class': 'form-select'}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
 
@@ -89,7 +90,7 @@ PurchaseOrderLineFormSet = inlineformset_factory(
 class StockMovementForm(forms.ModelForm):
     class Meta:
         model = StockMovement
-        fields = ['movement_type', 'quantity', 'movement_date', 'notes']
+        fields = ['movement_type', 'quantity', 'movement_date', 'notes', 'facture']
         widgets = {
             'movement_type': forms.Select(attrs={'class': 'form-select'}),
             'quantity': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': '0.00'}),
@@ -99,4 +100,9 @@ class StockMovementForm(forms.ModelForm):
                 'data-options': DatePickerConfig.OPTIONS
             }),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'placeholder': FormHelpTexts.ITEM_NOTES, 'rows': 2}),
+            'facture': forms.FileInput(attrs={'class': 'form-control'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['facture'].required = False

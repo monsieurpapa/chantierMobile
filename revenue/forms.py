@@ -43,7 +43,7 @@ class InvoiceForm(forms.ModelForm):
 class PaymentForm(forms.ModelForm):
     class Meta:
         model = Payment
-        fields = ['invoice', 'amount', 'payment_date', 'method', 'reference']
+        fields = ['invoice', 'amount', 'payment_date', 'method', 'reference', 'proof_of_payment']
         widgets = {
             'invoice': forms.Select(attrs={'class': 'form-select'}),
             'amount': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.AMOUNT}),
@@ -54,13 +54,18 @@ class PaymentForm(forms.ModelForm):
             }),
             'method': forms.Select(attrs={'class': 'form-select'}),
             'reference': forms.TextInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.TRANSACTION_REFERENCE}),
+            'proof_of_payment': forms.ClearableFileInput(attrs={'class': 'form-control'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['proof_of_payment'].required = False
 
 
 class DevisForm(forms.ModelForm):
     class Meta:
         model = Devis
-        fields = ['site', 'devis_number', 'client_name', 'issue_date', 'validity_date', 'notes']
+        fields = ['site', 'devis_number', 'client_name', 'issue_date', 'validity_date', 'photo', 'notes']
         widgets = {
             'site': forms.Select(attrs={'class': 'form-select'}),
             'devis_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.DEVIS_NUMBER}),
@@ -75,8 +80,13 @@ class DevisForm(forms.ModelForm):
                 'placeholder': DatePickerConfig.DATE_FORMAT,
                 'data-options': DatePickerConfig.OPTIONS
             }),
+            'photo': forms.ClearableFileInput(attrs={'class': 'form-control'}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['photo'].required = False
 
 
 class DevisLineForm(forms.ModelForm):

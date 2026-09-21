@@ -29,6 +29,7 @@
                                     <th scope="col">{% trans "Fournisseur" %}</th>
                                     <th scope="col" class="text-end">{% trans "Total" %}</th>
                                     <th scope="col">{% trans "Commandé le" %}</th>
+                                    <th scope="col">{% trans "Caisse" %}</th>
                                     <th scope="col" class="text-center">{% trans "Statut" %}</th>
                                     <th scope="col" class="text-end">{% trans "Actions" %}</th>
                                 </tr>
@@ -41,6 +42,7 @@
                                     <td>{{ po.supplier.name }}</td>
                                     <td class="text-end fw-semi-bold">${{ po.total_ht|floatformat:2 }}</td>
                                     <td>{{ po.order_date }}</td>
+                                    <td><span class="badge bg-secondary">{{ po.get_caisse_display }}</span></td>
                                     <td class="text-center">
                                         <span class="badge rounded-pill
                                         {% if po.status == 'RECUE' %}bg-success
@@ -60,7 +62,7 @@
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="7" class="text-center py-5">
+                                    <td colspan="8" class="text-center py-5">
                                         <span class="fas fa-file-invoice fa-2x text-300 d-block mb-2"></span>
                                         <p class="text-600 mb-2">{% trans "Aucune commande trouvée." %}</p>
                                         <a href="{% url 'procurement:purchase_order_create' %}" class="btn btn-falcon-primary btn-sm">

@@ -35,6 +35,7 @@
                                             <th scope="col">{% trans "Origine" %}</th>
                                             <th scope="col">{% trans "Par" %}</th>
                                             <th scope="col">{% trans "Notes" %}</th>
+                                            <th scope="col">{% trans "Facture" %}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -63,9 +64,16 @@
                                             </td>
                                             <td>{{ movement.moved_by.get_full_name|default:movement.moved_by.username|default:"-" }}</td>
                                             <td class="text-600">{{ movement.notes|default:"-" }}</td>
+                                            <td>
+                                                {% if movement.facture %}
+                                                <a href="{{ movement.facture.url }}" target="_blank" title="{% trans 'Voir la facture' %}"><i class="fas fa-paperclip"></i></a>
+                                                {% else %}
+                                                <span class="text-500">-</span>
+                                                {% endif %}
+                                            </td>
                                         </tr>
                                         {% empty %}
-                                        <tr><td colspan="6" class="text-center py-3 text-500">{% trans "Aucun mouvement enregistré." %}</td></tr>
+                                        <tr><td colspan="7" class="text-center py-3 text-500">{% trans "Aucun mouvement enregistré." %}</td></tr>
                                         {% endfor %}
                                     </tbody>
                                 </table>
@@ -112,13 +120,15 @@
                             </a>
                         </div>
                     </div>
+                    {% endif %}
 
+                    {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER,MAGASINIER' or request.user.is_superuser %}
                     <div class="card">
                         <div class="card-header bg-light">
                             <h6 class="mb-0">{% trans "Enregistrer un mouvement" %}</h6>
                         </div>
                         <div class="card-body">
-                            <form method="post" id="movement-form" action="{% url 'procurement:stock_movement_create' pk=stock_item.pk %}">
+                            <form method="post" id="movement-form" enctype="multipart/form-data" action="{% url 'procurement:stock_movement_create' pk=stock_item.pk %}">
                                 {% csrf_token %}
                                 <div class="mb-3">
                                     <label class="form-label fs--1 fw-semibold" for="{{ movement_form.movement_type.id_for_label }}">{% trans "Type" %}</label>
@@ -135,6 +145,10 @@
                                 <div class="mb-3">
                                     <label class="form-label fs--1 fw-semibold" for="{{ movement_form.notes.id_for_label }}">{% trans "Notes" %}</label>
                                     {{ movement_form.notes }}
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fs--1 fw-semibold" for="{{ movement_form.facture.id_for_label }}">{% trans "Facture" %} ({% trans "Optionnel" %})</label>
+                                    {{ movement_form.facture }}
                                 </div>
                                 <button type="submit" class="btn btn-primary w-100">
                                     <i class="fas fa-plus me-1"></i>{% trans "Enregistrer" %}
