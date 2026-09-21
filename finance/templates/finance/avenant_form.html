@@ -1,0 +1,55 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Nouvel avenant" %} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    {% include 'includes/navbar-vertical.html' with on="avenant_list" %}
+
+    <div class="content">
+        {% include 'includes/navbar-top.html' %}
+
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+            <div class="card mb-3">
+                <div class="card-body bg-light">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ form.site.id_for_label }}">{% trans "Chantier" %}</label>
+                            {{ form.site }}
+                            {% if form.site.errors %}<div class="text-danger fs--2">{{ form.site.errors }}</div>{% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ form.amount.id_for_label }}">{% trans "Montant additionnel" %}</label>
+                            {{ form.amount }}
+                            {% if form.amount.errors %}<div class="text-danger fs--2">{{ form.amount.errors }}</div>{% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ form.justification.id_for_label }}">{% trans "Justification" %}</label>
+                            {{ form.justification }}
+                            <p class="fs--2 text-500">{% trans "Ce montant s'ajoutera au budget du chantier et à la dette du client une fois autorisé." %}</p>
+                            {% if form.justification.errors %}<div class="text-danger fs--2">{{ form.justification.errors }}</div>{% endif %}
+                        </div>
+                        <div class="col-12 d-flex justify-content-end gap-2">
+                            <a class="btn btn-falcon-default" href="{{ back_url }}">{% trans "Cancel" %}</a>
+                            <button class="btn btn-primary" type="submit">{% trans "Soumettre pour autorisation" %}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.querySelectorAll('input, select, textarea').forEach(el => {
+        if (!el.classList.contains('form-range')) el.classList.add('form-control');
+        if (el.tagName === 'SELECT') { el.classList.remove('form-control'); el.classList.add('form-select'); }
+    });
+</script>
+{% endblock %}

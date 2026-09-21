@@ -9,11 +9,20 @@ from django.db.models import Sum, Count, Q
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from decimal import Decimal
-from .models import Expense, ExpenseApproval, Budget, Caisse, CaisseTransaction, CaisseLoan
-from .forms import ExpenseForm, BudgetForm, CaisseForm, CaisseTransactionForm, CaisseTransferForm, CaisseLoanForm, CaisseLoanRepayForm
+from .models import (
+    Expense, ExpenseApproval, Budget, Caisse, CaisseTransaction, CaisseLoan,
+    PayrollList, PayrollListItem, Avenant,
+)
+from .forms import (
+    ExpenseForm, BudgetForm, CaisseForm, CaisseTransactionForm, CaisseTransferForm,
+    CaisseLoanForm, CaisseLoanRepayForm, PayrollListForm, PayrollListItemForm,
+    PayrollDisburseForm, AvenantForm, AvenantDecisionForm,
+)
 from projects.models import Site
 from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet, can_act_for_cabinet
-from chantiermobile.constants import ExpenseStatus, UserRoles, CaisseTransactionType
+from chantiermobile.constants import (
+    ExpenseStatus, UserRoles, CaisseTransactionType, FINAL_AUTHORIZATION_ROLES, PayrollListStatus,
+)
 
 # Roles that may view the expenses report / export it to PDF — mirrors
 # core.dashboard.FINANCIAL_ROLES (the same audience that sees the
@@ -22,6 +31,18 @@ EXPENSE_REPORT_ROLES = ['DIRECTOR', 'ACCOUNTANT', 'CASHIER']
 
 # Roles that may manage caisses and record ledger movements.
 CAISSE_MANAGE_ROLES = ['DIRECTOR', 'ACCOUNTANT', 'CASHIER', 'FINANCIER']
+
+# "L'archi" — whoever prepares/submits a payroll list from worker payment requests.
+PAYROLL_PREPARE_ROLES = ['DIRECTOR', 'CHIEF_ENGINEER', 'ENGINEER']
+# Whoever disburses a submitted payroll list from a caisse.
+PAYROLL_DISBURSE_ROLES = ['DIRECTOR', 'ACCOUNTANT', 'CASHIER', 'FINANCIER']
+# Whoever may request an avenant (change order).
+AVENANT_REQUEST_ROLES = ['DIRECTOR', 'CHIEF_ENGINEER', 'ACCOUNTANT']
+# Anyone who may view payroll lists at all (preparers + disbursers) — payroll
+# amounts are sensitive, so this isn't LoginRequiredMixin-only like some
+# other list views.
+PAYROLL_VIEW_ROLES = list(dict.fromkeys(PAYROLL_PREPARE_ROLES + PAYROLL_DISBURSE_ROLES))
+AVENANT_VIEW_ROLES = list(dict.fromkeys(AVENANT_REQUEST_ROLES + FINAL_AUTHORIZATION_ROLES))
 
 class ExpenseListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
     model = Expense
@@ -862,3 +883,267 @@ def caisse_report_pdf(request):
         totals_row=["", "", "", "", "", "Solde net", f"{(total_entrees - total_sorties):.2f} $"],
         generated_by=request.user.get_full_name() or request.user.username,
     )
+
+
+# ---------------------------------------------------------------------
+# Liste de paie (paiement progressif des ouvriers)
+# ---------------------------------------------------------------------
+
+class PayrollListListView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, ListView):
+    model = PayrollList
+    template_name = 'finance/payroll_list_list.html'
+    context_object_name = 'payroll_lists'
+    allowed_roles = PAYROLL_VIEW_ROLES
+    header_title = _("Listes de paie")
+    header_subtitle = _("Paiement progressif des ouvriers, par avancement")
+
+    def get_queryset(self):
+        qs = PayrollList.objects.select_related('site', 'prepared_by').order_by('-created_at')
+        user = self.request.user
+        if not user.is_superuser:
+            cabinets = user.cabinet_roles.values_list('cabinet', flat=True) if hasattr(user, 'cabinet_roles') else []
+            qs = qs.filter(site__cabinet__in=cabinets)
+        else:
+            active_cabinet = get_session_cabinet(self.request)
+            if active_cabinet:
+                qs = qs.filter(site__cabinet=active_cabinet)
+        return qs
+
+    def get_header_actions(self):
+        from accounts.models import UserCabinetRole
+        if self.request.user.is_superuser or UserCabinetRole.objects.filter(
+            user=self.request.user, role__in=PAYROLL_PREPARE_ROLES
+        ).exists():
+            return [{
+                'label': _("Nouvelle liste de paie"),
+                'url': str(reverse_lazy('finance:payroll_create')),
+                'icon': 'plus',
+                'class': 'btn-falcon-primary',
+            }]
+        return []
+
+
+class PayrollListCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, CreateView):
+    model = PayrollList
+    form_class = PayrollListForm
+    template_name = 'finance/payroll_list_form.html'
+    allowed_roles = PAYROLL_PREPARE_ROLES
+    header_title = _("Nouvelle liste de paie")
+    back_url = reverse_lazy('finance:payroll_list')
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        user = self.request.user
+        if user.is_superuser:
+            active_cabinet = get_session_cabinet(self.request)
+            form.fields['site'].queryset = Site.objects.filter(cabinet=active_cabinet) if active_cabinet else Site.objects.all()
+        else:
+            cabinets = user.cabinet_roles.values_list('cabinet', flat=True)
+            form.fields['site'].queryset = Site.objects.filter(cabinet__in=cabinets)
+        return form
+
+    def form_valid(self, form):
+        form.instance.prepared_by = self.request.user
+        messages.success(self.request, _("Liste de paie créée. Ajoutez maintenant les ouvriers à payer."))
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse_lazy('finance:payroll_detail', kwargs={'pk': self.object.pk})
+
+
+class PayrollListDetailView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, DetailView):
+    model = PayrollList
+    template_name = 'finance/payroll_list_detail.html'
+    context_object_name = 'payroll_list'
+    allowed_roles = PAYROLL_VIEW_ROLES
+    cabinet_lookup_field = 'site__cabinet'
+
+    def get_header_title(self):
+        return str(self.object)
+
+    def get_back_url(self):
+        return str(reverse_lazy('finance:payroll_list'))
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['can_prepare'] = can_act_for_cabinet(self.request, self.object.site.cabinet, PAYROLL_PREPARE_ROLES)
+        context['can_disburse'] = can_act_for_cabinet(self.request, self.object.site.cabinet, PAYROLL_DISBURSE_ROLES)
+        if context['can_prepare'] and self.object.status == PayrollListStatus.BROUILLON:
+            item_form = PayrollListItemForm(site=self.object.site)
+            context['item_form'] = item_form
+        if context['can_disburse'] and self.object.status == PayrollListStatus.SOUMISE:
+            disburse_form = PayrollDisburseForm()
+            disburse_form.fields['caisse'].queryset = Caisse.objects.filter(cabinet=self.object.site.cabinet)
+            context['disburse_form'] = disburse_form
+        return context
+
+
+class PayrollListItemCreateView(LoginRequiredMixin, RoleRequiredMixin, CreateView):
+    model = PayrollListItem
+    form_class = PayrollListItemForm
+    allowed_roles = PAYROLL_PREPARE_ROLES
+
+    def dispatch(self, request, *args, **kwargs):
+        self.payroll_list = get_object_or_404(PayrollList, pk=kwargs['pk'])
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_role_cabinet(self):
+        return self.payroll_list.site.cabinet
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['site'] = self.payroll_list.site
+        return kwargs
+
+    def form_valid(self, form):
+        if self.payroll_list.status != PayrollListStatus.BROUILLON:
+            messages.error(self.request, _("Cette liste n'est plus modifiable."))
+            return redirect('finance:payroll_detail', pk=self.payroll_list.pk)
+        form.instance.payroll_list = self.payroll_list
+        messages.success(self.request, _("Ouvrier ajouté à la liste."))
+        return super().form_valid(form)
+
+    def form_invalid(self, form):
+        messages.error(self.request, _("Impossible d'ajouter : %(errors)s") % {'errors': form.errors.as_text()})
+        return redirect('finance:payroll_detail', pk=self.payroll_list.pk)
+
+    def get_success_url(self):
+        return reverse_lazy('finance:payroll_detail', kwargs={'pk': self.payroll_list.pk})
+
+
+@login_required
+def payroll_submit(request, pk):
+    payroll_list = get_object_or_404(PayrollList, pk=pk)
+    if request.method != 'POST':
+        return redirect('finance:payroll_detail', pk=pk)
+    if not can_act_for_cabinet(request, payroll_list.site.cabinet, PAYROLL_PREPARE_ROLES):
+        messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+        return redirect('finance:payroll_detail', pk=pk)
+    try:
+        payroll_list.submit(request.user)
+        messages.success(request, _("Liste soumise à la caisse."))
+    except ValidationError as e:
+        messages.error(request, str(e))
+    return redirect('finance:payroll_detail', pk=pk)
+
+
+@login_required
+def payroll_disburse(request, pk):
+    payroll_list = get_object_or_404(PayrollList, pk=pk)
+    if request.method != 'POST':
+        return redirect('finance:payroll_detail', pk=pk)
+    if not can_act_for_cabinet(request, payroll_list.site.cabinet, PAYROLL_DISBURSE_ROLES):
+        messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+        return redirect('finance:payroll_detail', pk=pk)
+    form = PayrollDisburseForm(request.POST)
+    form.fields['caisse'].queryset = Caisse.objects.filter(cabinet=payroll_list.site.cabinet)
+    if form.is_valid():
+        try:
+            payroll_list.disburse(request.user, form.cleaned_data['caisse'])
+            messages.success(request, _("Liste de paie décaissée."))
+        except ValidationError as e:
+            messages.error(request, str(e))
+    else:
+        messages.error(request, _("Sélectionnez une caisse valide."))
+    return redirect('finance:payroll_detail', pk=pk)
+
+
+# ---------------------------------------------------------------------
+# Avenants (dépassement de budget autorisé -> dette client)
+# ---------------------------------------------------------------------
+
+class AvenantListView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, ListView):
+    model = Avenant
+    template_name = 'finance/avenant_list.html'
+    context_object_name = 'avenants'
+    allowed_roles = AVENANT_VIEW_ROLES
+    header_title = _("Avenants")
+    header_subtitle = _("Dépenses autorisées au-delà du budget initial")
+
+    def get_queryset(self):
+        qs = Avenant.objects.select_related('site', 'requested_by').order_by('-created_at')
+        user = self.request.user
+        if not user.is_superuser:
+            cabinets = user.cabinet_roles.values_list('cabinet', flat=True) if hasattr(user, 'cabinet_roles') else []
+            qs = qs.filter(site__cabinet__in=cabinets)
+        else:
+            active_cabinet = get_session_cabinet(self.request)
+            if active_cabinet:
+                qs = qs.filter(site__cabinet=active_cabinet)
+        return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['can_decide'] = (
+            self.request.user.is_superuser or
+            self.request.user.cabinet_roles.filter(role__in=FINAL_AUTHORIZATION_ROLES).exists()
+        )
+        return context
+
+    def get_header_actions(self):
+        from accounts.models import UserCabinetRole
+        if self.request.user.is_superuser or UserCabinetRole.objects.filter(
+            user=self.request.user, role__in=AVENANT_REQUEST_ROLES
+        ).exists():
+            return [{
+                'label': _("Nouvel avenant"),
+                'url': str(reverse_lazy('finance:avenant_create')),
+                'icon': 'plus',
+                'class': 'btn-falcon-primary',
+            }]
+        return []
+
+
+class AvenantCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, CreateView):
+    model = Avenant
+    form_class = AvenantForm
+    template_name = 'finance/avenant_form.html'
+    allowed_roles = AVENANT_REQUEST_ROLES
+    success_url = reverse_lazy('finance:avenant_list')
+    header_title = _("Nouvel avenant")
+    back_url = reverse_lazy('finance:avenant_list')
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        user = self.request.user
+        if user.is_superuser:
+            active_cabinet = get_session_cabinet(self.request)
+            form.fields['site'].queryset = Site.objects.filter(cabinet=active_cabinet) if active_cabinet else Site.objects.all()
+        else:
+            cabinets = user.cabinet_roles.values_list('cabinet', flat=True)
+            form.fields['site'].queryset = Site.objects.filter(cabinet__in=cabinets)
+        return form
+
+    def form_valid(self, form):
+        form.instance.requested_by = self.request.user
+        messages.success(self.request, _("Avenant soumis pour autorisation."))
+        return super().form_valid(form)
+
+
+def _avenant_decide(request, pk, approve):
+    avenant = get_object_or_404(Avenant, pk=pk)
+    if request.method != 'POST':
+        return redirect('finance:avenant_list')
+    if not can_act_for_cabinet(request, avenant.site.cabinet, FINAL_AUTHORIZATION_ROLES):
+        messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+        return redirect('finance:avenant_list')
+    form = AvenantDecisionForm(request.POST)
+    notes = form.data.get('notes', '') if form.is_valid() else ''
+    try:
+        if approve:
+            avenant.approve(request.user, notes=notes)
+            messages.success(request, _("Avenant autorisé — budget et dette client mis à jour."))
+        else:
+            avenant.reject(request.user, notes=notes)
+            messages.success(request, _("Avenant rejeté."))
+    except ValidationError as e:
+        messages.error(request, str(e))
+    return redirect('finance:avenant_list')
+
+
+def avenant_approve(request, pk):
+    return _avenant_decide(request, pk, approve=True)
+
+
+def avenant_reject(request, pk):
+    return _avenant_decide(request, pk, approve=False)

@@ -1,6 +1,9 @@
 from django import forms
 from django.utils.translation import gettext_lazy as _
-from .models import Expense, Budget, ExpenseCategory, Caisse, CaisseTransaction, CaisseLoan
+from .models import (
+    Expense, Budget, ExpenseCategory, Caisse, CaisseTransaction, CaisseLoan,
+    PayrollList, PayrollListItem, Avenant,
+)
 from chantiermobile.constants import FormPlaceholders, DatePickerConfig, ValidationMessages, ExpenseNature
 
 class ExpenseForm(forms.ModelForm):
@@ -184,3 +187,65 @@ class CaisseLoanForm(forms.ModelForm):
 
 class CaisseLoanRepayForm(forms.Form):
     amount = forms.DecimalField(min_value=0.01, decimal_places=2, widget=forms.NumberInput(attrs={'class': 'form-control'}), label=_('Montant remboursé'))
+
+
+class PayrollListForm(forms.ModelForm):
+    class Meta:
+        model = PayrollList
+        fields = ['site', 'phase', 'notes']
+        widgets = {
+            'site': forms.Select(attrs={'class': 'form-select'}),
+            'phase': forms.Select(attrs={'class': 'form-select'}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': _("Analyse de l'avancement du projet...")}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['phase'].required = False
+        from projects.models import ProjectPhase
+        site = None
+        if self.data.get('site'):
+            from projects.models import Site
+            site = Site.objects.filter(pk=self.data.get('site')).first()
+        elif self.instance and self.instance.pk:
+            site = self.instance.site
+        self.fields['phase'].queryset = ProjectPhase.objects.filter(site=site) if site else ProjectPhase.objects.none()
+
+
+class PayrollListItemForm(forms.ModelForm):
+    class Meta:
+        model = PayrollListItem
+        fields = ['personnel', 'amount', 'progress_note', 'signed_receipt']
+        widgets = {
+            'personnel': forms.Select(attrs={'class': 'form-select'}),
+            'amount': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.AMOUNT}),
+            'progress_note': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'signed_receipt': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        site = kwargs.pop('site', None)
+        super().__init__(*args, **kwargs)
+        self.fields['signed_receipt'].required = False
+        from personnel.models import Personnel
+        if site:
+            self.fields['personnel'].queryset = Personnel.objects.filter(assignments__site=site).distinct()
+
+
+class PayrollDisburseForm(forms.Form):
+    caisse = forms.ModelChoiceField(queryset=Caisse.objects.none(), widget=forms.Select(attrs={'class': 'form-select'}), label=_('Caisse de décaissement'))
+
+
+class AvenantForm(forms.ModelForm):
+    class Meta:
+        model = Avenant
+        fields = ['site', 'amount', 'justification']
+        widgets = {
+            'site': forms.Select(attrs={'class': 'form-select'}),
+            'amount': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.AMOUNT}),
+            'justification': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+        }
+
+
+class AvenantDecisionForm(forms.Form):
+    notes = forms.CharField(required=False, widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2}), label=_('Notes'))

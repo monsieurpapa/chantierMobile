@@ -9,6 +9,11 @@ class Contract(BaseModel):
     client_name = models.CharField(max_length=255)
     total_value = models.DecimalField(max_digits=14, decimal_places=2, help_text=_("Total contract value"))
     signed_date = models.DateField()
+    avenant_debt = models.DecimalField(
+        max_digits=14, decimal_places=2, default=0,
+        verbose_name=_('Dette avenants'),
+        help_text=_("Dépenses au-delà du budget initial, autorisées par avenant : dette du client en plus du prix du contrat."),
+    )
 
     def __str__(self):
         return f"Contract for {self.site.name} - {self.client_name}"
@@ -27,12 +32,13 @@ class Contract(BaseModel):
 
     @property
     def client_balance(self):
-        """What the client still owes: contract value minus what they've
-        paid so far. Surfaced next to the site's (expense) budget so the
-        cashier/director can see both sides — money owed by the client and
-        money spent on the site — at a glance."""
+        """What the client still owes: contract value (plus any avenant
+        debt from budget overages the client authorized) minus what
+        they've paid so far. Surfaced next to the site's (expense) budget
+        so the cashier/director can see both sides — money owed by the
+        client and money spent on the site — at a glance."""
         from decimal import Decimal
-        return self.total_value - Decimal(self.total_paid)
+        return self.total_value + Decimal(self.avenant_debt) - Decimal(self.total_paid)
 
 class Invoice(BaseModel):
     contract = models.ForeignKey(Contract, on_delete=models.CASCADE, related_name='invoices')

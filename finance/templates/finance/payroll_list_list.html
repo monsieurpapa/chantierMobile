@@ -1,0 +1,54 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n humanize %}
+
+{% block title %}{% trans "Listes de paie" %} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    {% include 'includes/navbar-vertical.html' with on="payroll_list" %}
+
+    <div class="content">
+        {% include 'includes/navbar-top.html' %}
+
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            <div class="card mb-3">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped mb-0 fs--1">
+                            <thead>
+                                <tr>
+                                    <th>{% trans "Chantier" %}</th>
+                                    <th>{% trans "Préparée par" %}</th>
+                                    <th class="text-end">{% trans "Total" %}</th>
+                                    <th>{% trans "Statut" %}</th>
+                                    <th>{% trans "Créée le" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for pl in payroll_lists %}
+                                <tr>
+                                    <td><a href="{% url 'finance:payroll_detail' pk=pl.pk %}">{{ pl.site.name }}</a></td>
+                                    <td>{{ pl.prepared_by.get_full_name|default:pl.prepared_by }}</td>
+                                    <td class="text-end fw-semibold">${{ pl.total_amount|floatformat:2|intcomma }}</td>
+                                    <td>
+                                        <span class="badge {% if pl.status == 'PAYEE' %}bg-success{% elif pl.status == 'SOUMISE' %}bg-info{% else %}bg-warning{% endif %}">
+                                            {{ pl.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ pl.created_at|date:"d/m/Y" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="5" class="text-center py-4 text-500">{% trans "Aucune liste de paie." %}</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}

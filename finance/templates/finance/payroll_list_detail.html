@@ -1,0 +1,146 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n humanize %}
+
+{% block title %}{{ payroll_list }} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    {% include 'includes/navbar-vertical.html' with on="payroll_list" %}
+
+    <div class="content">
+        {% include 'includes/navbar-top.html' %}
+
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <label class="text-600 fs--1">{% trans "Chantier" %}</label>
+                            <p class="fs-2 fw-bold mb-0">{{ payroll_list.site.name }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <label class="text-600 fs--1">{% trans "Total" %}</label>
+                            <p class="fs-2 fw-bold text-primary mb-0">${{ payroll_list.total_amount|floatformat:2|intcomma }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <label class="text-600 fs--1">{% trans "Statut" %}</label>
+                            <p class="mb-0">
+                                <span class="badge fs-1 {% if payroll_list.status == 'PAYEE' %}bg-success{% elif payroll_list.status == 'SOUMISE' %}bg-info{% else %}bg-warning{% endif %}">
+                                    {{ payroll_list.get_status_display }}
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if payroll_list.notes %}
+            <div class="card mb-3">
+                <div class="card-body">
+                    <label class="text-600 fs--1">{% trans "Analyse de l'avancement" %}</label>
+                    <p class="mb-0">{{ payroll_list.notes|linebreaksbr }}</p>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="card mb-3">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">{% trans "Ouvriers" %}</h6>
+                    <div class="d-flex gap-2">
+                        {% if can_prepare and payroll_list.status == 'BROUILLON' %}
+                        <form method="post" action="{% url 'finance:payroll_submit' pk=payroll_list.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-falcon-primary btn-sm">{% trans "Soumettre à la caisse" %}</button>
+                        </form>
+                        {% endif %}
+                        {% if can_disburse and payroll_list.status == 'SOUMISE' %}
+                        <form method="post" action="{% url 'finance:payroll_disburse' pk=payroll_list.pk %}" class="d-flex gap-1">
+                            {% csrf_token %}
+                            {{ disburse_form.caisse }}
+                            <button type="submit" class="btn btn-falcon-success btn-sm">{% trans "Décaisser" %}</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped mb-0 fs--1">
+                            <thead>
+                                <tr>
+                                    <th>{% trans "Ouvrier" %}</th>
+                                    <th>{% trans "Justification" %}</th>
+                                    <th class="text-end">{% trans "Montant" %}</th>
+                                    <th>{% trans "Accusé de réception" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in payroll_list.items.all %}
+                                <tr>
+                                    <td>{{ item.personnel.get_full_name }}</td>
+                                    <td>{{ item.progress_note|default:"-" }}</td>
+                                    <td class="text-end fw-semibold">${{ item.amount|floatformat:2|intcomma }}</td>
+                                    <td>
+                                        {% if item.signed_receipt %}
+                                        <a href="{{ item.signed_receipt.url }}" target="_blank" rel="noopener"><span class="fas fa-paperclip"></span></a>
+                                        {% else %}—{% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="4" class="text-center py-4 text-500">{% trans "Aucun ouvrier ajouté." %}</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            {% if can_prepare and payroll_list.status == 'BROUILLON' and item_form %}
+            <div class="card mb-3">
+                <div class="card-header bg-light"><h6 class="mb-0">{% trans "Ajouter un ouvrier" %}</h6></div>
+                <div class="card-body bg-light">
+                    <form method="post" action="{% url 'finance:payroll_item_create' pk=payroll_list.pk %}" enctype="multipart/form-data" class="row g-3 align-items-end">
+                        {% csrf_token %}
+                        <div class="col-md-3">
+                            <label class="form-label fs--1">{% trans "Ouvrier" %}</label>
+                            {{ item_form.personnel }}
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fs--1">{% trans "Montant" %}</label>
+                            {{ item_form.amount }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fs--1">{% trans "Justification" %}</label>
+                            {{ item_form.progress_note }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fs--1">{% trans "Accusé signé (optionnel)" %}</label>
+                            {{ item_form.signed_receipt }}
+                        </div>
+                        <div class="col-md-1">
+                            <button type="submit" class="btn btn-falcon-primary w-100">{% trans "Ajouter" %}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.querySelectorAll('select').forEach(el => { el.classList.add('form-select'); });
+</script>
+{% endblock %}

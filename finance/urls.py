@@ -33,4 +33,18 @@ urlpatterns = [
     path('caisse-loans/', views.CaisseLoanListView.as_view(), name='caisse_loan_list'),
     path('caisse-loans/add/', views.CaisseLoanCreateView.as_view(), name='caisse_loan_create'),
     path('caisse-loans/<int:pk>/repay/', views.caisse_loan_repay, name='caisse_loan_repay'),
+
+    # Listes de paie
+    path('payroll/', views.PayrollListListView.as_view(), name='payroll_list'),
+    path('payroll/add/', views.PayrollListCreateView.as_view(), name='payroll_create'),
+    path('payroll/<int:pk>/', views.PayrollListDetailView.as_view(), name='payroll_detail'),
+    path('payroll/<int:pk>/items/add/', views.PayrollListItemCreateView.as_view(), name='payroll_item_create'),
+    path('payroll/<int:pk>/submit/', views.payroll_submit, name='payroll_submit'),
+    path('payroll/<int:pk>/disburse/', views.payroll_disburse, name='payroll_disburse'),
+
+    # Avenants
+    path('avenants/', views.AvenantListView.as_view(), name='avenant_list'),
+    path('avenants/add/', views.AvenantCreateView.as_view(), name='avenant_create'),
+    path('avenants/<int:pk>/approve/', views.avenant_approve, name='avenant_approve'),
+    path('avenants/<int:pk>/reject/', views.avenant_reject, name='avenant_reject'),
 ]

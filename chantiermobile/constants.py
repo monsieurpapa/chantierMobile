@@ -102,6 +102,28 @@ class CaisseTransactionType(models.TextChoices):
     SORTIE = 'SORTIE', _('Sortie')
 
 
+class PayrollListStatus(models.TextChoices):
+    """Progressive worker-payment workflow: architecte prépare -> soumet à
+    la caisse -> la caisse débourse."""
+    BROUILLON = 'BROUILLON', _('Brouillon')
+    SOUMISE = 'SOUMISE', _('Soumise à la caisse')
+    PAYEE = 'PAYEE', _('Payée')
+
+
+class AvenantStatus(models.TextChoices):
+    """Project change-order (avenant) authorization workflow."""
+    PENDING = 'PENDING', _("En attente d'autorisation")
+    APPROVED = 'APPROVED', _('Autorisé')
+    REJECTED = 'REJECTED', _('Rejeté')
+
+
+class PurchasePaymentMethod(models.TextChoices):
+    """How a PurchaseOrder was funded — caisse cash-on-hand, or a wire
+    transfer initiated by the financier."""
+    CAISSE = 'CAISSE', _('Caisse')
+    VIREMENT = 'VIREMENT', _('Virement bancaire')
+
+
 class DevisStatus(models.TextChoices):
     """Devis (quote/estimate) status choices"""
     BROUILLON = 'BROUILLON', _('Brouillon')
@@ -445,6 +467,9 @@ __all__ = [
     'ExpenseNature',
     'CaisseType',
     'CaisseTransactionType',
+    'PayrollListStatus',
+    'AvenantStatus',
+    'PurchasePaymentMethod',
     'DevisStatus',
     'SituationStatus',
     'PriceItemType',
