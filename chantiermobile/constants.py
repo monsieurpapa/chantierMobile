@@ -11,12 +11,23 @@ from django.db import models
 class UserRoles(models.TextChoices):
     """User role choices for cabinet assignments"""
     DIRECTOR = 'DIRECTOR', _('Directeur de Cabinet')
+    DIRECTEUR_TECHNIQUE = 'DIRECTEUR_TECHNIQUE', _('Directeur Technique')
+    DIRECTEUR_GENERAL = 'DIRECTEUR_GENERAL', _('Directeur Général')
     CHIEF_ENGINEER = 'CHIEF_ENGINEER', _('Chef des Ingénieurs')
     ENGINEER = 'ENGINEER', _('Ingénieur')
+    FINANCIER = 'FINANCIER', _('Financier')
     ACCOUNTANT = 'ACCOUNTANT', _('Comptable')
     CASHIER = 'CASHIER', _('Caissier')
     MAGASINIER = 'MAGASINIER', _('Magasinier')
     WORKER = 'WORKER', _('Ouvrier')
+
+
+# Roles empowered to give the second/final authorization on a state-of-need
+# (état de besoin) or an avenant — the "Directeur Technique ou le Directeur
+# Général" step named explicitly in the client's spec. DIRECTOR (Directeur
+# de Cabinet) is included so existing single-cabinet setups that never
+# created a dedicated DT/DG role keep working.
+FINAL_AUTHORIZATION_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL']
 
 
 class ApprovalStatus(models.TextChoices):
@@ -138,6 +149,42 @@ class PersonnelType(models.TextChoices):
     EMPLOYE = 'EMPLOYE', _('Employé')
     TACHERON = 'TACHERON', _('Tâcheron (journalier)')
     PRESTATAIRE = 'PRESTATAIRE', _('Prestataire (sous-traitant)')
+
+
+class AgentCategory(models.TextChoices):
+    """Whether a Personnel record is field staff or office/administration
+    staff — "agent de terrain ou d'administration" in the client's spec."""
+    TERRAIN = 'TERRAIN', _('Agent de terrain')
+    ADMINISTRATION = 'ADMINISTRATION', _("Agent d'administration")
+
+
+class PersonnelStatus(models.TextChoices):
+    """Eligibility status for a worker/agent."""
+    ACTIF = 'ACTIF', _('Actif')
+    INACTIF = 'INACTIF', _('Inactif')
+    NON_ELIGIBLE = 'NON_ELIGIBLE', _('Non éligible')
+
+
+class Trade(models.TextChoices):
+    """Fixed trade/function list for ouvriers, as specified by the client."""
+    MACON = 'MACON', _('Maçon')
+    MENUISIER = 'MENUISIER', _('Menuisier')
+    FERRAILLEUR = 'FERRAILLEUR', _('Ferrailleur')
+    PLOMBIER = 'PLOMBIER', _('Plombier')
+    ELECTRICIEN = 'ELECTRICIEN', _('Électricien')
+    AJUSTEUR = 'AJUSTEUR', _('Ajusteur')
+    PEINTRE = 'PEINTRE', _('Peintre')
+    VITRIER = 'VITRIER', _('Vitrier')
+    CARRELEUR = 'CARRELEUR', _('Carreleur')
+    CONSULTANT = 'CONSULTANT', _('Consultant')
+
+
+class LeaveType(models.TextChoices):
+    """Kind of personnel absence."""
+    CONGE = 'CONGE', _('Congé')
+    JOUR_FERIE = 'JOUR_FERIE', _('Jour férié')
+    MALADIE = 'MALADIE', _('Congé maladie')
+    AUTRE = 'AUTRE', _('Autre')
 
 
 class TaskStatus(models.TextChoices):
@@ -299,6 +346,20 @@ class StatusBadgeClasses:
         PersonnelType.PRESTATAIRE: 'bg-info',
     }
 
+    # Personnel status badge classes
+    PERSONNEL_STATUS = {
+        PersonnelStatus.ACTIF: 'bg-success',
+        PersonnelStatus.INACTIF: 'bg-secondary',
+        PersonnelStatus.NON_ELIGIBLE: 'bg-danger',
+    }
+
+    # Leave request status badge classes (reuses ApprovalStatus)
+    LEAVE_STATUS = {
+        ApprovalStatus.APPROVED: 'bg-success',
+        ApprovalStatus.REJECTED: 'bg-danger',
+        ApprovalStatus.PENDING: 'bg-warning',
+    }
+
 
 class ValidationMessages:
     """Common validation messages"""
@@ -384,6 +445,11 @@ __all__ = [
     'PurchaseOrderStatus',
     'StockMovementType',
     'PersonnelType',
+    'AgentCategory',
+    'PersonnelStatus',
+    'Trade',
+    'LeaveType',
+    'FINAL_AUTHORIZATION_ROLES',
     'TaskStatus',
     'TaskPriority',
 

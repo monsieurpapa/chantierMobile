@@ -1,0 +1,56 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Ajouter un document" %} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    <!-- vertical nav -->
+    {% include 'includes/navbar-vertical.html' with on="personnel" %}
+    <!-- /vertical nav -->
+
+    <div class="content">
+        <!-- navbar-top -->
+        {% include 'includes/navbar-top.html' %}
+        <!-- /navbar-top -->
+
+        <!-- Main Content -->
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+            <div class="card mb-3">
+                <div class="card-body bg-light">
+                    <p class="fs--1 text-600 mb-3">{% trans "Dossier de" %} <strong>{{ personnel.get_full_name }}</strong></p>
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ form.label.id_for_label }}">{% trans "Libellé" %}</label>
+                            {{ form.label }}
+                            {% if form.label.errors %}<div class="text-danger fs--2">{{ form.label.errors }}</div>{% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ form.file.id_for_label }}">{% trans "Fichier" %}</label>
+                            {{ form.file }}
+                            {% if form.file.errors %}<div class="text-danger fs--2">{{ form.file.errors }}</div>{% endif %}
+                        </div>
+                        <div class="col-12 d-flex justify-content-end gap-2">
+                            <a class="btn btn-falcon-default" href="{{ back_url }}">{% trans "Cancel" %}</a>
+                            <button class="btn btn-primary" type="submit">{% trans "Enregistrer" %}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.querySelectorAll('input, select, textarea').forEach(el => {
+        if (!el.classList.contains('form-range')) el.classList.add('form-control');
+        if (el.tagName === 'SELECT') { el.classList.remove('form-control'); el.classList.add('form-select'); }
+    });
+</script>
+{% endblock %}

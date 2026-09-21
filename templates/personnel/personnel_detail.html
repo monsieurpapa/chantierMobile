@@ -38,6 +38,16 @@
                                         {% else %}bg-primary{% endif %}">
                                             {{ personnel.get_personnel_type_display }}
                                         </span>
+                                        <span class="badge rounded-pill me-1
+                                        {% if personnel.status == 'ACTIF' %}bg-success
+                                        {% elif personnel.status == 'NON_ELIGIBLE' %}bg-danger
+                                        {% else %}bg-secondary{% endif %}">
+                                            {{ personnel.get_status_display }}
+                                        </span>
+                                        <span class="badge badge-subtle-secondary rounded-pill me-1">{{ personnel.get_category_display }}</span>
+                                        {% if personnel.trade %}
+                                        <span class="badge badge-subtle-dark rounded-pill me-1">{{ personnel.get_trade_display }}</span>
+                                        {% endif %}
                                         {% for skill in personnel.skills.all %}
                                         <span class="badge badge-subtle-primary rounded-pill me-1">{{ skill.name }}</span>
                                         {% endfor %}
@@ -72,7 +82,7 @@
                                             <th>{% trans "Role" %}</th>
                                             <th>{% trans "Period" %}</th>
                                             <th class="text-end">{% trans "Rate" %}</th>
-                                            <th></th>
+                                            <th>{% trans "Convention" %}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -86,6 +96,15 @@
                                                 ${{ assignment.daily_rate }}
                                                 {% else %}
                                                 ***
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if assignment.agreement_document %}
+                                                <a href="{{ assignment.agreement_document.url }}" target="_blank" rel="noopener" class="btn btn-falcon-default btn-sm" title="{% trans 'Voir la convention' %}">
+                                                    <span class="fas fa-file-contract"></span>
+                                                </a>
+                                                {% else %}
+                                                <span class="text-300">—</span>
                                                 {% endif %}
                                             </td>
                                         </tr>
@@ -120,6 +139,50 @@
                                 <label class="text-600 fs--1">{% trans "Total Assignments" %}</label>
                                 <p class="fs-1 fw-bold">{{ personnel.assignments.count }}</p>
                             </div>
+                            {% if personnel.monthly_salary %}
+                            <div class="mb-0">
+                                <label class="text-600 fs--1">{% trans "Salaire mensuel" %}</label>
+                                <p class="fs-1 fw-bold text-success mb-0">
+                                    {% if request.user|has_role:'DIRECTOR,ACCOUNTANT' %}
+                                    ${{ personnel.monthly_salary }}
+                                    {% else %}
+                                    {% trans "Restricted" %}
+                                    {% endif %}
+                                </p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="card mb-3">
+                        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">{% trans "Dossier" %}</h5>
+                            {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER' %}
+                            <a class="btn btn-falcon-primary btn-sm" href="{% url 'personnel:document_create' unique_id=personnel.unique_id %}">
+                                <span class="fas fa-plus me-1"></span>{% trans "Ajouter" %}
+                            </a>
+                            {% endif %}
+                        </div>
+                        <div class="card-body p-0">
+                            {% if personnel.documents.exists %}
+                            <ul class="list-group list-group-flush fs--1">
+                                {% for doc in personnel.documents.all %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <a href="{{ doc.file.url }}" target="_blank" rel="noopener">
+                                        <span class="fas fa-file me-1"></span>{{ doc.label }}
+                                    </a>
+                                    {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER' %}
+                                    <form method="post" action="{% url 'personnel:document_delete' pk=doc.pk %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-link text-danger btn-sm p-0"><span class="fas fa-trash"></span></button>
+                                    </form>
+                                    {% endif %}
+                                </li>
+                                {% endfor %}
+                            </ul>
+                            {% else %}
+                            <p class="text-center py-3 mb-0">{% trans "Aucun document dans le dossier." %}</p>
+                            {% endif %}
                         </div>
                     </div>
 

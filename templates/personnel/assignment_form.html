@@ -30,7 +30,7 @@
             {% endif %}
             <div class="card mb-3">
                 <div class="card-body bg-light">
-                    <form method="post">
+                    <form method="post" enctype="multipart/form-data">
                         {% csrf_token %}
 
                         <div class="mb-3">
@@ -90,6 +90,22 @@
                             <div class="text-danger fs--2">
                                 {{ form.daily_rate.errors }}
                             </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ form.agreement_document.id_for_label }}">{% trans "Convention de main-d'œuvre (document)" %}</label>
+                            {{ form.agreement_document }}
+                            {% if form.agreement_document.errors %}
+                            <div class="text-danger fs--2">{{ form.agreement_document.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ form.agreement_notes.id_for_label }}">{% trans "Termes de la convention" %}</label>
+                            {{ form.agreement_notes }}
+                            {% if form.agreement_notes.errors %}
+                            <div class="text-danger fs--2">{{ form.agreement_notes.errors }}</div>
                             {% endif %}
                         </div>
 
