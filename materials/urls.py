@@ -14,6 +14,7 @@ urlpatterns = [
     path('requests/add/', views.MaterialRequestCreateView.as_view(), name='request_create'),
     path('requests/<int:pk>/', views.MaterialRequestDetailView.as_view(), name='request_detail'),
     path('requests/<int:pk>/edit/', views.MaterialRequestUpdateView.as_view(), name='request_update'),
+    path('requests/<int:pk>/validate/', views.request_validate, name='request_validate'),
     path('requests/<int:pk>/approve/', views.approve_material_request, name='request_approve'),
     
     # API

@@ -34,4 +34,9 @@ urlpatterns = [
     path('stock/<int:pk>/', views.StockItemDetailView.as_view(), name='stock_item_detail'),
     path('stock/<int:pk>/edit/', views.StockItemUpdateView.as_view(), name='stock_item_update'),
     path('stock/<int:pk>/mouvement/', views.stock_movement_create, name='stock_movement_create'),
+    path('stock/<int:pk>/transfert/', views.stock_transfer_create, name='stock_transfer_create'),
+
+    # Reports
+    path('stock/rapport/', views.StockReportView.as_view(), name='stock_report'),
+    path('stock/rapport/pdf/', views.stock_report_pdf, name='stock_report_pdf'),
 ]

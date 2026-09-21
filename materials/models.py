@@ -34,6 +34,43 @@ class MaterialRequest(BaseModel):
         if self.pk and self.items.count() == 0:
             raise ValidationError('Material request must have at least one item.')
     
+    def magasinier_validate(self, user, notes=''):
+        """First stage of the two-step approval (état de besoin): the
+        magasinier checks the request against what's actually needed/
+        available before it goes up for final authorization."""
+        from django.core.exceptions import ValidationError
+        from core.models import StatusChangeLog
+        if self.status != MaterialRequestStatus.PENDING:
+            raise ValidationError(_('Seule une demande en attente peut être validée par le magasinier.'))
+        old_status = self.status
+        self.status = MaterialRequestStatus.VALIDATED
+        self.save(update_fields=['status', 'updated_at'])
+        StatusChangeLog.log(self, changed_by=user, old_status=old_status, new_status=self.status, note=notes)
+
+    def authorize(self, user, notes=''):
+        """Second/final stage: Directeur Technique, Directeur Général (or
+        Directeur de Cabinet) gives the final authorization once the
+        magasinier has validated the request."""
+        from django.core.exceptions import ValidationError
+        from core.models import StatusChangeLog
+        if self.status != MaterialRequestStatus.VALIDATED:
+            raise ValidationError(_("Seule une demande validée par le magasinier peut être autorisée."))
+        old_status = self.status
+        self.status = MaterialRequestStatus.APPROVED
+        self.save(update_fields=['status', 'updated_at'])
+        StatusChangeLog.log(self, changed_by=user, old_status=old_status, new_status=self.status, note=notes)
+
+    def reject(self, user, notes=''):
+        """Either stage may reject the request."""
+        from django.core.exceptions import ValidationError
+        from core.models import StatusChangeLog
+        if self.status not in (MaterialRequestStatus.PENDING, MaterialRequestStatus.VALIDATED):
+            raise ValidationError(_('Cette demande ne peut plus être rejetée.'))
+        old_status = self.status
+        self.status = MaterialRequestStatus.REJECTED
+        self.save(update_fields=['status', 'updated_at'])
+        StatusChangeLog.log(self, changed_by=user, old_status=old_status, new_status=self.status, note=notes)
+
     @property
     def total_items(self):
         """Get total number of material items in this request"""

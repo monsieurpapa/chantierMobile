@@ -1,0 +1,164 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n humanize %}
+
+{% block title %}{% trans "Rapport de stock" %} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    <!-- vertical nav -->
+    {% include 'includes/navbar-vertical.html' with on="stock_report" %}
+    <!-- /vertical nav -->
+
+    <div class="content">
+        <!-- navbar-top -->
+        {% include 'includes/navbar-top.html' %}
+        <!-- /navbar-top -->
+
+        <!-- Main Content -->
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            <div class="card mb-3">
+                <div class="card-body bg-light">
+                    <form method="get" class="row g-3 align-items-end">
+                        <div class="col-md-2">
+                            <label class="form-label fs--1 fw-semibold">{% trans "Chantier" %}</label>
+                            <select name="site" class="form-select">
+                                <option value="">{% trans "Tous les chantiers" %}</option>
+                                {% for s in sites %}
+                                <option value="{{ s.pk }}" {% if selected_site == s.pk|stringformat:"s" %}selected{% endif %}>{{ s.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fs--1 fw-semibold">{% trans "Étape" %}</label>
+                            <select name="phase" class="form-select">
+                                <option value="">{% trans "Toutes" %}</option>
+                                {% for p in phases %}
+                                <option value="{{ p.pk }}" {% if selected_phase == p.pk|stringformat:"s" %}selected{% endif %}>{{ p.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fs--1 fw-semibold">{% trans "Type" %}</label>
+                            <select name="movement_type" class="form-select">
+                                <option value="">{% trans "Tous" %}</option>
+                                {% for value, label in movement_type_choices %}
+                                <option value="{{ value }}" {% if selected_movement_type == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fs--1 fw-semibold">{% trans "Période" %}</label>
+                            <select name="period" class="form-select">
+                                <option value="">{% trans "Personnalisée" %}</option>
+                                {% for value, label in period_choices %}
+                                <option value="{{ value }}" {% if selected_period == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fs--1 fw-semibold">{% trans "Du" %}</label>
+                            <input type="date" name="date_from" value="{{ date_from }}" class="form-control">
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label fs--1 fw-semibold">{% trans "Au" %}</label>
+                            <input type="date" name="date_to" value="{{ date_to }}" class="form-control">
+                        </div>
+                        <div class="col-md-1 d-flex gap-2">
+                            <button type="submit" class="btn btn-falcon-primary flex-fill" title="{% trans 'Filtrer' %}">
+                                <i class="fas fa-filter"></i>
+                            </button>
+                        </div>
+                    </form>
+                    <div class="mt-2">
+                        <a href="{% url 'procurement:stock_report_pdf' %}?{{ request.GET.urlencode }}" class="btn btn-falcon-danger btn-sm">
+                            <i class="fas fa-file-pdf me-1"></i>{% trans "Exporter en PDF" %}
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">{% trans "État global des stocks" %} ({{ stock_levels|length }})</h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped mb-0 fs--1">
+                            <thead>
+                                <tr>
+                                    <th>{% trans "Chantier" %}</th>
+                                    <th>{% trans "Article" %}</th>
+                                    <th class="text-end">{% trans "Quantité en stock" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in stock_levels %}
+                                <tr>
+                                    <td><a href="{% url 'projects:site_detail' unique_id=item.site.unique_id %}">{{ item.site.name }}</a></td>
+                                    <td><a href="{% url 'procurement:stock_item_detail' pk=item.pk %}">{{ item.name }}</a></td>
+                                    <td class="text-end fw-semibold {% if item.is_below_reorder_threshold %}text-danger{% endif %}">
+                                        {{ item.quantity_on_hand }} {{ item.unit }}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="3" class="text-center py-4 text-500">{% trans "Aucun article." %}</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">{% trans "Mouvements" %} ({{ movements|length }})</h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped mb-0 fs--1">
+                            <thead>
+                                <tr>
+                                    <th>{% trans "Date" %}</th>
+                                    <th>{% trans "Chantier" %}</th>
+                                    <th>{% trans "Étape" %}</th>
+                                    <th>{% trans "Article" %}</th>
+                                    <th>{% trans "Type" %}</th>
+                                    <th class="text-end">{% trans "Quantité" %}</th>
+                                    <th>{% trans "Motif" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for m in movements %}
+                                <tr>
+                                    <td>{{ m.movement_date }}</td>
+                                    <td>{{ m.stock_item.site.name }}</td>
+                                    <td>{{ m.phase.name|default:"-" }}</td>
+                                    <td><a href="{% url 'procurement:stock_item_detail' pk=m.stock_item.pk %}">{{ m.stock_item.name }}</a></td>
+                                    <td>
+                                        <span class="badge
+                                        {% if m.movement_type == 'IN' %}bg-success
+                                        {% elif m.movement_type == 'OUT' %}bg-danger
+                                        {% elif m.movement_type == 'TRANSFER' %}bg-info
+                                        {% else %}bg-secondary{% endif %}">
+                                            {{ m.get_movement_type_display }}
+                                        </span>
+                                    </td>
+                                    <td class="text-end fw-semibold">{{ m.quantity }} {{ m.stock_item.unit }}</td>
+                                    <td>{{ m.motif|default:"-" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="7" class="text-center py-4 text-500">{% trans "Aucun mouvement pour cette sélection." %}</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}

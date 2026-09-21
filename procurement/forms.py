@@ -91,10 +91,12 @@ PurchaseOrderLineFormSet = inlineformset_factory(
 class StockMovementForm(forms.ModelForm):
     class Meta:
         model = StockMovement
-        fields = ['movement_type', 'quantity', 'movement_date', 'notes', 'facture']
+        fields = ['movement_type', 'quantity', 'phase', 'motif', 'movement_date', 'notes', 'facture']
         widgets = {
             'movement_type': forms.Select(attrs={'class': 'form-select'}),
             'quantity': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': '0.00'}),
+            'phase': forms.Select(attrs={'class': 'form-select'}),
+            'motif': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('Raison du mouvement')}),
             'movement_date': forms.DateInput(attrs={
                 'class': 'form-control datetimepicker',
                 'placeholder': DatePickerConfig.DATE_FORMAT,
@@ -105,8 +107,37 @@ class StockMovementForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        stock_item = kwargs.pop('stock_item', None)
         super().__init__(*args, **kwargs)
         self.fields['facture'].required = False
+        self.fields['phase'].required = False
+        self.fields['motif'].required = False
+        # A manual movement here is always single-item — a Transfer must go
+        # through StockItem.transfer_to() (a dedicated flow) so both legs of
+        # the audit trail are always created together.
+        self.fields['movement_type'].choices = [
+            c for c in self.fields['movement_type'].choices if c[0] != 'TRANSFER'
+        ]
+        if stock_item is not None:
+            self.fields['phase'].queryset = stock_item.site.phases.all()
+        else:
+            self.fields['phase'].queryset = self.fields['phase'].queryset.none()
+
+
+class StockTransferForm(forms.Form):
+    """Move stock from one StockItem to another — typically the same
+    material at a different site of the same cabinet."""
+    destination_site = forms.ModelChoiceField(queryset=None, widget=forms.Select(attrs={'class': 'form-select'}), label=_('Chantier de destination'))
+    quantity = forms.DecimalField(min_value=0.01, decimal_places=2, widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}), label=_('Quantité'))
+    motif = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control'}), label=_('Motif'))
+    notes = forms.CharField(required=False, widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2}), label=_('Notes'))
+
+    def __init__(self, *args, **kwargs):
+        source_site = kwargs.pop('source_site', None)
+        super().__init__(*args, **kwargs)
+        from projects.models import Site
+        qs = Site.objects.filter(cabinet=source_site.cabinet).exclude(pk=source_site.pk) if source_site else Site.objects.none()
+        self.fields['destination_site'].queryset = qs
 
 
 class TransferProofForm(forms.Form):

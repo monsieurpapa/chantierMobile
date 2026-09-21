@@ -59,8 +59,11 @@ class TestDatabasePerformance:
         # N+1) — the exact ceiling just needs headroom for flat, one-per-request
         # checks like the header's role-gated "Rapport" link visibility query,
         # plus the navbar's "Caisses" link (a distinct has_role cache key,
-        # 'DIRECTOR,ACCOUNTANT,CASHIER,FINANCIER', so +1 query of its own).
-        assert len(ctx.captured_queries) < 13
+        # 'DIRECTOR,ACCOUNTANT,CASHIER,FINANCIER', so +1 query of its own),
+        # plus the navbar's "Rapport de stock" link (another distinct
+        # has_role cache key, 'DIRECTOR,CHIEF_ENGINEER,ENGINEER,MAGASINIER',
+        # +1 more).
+        assert len(ctx.captured_queries) < 14
     
     def test_dashboard_query_performance(self, director_client, user):
         """Test dashboard query performance."""
