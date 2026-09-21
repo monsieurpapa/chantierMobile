@@ -1,12 +1,12 @@
 from django import forms
 from django.utils.translation import gettext_lazy as _
-from .models import Site, ProjectPhase, SiteProgress
+from .models import Site, ProjectPhase, SiteProgress, PlanningSubmission
 from chantiermobile.constants import FormPlaceholders, DatePickerConfig
 
 class SiteForm(forms.ModelForm):
     class Meta:
         model = Site
-        fields = ['name', 'location', 'status', 'start_date', 'expected_end_date']
+        fields = ['name', 'location', 'status', 'start_date', 'expected_end_date', 'lead_engineer']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.SITE_NAME}),
             'location': forms.TextInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.LOCATION}),
@@ -21,7 +21,12 @@ class SiteForm(forms.ModelForm):
                 'placeholder': DatePickerConfig.DATE_FORMAT,
                 'data-options': DatePickerConfig.OPTIONS
             }),
+            'lead_engineer': forms.Select(attrs={'class': 'form-select'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['lead_engineer'].required = False
 
 class ProjectPhaseForm(forms.ModelForm):
     class Meta:
@@ -40,6 +45,20 @@ class ProjectPhaseForm(forms.ModelForm):
                 'data-options': DatePickerConfig.OPTIONS
             }),
         }
+
+class PlanningSubmissionForm(forms.ModelForm):
+    class Meta:
+        model = PlanningSubmission
+        fields = ['phase', 'description']
+        widgets = {
+            'phase': forms.Select(attrs={'class': 'form-select'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': _('Décrivez la planification à soumettre...')}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['phase'].required = False
+
 
 class SiteProgressForm(forms.ModelForm):
     class Meta:
