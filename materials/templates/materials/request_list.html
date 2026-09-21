@@ -64,7 +64,7 @@
                                         {% if req.status == 'APPROVED' %}bg-success
                                         {% elif req.status == 'DELIVERED' %}bg-info
                                         {% elif req.status == 'REJECTED' %}bg-danger
-                                        {% elif req.status == 'ORDERED' %}bg-primary
+                                        {% elif req.status == 'VALIDATED' or req.status == 'ORDERED' %}bg-primary
                                         {% else %}bg-warning{% endif %}">
                                             {{ req.get_status_display }}
                                         </span>

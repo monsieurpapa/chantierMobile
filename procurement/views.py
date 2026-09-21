@@ -13,11 +13,11 @@ from .models import Supplier, StockItem, PurchaseOrder, PurchaseOrderLine, Stock
 from .forms import (
     SupplierForm, StockItemForm,
     PurchaseOrderForm, PurchaseOrderLineFormSet,
-    StockMovementForm, TransferProofForm, SupplierCreditForm, SupplierCreditPaymentForm,
+    StockMovementForm, StockTransferForm, TransferProofForm, SupplierCreditForm, SupplierCreditPaymentForm,
 )
 from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet, can_act_for_cabinet
-from projects.models import Site
-from chantiermobile.constants import PurchaseOrderStatus, UserRoles, CaisseType
+from projects.models import Site, ProjectPhase
+from chantiermobile.constants import PurchaseOrderStatus, UserRoles, CaisseType, StockMovementType, StockReportPeriod
 
 # Mirrors StockItemCreateView/PurchaseOrderCreateView's allowed_roles and
 # the has_role gate on the corresponding detail templates. MAGASINIER can
@@ -247,7 +247,8 @@ class StockItemDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixi
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['movement_form'] = StockMovementForm()
+        context['movement_form'] = StockMovementForm(stock_item=self.object)
+        context['transfer_form'] = StockTransferForm(source_site=self.object.site)
         return context
 
 
@@ -255,13 +256,15 @@ class StockItemDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixi
 def stock_movement_create(request, pk):
     """Record a manual stock movement (entry, exit, or correction) against
     a StockItem — receipts from a PurchaseOrder go through
-    PurchaseOrder.receive() instead."""
+    PurchaseOrder.receive() instead, and inter-site moves go through
+    stock_transfer_create() so both legs of the audit trail are created
+    together."""
     stock_item = get_object_or_404(StockItem, pk=pk)
     if request.method == 'POST':
         if not can_act_for_cabinet(request, stock_item.site.cabinet, STOCK_ACTION_ROLES):
             messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
             return redirect('procurement:stock_item_detail', pk=pk)
-        form = StockMovementForm(request.POST, request.FILES)
+        form = StockMovementForm(request.POST, request.FILES, stock_item=stock_item)
         if form.is_valid():
             movement = form.save(commit=False)
             movement.stock_item = stock_item
@@ -274,6 +277,37 @@ def stock_movement_create(request, pk):
                 messages.error(request, str(e.message) if hasattr(e, 'message') else str(e))
         else:
             messages.error(request, _("Impossible d'enregistrer ce mouvement : vérifiez les champs."))
+    return redirect('procurement:stock_item_detail', pk=pk)
+
+
+@login_required
+def stock_transfer_create(request, pk):
+    """Transfer stock from this StockItem to the same material at another
+    site of the same cabinet — creates the matching StockItem there if it
+    doesn't already exist, and both legs of the movement atomically."""
+    source = get_object_or_404(StockItem, pk=pk)
+    if request.method != 'POST':
+        return redirect('procurement:stock_item_detail', pk=pk)
+    if not can_act_for_cabinet(request, source.site.cabinet, STOCK_ACTION_ROLES):
+        messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+        return redirect('procurement:stock_item_detail', pk=pk)
+    form = StockTransferForm(request.POST, source_site=source.site)
+    if form.is_valid():
+        destination_site = form.cleaned_data['destination_site']
+        destination, _created = StockItem.objects.get_or_create(
+            site=destination_site, name=source.name,
+            defaults={'material': source.material, 'unit': source.unit},
+        )
+        try:
+            source.transfer_to(
+                destination, form.cleaned_data['quantity'], request.user,
+                motif=form.cleaned_data.get('motif', ''), notes=form.cleaned_data.get('notes', ''),
+            )
+            messages.success(request, _("Transfert enregistré vers %(site)s.") % {'site': destination_site.name})
+        except ValidationError as e:
+            messages.error(request, str(e.message) if hasattr(e, 'message') else str(e))
+    else:
+        messages.error(request, _("Impossible d'enregistrer ce transfert : vérifiez les champs."))
     return redirect('procurement:stock_item_detail', pk=pk)
 
 
@@ -670,6 +704,164 @@ def achats_report_pdf(request):
         columns=["Date", "N° Commande", "Chantier", "Fournisseur", "Caisse", "Total", "Statut"],
         rows=rows,
         totals_row=["", "", "", "", "Total", f"{total:.2f} $", ""],
+        generated_by=request.user.get_full_name() or request.user.username,
+    )
+
+
+# ---------------------------------------------------------------------
+# Rapport de stock : mouvements filtrables par chantier/étape/période,
+# plus l'état global des stocks — "rapports périodiques
+# (journalier/hebdomadaire/mensuel/trimestriel/annuel) filtrés par
+# projet/étape" et "un rapport global de stock" du cahier des charges.
+# ---------------------------------------------------------------------
+
+STOCK_REPORT_ROLES = ['DIRECTOR', 'CHIEF_ENGINEER', 'ENGINEER', 'MAGASINIER']
+
+
+def _stock_report_queryset(request):
+    qs = StockMovement.objects.select_related('stock_item', 'stock_item__site', 'phase', 'moved_by').order_by('-movement_date', '-id')
+    if request.user.is_superuser:
+        active_cabinet = get_session_cabinet(request)
+        if active_cabinet:
+            qs = qs.filter(stock_item__site__cabinet=active_cabinet)
+    else:
+        user_cabinet_ids = request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+        qs = qs.filter(stock_item__site__cabinet__id__in=user_cabinet_ids)
+
+    site_id = request.GET.get('site')
+    if site_id:
+        qs = qs.filter(stock_item__site_id=site_id)
+
+    phase_id = request.GET.get('phase')
+    if phase_id:
+        qs = qs.filter(phase_id=phase_id)
+
+    movement_type = request.GET.get('movement_type')
+    if movement_type:
+        qs = qs.filter(movement_type=movement_type)
+
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+    if date_from:
+        qs = qs.filter(movement_date__gte=date_from)
+    if date_to:
+        qs = qs.filter(movement_date__lte=date_to)
+
+    today = timezone.localdate()
+    period = request.GET.get('period')
+    if period == StockReportPeriod.JOURNALIER:
+        qs = qs.filter(movement_date=today)
+    elif period == StockReportPeriod.HEBDOMADAIRE:
+        qs = qs.filter(movement_date__gte=today - timezone.timedelta(days=7))
+    elif period == StockReportPeriod.MENSUEL:
+        qs = qs.filter(movement_date__gte=today.replace(day=1))
+    elif period == StockReportPeriod.TRIMESTRIEL:
+        qs = qs.filter(movement_date__gte=today - timezone.timedelta(days=90))
+    elif period == StockReportPeriod.ANNUEL:
+        qs = qs.filter(movement_date__gte=today.replace(month=1, day=1))
+
+    return qs
+
+
+def _stock_levels_queryset(request):
+    """The global stock state — current quantity_on_hand per StockItem,
+    scoped the same way as the movements report."""
+    qs = StockItem.objects.select_related('site', 'material').order_by('site__name', 'name')
+    if request.user.is_superuser:
+        active_cabinet = get_session_cabinet(request)
+        if active_cabinet:
+            qs = qs.filter(site__cabinet=active_cabinet)
+    else:
+        user_cabinet_ids = request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+        qs = qs.filter(site__cabinet__id__in=user_cabinet_ids)
+
+    site_id = request.GET.get('site')
+    if site_id:
+        qs = qs.filter(site_id=site_id)
+
+    return qs
+
+
+class StockReportView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, ListView):
+    model = StockMovement
+    template_name = 'procurement/stock_report.html'
+    context_object_name = 'movements'
+    allowed_roles = STOCK_REPORT_ROLES
+    header_title = _("Rapport de stock")
+    header_subtitle = _("État global et mouvements filtrables par chantier, étape et période")
+    back_url = reverse_lazy('procurement:stock_item_list')
+
+    def get_breadcrumb_items(self):
+        return [
+            {'title': _("Achats & Stocks"), 'url': str(reverse_lazy('procurement:stock_item_list'))},
+            {'title': _("Rapport de stock"), 'url': None},
+        ]
+
+    def get_queryset(self):
+        return _stock_report_queryset(self.request)
+
+    def get_header_actions(self):
+        return [{
+            'label': _("Exporter en PDF"),
+            'url': f"{reverse_lazy('procurement:stock_report_pdf')}?{self.request.GET.urlencode()}",
+            'icon': 'file-pdf',
+            'class': 'btn-falcon-danger',
+        }]
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['stock_levels'] = _stock_levels_queryset(self.request)
+        if self.request.user.is_superuser:
+            active_cabinet = get_session_cabinet(self.request)
+            sites = Site.objects.filter(cabinet=active_cabinet) if active_cabinet else Site.objects.all()
+        else:
+            user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+            sites = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
+        context['sites'] = sites
+        selected_site = self.request.GET.get('site', '')
+        context['selected_site'] = selected_site
+        context['phases'] = ProjectPhase.objects.filter(site__in=sites, site_id=selected_site) if selected_site else ProjectPhase.objects.none()
+        context['selected_phase'] = self.request.GET.get('phase', '')
+        context['movement_type_choices'] = StockMovementType.choices
+        context['selected_movement_type'] = self.request.GET.get('movement_type', '')
+        context['period_choices'] = StockReportPeriod.choices
+        context['selected_period'] = self.request.GET.get('period', '')
+        context['date_from'] = self.request.GET.get('date_from', '')
+        context['date_to'] = self.request.GET.get('date_to', '')
+        return context
+
+
+@login_required
+def stock_report_pdf(request):
+    """PDF export of the same filtered stock movements report."""
+    from accounts.models import UserCabinetRole
+    if not (request.user.is_superuser or UserCabinetRole.objects.filter(
+        user=request.user, role__in=STOCK_REPORT_ROLES
+    ).exists()):
+        messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+        return redirect('procurement:stock_report')
+
+    from core.pdf_utils import render_table_report_pdf
+
+    qs = _stock_report_queryset(request)
+    rows = [
+        (
+            m.movement_date.strftime('%d/%m/%Y'),
+            m.stock_item.site.name,
+            m.phase.name if m.phase else '-',
+            m.stock_item.name,
+            m.get_movement_type_display(),
+            f"{m.quantity} {m.stock_item.unit}",
+            m.motif or '-',
+        )
+        for m in qs
+    ]
+    return render_table_report_pdf(
+        filename=f"stock-{timezone.localdate().isoformat()}.pdf",
+        title="Rapport de stock",
+        subtitle=_("%(count)s mouvement(s)") % {'count': qs.count()},
+        columns=["Date", "Chantier", "Étape", "Article", "Type", "Quantité", "Motif"],
+        rows=rows,
         generated_by=request.user.get_full_name() or request.user.username,
     )
 

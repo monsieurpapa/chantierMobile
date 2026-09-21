@@ -3,7 +3,7 @@ from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from core.models import BaseModel
 from accounts.models import Cabinet
-from projects.models import Site
+from projects.models import Site, ProjectPhase
 from materials.models import Material
 from chantiermobile.constants import (
     PurchaseOrderStatus, StockMovementType, CaisseType, PurchasePaymentMethod, CaisseTransactionType,
@@ -145,6 +145,37 @@ class StockItem(BaseModel):
         if self.reorder_threshold is None:
             return False
         return self.quantity_on_hand <= self.reorder_threshold
+
+    def transfer_to(self, destination, quantity, user, motif='', notes='', phase=None, movement_date=None):
+        """Move `quantity` of this stock item to another StockItem —
+        typically the same material at a different site. Creates a
+        paired TRANSFER movement on both sides atomically, so the audit
+        trail always balances."""
+        from django.core.exceptions import ValidationError
+        from django.utils import timezone
+
+        if destination.pk == self.pk:
+            raise ValidationError(_("La destination doit être différente de l'origine."))
+        if quantity is None or quantity <= 0:
+            raise ValidationError(_('La quantité doit être positive.'))
+
+        movement_date = movement_date or timezone.localdate()
+        with transaction.atomic():
+            out_movement = StockMovement.objects.create(
+                stock_item=self, movement_type=StockMovementType.TRANSFER, quantity=quantity,
+                is_transfer_source=True, movement_date=movement_date, motif=motif, notes=notes,
+                moved_by=user, phase=phase,
+            )
+            in_movement = StockMovement.objects.create(
+                stock_item=destination, movement_type=StockMovementType.TRANSFER, quantity=quantity,
+                is_transfer_source=False, movement_date=movement_date, motif=motif, notes=notes,
+                moved_by=user, phase=phase,
+            )
+            out_movement.transfer_pair = in_movement
+            out_movement.save(update_fields=['transfer_pair'])
+            in_movement.transfer_pair = out_movement
+            in_movement.save(update_fields=['transfer_pair'])
+        return out_movement, in_movement
 
 
 class PurchaseOrder(BaseModel):
@@ -369,6 +400,20 @@ class StockMovement(BaseModel):
         PurchaseOrderLine, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='stock_movements',
     )
+    phase = models.ForeignKey(
+        ProjectPhase, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='stock_movements',
+        help_text=_('Étape du chantier concernée (facultatif)'),
+    )
+    motif = models.CharField(max_length=255, blank=True, verbose_name=_('Motif'), help_text=_('Raison du mouvement'))
+    is_transfer_source = models.BooleanField(
+        default=False,
+        help_text=_("Pour un mouvement de type Transfert : True côté origine (sortie), False côté destination (entrée)."),
+    )
+    transfer_pair = models.OneToOneField(
+        'self', on_delete=models.SET_NULL, null=True, blank=True, related_name='transfer_pair_reverse',
+        help_text=_("L'autre moitié de ce transfert (origine <-> destination)."),
+    )
     moved_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='stock_movements',
@@ -392,9 +437,12 @@ class StockMovement(BaseModel):
     def clean(self):
         from django.core.exceptions import ValidationError
 
-        if self.movement_type in (StockMovementType.IN, StockMovementType.OUT):
+        if self.phase_id and self.stock_item_id and self.phase.site_id != self.stock_item.site_id:
+            raise ValidationError({'phase': _("L'étape sélectionnée doit appartenir au chantier de cet article de stock.")})
+
+        if self.movement_type in (StockMovementType.IN, StockMovementType.OUT, StockMovementType.TRANSFER):
             if self.quantity is None or self.quantity <= 0:
-                raise ValidationError({'quantity': _('La quantité doit être positive pour une entrée ou une sortie.')})
+                raise ValidationError({'quantity': _('La quantité doit être positive pour une entrée, une sortie ou un transfert.')})
         elif self.movement_type == StockMovementType.ADJUSTMENT:
             if not self.quantity:
                 raise ValidationError({'quantity': _("La quantité d'ajustement ne peut pas être nulle.")})
@@ -407,6 +455,8 @@ class StockMovement(BaseModel):
     def _signed_delta(self):
         if self.movement_type == StockMovementType.OUT:
             return -self.quantity
+        if self.movement_type == StockMovementType.TRANSFER:
+            return -self.quantity if self.is_transfer_source else self.quantity
         return self.quantity
 
     def save(self, *args, **kwargs):

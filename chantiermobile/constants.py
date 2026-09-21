@@ -46,8 +46,12 @@ class ExpenseStatus(models.TextChoices):
 
 
 class MaterialRequestStatus(models.TextChoices):
-    """Material request specific status choices"""
+    """Material request (état de besoin) status choices — a two-stage
+    approval: the magasinier validates the request first, then a
+    Directeur Technique/Général (or Directeur de Cabinet) gives the
+    final authorization."""
     PENDING = 'PENDING', _('En attente')
+    VALIDATED = 'VALIDATED', _('Validé par le magasinier')
     APPROVED = 'APPROVED', _('Approuvé')
     REJECTED = 'REJECTED', _('Rejeté')
     ORDERED = 'ORDERED', _('Commandé')
@@ -170,6 +174,18 @@ class StockMovementType(models.TextChoices):
     IN = 'IN', _('Entrée')
     OUT = 'OUT', _('Sortie')
     ADJUSTMENT = 'ADJUSTMENT', _('Ajustement')
+    TRANSFER = 'TRANSFER', _('Transfert')
+
+
+class StockReportPeriod(models.TextChoices):
+    """Periodicity for the stock report — "rapports périodiques
+    (journalier/hebdomadaire/mensuel/trimestriel/annuel)" from the
+    client's spec."""
+    JOURNALIER = 'JOURNALIER', _('Journalier')
+    HEBDOMADAIRE = 'HEBDOMADAIRE', _('Hebdomadaire')
+    MENSUEL = 'MENSUEL', _('Mensuel')
+    TRIMESTRIEL = 'TRIMESTRIEL', _('Trimestriel')
+    ANNUEL = 'ANNUEL', _('Annuel')
 
 
 class PersonnelType(models.TextChoices):
@@ -331,6 +347,7 @@ class StatusBadgeClasses:
         MaterialRequestStatus.DELIVERED: 'bg-info',
         MaterialRequestStatus.REJECTED: 'bg-danger',
         MaterialRequestStatus.PENDING: 'bg-warning',
+        MaterialRequestStatus.VALIDATED: 'bg-primary',
         MaterialRequestStatus.ORDERED: 'bg-primary',
     }
     
@@ -517,6 +534,7 @@ __all__ = [
     'TaskPriority',
     'PlanningStatus',
     'PhaseStatus',
+    'StockReportPeriod',
 
     # Configuration classes
     'FormPlaceholders',

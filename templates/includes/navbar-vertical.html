@@ -228,6 +228,16 @@
                             </a>
                         </li>
                         {% endif %}
+                        {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER,ENGINEER,MAGASINIER' or request.user.is_superuser %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if on == 'stock_report' %}active{% endif %}"
+                                href="{% url 'procurement:stock_report' %}">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-text ps-1">{% trans "Rapport de stock" %}</span>
+                                </div>
+                            </a>
+                        </li>
+                        {% endif %}
                     </ul>
                 </li>
 
