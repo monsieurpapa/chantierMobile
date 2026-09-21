@@ -51,33 +51,56 @@ class MaterialRequest(BaseModel):
 
 
 class MaterialRequestItem(BaseModel):
-    """Represents a single material item within a request"""
+    """Represents a single material item within a request.
+
+    `material` links to the catalog when the item is already registered
+    there. When it isn't (a one-off or not-yet-catalogued item), the
+    requester can instead type a name directly into `material_name` —
+    exactly one of the two must be set (see clean())."""
     request = models.ForeignKey(MaterialRequest, on_delete=models.CASCADE, related_name='items')
-    material = models.ForeignKey(Material, on_delete=models.PROTECT, related_name='request_items')
+    material = models.ForeignKey(Material, on_delete=models.PROTECT, related_name='request_items', null=True, blank=True)
+    material_name = models.CharField(
+        max_length=255, blank=True,
+        verbose_name=_('Nom du matériel'),
+        help_text=_("À utiliser si le matériel n'est pas dans le catalogue"),
+    )
     quantity = models.DecimalField(max_digits=10, decimal_places=2)
     notes = models.TextField(blank=True, null=True, help_text=_("Notes specific to this material item"))
 
     class Meta:
         verbose_name = "Material Request Item"
         verbose_name_plural = "Material Request Items"
-        unique_together = ('request', 'material')  # Prevent duplicate materials in same request
+        # NULL is never equal to NULL in a SQL unique constraint, so this
+        # only blocks adding the *same catalog material* twice to a
+        # request — free-text rows (material IS NULL) are never affected.
+        unique_together = ('request', 'material')
 
     def __str__(self):
-        return f"{self.quantity} {self.material.unit} of {self.material.name}"
-    
+        return f"{self.quantity} of {self.display_name}"
+
+    @property
+    def display_name(self):
+        return self.material.name if self.material_id else self.material_name
+
     def clean(self):
         """Validate material request item."""
         from django.core.exceptions import ValidationError
-        
+
+        if not self.material_id and not self.material_name:
+            raise ValidationError(_("Sélectionnez un matériel du catalogue ou indiquez son nom."))
+        if self.material_id and self.material_name:
+            raise ValidationError(_("Choisissez soit un matériel du catalogue, soit un nom libre — pas les deux."))
+
         # Validate quantity is positive
-        if self.quantity <= 0:
+        if self.quantity is not None and self.quantity <= 0:
             raise ValidationError({
                 'quantity': 'Quantity must be a positive number.'
             })
-    
+
     @property
     def estimated_cost(self):
-        """Calculate estimated cost for this item"""
-        if self.material.estimated_cost_per_unit:
+        """Calculate estimated cost for this item (free-text items have no
+        catalog price, so this is always 0 for them)."""
+        if self.material_id and self.material.estimated_cost_per_unit:
             return self.material.estimated_cost_per_unit * self.quantity
         return 0

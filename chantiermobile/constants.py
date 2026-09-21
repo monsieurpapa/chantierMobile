@@ -15,6 +15,7 @@ class UserRoles(models.TextChoices):
     ENGINEER = 'ENGINEER', _('Ingénieur')
     ACCOUNTANT = 'ACCOUNTANT', _('Comptable')
     CASHIER = 'CASHIER', _('Caissier')
+    MAGASINIER = 'MAGASINIER', _('Magasinier')
     WORKER = 'WORKER', _('Ouvrier')
 
 
@@ -66,6 +67,22 @@ class PaymentMethod(models.TextChoices):
     CHECK = 'CHECK', _('Chèque')
     CASH = 'CASH', _('Espèces')
     MOBILE_MONEY = 'MOBILE_MONEY', _('Mobile Money')
+
+
+class ExpenseNature(models.TextChoices):
+    """Whether an expense pays for a material/purchase or for labor
+    (main-d'œuvre) — drives whether the Personnel field is shown/required
+    on the expense form."""
+    MATERIEL = 'MATERIEL', _('Matériel')
+    MAIN_DOEUVRE = 'MAIN_DOEUVRE', _("Main d'œuvre")
+    AUTRE = 'AUTRE', _('Autre')
+
+
+class CaisseType(models.TextChoices):
+    """Which cash register (caisse) a purchase was funded from. A simple
+    tag used for filtering/report purposes — not a balance-tracked ledger."""
+    PRINCIPALE = 'PRINCIPALE', _('Caisse principale')
+    SECONDAIRE = 'SECONDAIRE', _('Caisse secondaire')
 
 
 class DevisStatus(models.TextChoices):
@@ -358,6 +375,8 @@ __all__ = [
     'SiteStatus',
     'InvoiceStatus',
     'PaymentMethod',
+    'ExpenseNature',
+    'CaisseType',
     'DevisStatus',
     'SituationStatus',
     'PriceItemType',

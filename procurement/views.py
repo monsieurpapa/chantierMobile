@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 from django.http import HttpResponseRedirect
 from django.views.generic import ListView, CreateView, UpdateView, DetailView
 from django.urls import reverse_lazy
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from .models import Supplier, StockItem, PurchaseOrder, PurchaseOrderLine, StockMovement
@@ -16,11 +17,13 @@ from .forms import (
 )
 from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet, can_act_for_cabinet
 from projects.models import Site
-from chantiermobile.constants import PurchaseOrderStatus, UserRoles
+from chantiermobile.constants import PurchaseOrderStatus, UserRoles, CaisseType
 
 # Mirrors StockItemCreateView/PurchaseOrderCreateView's allowed_roles and
-# the has_role gate on the corresponding detail templates.
-STOCK_ACTION_ROLES = ['DIRECTOR', 'CHIEF_ENGINEER']
+# the has_role gate on the corresponding detail templates. MAGASINIER can
+# record stock entries/exits (their core job) but not create/edit the
+# StockItem catalog entry itself, nor create purchase orders.
+STOCK_ACTION_ROLES = ['DIRECTOR', 'CHIEF_ENGINEER', 'MAGASINIER']
 PURCHASE_ORDER_ACTION_ROLES = ['DIRECTOR', 'CHIEF_ENGINEER', 'ACCOUNTANT']
 
 
@@ -253,7 +256,7 @@ def stock_movement_create(request, pk):
         if not can_act_for_cabinet(request, stock_item.site.cabinet, STOCK_ACTION_ROLES):
             messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
             return redirect('procurement:stock_item_detail', pk=pk)
-        form = StockMovementForm(request.POST)
+        form = StockMovementForm(request.POST, request.FILES)
         if form.is_valid():
             movement = form.save(commit=False)
             movement.stock_item = stock_item
@@ -280,12 +283,20 @@ class PurchaseOrderListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMi
     header_subtitle = _("Gérez les commandes passées auprès des fournisseurs")
 
     def get_header_actions(self):
-        return [{
-            'label': _("Nouvelle commande"),
-            'url': str(reverse_lazy('procurement:purchase_order_create')),
-            'icon': 'plus',
-            'class': 'btn-falcon-primary'
-        }]
+        return [
+            {
+                'label': _("Nouvelle commande"),
+                'url': str(reverse_lazy('procurement:purchase_order_create')),
+                'icon': 'plus',
+                'class': 'btn-falcon-primary'
+            },
+            {
+                'label': _("Rapport des achats"),
+                'url': str(reverse_lazy('procurement:achats_report')),
+                'icon': 'file-alt',
+                'class': 'btn-falcon-default'
+            },
+        ]
 
     def get_queryset(self):
         qs = super().get_queryset().select_related('site', 'supplier').prefetch_related('lines')
@@ -528,3 +539,131 @@ def purchase_order_cancel(request, pk):
         else:
             messages.error(request, _("Cette commande ne peut pas être annulée dans son statut actuel."))
     return redirect('procurement:purchase_order_detail', pk=pk)
+
+
+# Roles that may view the Achats/Caisse report and export it to PDF.
+ACHATS_REPORT_ROLES = ['DIRECTOR', 'CHIEF_ENGINEER', 'ACCOUNTANT', 'CASHIER']
+
+
+def _achats_report_queryset(request):
+    """Shared filtering for the achats report view and its PDF export:
+    cabinet-scoped, optionally filtered by caisse, site, and order_date
+    range/period. A caisse is shared across every chantier of the cabinet
+    (it isn't site-scoped), so the site filter narrows the report without
+    implying the caisse itself belongs to one site."""
+    qs = PurchaseOrder.objects.select_related('site', 'supplier').prefetch_related('lines').order_by('-order_date', '-id')
+    if request.user.is_superuser:
+        active_cabinet = get_session_cabinet(request)
+        if active_cabinet:
+            qs = qs.filter(site__cabinet=active_cabinet)
+    else:
+        user_cabinet_ids = request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+        qs = qs.filter(site__cabinet__id__in=user_cabinet_ids)
+
+    caisse = request.GET.get('caisse')
+    if caisse:
+        qs = qs.filter(caisse=caisse)
+
+    site_id = request.GET.get('site')
+    if site_id:
+        qs = qs.filter(site_id=site_id)
+
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+    if date_from:
+        qs = qs.filter(order_date__gte=date_from)
+    if date_to:
+        qs = qs.filter(order_date__lte=date_to)
+
+    period = request.GET.get('period')
+    today = timezone.localdate()
+    if period == 'week':
+        qs = qs.filter(order_date__gte=today - timezone.timedelta(days=7))
+    elif period == 'month':
+        qs = qs.filter(order_date__gte=today.replace(day=1))
+
+    return qs
+
+
+class AchatsReportView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, ListView):
+    """Filterable purchases (achats) report — by caisse, by chantier, by
+    date range/period — with a PDF export."""
+    model = PurchaseOrder
+    template_name = 'procurement/achats_report.html'
+    context_object_name = 'purchase_orders'
+    allowed_roles = ACHATS_REPORT_ROLES
+    header_title = _("Rapport des achats")
+    header_subtitle = _("Filtrez par caisse, chantier ou période et exportez en PDF")
+    back_url = reverse_lazy('procurement:purchase_order_list')
+
+    def get_breadcrumb_items(self):
+        return [
+            {'title': _("Achats & Stocks"), 'url': str(reverse_lazy('procurement:purchase_order_list'))},
+            {'title': _("Rapport"), 'url': None},
+        ]
+
+    def get_queryset(self):
+        return _achats_report_queryset(self.request)
+
+    def get_header_actions(self):
+        return [{
+            'label': _("Exporter en PDF"),
+            'url': f"{reverse_lazy('procurement:achats_report_pdf')}?{self.request.GET.urlencode()}",
+            'icon': 'file-pdf',
+            'class': 'btn-falcon-danger',
+        }]
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        qs = context['purchase_orders']
+        context['total_amount'] = sum((po.total_ht for po in qs), 0)
+        if self.request.user.is_superuser:
+            active_cabinet = get_session_cabinet(self.request)
+            context['sites'] = Site.objects.filter(cabinet=active_cabinet) if active_cabinet else Site.objects.all()
+        else:
+            user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+            context['sites'] = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
+        context['caisse_choices'] = CaisseType.choices
+        context['selected_caisse'] = self.request.GET.get('caisse', '')
+        context['selected_site'] = self.request.GET.get('site', '')
+        context['date_from'] = self.request.GET.get('date_from', '')
+        context['date_to'] = self.request.GET.get('date_to', '')
+        context['period'] = self.request.GET.get('period', '')
+        return context
+
+
+@login_required
+def achats_report_pdf(request):
+    """PDF export of the same filtered achats report."""
+    from accounts.models import UserCabinetRole
+    if not (request.user.is_superuser or UserCabinetRole.objects.filter(
+        user=request.user, role__in=ACHATS_REPORT_ROLES
+    ).exists()):
+        messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+        return redirect('procurement:achats_report')
+
+    from core.pdf_utils import render_table_report_pdf
+
+    qs = _achats_report_queryset(request)
+    rows = [
+        (
+            po.order_date.strftime('%d/%m/%Y'),
+            po.order_number,
+            po.site.name,
+            po.supplier.name,
+            po.get_caisse_display(),
+            f"{po.total_ht:.2f} $",
+            po.get_status_display(),
+        )
+        for po in qs
+    ]
+    total = sum((po.total_ht for po in qs), 0)
+    return render_table_report_pdf(
+        filename=f"achats-{timezone.localdate().isoformat()}.pdf",
+        title="Rapport des achats",
+        subtitle=_("%(count)s commande(s)") % {'count': qs.count()},
+        columns=["Date", "N° Commande", "Chantier", "Fournisseur", "Caisse", "Total", "Statut"],
+        rows=rows,
+        totals_row=["", "", "", "", "Total", f"{total:.2f} $", ""],
+        generated_by=request.user.get_full_name() or request.user.username,
+    )

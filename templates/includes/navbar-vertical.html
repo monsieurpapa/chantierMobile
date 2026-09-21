@@ -1,4 +1,4 @@
-{% load static i18n %}
+{% load static i18n rbac_tags %}
 <script>
     var isFluid = JSON.parse(localStorage.getItem('isFluid'));
     if (isFluid) {
@@ -106,6 +106,16 @@
                                 </div>
                             </a>
                         </li>
+                        {% if request.user|has_role:'DIRECTOR,ACCOUNTANT,CASHIER' or request.user.is_superuser %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if on == 'expense_report' %}active{% endif %}"
+                                href="{% url 'finance:expense_report' %}">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-text ps-1">{% trans "Rapport des dépenses" %}</span>
+                                </div>
+                            </a>
+                        </li>
+                        {% endif %}
                     </ul>
                 </li>
 
@@ -172,6 +182,16 @@
                                 </div>
                             </a>
                         </li>
+                        {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER,ACCOUNTANT,CASHIER' or request.user.is_superuser %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if on == 'achats_report' %}active{% endif %}"
+                                href="{% url 'procurement:achats_report' %}">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-text ps-1">{% trans "Rapport des achats" %}</span>
+                                </div>
+                            </a>
+                        </li>
+                        {% endif %}
                     </ul>
                 </li>
 

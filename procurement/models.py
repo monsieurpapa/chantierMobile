@@ -5,7 +5,7 @@ from core.models import BaseModel
 from accounts.models import Cabinet
 from projects.models import Site
 from materials.models import Material
-from chantiermobile.constants import PurchaseOrderStatus, StockMovementType
+from chantiermobile.constants import PurchaseOrderStatus, StockMovementType, CaisseType
 
 
 class Supplier(BaseModel):
@@ -78,6 +78,11 @@ class PurchaseOrder(BaseModel):
     order_date = models.DateField(verbose_name=_('Date de commande'))
     expected_delivery_date = models.DateField(null=True, blank=True, verbose_name=_('Livraison prévue'))
     status = models.CharField(max_length=20, choices=PurchaseOrderStatus.choices, default=PurchaseOrderStatus.BROUILLON)
+    caisse = models.CharField(
+        max_length=20, choices=CaisseType.choices, default=CaisseType.PRINCIPALE,
+        verbose_name=_('Caisse'),
+        help_text=_("Caisse ayant financé cet achat — utilisée pour tous les chantiers, sert uniquement au filtrage des rapports"),
+    )
     notes = models.TextField(blank=True, verbose_name=_('Notes'))
 
     class Meta:
@@ -246,6 +251,11 @@ class StockMovement(BaseModel):
     )
     movement_date = models.DateField(verbose_name=_('Date du mouvement'))
     notes = models.TextField(blank=True, verbose_name=_('Notes'))
+    facture = models.FileField(
+        upload_to='stock_movements/factures/', blank=True, null=True,
+        verbose_name=_('Facture'),
+        help_text=_('Justificatif (facture/reçu) lié à ce mouvement — facultatif'),
+    )
 
     class Meta:
         verbose_name = _('Mouvement de stock')

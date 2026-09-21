@@ -27,6 +27,7 @@
                                     <th scope="col">{% trans "Site" %}</th>
                                     <th scope="col">{% trans "Client" %}</th>
                                     <th scope="col">{% trans "Total Value" %}</th>
+                                    <th scope="col">{% trans "Solde client" %}</th>
                                     <th scope="col">{% trans "Signed Date" %}</th>
                                     <th scope="col" class="text-end">{% trans "Actions" %}</th>
                                 </tr>
@@ -37,6 +38,7 @@
                                     <td><a href="{% url 'projects:site_detail' unique_id=contract.site.unique_id %}"><strong>{{ contract.site.name }}</strong></a></td>
                                     <td>{{ contract.client_name }}</td>
                                     <td class="fw-semi-bold">${{ contract.total_value|floatformat:2 }}</td>
+                                    <td class="fw-semi-bold {% if contract.client_balance > 0 %}text-danger{% else %}text-success{% endif %}">${{ contract.client_balance|floatformat:2 }}</td>
                                     <td>{{ contract.signed_date }}</td>
                                     <td class="text-end">
                                         <a class="btn btn-falcon-default btn-sm"
@@ -51,7 +53,7 @@
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="5" class="text-center py-5">
+                                    <td colspan="6" class="text-center py-5">
                                         <span class="fas fa-file-contract fa-2x text-300 d-block mb-2"></span>
                                         <p class="text-600 mb-2">{% trans "No contracts found." %}</p>
                                         <a href="{% url 'revenue:contract_create' %}" class="btn btn-falcon-primary btn-sm">

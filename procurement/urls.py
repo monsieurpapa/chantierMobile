@@ -18,6 +18,8 @@ urlpatterns = [
     path('orders/<int:pk>/envoyer/', views.purchase_order_send, name='purchase_order_send'),
     path('orders/<int:pk>/receptionner/', views.purchase_order_receive, name='purchase_order_receive'),
     path('orders/<int:pk>/annuler/', views.purchase_order_cancel, name='purchase_order_cancel'),
+    path('orders/rapport/', views.AchatsReportView.as_view(), name='achats_report'),
+    path('orders/rapport/pdf/', views.achats_report_pdf, name='achats_report_pdf'),
 
     # Stock
     path('stock/', views.StockItemListView.as_view(), name='stock_item_list'),

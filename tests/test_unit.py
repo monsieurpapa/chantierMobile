@@ -80,12 +80,13 @@ class TestForms:
         form_data = {
             'site': site.pk,
             'category': expense_category.pk,
+            'nature': 'MATERIEL',
             'amount': '1000.00',
             'expense_date': date.today(),
             'description': 'Valid expense'
         }
         form = ExpenseForm(data=form_data)
-        assert form.is_valid()
+        assert form.is_valid(), form.errors
         
         # Invalid amount
         form_data['amount'] = '-100.00'

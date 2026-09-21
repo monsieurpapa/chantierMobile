@@ -3,7 +3,7 @@ from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 from core.models import BaseModel
 from projects.models import Site
-from chantiermobile.constants import ExpenseStatus, FileUploadConfig
+from chantiermobile.constants import ExpenseStatus, ExpenseNature, FileUploadConfig
 
 class Budget(BaseModel):
     site = models.OneToOneField(Site, on_delete=models.CASCADE, related_name='budget')
@@ -62,22 +62,43 @@ class Expense(BaseModel):
     site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name='expenses')
     requester = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='requested_expenses')
     category = models.ForeignKey(ExpenseCategory, on_delete=models.PROTECT, related_name='expenses')
+    nature = models.CharField(
+        max_length=20, choices=ExpenseNature.choices, default=ExpenseNature.MATERIEL,
+        verbose_name=_("Matériel ou main d'œuvre"),
+        help_text=_("Cette dépense couvre-t-elle un achat de matériel ou de la main d'œuvre ?"),
+    )
+    personnel = models.ForeignKey(
+        'personnel.Personnel', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='expenses',
+        verbose_name=_("Personnel concerné"),
+        help_text=_("Pour une dépense de main d'œuvre : le personnel enregistré sur ce chantier concerné par cette dépense"),
+    )
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     expense_date = models.DateField(help_text=_("Date the expense was incurred (used for budget period matching)"))
-    description = models.TextField()
+    description = models.TextField(verbose_name=_('Désignation'))
     status = models.CharField(max_length=20, choices=ExpenseStatus.choices, default=ExpenseStatus.PENDING)
     receipt_image = models.ImageField(upload_to=FileUploadConfig.EXPENSE_RECEIPT_PATH, blank=True, null=True)
-    
+
     def clean(self):
         """Validate expense data."""
         from django.core.exceptions import ValidationError
         from decimal import Decimal
-        
+
         # Validate positive amount (None means the amount field itself already
         # failed form-level validation and is excluded from clean_fields())
         if self.amount is not None and self.amount <= 0:
             raise ValidationError({'amount': 'Amount must be a positive number.'})
-        
+
+        # A "main d'œuvre" personnel link only makes sense for that person's
+        # own project — otherwise the searchable dropdown (scoped to the
+        # site's active assignments in the form) could still be bypassed by
+        # posting an arbitrary personnel id directly.
+        if self.personnel_id and self.site_id:
+            if not self.personnel.assignments.filter(site_id=self.site_id).exists():
+                raise ValidationError({
+                    'personnel': _("Ce membre du personnel n'est pas affecté à ce chantier."),
+                })
+
         # Validate status transition
         original = None
         if self.pk:  # Only if updating existing expense
