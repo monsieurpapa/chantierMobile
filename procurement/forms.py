@@ -1,7 +1,7 @@
 from django import forms
 from django.utils.translation import gettext_lazy as _
 from django.forms import inlineformset_factory
-from .models import Supplier, StockItem, PurchaseOrder, PurchaseOrderLine, StockMovement
+from .models import Supplier, StockItem, PurchaseOrder, PurchaseOrderLine, StockMovement, SupplierCredit
 from chantiermobile.constants import FormPlaceholders, FormHelpTexts, DatePickerConfig
 
 
@@ -45,7 +45,7 @@ class StockItemForm(forms.ModelForm):
 class PurchaseOrderForm(forms.ModelForm):
     class Meta:
         model = PurchaseOrder
-        fields = ['site', 'supplier', 'order_number', 'order_date', 'expected_delivery_date', 'caisse', 'notes']
+        fields = ['site', 'supplier', 'order_number', 'order_date', 'expected_delivery_date', 'caisse', 'payment_method', 'notes']
         widgets = {
             'site': forms.Select(attrs={'class': 'form-select'}),
             'supplier': forms.Select(attrs={'class': 'form-select'}),
@@ -61,6 +61,7 @@ class PurchaseOrderForm(forms.ModelForm):
                 'data-options': DatePickerConfig.OPTIONS
             }),
             'caisse': forms.Select(attrs={'class': 'form-select'}),
+            'payment_method': forms.Select(attrs={'class': 'form-select'}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
 
@@ -106,3 +107,38 @@ class StockMovementForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['facture'].required = False
+
+
+class TransferProofForm(forms.Form):
+    """The cashier enters the wire-transfer proof the financier sent her."""
+    transfer_proof = forms.FileField(widget=forms.ClearableFileInput(attrs={'class': 'form-control'}), label=_('Preuve de virement'))
+
+
+class SupplierCreditForm(forms.ModelForm):
+    class Meta:
+        model = SupplierCredit
+        fields = ['supplier', 'purchase_order', 'amount', 'date', 'due_date', 'notes']
+        widgets = {
+            'supplier': forms.Select(attrs={'class': 'form-select'}),
+            'purchase_order': forms.Select(attrs={'class': 'form-select'}),
+            'amount': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.AMOUNT}),
+            'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'due_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['purchase_order'].required = False
+        self.fields['due_date'].required = False
+
+
+class SupplierCreditPaymentForm(forms.Form):
+    amount = forms.DecimalField(min_value=0.01, decimal_places=2, widget=forms.NumberInput(attrs={'class': 'form-control'}), label=_('Montant'))
+    caisse = forms.ModelChoiceField(required=False, queryset=None, widget=forms.Select(attrs={'class': 'form-select'}), label=_('Caisse (optionnel)'))
+
+    def __init__(self, *args, **kwargs):
+        cabinet = kwargs.pop('cabinet', None)
+        super().__init__(*args, **kwargs)
+        from finance.models import Caisse
+        self.fields['caisse'].queryset = Caisse.objects.filter(cabinet=cabinet) if cabinet else Caisse.objects.none()

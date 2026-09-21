@@ -9,11 +9,11 @@ from django.urls import reverse_lazy
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
-from .models import Supplier, StockItem, PurchaseOrder, PurchaseOrderLine, StockMovement
+from .models import Supplier, StockItem, PurchaseOrder, PurchaseOrderLine, StockMovement, SupplierCredit
 from .forms import (
     SupplierForm, StockItemForm,
     PurchaseOrderForm, PurchaseOrderLineFormSet,
-    StockMovementForm,
+    StockMovementForm, TransferProofForm, SupplierCreditForm, SupplierCreditPaymentForm,
 )
 from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet, can_act_for_cabinet
 from projects.models import Site
@@ -25,6 +25,11 @@ from chantiermobile.constants import PurchaseOrderStatus, UserRoles, CaisseType
 # StockItem catalog entry itself, nor create purchase orders.
 STOCK_ACTION_ROLES = ['DIRECTOR', 'CHIEF_ENGINEER', 'MAGASINIER']
 PURCHASE_ORDER_ACTION_ROLES = ['DIRECTOR', 'CHIEF_ENGINEER', 'ACCOUNTANT']
+# La caissière saisit la preuve de virement envoyée par le financier.
+TRANSFER_ENTRY_ROLES = ['DIRECTOR', 'CASHIER']
+# Le financier (ou un directeur) valide.
+TRANSFER_VALIDATE_ROLES = ['DIRECTOR', 'FINANCIER']
+CREDIT_MANAGE_ROLES = ['DIRECTOR', 'ACCOUNTANT', 'CASHIER', 'FINANCIER']
 
 
 # --- Supplier views ---
@@ -667,3 +672,127 @@ def achats_report_pdf(request):
         totals_row=["", "", "", "", "Total", f"{total:.2f} $", ""],
         generated_by=request.user.get_full_name() or request.user.username,
     )
+
+
+# ---------------------------------------------------------------------
+# Achats par virement : la caissière saisit la preuve, le financier valide
+# ---------------------------------------------------------------------
+
+@login_required
+def purchase_order_submit_transfer_proof(request, pk):
+    po = get_object_or_404(PurchaseOrder, pk=pk)
+    if request.method != 'POST':
+        return redirect('procurement:purchase_order_detail', pk=pk)
+    if not can_act_for_cabinet(request, po.site.cabinet, TRANSFER_ENTRY_ROLES):
+        messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+        return redirect('procurement:purchase_order_detail', pk=pk)
+    form = TransferProofForm(request.POST, request.FILES)
+    if form.is_valid():
+        try:
+            po.submit_transfer_proof(request.user, form.cleaned_data['transfer_proof'])
+            messages.success(request, _("Preuve de virement enregistrée — en attente de validation du financier."))
+        except ValidationError as e:
+            messages.error(request, str(e))
+    else:
+        messages.error(request, _("Fichier invalide."))
+    return redirect('procurement:purchase_order_detail', pk=pk)
+
+
+@login_required
+def purchase_order_validate_transfer(request, pk):
+    po = get_object_or_404(PurchaseOrder, pk=pk)
+    if request.method != 'POST':
+        return redirect('procurement:purchase_order_detail', pk=pk)
+    if not can_act_for_cabinet(request, po.site.cabinet, TRANSFER_VALIDATE_ROLES):
+        messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+        return redirect('procurement:purchase_order_detail', pk=pk)
+    try:
+        po.validate_transfer(request.user)
+        messages.success(request, _("Virement validé."))
+    except ValidationError as e:
+        messages.error(request, str(e))
+    return redirect('procurement:purchase_order_detail', pk=pk)
+
+
+# ---------------------------------------------------------------------
+# Crédits fournisseurs
+# ---------------------------------------------------------------------
+
+class SupplierCreditListView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
+    model = SupplierCredit
+    template_name = 'procurement/supplier_credit_list.html'
+    context_object_name = 'credits'
+    allowed_roles = CREDIT_MANAGE_ROLES
+    cabinet_lookup_field = 'supplier__cabinet'
+    header_title = _("Crédits fournisseurs")
+    header_subtitle = _("Achats à crédit et suivi des paiements")
+
+    def get_queryset(self):
+        return super().get_queryset().select_related('supplier').order_by('-date')
+
+    def get_context_data(self, **kwargs):
+        from finance.models import Caisse
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+        if user.is_superuser:
+            active_cabinet = get_session_cabinet(self.request)
+            context['caisses'] = Caisse.objects.filter(cabinet=active_cabinet) if active_cabinet else Caisse.objects.none()
+        else:
+            cabinets = user.cabinet_roles.values_list('cabinet', flat=True)
+            context['caisses'] = Caisse.objects.filter(cabinet__in=cabinets)
+        return context
+
+    def get_header_actions(self):
+        return [{
+            'label': _("Nouveau crédit"),
+            'url': str(reverse_lazy('procurement:supplier_credit_create')),
+            'icon': 'plus',
+            'class': 'btn-falcon-primary',
+        }]
+
+
+class SupplierCreditCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, CreateView):
+    model = SupplierCredit
+    form_class = SupplierCreditForm
+    template_name = 'procurement/supplier_credit_form.html'
+    allowed_roles = CREDIT_MANAGE_ROLES
+    success_url = reverse_lazy('procurement:supplier_credit_list')
+    header_title = _("Nouveau crédit fournisseur")
+    back_url = reverse_lazy('procurement:supplier_credit_list')
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        user = self.request.user
+        if user.is_superuser:
+            active_cabinet = get_session_cabinet(self.request)
+            supplier_qs = Supplier.objects.filter(cabinet=active_cabinet) if active_cabinet else Supplier.objects.all()
+        else:
+            cabinets = user.cabinet_roles.values_list('cabinet', flat=True)
+            supplier_qs = Supplier.objects.filter(cabinet__in=cabinets)
+        form.fields['supplier'].queryset = supplier_qs
+        form.fields['purchase_order'].queryset = PurchaseOrder.objects.filter(supplier__in=supplier_qs)
+        return form
+
+    def form_valid(self, form):
+        messages.success(self.request, _("Crédit fournisseur enregistré."))
+        return super().form_valid(form)
+
+
+@login_required
+def supplier_credit_repay(request, pk):
+    credit = get_object_or_404(SupplierCredit, pk=pk)
+    if request.method != 'POST':
+        return redirect('procurement:supplier_credit_list')
+    if not can_act_for_cabinet(request, credit.supplier.cabinet, CREDIT_MANAGE_ROLES):
+        messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+        return redirect('procurement:supplier_credit_list')
+    form = SupplierCreditPaymentForm(request.POST, cabinet=credit.supplier.cabinet)
+    if form.is_valid():
+        try:
+            credit.record_payment(form.cleaned_data['amount'], request.user, caisse=form.cleaned_data.get('caisse'))
+            messages.success(request, _("Paiement enregistré."))
+        except ValidationError as e:
+            messages.error(request, str(e))
+    else:
+        messages.error(request, _("Montant invalide."))
+    return redirect('procurement:supplier_credit_list')
