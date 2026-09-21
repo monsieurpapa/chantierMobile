@@ -43,6 +43,13 @@
                             </div>
                         </div>
 
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ form.phase.id_for_label }}">{% trans "Étape (optionnel)" %}</label>
+                            {{ form.phase }}
+                            <p class="fs--2 text-500">{% trans "Enregistrez d'abord le chantier, puis rouvrez ce formulaire pour choisir l'étape." %}</p>
+                            {% if form.phase.errors %}<div class="text-danger fs--2">{{ form.phase.errors }}</div>{% endif %}
+                        </div>
+
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label class="form-label" for="{{ form.nature.id_for_label }}">{% trans "Matériel ou main d'œuvre" %}</label>

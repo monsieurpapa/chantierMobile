@@ -57,8 +57,10 @@ class TestDatabasePerformance:
             assert response.status_code == 200
         # select_related keeps this flat per page regardless of row count (no
         # N+1) — the exact ceiling just needs headroom for flat, one-per-request
-        # checks like the header's role-gated "Rapport" link visibility query.
-        assert len(ctx.captured_queries) < 12
+        # checks like the header's role-gated "Rapport" link visibility query,
+        # plus the navbar's "Caisses" link (a distinct has_role cache key,
+        # 'DIRECTOR,ACCOUNTANT,CASHIER,FINANCIER', so +1 query of its own).
+        assert len(ctx.captured_queries) < 13
     
     def test_dashboard_query_performance(self, director_client, user):
         """Test dashboard query performance."""

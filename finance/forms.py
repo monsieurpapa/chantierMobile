@@ -1,14 +1,15 @@
 from django import forms
 from django.utils.translation import gettext_lazy as _
-from .models import Expense, Budget, ExpenseCategory
+from .models import Expense, Budget, ExpenseCategory, Caisse, CaisseTransaction, CaisseLoan
 from chantiermobile.constants import FormPlaceholders, DatePickerConfig, ValidationMessages, ExpenseNature
 
 class ExpenseForm(forms.ModelForm):
     class Meta:
         model = Expense
-        fields = ['site', 'category', 'nature', 'personnel', 'amount', 'expense_date', 'description', 'receipt_image']
+        fields = ['site', 'phase', 'category', 'nature', 'personnel', 'amount', 'expense_date', 'description', 'receipt_image']
         widgets = {
             'site': forms.Select(attrs={'class': 'form-select'}),
+            'phase': forms.Select(attrs={'class': 'form-select'}),
             'category': forms.Select(attrs={'class': 'form-select'}),
             'nature': forms.Select(attrs={'class': 'form-select', 'id': 'id_expense_nature'}),
             'personnel': forms.Select(attrs={
@@ -24,6 +25,7 @@ class ExpenseForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['personnel'].required = False
+        self.fields['phase'].required = False
         # Not required: falls back to the model's MATERIEL default so
         # existing callers that don't send 'nature' keep working.
         self.fields['nature'].required = False
@@ -34,6 +36,7 @@ class ExpenseForm(forms.ModelForm):
         # empty initial GET render didn't include it), rebuild the queryset
         # from whichever site was actually submitted/selected.
         from personnel.models import Personnel
+        from projects.models import ProjectPhase
         site = None
         if self.data.get('site'):
             from projects.models import Site
@@ -44,8 +47,10 @@ class ExpenseForm(forms.ModelForm):
             self.fields['personnel'].queryset = Personnel.objects.filter(
                 assignments__site=site
             ).distinct().order_by('first_name', 'last_name')
+            self.fields['phase'].queryset = ProjectPhase.objects.filter(site=site).order_by('start_date')
         else:
             self.fields['personnel'].queryset = Personnel.objects.none()
+            self.fields['phase'].queryset = ProjectPhase.objects.none()
 
     def clean_nature(self):
         # Not required (see __init__) — fall back to the model default
@@ -104,3 +109,78 @@ class BudgetForm(forms.ModelForm):
         if start_date and end_date and end_date <= start_date:
             raise forms.ValidationError({'end_date': ValidationMessages.END_DATE_AFTER_START})
         return cleaned_data
+
+
+class CaisseForm(forms.ModelForm):
+    class Meta:
+        model = Caisse
+        fields = ['name', 'caisse_type', 'site', 'is_administrative']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('Ex: Caisse principale')}),
+            'caisse_type': forms.Select(attrs={'class': 'form-select'}),
+            'site': forms.Select(attrs={'class': 'form-select'}),
+            'is_administrative': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['site'].required = False
+
+
+class CaisseTransactionForm(forms.ModelForm):
+    class Meta:
+        model = CaisseTransaction
+        fields = ['transaction_type', 'amount', 'date', 'description', 'site', 'phase', 'proof']
+        widgets = {
+            'transaction_type': forms.Select(attrs={'class': 'form-select'}),
+            'amount': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.AMOUNT}),
+            'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'description': forms.TextInput(attrs={'class': 'form-control'}),
+            'site': forms.Select(attrs={'class': 'form-select'}),
+            'phase': forms.Select(attrs={'class': 'form-select'}),
+            'proof': forms.FileInput(attrs={'class': 'form-control'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['site'].required = False
+        self.fields['phase'].required = False
+        from projects.models import ProjectPhase
+        site = None
+        if self.data.get('site'):
+            from projects.models import Site
+            site = Site.objects.filter(pk=self.data.get('site')).first()
+        if site:
+            self.fields['phase'].queryset = ProjectPhase.objects.filter(site=site).order_by('start_date')
+        else:
+            self.fields['phase'].queryset = ProjectPhase.objects.none()
+
+
+class CaisseTransferForm(forms.Form):
+    target_caisse = forms.ModelChoiceField(queryset=Caisse.objects.none(), widget=forms.Select(attrs={'class': 'form-select'}), label=_('Vers'))
+    amount = forms.DecimalField(min_value=0.01, decimal_places=2, widget=forms.NumberInput(attrs={'class': 'form-control'}), label=_('Montant'))
+    description = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control'}), label=_('Description'))
+
+
+class CaisseLoanForm(forms.ModelForm):
+    class Meta:
+        model = CaisseLoan
+        fields = ['lender_caisse', 'borrower_caisse', 'amount', 'date', 'notes']
+        widgets = {
+            'lender_caisse': forms.Select(attrs={'class': 'form-select'}),
+            'borrower_caisse': forms.Select(attrs={'class': 'form-select'}),
+            'amount': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.AMOUNT}),
+            'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        }
+
+    def clean(self):
+        cleaned = super().clean()
+        lender, borrower = cleaned.get('lender_caisse'), cleaned.get('borrower_caisse')
+        if lender and borrower and lender.pk == borrower.pk:
+            raise forms.ValidationError(_("La caisse prêteuse et la caisse emprunteuse doivent être différentes."))
+        return cleaned
+
+
+class CaisseLoanRepayForm(forms.Form):
+    amount = forms.DecimalField(min_value=0.01, decimal_places=2, widget=forms.NumberInput(attrs={'class': 'form-control'}), label=_('Montant remboursé'))
