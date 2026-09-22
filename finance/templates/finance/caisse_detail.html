@@ -1,0 +1,152 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n humanize %}
+
+{% block title %}{{ caisse.name }} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    {% include 'includes/navbar-vertical.html' with on="caisse_list" %}
+
+    <div class="content">
+        {% include 'includes/navbar-top.html' %}
+
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <label class="text-600 fs--1">{% trans "Solde d'ouverture" %}</label>
+                            <p class="fs-1 fw-bold mb-0">${{ opening_balance|floatformat:2|intcomma }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <label class="text-600 fs--1">{% trans "Solde actuel" %}</label>
+                            <p class="fs-1 fw-bold {% if closing_balance < 0 %}text-danger{% else %}text-success{% endif %} mb-0">${{ closing_balance|floatformat:2|intcomma }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    {% if can_manage %}
+                    <div class="card h-100">
+                        <div class="card-body d-flex flex-column gap-2">
+                            <a href="{% url 'finance:caisse_transaction_create' pk=caisse.pk %}" class="btn btn-falcon-primary btn-sm">
+                                <span class="fas fa-plus me-1"></span>{% trans "Mouvement" %}
+                            </a>
+                            <button class="btn btn-falcon-default btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#transferForm">
+                                <span class="fas fa-exchange-alt me-1"></span>{% trans "Transférer" %}
+                            </button>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if can_manage %}
+            <div class="collapse mb-3" id="transferForm">
+                <div class="card">
+                    <div class="card-body bg-light">
+                        <form method="post" action="{% url 'finance:caisse_transfer' pk=caisse.pk %}" class="row g-3 align-items-end">
+                            {% csrf_token %}
+                            <div class="col-md-4">
+                                <label class="form-label fs--1">{% trans "Vers" %}</label>
+                                {{ transfer_form.target_caisse }}
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fs--1">{% trans "Montant" %}</label>
+                                {{ transfer_form.amount }}
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fs--1">{% trans "Description" %}</label>
+                                {{ transfer_form.description }}
+                            </div>
+                            <div class="col-md-2">
+                                <button type="submit" class="btn btn-falcon-primary w-100">{% trans "Transférer" %}</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="card mb-3">
+                <div class="card-body bg-light">
+                    <form method="get" class="row g-3 align-items-end">
+                        <div class="col-md-3">
+                            <label class="form-label fs--1 fw-semibold">{% trans "Période" %}</label>
+                            <select name="period" class="form-select">
+                                <option value="">{% trans "Personnalisée" %}</option>
+                                <option value="day" {% if period == "day" %}selected{% endif %}>{% trans "Aujourd'hui" %}</option>
+                                <option value="week" {% if period == "week" %}selected{% endif %}>{% trans "7 derniers jours" %}</option>
+                                <option value="month" {% if period == "month" %}selected{% endif %}>{% trans "Ce mois-ci" %}</option>
+                                <option value="year" {% if period == "year" %}selected{% endif %}>{% trans "Cette année" %}</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fs--1 fw-semibold">{% trans "Du" %}</label>
+                            <input type="date" name="date_from" value="{{ date_from }}" class="form-control">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fs--1 fw-semibold">{% trans "Au" %}</label>
+                            <input type="date" name="date_to" value="{{ date_to }}" class="form-control">
+                        </div>
+                        <div class="col-md-3">
+                            <button type="submit" class="btn btn-falcon-primary w-100"><i class="fas fa-filter me-1"></i>{% trans "Filtrer" %}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped mb-0 fs--1">
+                            <thead>
+                                <tr>
+                                    <th>{% trans "Date" %}</th>
+                                    <th>{% trans "Type" %}</th>
+                                    <th>{% trans "Chantier" %}</th>
+                                    <th>{% trans "Étape" %}</th>
+                                    <th>{% trans "Description" %}</th>
+                                    <th class="text-end">{% trans "Montant" %}</th>
+                                    <th class="text-end">{% trans "Solde" %}</th>
+                                    <th>{% trans "Justificatif" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in ledger_rows %}
+                                <tr>
+                                    <td>{{ row.tx.date }}</td>
+                                    <td>
+                                        <span class="badge {% if row.tx.transaction_type == 'ENTREE' %}bg-success{% else %}bg-danger{% endif %}">
+                                            {{ row.tx.get_transaction_type_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ row.tx.site.name|default:"-" }}</td>
+                                    <td>{{ row.tx.phase.name|default:"-" }}</td>
+                                    <td>{{ row.tx.description|default:"-" }}</td>
+                                    <td class="text-end fw-semibold">${{ row.tx.amount|floatformat:2|intcomma }}</td>
+                                    <td class="text-end">${{ row.running_balance|floatformat:2|intcomma }}</td>
+                                    <td>
+                                        {% if row.tx.proof %}
+                                        <a href="{{ row.tx.proof.url }}" target="_blank" rel="noopener"><span class="fas fa-paperclip"></span></a>
+                                        {% else %}—{% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="8" class="text-center py-4 text-500">{% trans "Aucun mouvement pour cette période." %}</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}

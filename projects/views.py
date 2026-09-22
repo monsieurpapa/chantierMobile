@@ -1,13 +1,31 @@
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
 from django.views.generic import ListView, CreateView, UpdateView, DetailView, DeleteView
 from django.urls import reverse_lazy
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
+from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
-from .models import Site, ProjectPhase, SiteProgress
-from .forms import SiteForm, ProjectPhaseForm, SiteProgressForm
-from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin
+from .models import Site, ProjectPhase, SiteProgress, PlanningSubmission
+from .forms import SiteForm, ProjectPhaseForm, SiteProgressForm, PlanningSubmissionForm
+from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet, can_act_for_cabinet
 from chantiermobile.constants import UserRoles
+
+LEAD_ENGINEER_ROLES = ['ENGINEER', 'CHIEF_ENGINEER']
+PHASE_CLOSE_ROLES = ['DIRECTOR', 'CHIEF_ENGINEER', 'ENGINEER']
+PLANNING_REVIEW_ROLES = ['DIRECTOR', 'CHIEF_ENGINEER', 'ENGINEER']
+PLANNING_SUBMIT_ROLES = ['DIRECTOR', 'CHIEF_ENGINEER']
+
+
+def _scope_lead_engineer_queryset(form, cabinet):
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    if cabinet:
+        user_ids = cabinet.user_roles.filter(role__in=LEAD_ENGINEER_ROLES).values_list('user_id', flat=True)
+        form.fields['lead_engineer'].queryset = User.objects.filter(id__in=user_ids)
+    else:
+        form.fields['lead_engineer'].queryset = User.objects.none()
+    return form
 
 class SiteListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
     model = Site
@@ -48,6 +66,10 @@ class SiteCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, 
             {'title': _("Nouveau chantier"), 'url': None},
         ]
 
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        return _scope_lead_engineer_queryset(form, self.get_user_cabinet())
+
     def form_valid(self, form):
         cabinet = self.get_user_cabinet()
         if not cabinet:
@@ -81,6 +103,10 @@ class SiteUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, 
             {'title': self.object.name, 'url': str(reverse_lazy('projects:site_detail', kwargs={'unique_id': self.object.unique_id}))},
             {'title': _("Modifier"), 'url': None},
         ]
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        return _scope_lead_engineer_queryset(form, self.object.cabinet)
 
     def form_valid(self, form):
         from django.core.exceptions import ValidationError
@@ -357,3 +383,109 @@ class SiteProgressCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMi
 
     def get_success_url(self):
         return reverse_lazy('projects:site_detail', kwargs={'unique_id': self.phase.site.unique_id})
+
+
+@login_required
+def phase_close(request, unique_id):
+    """L'ingénieur principal du chantier (ou un directeur/chef des
+    ingénieurs) clôture une étape du projet une fois ses travaux
+    terminés."""
+    phase = get_object_or_404(ProjectPhase, unique_id=unique_id)
+    if request.method != 'POST':
+        return redirect('projects:site_detail', unique_id=phase.site.unique_id)
+    if not can_act_for_cabinet(request, phase.site.cabinet, PHASE_CLOSE_ROLES):
+        messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+        return redirect('projects:site_detail', unique_id=phase.site.unique_id)
+    notes = request.POST.get('notes', '')
+    try:
+        phase.close(request.user, notes=notes)
+        messages.success(request, _("Étape '%(name)s' clôturée.") % {'name': phase.name})
+    except ValidationError as e:
+        messages.error(request, str(e.message) if hasattr(e, 'message') else str(e))
+    return redirect('projects:site_detail', unique_id=phase.site.unique_id)
+
+
+# --- PLANNING SUBMISSIONS ---
+
+class PlanningSubmissionCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, CreateView):
+    model = PlanningSubmission
+    form_class = PlanningSubmissionForm
+    template_name = 'projects/planning_submission_form.html'
+    allowed_roles = PLANNING_SUBMIT_ROLES
+
+    def dispatch(self, request, *args, **kwargs):
+        self.site = get_object_or_404(Site, unique_id=self.kwargs.get('site_id'))
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_role_cabinet(self):
+        return self.site.cabinet
+
+    def get_header_title(self):
+        return _("Soumettre une planification : %(name)s") % {'name': self.site.name}
+
+    def get_header_subtitle(self):
+        return _("À examiner par l'ingénieur principal du chantier")
+
+    def get_back_url(self):
+        return str(reverse_lazy('projects:site_detail', kwargs={'unique_id': self.site.unique_id}))
+
+    def get_breadcrumb_items(self):
+        return [
+            {'title': _("Projets & Chantiers"), 'url': str(reverse_lazy('projects:site_list'))},
+            {'title': self.site.name, 'url': str(reverse_lazy('projects:site_detail', kwargs={'unique_id': self.site.unique_id}))},
+            {'title': _("Nouvelle planification"), 'url': None},
+        ]
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        form.fields['phase'].queryset = self.site.phases.all()
+        return form
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['site'] = self.site
+        return context
+
+    def form_valid(self, form):
+        form.instance.site = self.site
+        response = super().form_valid(form)
+        self.object.submit(self.request.user)
+        messages.success(self.request, _("Planification soumise pour examen."))
+        return response
+
+    def get_success_url(self):
+        return reverse_lazy('projects:site_detail', kwargs={'unique_id': self.site.unique_id})
+
+
+@login_required
+def planning_submission_approve(request, pk):
+    submission = get_object_or_404(PlanningSubmission, pk=pk)
+    if request.method != 'POST':
+        return redirect('projects:site_detail', unique_id=submission.site.unique_id)
+    if not can_act_for_cabinet(request, submission.site.cabinet, PLANNING_REVIEW_ROLES):
+        messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+        return redirect('projects:site_detail', unique_id=submission.site.unique_id)
+    notes = request.POST.get('notes', '')
+    try:
+        submission.approve(request.user, notes=notes)
+        messages.success(request, _("Planification approuvée."))
+    except ValidationError as e:
+        messages.error(request, str(e.message) if hasattr(e, 'message') else str(e))
+    return redirect('projects:site_detail', unique_id=submission.site.unique_id)
+
+
+@login_required
+def planning_submission_reject(request, pk):
+    submission = get_object_or_404(PlanningSubmission, pk=pk)
+    if request.method != 'POST':
+        return redirect('projects:site_detail', unique_id=submission.site.unique_id)
+    if not can_act_for_cabinet(request, submission.site.cabinet, PLANNING_REVIEW_ROLES):
+        messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+        return redirect('projects:site_detail', unique_id=submission.site.unique_id)
+    notes = request.POST.get('notes', '')
+    try:
+        submission.reject(request.user, notes=notes)
+        messages.success(request, _("Planification rejetée."))
+    except ValidationError as e:
+        messages.error(request, str(e.message) if hasattr(e, 'message') else str(e))
+    return redirect('projects:site_detail', unique_id=submission.site.unique_id)

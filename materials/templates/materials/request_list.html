@@ -45,7 +45,7 @@
                                         <div class="d-flex flex-wrap gap-2">
                                             {% for item in req.items.all|slice:":3" %}
                                             <span class="badge bg-light text-dark border border-secondary">
-                                                {{ item.material.name }} ({{ item.quantity }})
+                                                {{ item.display_name }} ({{ item.quantity }})
                                             </span>
                                             {% endfor %}
                                             {% if req.items.count > 3 %}
@@ -64,7 +64,7 @@
                                         {% if req.status == 'APPROVED' %}bg-success
                                         {% elif req.status == 'DELIVERED' %}bg-info
                                         {% elif req.status == 'REJECTED' %}bg-danger
-                                        {% elif req.status == 'ORDERED' %}bg-primary
+                                        {% elif req.status == 'VALIDATED' or req.status == 'ORDERED' %}bg-primary
                                         {% else %}bg-warning{% endif %}">
                                             {{ req.get_status_display }}
                                         </span>

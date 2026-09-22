@@ -1,0 +1,56 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Nouvelle liste de paie" %} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    {% include 'includes/navbar-vertical.html' with on="payroll_list" %}
+
+    <div class="content">
+        {% include 'includes/navbar-top.html' %}
+
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+            <div class="card mb-3">
+                <div class="card-body bg-light">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label" for="{{ form.site.id_for_label }}">{% trans "Chantier" %}</label>
+                                {{ form.site }}
+                                {% if form.site.errors %}<div class="text-danger fs--2">{{ form.site.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="{{ form.phase.id_for_label }}">{% trans "Étape (optionnel)" %}</label>
+                                {{ form.phase }}
+                                {% if form.phase.errors %}<div class="text-danger fs--2">{{ form.phase.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ form.notes.id_for_label }}">{% trans "Analyse de l'avancement" %}</label>
+                            {{ form.notes }}
+                            {% if form.notes.errors %}<div class="text-danger fs--2">{{ form.notes.errors }}</div>{% endif %}
+                        </div>
+                        <div class="col-12 d-flex justify-content-end gap-2">
+                            <a class="btn btn-falcon-default" href="{{ back_url }}">{% trans "Cancel" %}</a>
+                            <button class="btn btn-primary" type="submit">{% trans "Créer" %}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.querySelectorAll('input, select, textarea').forEach(el => {
+        if (!el.classList.contains('form-range')) el.classList.add('form-control');
+        if (el.tagName === 'SELECT') { el.classList.remove('form-control'); el.classList.add('form-select'); }
+    });
+</script>
+{% endblock %}

@@ -15,7 +15,13 @@ urlpatterns = [
     path('sites/<uuid:site_id>/phases/add/', views.ProjectPhaseCreateView.as_view(), name='phase_create'),
     path('phases/<uuid:unique_id>/edit/', views.ProjectPhaseUpdateView.as_view(), name='phase_update'),
     path('phases/<uuid:unique_id>/delete/', views.ProjectPhaseDeleteView.as_view(), name='phase_delete'),
-    
+    path('phases/<uuid:unique_id>/close/', views.phase_close, name='phase_close'),
+
     # Progress
     path('phases/<uuid:phase_id>/progress/add/', views.SiteProgressCreateView.as_view(), name='progress_create'),
+
+    # Planning submissions
+    path('sites/<uuid:site_id>/planning/add/', views.PlanningSubmissionCreateView.as_view(), name='planning_submission_create'),
+    path('planning/<int:pk>/approve/', views.planning_submission_approve, name='planning_submission_approve'),
+    path('planning/<int:pk>/reject/', views.planning_submission_reject, name='planning_submission_reject'),
 ]

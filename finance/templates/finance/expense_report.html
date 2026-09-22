@@ -1,0 +1,112 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n humanize %}
+
+{% block title %}{% trans "Rapport des dépenses" %} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    <!-- vertical nav -->
+    {% include 'includes/navbar-vertical.html' with on="expense_report" %}
+    <!-- /vertical nav -->
+
+    <div class="content">
+        <!-- navbar-top -->
+        {% include 'includes/navbar-top.html' %}
+        <!-- /navbar-top -->
+
+        <!-- Main Content -->
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            <div class="card mb-3">
+                <div class="card-body bg-light">
+                    <form method="get" class="row g-3 align-items-end">
+                        <div class="col-md-3">
+                            <label class="form-label fs--1 fw-semibold">{% trans "Chantier" %}</label>
+                            <select name="site" class="form-select">
+                                <option value="">{% trans "Tous les chantiers" %}</option>
+                                {% for s in sites %}
+                                <option value="{{ s.pk }}" {% if selected_site == s.pk|stringformat:"s" %}selected{% endif %}>{{ s.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fs--1 fw-semibold">{% trans "Période" %}</label>
+                            <select name="period" class="form-select">
+                                <option value="">{% trans "Personnalisée" %}</option>
+                                <option value="week" {% if period == "week" %}selected{% endif %}>{% trans "7 derniers jours" %}</option>
+                                <option value="month" {% if period == "month" %}selected{% endif %}>{% trans "Ce mois-ci" %}</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fs--1 fw-semibold">{% trans "Du" %}</label>
+                            <input type="date" name="date_from" value="{{ date_from }}" class="form-control">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fs--1 fw-semibold">{% trans "Au" %}</label>
+                            <input type="date" name="date_to" value="{{ date_to }}" class="form-control">
+                        </div>
+                        <div class="col-md-3 d-flex gap-2">
+                            <button type="submit" class="btn btn-falcon-primary flex-fill">
+                                <i class="fas fa-filter me-1"></i>{% trans "Filtrer" %}
+                            </button>
+                            <a href="{% url 'finance:expense_report_pdf' %}?{{ request.GET.urlencode }}" class="btn btn-falcon-danger flex-fill">
+                                <i class="fas fa-file-pdf me-1"></i>PDF
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">{% trans "Dépenses" %} ({{ expenses|length }})</h6>
+                    <span class="fw-bold text-primary">{% trans "Total" %}: ${{ total_amount|floatformat:2|intcomma }}</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped mb-0 fs--1">
+                            <thead>
+                                <tr>
+                                    <th>{% trans "Date" %}</th>
+                                    <th>{% trans "Chantier" %}</th>
+                                    <th>{% trans "Catégorie" %}</th>
+                                    <th>{% trans "Nature" %}</th>
+                                    <th>{% trans "Personnel" %}</th>
+                                    <th>{% trans "Désignation" %}</th>
+                                    <th class="text-end">{% trans "Montant" %}</th>
+                                    <th>{% trans "Statut" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for expense in expenses %}
+                                <tr>
+                                    <td>{{ expense.expense_date }}</td>
+                                    <td><a href="{% url 'projects:site_detail' unique_id=expense.site.unique_id %}">{{ expense.site.name }}</a></td>
+                                    <td>{{ expense.category.name }}</td>
+                                    <td>{{ expense.get_nature_display }}</td>
+                                    <td>{{ expense.personnel.get_full_name|default:"-" }}</td>
+                                    <td>
+                                        <a href="{% url 'finance:expense_detail' pk=expense.pk %}">{{ expense.description|truncatechars:60 }}</a>
+                                    </td>
+                                    <td class="text-end fw-semibold">${{ expense.amount|floatformat:2|intcomma }}</td>
+                                    <td>
+                                        <span class="badge {% if expense.status == 'PAID' %}bg-info{% elif expense.status == 'APPROVED' %}bg-success{% elif expense.status == 'REJECTED' %}bg-danger{% else %}bg-warning{% endif %}">
+                                            {{ expense.get_status_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="8" class="text-center py-4 text-500">{% trans "Aucune dépense pour cette sélection." %}</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}

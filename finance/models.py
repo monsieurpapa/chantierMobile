@@ -2,8 +2,11 @@ from django.db import models, transaction
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 from core.models import BaseModel
-from projects.models import Site
-from chantiermobile.constants import ExpenseStatus, FileUploadConfig
+from projects.models import Site, ProjectPhase
+from chantiermobile.constants import (
+    ExpenseStatus, ExpenseNature, FileUploadConfig, CaisseType, CaisseTransactionType,
+    PayrollListStatus, AvenantStatus,
+)
 
 class Budget(BaseModel):
     site = models.OneToOneField(Site, on_delete=models.CASCADE, related_name='budget')
@@ -60,24 +63,49 @@ class ExpenseCategory(BaseModel):
 
 class Expense(BaseModel):
     site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name='expenses')
+    phase = models.ForeignKey(
+        ProjectPhase, on_delete=models.SET_NULL, null=True, blank=True, related_name='expenses',
+        verbose_name=_('Étape'), help_text=_("Étape du projet concernée par cette dépense (optionnel)"),
+    )
     requester = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='requested_expenses')
     category = models.ForeignKey(ExpenseCategory, on_delete=models.PROTECT, related_name='expenses')
+    nature = models.CharField(
+        max_length=20, choices=ExpenseNature.choices, default=ExpenseNature.MATERIEL,
+        verbose_name=_("Matériel ou main d'œuvre"),
+        help_text=_("Cette dépense couvre-t-elle un achat de matériel ou de la main d'œuvre ?"),
+    )
+    personnel = models.ForeignKey(
+        'personnel.Personnel', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='expenses',
+        verbose_name=_("Personnel concerné"),
+        help_text=_("Pour une dépense de main d'œuvre : le personnel enregistré sur ce chantier concerné par cette dépense"),
+    )
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     expense_date = models.DateField(help_text=_("Date the expense was incurred (used for budget period matching)"))
-    description = models.TextField()
+    description = models.TextField(verbose_name=_('Désignation'))
     status = models.CharField(max_length=20, choices=ExpenseStatus.choices, default=ExpenseStatus.PENDING)
     receipt_image = models.ImageField(upload_to=FileUploadConfig.EXPENSE_RECEIPT_PATH, blank=True, null=True)
-    
+
     def clean(self):
         """Validate expense data."""
         from django.core.exceptions import ValidationError
         from decimal import Decimal
-        
+
         # Validate positive amount (None means the amount field itself already
         # failed form-level validation and is excluded from clean_fields())
         if self.amount is not None and self.amount <= 0:
             raise ValidationError({'amount': 'Amount must be a positive number.'})
-        
+
+        # A "main d'œuvre" personnel link only makes sense for that person's
+        # own project — otherwise the searchable dropdown (scoped to the
+        # site's active assignments in the form) could still be bypassed by
+        # posting an arbitrary personnel id directly.
+        if self.personnel_id and self.site_id:
+            if not self.personnel.assignments.filter(site_id=self.site_id).exists():
+                raise ValidationError({
+                    'personnel': _("Ce membre du personnel n'est pas affecté à ce chantier."),
+                })
+
         # Validate status transition
         original = None
         if self.pk:  # Only if updating existing expense
@@ -169,6 +197,304 @@ class ExpenseApproval(BaseModel):
     status = models.CharField(max_length=20, choices=Status.choices)
     approval_date = models.DateTimeField(auto_now_add=True)
     comments = models.TextField(blank=True)
-    
+
     def __str__(self):
         return f"{self.status} by {self.approver} on {self.approval_date}"
+
+
+# ---------------------------------------------------------------------
+# Caisse (cash register) ledger — balance-tracked, unlike the plain
+# CaisseType tag on procurement.PurchaseOrder. Covers: "Générer un livre
+# de caisse quotidien", "gestion de caisse", inter-caisse loans that must
+# be repaid, and the daily transfer to the "caisse de gestion administrative".
+# ---------------------------------------------------------------------
+
+class Caisse(BaseModel):
+    cabinet = models.ForeignKey('accounts.Cabinet', on_delete=models.CASCADE, related_name='caisses')
+    name = models.CharField(max_length=150, verbose_name=_('Nom'))
+    caisse_type = models.CharField(max_length=20, choices=CaisseType.choices, default=CaisseType.SECONDAIRE, verbose_name=_('Type'))
+    site = models.ForeignKey(
+        Site, on_delete=models.SET_NULL, null=True, blank=True, related_name='caisses',
+        verbose_name=_('Chantier'), help_text=_("Optionnel : caisse dédiée à un projet (ex: location d'engins)."),
+    )
+    is_administrative = models.BooleanField(
+        default=False, verbose_name=_('Caisse de gestion administrative'),
+        help_text=_("La caisse vers laquelle les autres caisses transfèrent leurs recettes quotidiennes."),
+    )
+
+    class Meta:
+        ordering = ['-is_administrative', 'name']
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def balance(self):
+        agg = self.transactions.aggregate(
+            entrees=models.Sum('amount', filter=models.Q(transaction_type=CaisseTransactionType.ENTREE)),
+            sorties=models.Sum('amount', filter=models.Q(transaction_type=CaisseTransactionType.SORTIE)),
+        )
+        return (agg['entrees'] or 0) - (agg['sorties'] or 0)
+
+    def record(self, transaction_type, amount, user, description='', date=None, site=None, phase=None, expense=None, proof=None):
+        """Create a single ledger entry. Use transfer_to()/CaisseLoan for
+        moves between two caisses so both legs are created atomically."""
+        from django.utils import timezone as _tz
+        return CaisseTransaction.objects.create(
+            caisse=self,
+            transaction_type=transaction_type,
+            amount=amount,
+            date=date or _tz.localdate(),
+            description=description,
+            site=site,
+            phase=phase,
+            expense=expense,
+            proof=proof,
+            recorded_by=user,
+        )
+
+    @transaction.atomic
+    def transfer_to(self, target_caisse, amount, user, description=''):
+        """Move funds from this caisse to another (e.g. the daily remittance
+        to the caisse de gestion administrative). Not a loan — no repayment
+        is tracked; use CaisseLoan.lend() when repayment is expected."""
+        if target_caisse.pk == self.pk:
+            raise ValueError(_("La caisse de destination doit être différente."))
+        out_tx = self.record(CaisseTransactionType.SORTIE, amount, user, description=description)
+        in_tx = target_caisse.record(CaisseTransactionType.ENTREE, amount, user, description=description)
+        return out_tx, in_tx
+
+
+class CaisseTransaction(BaseModel):
+    caisse = models.ForeignKey(Caisse, on_delete=models.CASCADE, related_name='transactions')
+    transaction_type = models.CharField(max_length=10, choices=CaisseTransactionType.choices, verbose_name=_('Type'))
+    amount = models.DecimalField(max_digits=14, decimal_places=2, verbose_name=_('Montant'))
+    date = models.DateField(verbose_name=_('Date'))
+    description = models.CharField(max_length=255, blank=True, verbose_name=_('Description'))
+    site = models.ForeignKey(Site, on_delete=models.SET_NULL, null=True, blank=True, related_name='caisse_transactions', verbose_name=_('Chantier'))
+    phase = models.ForeignKey(ProjectPhase, on_delete=models.SET_NULL, null=True, blank=True, related_name='caisse_transactions', verbose_name=_('Étape'))
+    expense = models.ForeignKey(Expense, on_delete=models.SET_NULL, null=True, blank=True, related_name='caisse_transactions')
+    proof = models.FileField(upload_to='caisse/proofs/', null=True, blank=True, verbose_name=_('Justificatif'))
+    recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='caisse_transactions_recorded')
+
+    class Meta:
+        ordering = ['-date', '-created_at']
+
+    def __str__(self):
+        sign = '+' if self.transaction_type == CaisseTransactionType.ENTREE else '-'
+        return f"{self.caisse} {sign}{self.amount} ({self.date})"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.amount is not None and self.amount <= 0:
+            raise ValidationError({'amount': _('Le montant doit être positif.')})
+
+
+class CaisseLoan(BaseModel):
+    """A cash advance from one caisse to another that must be repaid — e.g.
+    the equipment-rental caisse lending to the main site caisse."""
+    lender_caisse = models.ForeignKey(Caisse, on_delete=models.CASCADE, related_name='loans_given')
+    borrower_caisse = models.ForeignKey(Caisse, on_delete=models.CASCADE, related_name='loans_received')
+    amount = models.DecimalField(max_digits=14, decimal_places=2, verbose_name=_('Montant prêté'))
+    date = models.DateField(verbose_name=_('Date du prêt'))
+    notes = models.TextField(blank=True, verbose_name=_('Notes'))
+    repaid_amount = models.DecimalField(max_digits=14, decimal_places=2, default=0, verbose_name=_('Montant remboursé'))
+    lend_transaction = models.ForeignKey(CaisseTransaction, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+    receive_transaction = models.ForeignKey(CaisseTransaction, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+
+    class Meta:
+        ordering = ['-date']
+
+    def __str__(self):
+        return f"{self.lender_caisse} → {self.borrower_caisse}: {self.amount} ({self.date})"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.lender_caisse_id and self.borrower_caisse_id and self.lender_caisse_id == self.borrower_caisse_id:
+            raise ValidationError(_("La caisse prêteuse et la caisse emprunteuse doivent être différentes."))
+        if self.amount is not None and self.amount <= 0:
+            raise ValidationError({'amount': _('Le montant doit être positif.')})
+
+    @property
+    def outstanding_balance(self):
+        return self.amount - self.repaid_amount
+
+    @property
+    def is_fully_repaid(self):
+        return self.repaid_amount >= self.amount
+
+    @transaction.atomic
+    def disburse(self, user):
+        """Move the loaned amount from lender to borrower and record the
+        paired ledger entries on the loan itself."""
+        out_tx = self.lender_caisse.record(
+            CaisseTransactionType.SORTIE, self.amount, user,
+            description=_("Prêt à %(caisse)s") % {'caisse': self.borrower_caisse},
+        )
+        in_tx = self.borrower_caisse.record(
+            CaisseTransactionType.ENTREE, self.amount, user,
+            description=_("Prêt reçu de %(caisse)s") % {'caisse': self.lender_caisse},
+        )
+        self.lend_transaction = out_tx
+        self.receive_transaction = in_tx
+        self.save(update_fields=['lend_transaction', 'receive_transaction', 'updated_at'])
+
+    @transaction.atomic
+    def repay(self, amount, user):
+        """Record a (possibly partial) repayment: borrower → lender."""
+        from django.core.exceptions import ValidationError
+        if amount <= 0:
+            raise ValidationError(_("Le montant du remboursement doit être positif."))
+        if self.repaid_amount + amount > self.amount:
+            raise ValidationError(_("Le remboursement dépasse le montant restant dû."))
+        self.borrower_caisse.record(
+            CaisseTransactionType.SORTIE, amount, user,
+            description=_("Remboursement à %(caisse)s") % {'caisse': self.lender_caisse},
+        )
+        self.lender_caisse.record(
+            CaisseTransactionType.ENTREE, amount, user,
+            description=_("Remboursement reçu de %(caisse)s") % {'caisse': self.borrower_caisse},
+        )
+        self.repaid_amount = self.repaid_amount + amount
+        self.save(update_fields=['repaid_amount', 'updated_at'])
+
+
+# ---------------------------------------------------------------------
+# Progressive worker payroll — "l'archi reçoit les demandes de paiements
+# venant des ouvriers, analyse dépendamment de l'avancement du projet et
+# prépare une sorte de liste de paie à soumettre à la caisse et la caisse
+# débourse l'argent aux ouvriers; chaque ouvrier signe pour accusé de
+# réception (sur papier)."
+# ---------------------------------------------------------------------
+
+class PayrollList(BaseModel):
+    site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name='payroll_lists')
+    phase = models.ForeignKey(ProjectPhase, on_delete=models.SET_NULL, null=True, blank=True, related_name='payroll_lists')
+    prepared_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='payroll_lists_prepared')
+    status = models.CharField(max_length=20, choices=PayrollListStatus.choices, default=PayrollListStatus.BROUILLON)
+    notes = models.TextField(blank=True, verbose_name=_("Analyse de l'avancement"))
+    caisse = models.ForeignKey('finance.Caisse', on_delete=models.SET_NULL, null=True, blank=True, related_name='payroll_lists')
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    paid_at = models.DateTimeField(null=True, blank=True)
+    paid_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='payroll_lists_disbursed')
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Liste de paie — {self.site.name} ({self.get_status_display()})"
+
+    @property
+    def total_amount(self):
+        return self.items.aggregate(t=models.Sum('amount'))['t'] or 0
+
+    def submit(self, user):
+        from django.core.exceptions import ValidationError
+        from django.utils import timezone as _tz
+        if self.status != PayrollListStatus.BROUILLON:
+            raise ValidationError(_("Seule une liste en brouillon peut être soumise."))
+        if not self.items.exists():
+            raise ValidationError(_("Ajoutez au moins un ouvrier avant de soumettre."))
+        self.status = PayrollListStatus.SOUMISE
+        self.submitted_at = _tz.now()
+        self.save(update_fields=['status', 'submitted_at', 'updated_at'])
+
+    @transaction.atomic
+    def disburse(self, user, caisse):
+        from django.core.exceptions import ValidationError
+        from django.utils import timezone as _tz
+        if self.status != PayrollListStatus.SOUMISE:
+            raise ValidationError(_("Seule une liste soumise peut être décaissée."))
+        total = self.total_amount
+        if total <= 0:
+            raise ValidationError(_("Le montant total doit être positif."))
+        if total > caisse.balance:
+            raise ValidationError(_("Solde de caisse insuffisant."))
+        caisse.record(
+            CaisseTransactionType.SORTIE, total, user, site=self.site, phase=self.phase,
+            description=_("Paiement liste de paie — %(site)s") % {'site': self.site.name},
+        )
+        self.status = PayrollListStatus.PAYEE
+        self.caisse = caisse
+        self.paid_at = _tz.now()
+        self.paid_by = user
+        self.save(update_fields=['status', 'caisse', 'paid_at', 'paid_by', 'updated_at'])
+
+
+class PayrollListItem(BaseModel):
+    payroll_list = models.ForeignKey(PayrollList, on_delete=models.CASCADE, related_name='items')
+    personnel = models.ForeignKey('personnel.Personnel', on_delete=models.CASCADE, related_name='payroll_items')
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    progress_note = models.TextField(blank=True, verbose_name=_("Avancement / justification"))
+    signed_receipt = models.FileField(
+        upload_to='payroll/receipts/', null=True, blank=True,
+        verbose_name=_('Accusé de réception signé'),
+        help_text=_("Scan du reçu papier signé par l'ouvrier."),
+    )
+
+    class Meta:
+        ordering = ['personnel__last_name']
+
+    def __str__(self):
+        return f"{self.personnel} — {self.amount}"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.amount is not None and self.amount <= 0:
+            raise ValidationError({'amount': _('Le montant doit être positif.')})
+
+
+# ---------------------------------------------------------------------
+# Avenant (change order): authorizes spend beyond the initial budget,
+# with the resulting overage recorded as client debt.
+# ---------------------------------------------------------------------
+
+class Avenant(BaseModel):
+    site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name='avenants')
+    amount = models.DecimalField(max_digits=14, decimal_places=2, verbose_name=_('Montant additionnel'))
+    justification = models.TextField(verbose_name=_('Justification'))
+    requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='avenants_requested')
+    status = models.CharField(max_length=20, choices=AvenantStatus.choices, default=AvenantStatus.PENDING)
+    decided_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='avenants_decided')
+    decided_at = models.DateTimeField(null=True, blank=True)
+    decision_notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Avenant {self.site.name}: +{self.amount} ({self.get_status_display()})"
+
+    @transaction.atomic
+    def approve(self, user, notes=''):
+        from django.core.exceptions import ValidationError
+        from django.utils import timezone as _tz
+        if self.status != AvenantStatus.PENDING:
+            raise ValidationError(_("Cet avenant a déjà été décidé."))
+        if hasattr(self.site, 'budget'):
+            budget = self.site.budget
+            budget.total_amount = budget.total_amount + self.amount
+            budget.save(update_fields=['total_amount', 'updated_at'])
+        self.status = AvenantStatus.APPROVED
+        self.decided_by = user
+        self.decided_at = _tz.now()
+        self.decision_notes = notes
+        self.save(update_fields=['status', 'decided_by', 'decided_at', 'decision_notes', 'updated_at'])
+        # The budget grows by the avenant amount, but that additional spend
+        # was not part of what the client originally agreed to pay for —
+        # it becomes debt owed by the client on top of the contract price.
+        if hasattr(self.site, 'contract'):
+            contract = self.site.contract
+            contract.avenant_debt = (contract.avenant_debt or 0) + self.amount
+            contract.save(update_fields=['avenant_debt', 'updated_at'])
+
+    def reject(self, user, notes=''):
+        from django.core.exceptions import ValidationError
+        from django.utils import timezone as _tz
+        if self.status != AvenantStatus.PENDING:
+            raise ValidationError(_("Cet avenant a déjà été décidé."))
+        self.status = AvenantStatus.REJECTED
+        self.decided_by = user
+        self.decided_at = _tz.now()
+        self.decision_notes = notes
+        self.save(update_fields=['status', 'decided_by', 'decided_at', 'decision_notes', 'updated_at'])

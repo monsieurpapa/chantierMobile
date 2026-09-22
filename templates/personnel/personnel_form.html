@@ -43,6 +43,24 @@
                             </div>
                         </div>
 
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label" for="{{ form.category.id_for_label }}">{% trans "Catégorie" %}</label>
+                                {{ form.category }}
+                                {% if form.category.errors %}<div class="text-danger fs--2">{{ form.category.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label" for="{{ form.trade.id_for_label }}">{% trans "Fonction / Métier (ouvrier)" %}</label>
+                                {{ form.trade }}
+                                {% if form.trade.errors %}<div class="text-danger fs--2">{{ form.trade.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label" for="{{ form.status.id_for_label }}">{% trans "Statut" %}</label>
+                                {{ form.status }}
+                                {% if form.status.errors %}<div class="text-danger fs--2">{{ form.status.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+
                         <div class="mb-3">
                             <label class="form-label" for="{{ form.skills.id_for_label }}">{% trans "Skills" %}</label>
                             {{ form.skills }}
@@ -55,7 +73,7 @@
                         </div>
 
                         <div class="row mb-3">
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <label class="form-label" for="{{ form.default_daily_rate.id_for_label }}">{% trans "Default Daily Rate ($)" %}</label>
                                 {{ form.default_daily_rate }}
                                 {% if form.default_daily_rate.errors %}
@@ -64,7 +82,17 @@
                                 </div>
                                 {% endif %}
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
+                                <label class="form-label" for="{{ form.monthly_salary.id_for_label }}">{% trans "Salaire mensuel ($)" %}</label>
+                                {{ form.monthly_salary }}
+                                <p class="fs--2 text-500">{% trans "Laisser vide pour un ouvrier payé au journalier." %}</p>
+                                {% if form.monthly_salary.errors %}
+                                <div class="text-danger fs--2">
+                                    {{ form.monthly_salary.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4">
                                 <label class="form-label" for="{{ form.user.id_for_label }}">{% trans "System User (Link for Login)" %}</label>
                                 {{ form.user }}
                                 {% if form.user.errors %}

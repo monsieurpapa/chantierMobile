@@ -3,12 +3,15 @@ from django.views.generic import ListView, CreateView, UpdateView, DetailView, D
 from django.urls import reverse_lazy
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-from .models import Personnel, Skill, SiteAssignment
-from .forms import PersonnelForm, SiteAssignmentForm, SkillForm
-from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet
+from .models import Personnel, Skill, SiteAssignment, PersonnelDocument, Leave, Holiday
+from .forms import PersonnelForm, SiteAssignmentForm, SkillForm, PersonnelDocumentForm, LeaveForm, HolidayForm
+from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet, can_act_for_cabinet
 from chantiermobile.constants import UserRoles
 from projects.models import Site
+
+HR_ADMIN_ROLES = ['DIRECTOR', 'CHIEF_ENGINEER']
 
 class PersonnelListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
     model = Personnel
@@ -23,11 +26,23 @@ class PersonnelListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin,
         personnel_type = self.request.GET.get('type')
         if personnel_type:
             qs = qs.filter(personnel_type=personnel_type)
+        status = self.request.GET.get('status')
+        if status:
+            qs = qs.filter(status=status)
+        category = self.request.GET.get('category')
+        if category:
+            qs = qs.filter(category=category)
+        trade = self.request.GET.get('trade')
+        if trade:
+            qs = qs.filter(trade=trade)
         return qs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['current_type_filter'] = self.request.GET.get('type', '')
+        context['current_status_filter'] = self.request.GET.get('status', '')
+        context['current_category_filter'] = self.request.GET.get('category', '')
+        context['current_trade_filter'] = self.request.GET.get('trade', '')
         return context
 
     def get_header_actions(self):
@@ -256,3 +271,208 @@ class SiteAssignmentCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAcc
 
     def get_success_url(self):
         return reverse_lazy('personnel:personnel_detail', kwargs={'unique_id': self.object.personnel.unique_id})
+
+
+# ---------------------------------------------------------------------
+# Dossier (documents), congés/jours fériés
+# ---------------------------------------------------------------------
+
+class PersonnelDocumentCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, CreateView):
+    """Upload a file into a Personnel's dossier. Scoped by cabinet via the
+    parent Personnel (not CabinetAccessMixin, since PersonnelDocument has
+    no direct cabinet FK)."""
+    model = PersonnelDocument
+    form_class = PersonnelDocumentForm
+    template_name = 'personnel/document_form.html'
+    allowed_roles = HR_ADMIN_ROLES
+    header_title = _("Ajouter un document au dossier")
+
+    def dispatch(self, request, *args, **kwargs):
+        self.personnel = get_object_or_404(Personnel, unique_id=kwargs['unique_id'])
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_role_cabinet(self):
+        return self.personnel.cabinet
+
+    def get_back_url(self):
+        return str(reverse_lazy('personnel:personnel_detail', kwargs={'unique_id': self.personnel.unique_id}))
+
+    def get_breadcrumb_items(self):
+        return [
+            {'title': _("Ressources humaines"), 'url': str(reverse_lazy('personnel:personnel_list'))},
+            {'title': self.personnel.get_full_name(), 'url': self.get_back_url()},
+            {'title': _("Dossier"), 'url': None},
+        ]
+
+    def form_valid(self, form):
+        form.instance.personnel = self.personnel
+        messages.success(self.request, _("Document ajouté au dossier."))
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse_lazy('personnel:personnel_detail', kwargs={'unique_id': self.personnel.unique_id})
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['personnel'] = self.personnel
+        return context
+
+
+class PersonnelDocumentDeleteView(LoginRequiredMixin, RoleRequiredMixin, DeleteView):
+    model = PersonnelDocument
+    allowed_roles = HR_ADMIN_ROLES
+
+    def get_role_cabinet(self):
+        return self.get_object().personnel.cabinet
+
+    def get_success_url(self):
+        messages.success(self.request, _("Document supprimé."))
+        return reverse_lazy('personnel:personnel_detail', kwargs={'unique_id': self.object.personnel.unique_id})
+
+    def post(self, request, *args, **kwargs):
+        return self.delete(request, *args, **kwargs)
+
+
+class LeaveListView(LoginRequiredMixin, PageHeaderMixin, ListView):
+    """Congés — scoped to the current user's cabinet(s) via Personnel."""
+    model = Leave
+    template_name = 'personnel/leave_list.html'
+    context_object_name = 'leave_list'
+    header_title = _("Congés")
+    header_subtitle = _("Gérez les congés du personnel")
+    back_url = reverse_lazy('personnel:personnel_list')
+
+    def get_queryset(self):
+        qs = Leave.objects.select_related('personnel').order_by('-start_date')
+        user = self.request.user
+        if not user.is_superuser:
+            cabinets = user.cabinet_roles.values_list('cabinet', flat=True) if hasattr(user, 'cabinet_roles') else []
+            qs = qs.filter(personnel__cabinet__in=cabinets)
+        else:
+            active_cabinet = get_session_cabinet(self.request)
+            if active_cabinet:
+                qs = qs.filter(personnel__cabinet=active_cabinet)
+        status = self.request.GET.get('status')
+        if status:
+            qs = qs.filter(status=status)
+        return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['current_status_filter'] = self.request.GET.get('status', '')
+        context['can_manage'] = (
+            self.request.user.is_superuser or
+            self.request.user.cabinet_roles.filter(role__in=HR_ADMIN_ROLES).exists()
+        )
+        return context
+
+
+class LeaveCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, CreateView):
+    model = Leave
+    form_class = LeaveForm
+    template_name = 'personnel/leave_form.html'
+    allowed_roles = HR_ADMIN_ROLES
+    success_url = reverse_lazy('personnel:leave_list')
+    header_title = _("Déclarer un congé")
+    header_subtitle = _("Enregistrez un congé pour un membre du personnel")
+    back_url = reverse_lazy('personnel:leave_list')
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        user = self.request.user
+        if user.is_superuser:
+            active_cabinet = get_session_cabinet(self.request)
+            form.fields['personnel'].queryset = (
+                Personnel.objects.filter(cabinet=active_cabinet) if active_cabinet else Personnel.objects.all()
+            )
+        elif hasattr(user, 'cabinet_roles'):
+            cabinets = user.cabinet_roles.values_list('cabinet', flat=True)
+            form.fields['personnel'].queryset = Personnel.objects.filter(cabinet__in=cabinets)
+        return form
+
+    def form_valid(self, form):
+        messages.success(self.request, _("Congé enregistré avec succès."))
+        return super().form_valid(form)
+
+
+def _decide_leave(request, pk, approve):
+    leave = get_object_or_404(Leave, pk=pk)
+    if not can_act_for_cabinet(request, leave.personnel.cabinet, HR_ADMIN_ROLES):
+        messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+        return redirect('personnel:leave_list')
+    from chantiermobile.constants import ApprovalStatus
+    leave.status = ApprovalStatus.APPROVED if approve else ApprovalStatus.REJECTED
+    leave.decided_by = request.user
+    leave.decided_at = timezone.now()
+    leave.save(update_fields=['status', 'decided_by', 'decided_at', 'updated_at'])
+    messages.success(
+        request,
+        _("Congé approuvé.") if approve else _("Congé rejeté."),
+    )
+    return redirect('personnel:leave_list')
+
+
+def leave_approve(request, pk):
+    return _decide_leave(request, pk, approve=True)
+
+
+def leave_reject(request, pk):
+    return _decide_leave(request, pk, approve=False)
+
+
+class HolidayListView(LoginRequiredMixin, PageHeaderMixin, ListView):
+    model = Holiday
+    template_name = 'personnel/holiday_list.html'
+    context_object_name = 'holiday_list'
+    header_title = _("Jours fériés")
+    header_subtitle = _("Calendrier des jours fériés")
+    back_url = reverse_lazy('personnel:personnel_list')
+
+    def get_queryset(self):
+        qs = Holiday.objects.order_by('date')
+        user = self.request.user
+        if not user.is_superuser:
+            cabinets = user.cabinet_roles.values_list('cabinet', flat=True) if hasattr(user, 'cabinet_roles') else []
+            qs = qs.filter(cabinet__in=cabinets)
+        else:
+            active_cabinet = get_session_cabinet(self.request)
+            if active_cabinet:
+                qs = qs.filter(cabinet=active_cabinet)
+        return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['can_manage'] = (
+            self.request.user.is_superuser or
+            self.request.user.cabinet_roles.filter(role__in=HR_ADMIN_ROLES).exists()
+        )
+        return context
+
+
+class HolidayCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, CreateView):
+    model = Holiday
+    form_class = HolidayForm
+    template_name = 'personnel/holiday_form.html'
+    allowed_roles = HR_ADMIN_ROLES
+    success_url = reverse_lazy('personnel:holiday_list')
+    header_title = _("Ajouter un jour férié")
+    back_url = reverse_lazy('personnel:holiday_list')
+
+    def form_valid(self, form):
+        cabinet = self.get_user_cabinet()
+        if not cabinet:
+            messages.error(self.request, _("Identification du cabinet échouée."))
+            return self.form_invalid(form)
+        form.instance.cabinet = cabinet
+        messages.success(self.request, _("Jour férié ajouté."))
+        return super().form_valid(form)
+
+
+class HolidayDeleteView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, DeleteView):
+    model = Holiday
+    allowed_roles = HR_ADMIN_ROLES
+    success_url = reverse_lazy('personnel:holiday_list')
+
+    def post(self, request, *args, **kwargs):
+        messages.success(request, _("Jour férié supprimé."))
+        return self.delete(request, *args, **kwargs)

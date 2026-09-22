@@ -1,11 +1,13 @@
-from django.db import models
+from django.db import models, transaction
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from core.models import BaseModel
 from accounts.models import Cabinet
-from projects.models import Site
+from projects.models import Site, ProjectPhase
 from materials.models import Material
-from chantiermobile.constants import PurchaseOrderStatus, StockMovementType
+from chantiermobile.constants import (
+    PurchaseOrderStatus, StockMovementType, CaisseType, PurchasePaymentMethod, CaisseTransactionType,
+)
 
 
 class Supplier(BaseModel):
@@ -29,6 +31,81 @@ class Supplier(BaseModel):
     @property
     def total_orders(self):
         return self.purchase_orders.count()
+
+    @property
+    def total_credit_outstanding(self):
+        return self.credits.aggregate(
+            t=models.Sum(models.F('amount') - models.F('paid_amount'), output_field=models.DecimalField(max_digits=14, decimal_places=2))
+        )['t'] or 0
+
+
+class SupplierCredit(BaseModel):
+    """An amount owed to a supplier (achat à crédit), optionally tied to a
+    purchase order, with installment payments tracked separately."""
+    supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE, related_name='credits')
+    purchase_order = models.ForeignKey(
+        'procurement.PurchaseOrder', on_delete=models.SET_NULL, null=True, blank=True, related_name='credits',
+    )
+    amount = models.DecimalField(max_digits=14, decimal_places=2, verbose_name=_('Montant dû'))
+    paid_amount = models.DecimalField(max_digits=14, decimal_places=2, default=0, verbose_name=_('Montant payé'))
+    date = models.DateField(verbose_name=_("Date de l'achat à crédit"))
+    due_date = models.DateField(null=True, blank=True, verbose_name=_('Échéance'))
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        verbose_name = _('Crédit fournisseur')
+        verbose_name_plural = _('Crédits fournisseurs')
+        ordering = ['-date']
+
+    def __str__(self):
+        return f"{self.supplier.name}: {self.amount} ({self.date})"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.amount is not None and self.amount <= 0:
+            raise ValidationError({'amount': _('Le montant doit être positif.')})
+
+    @property
+    def outstanding_balance(self):
+        return self.amount - self.paid_amount
+
+    @property
+    def is_fully_paid(self):
+        return self.paid_amount >= self.amount
+
+    def record_payment(self, amount, user, caisse=None, date=None):
+        from django.core.exceptions import ValidationError
+        from django.utils import timezone as _tz
+        if amount <= 0:
+            raise ValidationError(_('Le montant du paiement doit être positif.'))
+        if self.paid_amount + amount > self.amount:
+            raise ValidationError(_('Le paiement dépasse le montant restant dû.'))
+        payment_date = date or _tz.localdate()
+        with transaction.atomic():
+            SupplierCreditPayment.objects.create(
+                credit=self, amount=amount, date=payment_date, recorded_by=user, caisse=caisse,
+            )
+            if caisse is not None:
+                caisse.record(
+                    CaisseTransactionType.SORTIE, amount, user, date=payment_date,
+                    description=_("Paiement crédit fournisseur — %(supplier)s") % {'supplier': self.supplier.name},
+                )
+            self.paid_amount = self.paid_amount + amount
+            self.save(update_fields=['paid_amount', 'updated_at'])
+
+
+class SupplierCreditPayment(BaseModel):
+    credit = models.ForeignKey(SupplierCredit, on_delete=models.CASCADE, related_name='payments')
+    amount = models.DecimalField(max_digits=14, decimal_places=2)
+    date = models.DateField()
+    caisse = models.ForeignKey('finance.Caisse', on_delete=models.SET_NULL, null=True, blank=True, related_name='supplier_credit_payments')
+    recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+
+    class Meta:
+        ordering = ['-date']
+
+    def __str__(self):
+        return f"{self.credit.supplier.name}: -{self.amount} ({self.date})"
 
 
 class StockItem(BaseModel):
@@ -69,6 +146,37 @@ class StockItem(BaseModel):
             return False
         return self.quantity_on_hand <= self.reorder_threshold
 
+    def transfer_to(self, destination, quantity, user, motif='', notes='', phase=None, movement_date=None):
+        """Move `quantity` of this stock item to another StockItem —
+        typically the same material at a different site. Creates a
+        paired TRANSFER movement on both sides atomically, so the audit
+        trail always balances."""
+        from django.core.exceptions import ValidationError
+        from django.utils import timezone
+
+        if destination.pk == self.pk:
+            raise ValidationError(_("La destination doit être différente de l'origine."))
+        if quantity is None or quantity <= 0:
+            raise ValidationError(_('La quantité doit être positive.'))
+
+        movement_date = movement_date or timezone.localdate()
+        with transaction.atomic():
+            out_movement = StockMovement.objects.create(
+                stock_item=self, movement_type=StockMovementType.TRANSFER, quantity=quantity,
+                is_transfer_source=True, movement_date=movement_date, motif=motif, notes=notes,
+                moved_by=user, phase=phase,
+            )
+            in_movement = StockMovement.objects.create(
+                stock_item=destination, movement_type=StockMovementType.TRANSFER, quantity=quantity,
+                is_transfer_source=False, movement_date=movement_date, motif=motif, notes=notes,
+                moved_by=user, phase=phase,
+            )
+            out_movement.transfer_pair = in_movement
+            out_movement.save(update_fields=['transfer_pair'])
+            in_movement.transfer_pair = out_movement
+            in_movement.save(update_fields=['transfer_pair'])
+        return out_movement, in_movement
+
 
 class PurchaseOrder(BaseModel):
     """A bon de commande (purchase order) raised against a Supplier for a Site."""
@@ -78,6 +186,30 @@ class PurchaseOrder(BaseModel):
     order_date = models.DateField(verbose_name=_('Date de commande'))
     expected_delivery_date = models.DateField(null=True, blank=True, verbose_name=_('Livraison prévue'))
     status = models.CharField(max_length=20, choices=PurchaseOrderStatus.choices, default=PurchaseOrderStatus.BROUILLON)
+    caisse = models.CharField(
+        max_length=20, choices=CaisseType.choices, default=CaisseType.PRINCIPALE,
+        verbose_name=_('Caisse'),
+        help_text=_("Caisse ayant financé cet achat — utilisée pour tous les chantiers, sert uniquement au filtrage des rapports"),
+    )
+    payment_method = models.CharField(
+        max_length=20, choices=PurchasePaymentMethod.choices, default=PurchasePaymentMethod.CAISSE,
+        verbose_name=_('Mode de paiement'),
+    )
+    transfer_proof = models.FileField(
+        upload_to='procurement/transfer_proofs/', null=True, blank=True,
+        verbose_name=_('Preuve de virement'),
+        help_text=_("Envoyée par le financier après un achat par virement."),
+    )
+    entered_by_cashier = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='purchase_orders_entered', verbose_name=_('Saisi par (caissière)'),
+    )
+    entered_at = models.DateTimeField(null=True, blank=True)
+    validated_by_financier = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='purchase_orders_validated', verbose_name=_('Validé par (financier)'),
+    )
+    validated_at = models.DateTimeField(null=True, blank=True)
     notes = models.TextField(blank=True, verbose_name=_('Notes'))
 
     class Meta:
@@ -188,6 +320,34 @@ class PurchaseOrder(BaseModel):
             note=_('Réception enregistrée.'),
         )
 
+    def submit_transfer_proof(self, user, proof_file):
+        """La caissière saisit les informations (preuve de virement) envoyées
+        par le financier — en attente de validation par ce dernier."""
+        from django.core.exceptions import ValidationError
+        from django.utils import timezone
+        if self.payment_method != PurchasePaymentMethod.VIREMENT:
+            raise ValidationError(_("Cette commande n'est pas financée par virement."))
+        self.transfer_proof = proof_file
+        self.entered_by_cashier = user
+        self.entered_at = timezone.now()
+        self.validated_by_financier = None
+        self.validated_at = None
+        self.save(update_fields=['transfer_proof', 'entered_by_cashier', 'entered_at', 'validated_by_financier', 'validated_at', 'updated_at'])
+
+    def validate_transfer(self, user):
+        """Le financier valide les informations saisies par la caissière."""
+        from django.core.exceptions import ValidationError
+        from django.utils import timezone
+        if not self.transfer_proof:
+            raise ValidationError(_("Aucune preuve de virement à valider."))
+        self.validated_by_financier = user
+        self.validated_at = timezone.now()
+        self.save(update_fields=['validated_by_financier', 'validated_at', 'updated_at'])
+
+    @property
+    def is_transfer_validated(self):
+        return self.payment_method == PurchasePaymentMethod.VIREMENT and self.validated_by_financier_id is not None
+
 
 class PurchaseOrderLine(BaseModel):
     """A single line item on a PurchaseOrder, tied to the StockItem it
@@ -240,12 +400,31 @@ class StockMovement(BaseModel):
         PurchaseOrderLine, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='stock_movements',
     )
+    phase = models.ForeignKey(
+        ProjectPhase, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='stock_movements',
+        help_text=_('Étape du chantier concernée (facultatif)'),
+    )
+    motif = models.CharField(max_length=255, blank=True, verbose_name=_('Motif'), help_text=_('Raison du mouvement'))
+    is_transfer_source = models.BooleanField(
+        default=False,
+        help_text=_("Pour un mouvement de type Transfert : True côté origine (sortie), False côté destination (entrée)."),
+    )
+    transfer_pair = models.OneToOneField(
+        'self', on_delete=models.SET_NULL, null=True, blank=True, related_name='transfer_pair_reverse',
+        help_text=_("L'autre moitié de ce transfert (origine <-> destination)."),
+    )
     moved_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='stock_movements',
     )
     movement_date = models.DateField(verbose_name=_('Date du mouvement'))
     notes = models.TextField(blank=True, verbose_name=_('Notes'))
+    facture = models.FileField(
+        upload_to='stock_movements/factures/', blank=True, null=True,
+        verbose_name=_('Facture'),
+        help_text=_('Justificatif (facture/reçu) lié à ce mouvement — facultatif'),
+    )
 
     class Meta:
         verbose_name = _('Mouvement de stock')
@@ -258,9 +437,12 @@ class StockMovement(BaseModel):
     def clean(self):
         from django.core.exceptions import ValidationError
 
-        if self.movement_type in (StockMovementType.IN, StockMovementType.OUT):
+        if self.phase_id and self.stock_item_id and self.phase.site_id != self.stock_item.site_id:
+            raise ValidationError({'phase': _("L'étape sélectionnée doit appartenir au chantier de cet article de stock.")})
+
+        if self.movement_type in (StockMovementType.IN, StockMovementType.OUT, StockMovementType.TRANSFER):
             if self.quantity is None or self.quantity <= 0:
-                raise ValidationError({'quantity': _('La quantité doit être positive pour une entrée ou une sortie.')})
+                raise ValidationError({'quantity': _('La quantité doit être positive pour une entrée, une sortie ou un transfert.')})
         elif self.movement_type == StockMovementType.ADJUSTMENT:
             if not self.quantity:
                 raise ValidationError({'quantity': _("La quantité d'ajustement ne peut pas être nulle.")})
@@ -273,6 +455,8 @@ class StockMovement(BaseModel):
     def _signed_delta(self):
         if self.movement_type == StockMovementType.OUT:
             return -self.quantity
+        if self.movement_type == StockMovementType.TRANSFER:
+            return -self.quantity if self.is_transfer_source else self.quantity
         return self.quantity
 
     def save(self, *args, **kwargs):

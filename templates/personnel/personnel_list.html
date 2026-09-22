@@ -18,19 +18,31 @@
         <div class="container-fluid py-4">
             {% include 'includes/page_header.html' %}
 
+            <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                <ul class="nav nav-pills mb-0">
+                    <li class="nav-item">
+                        <a class="nav-link {% if not current_type_filter %}active{% endif %}" href="{% url 'personnel:personnel_list' %}">{% trans "Tous" %}</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if current_type_filter == 'EMPLOYE' %}active{% endif %}" href="?type=EMPLOYE">{% trans "Employés" %}</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if current_type_filter == 'TACHERON' %}active{% endif %}" href="?type=TACHERON">{% trans "Tâcherons" %}</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if current_type_filter == 'PRESTATAIRE' %}active{% endif %}" href="?type=PRESTATAIRE">{% trans "Prestataires" %}</a>
+                    </li>
+                </ul>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'personnel:leave_list' %}" class="btn btn-falcon-default btn-sm"><span class="fas fa-umbrella-beach me-1"></span>{% trans "Congés" %}</a>
+                    <a href="{% url 'personnel:holiday_list' %}" class="btn btn-falcon-default btn-sm"><span class="fas fa-calendar-day me-1"></span>{% trans "Jours fériés" %}</a>
+                </div>
+            </div>
             <ul class="nav nav-pills mb-3">
-                <li class="nav-item">
-                    <a class="nav-link {% if not current_type_filter %}active{% endif %}" href="{% url 'personnel:personnel_list' %}">{% trans "Tous" %}</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {% if current_type_filter == 'EMPLOYE' %}active{% endif %}" href="?type=EMPLOYE">{% trans "Employés" %}</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {% if current_type_filter == 'TACHERON' %}active{% endif %}" href="?type=TACHERON">{% trans "Tâcherons" %}</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {% if current_type_filter == 'PRESTATAIRE' %}active{% endif %}" href="?type=PRESTATAIRE">{% trans "Prestataires" %}</a>
-                </li>
+                <li class="nav-item"><a class="nav-link fs--1 {% if not current_status_filter %}active{% endif %}" href="?status=&type={{ current_type_filter }}">{% trans "Tous statuts" %}</a></li>
+                <li class="nav-item"><a class="nav-link fs--1 {% if current_status_filter == 'ACTIF' %}active{% endif %}" href="?status=ACTIF&type={{ current_type_filter }}">{% trans "Actif" %}</a></li>
+                <li class="nav-item"><a class="nav-link fs--1 {% if current_status_filter == 'INACTIF' %}active{% endif %}" href="?status=INACTIF&type={{ current_type_filter }}">{% trans "Inactif" %}</a></li>
+                <li class="nav-item"><a class="nav-link fs--1 {% if current_status_filter == 'NON_ELIGIBLE' %}active{% endif %}" href="?status=NON_ELIGIBLE&type={{ current_type_filter }}">{% trans "Non éligible" %}</a></li>
             </ul>
 
             <div class="card mb-3">
@@ -42,6 +54,7 @@
                                     <th scope="col" class="sort pe-1 align-middle white-space-nowrap">{% trans "Name" %}</th>
                                     <th scope="col" class="sort pe-1 align-middle white-space-nowrap">{% trans "Type" %}</th>
                                     <th scope="col" class="sort pe-1 align-middle white-space-nowrap">{% trans "Skills" %}</th>
+                                    <th scope="col" class="sort pe-1 align-middle white-space-nowrap">{% trans "Statut" %}</th>
                                     <th scope="col" class="sort pe-1 align-middle white-space-nowrap text-end">{% trans "Default Rate" %}</th>
                                     <th scope="col" class="no-sort pe-1 align-middle data-table-row-action"></th>
                                 </tr>
@@ -68,6 +81,14 @@
                                         {% empty %}
                                         <span class="text-300 fs--2">{% trans "No skills listed" %}</span>
                                         {% endfor %}
+                                    </td>
+                                    <td class="py-2 align-middle white-space-nowrap">
+                                        <span class="badge rounded-pill
+                                        {% if person.status == 'ACTIF' %}bg-success
+                                        {% elif person.status == 'NON_ELIGIBLE' %}bg-danger
+                                        {% else %}bg-secondary{% endif %}">
+                                            {{ person.get_status_display }}
+                                        </span>
                                     </td>
                                     <td class="rate py-2 align-middle text-end">
                                         {% if request.user|has_role:'DIRECTOR,ACCOUNTANT' %}
@@ -102,7 +123,7 @@
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="5" class="text-center py-5">
+                                    <td colspan="6" class="text-center py-5">
                                         <span class="fas fa-users fa-2x text-300 d-block mb-2"></span>
                                         <p class="text-600 mb-2">{% trans "No personnel registered yet." %}</p>
                                         <a href="{% url 'personnel:personnel_create' %}" class="btn btn-falcon-primary btn-sm">

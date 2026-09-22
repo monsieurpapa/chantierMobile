@@ -1,0 +1,81 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Mouvement de caisse" %} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    {% include 'includes/navbar-vertical.html' with on="caisse_list" %}
+
+    <div class="content">
+        {% include 'includes/navbar-top.html' %}
+
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+            <div class="card mb-3">
+                <div class="card-body bg-light">
+                    <p class="fs--1 text-600 mb-3">{% trans "Caisse" %}: <strong>{{ caisse.name }}</strong></p>
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label" for="{{ form.transaction_type.id_for_label }}">{% trans "Type" %}</label>
+                                {{ form.transaction_type }}
+                                {% if form.transaction_type.errors %}<div class="text-danger fs--2">{{ form.transaction_type.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="{{ form.amount.id_for_label }}">{% trans "Montant" %}</label>
+                                {{ form.amount }}
+                                {% if form.amount.errors %}<div class="text-danger fs--2">{{ form.amount.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label" for="{{ form.date.id_for_label }}">{% trans "Date" %}</label>
+                                {{ form.date }}
+                                {% if form.date.errors %}<div class="text-danger fs--2">{{ form.date.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="{{ form.site.id_for_label }}">{% trans "Chantier (optionnel)" %}</label>
+                                {{ form.site }}
+                                {% if form.site.errors %}<div class="text-danger fs--2">{{ form.site.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label" for="{{ form.phase.id_for_label }}">{% trans "Étape (optionnel)" %}</label>
+                                {{ form.phase }}
+                                {% if form.phase.errors %}<div class="text-danger fs--2">{{ form.phase.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="{{ form.proof.id_for_label }}">{% trans "Justificatif (optionnel)" %}</label>
+                                {{ form.proof }}
+                                {% if form.proof.errors %}<div class="text-danger fs--2">{{ form.proof.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ form.description.id_for_label }}">{% trans "Description" %}</label>
+                            {{ form.description }}
+                            {% if form.description.errors %}<div class="text-danger fs--2">{{ form.description.errors }}</div>{% endif %}
+                        </div>
+                        <div class="col-12 d-flex justify-content-end gap-2">
+                            <a class="btn btn-falcon-default" href="{{ back_url }}">{% trans "Cancel" %}</a>
+                            <button class="btn btn-primary" type="submit">{% trans "Enregistrer" %}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.querySelectorAll('input, select, textarea').forEach(el => {
+        if (!el.classList.contains('form-range')) el.classList.add('form-control');
+        if (el.tagName === 'SELECT') { el.classList.remove('form-control'); el.classList.add('form-select'); }
+    });
+</script>
+{% endblock %}

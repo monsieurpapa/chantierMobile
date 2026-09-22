@@ -25,8 +25,29 @@ from procurement.models import PurchaseOrder, StockItem
 from tasks.models import Task
 from chantiermobile.constants import (
     SiteStatus, ExpenseStatus, DevisStatus, InvoiceStatus,
-    TaskStatus, PersonnelType, StatusBadgeClasses,
+    TaskStatus, PersonnelType, StatusBadgeClasses, UserRoles,
 )
+
+# Roles that legitimately need to see money on the dashboard (revenue,
+# expenses, margin, invoicing, budgets). Everyone else (CHIEF_ENGINEER,
+# ENGINEER, WORKER) gets the same operational widgets — sites, tasks,
+# stock, personnel — without financial figures. Superusers always pass
+# (see can_view_financials below), matching has_role's convention
+# elsewhere in the app (accounts/templatetags/rbac_tags.py).
+FINANCIAL_ROLES = [UserRoles.DIRECTOR, UserRoles.ACCOUNTANT, UserRoles.CASHIER]
+
+
+def can_view_financials(request):
+    """RBAC gate for the dashboard's financial widgets.
+
+    Kept next to scoped_cabinet_ids as its own testable function rather
+    than a template-level check, so the same rule can be asserted in
+    tests without rendering HTML.
+    """
+    user = request.user
+    if user.is_superuser:
+        return True
+    return user.cabinet_roles.filter(role__in=FINANCIAL_ROLES).exists()
 
 MONEY_FIELD = DecimalField(max_digits=14, decimal_places=2)
 APPROVED_OR_PAID = [ExpenseStatus.APPROVED, ExpenseStatus.PAID]
@@ -357,4 +378,8 @@ def build_dashboard_context(request):
         # Viewing scope (used to label the page when a superuser has no
         # active cabinet selected)
         'dashboard_all_cabinets': cabinet_ids is None and request.user.is_superuser,
+
+        # RBAC: whether this user's role(s) may see financial figures
+        # (revenue, expenses, margin, invoices, budgets) on the dashboard.
+        'can_view_financials': can_view_financials(request),
     }

@@ -1,0 +1,78 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Déclarer un congé" %} - ChantierMobile{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'vendors/flatpickr/flatpickr.min.css' %}" rel="stylesheet" />
+{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    <!-- vertical nav -->
+    {% include 'includes/navbar-vertical.html' with on="personnel" %}
+    <!-- /vertical nav -->
+
+    <div class="content">
+        <!-- navbar-top -->
+        {% include 'includes/navbar-top.html' %}
+        <!-- /navbar-top -->
+
+        <!-- Main Content -->
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+            <div class="card mb-3">
+                <div class="card-body bg-light">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ form.personnel.id_for_label }}">{% trans "Personnel" %}</label>
+                            {{ form.personnel }}
+                            {% if form.personnel.errors %}<div class="text-danger fs--2">{{ form.personnel.errors }}</div>{% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ form.leave_type.id_for_label }}">{% trans "Type" %}</label>
+                            {{ form.leave_type }}
+                            {% if form.leave_type.errors %}<div class="text-danger fs--2">{{ form.leave_type.errors }}</div>{% endif %}
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label" for="{{ form.start_date.id_for_label }}">{% trans "Date de début" %}</label>
+                                {{ form.start_date }}
+                                {% if form.start_date.errors %}<div class="text-danger fs--2">{{ form.start_date.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="{{ form.end_date.id_for_label }}">{% trans "Date de fin" %}</label>
+                                {{ form.end_date }}
+                                {% if form.end_date.errors %}<div class="text-danger fs--2">{{ form.end_date.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+                        {% if form.non_field_errors %}<div class="text-danger fs--2 mb-3">{{ form.non_field_errors }}</div>{% endif %}
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ form.reason.id_for_label }}">{% trans "Motif" %}</label>
+                            {{ form.reason }}
+                            {% if form.reason.errors %}<div class="text-danger fs--2">{{ form.reason.errors }}</div>{% endif %}
+                        </div>
+                        <div class="col-12 d-flex justify-content-end gap-2">
+                            <a class="btn btn-falcon-default" href="{{ back_url }}">{% trans "Cancel" %}</a>
+                            <button class="btn btn-primary" type="submit">{% trans "Enregistrer" %}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'assets/js/flatpickr.js' %}"></script>
+<script>
+    document.querySelectorAll('input, select, textarea').forEach(el => {
+        if (!el.classList.contains('form-range')) el.classList.add('form-control');
+        if (el.tagName === 'SELECT') { el.classList.remove('form-control'); el.classList.add('form-select'); }
+    });
+</script>
+{% endblock %}
