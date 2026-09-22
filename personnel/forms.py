@@ -8,7 +8,7 @@ class PersonnelForm(forms.ModelForm):
     class Meta:
         model = Personnel
         fields = [
-            'first_name', 'last_name', 'personnel_type', 'category', 'trade', 'status',
+            'first_name', 'last_name', 'personnel_type', 'category', 'trade', 'status', 'payroll_type',
             'skills', 'default_daily_rate', 'monthly_salary', 'user',
         ]
         widgets = {
@@ -18,6 +18,7 @@ class PersonnelForm(forms.ModelForm):
             'category': forms.Select(attrs={'class': 'form-select'}),
             'trade': forms.Select(attrs={'class': 'form-select'}),
             'status': forms.Select(attrs={'class': 'form-select'}),
+            'payroll_type': forms.Select(attrs={'class': 'form-select'}),
             'skills': DynamicSelectMultipleWidget(
                 create_url_name='personnel:skill_quick_create',
                 placeholder=_('Sélectionner ou ajouter une compétence...'),
@@ -84,7 +85,7 @@ class SiteAssignmentForm(forms.ModelForm):
         model = SiteAssignment
         fields = [
             'personnel', 'site', 'role', 'start_date', 'end_date', 'daily_rate',
-            'agreement_document', 'agreement_notes',
+            'agreement_document', 'agreement_notes', 'convention_amount',
         ]
         widgets = {
             'personnel': DynamicSelectWidget(
@@ -106,7 +107,12 @@ class SiteAssignmentForm(forms.ModelForm):
             'daily_rate': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0.00'}),
             'agreement_document': forms.ClearableFileInput(attrs={'class': 'form-control'}),
             'agreement_notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'convention_amount': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.AMOUNT}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['convention_amount'].required = False
 
 class SkillForm(forms.ModelForm):
     class Meta:

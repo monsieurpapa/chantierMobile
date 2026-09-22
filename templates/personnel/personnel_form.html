@@ -61,6 +61,15 @@
                             </div>
                         </div>
 
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label" for="{{ form.payroll_type.id_for_label }}">{% trans "Catégorie de paie" %}</label>
+                                {{ form.payroll_type }}
+                                <p class="fs--2 text-500">{% trans "Détermine la catégorie de décaissement sur la liste de paie (Main d'œuvre Ouvriers ou Salaire Ingénieurs)." %}</p>
+                                {% if form.payroll_type.errors %}<div class="text-danger fs--2">{{ form.payroll_type.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+
                         <div class="mb-3">
                             <label class="form-label" for="{{ form.skills.id_for_label }}">{% trans "Skills" %}</label>
                             {{ form.skills }}

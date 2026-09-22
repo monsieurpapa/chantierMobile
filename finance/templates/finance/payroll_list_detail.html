@@ -106,7 +106,12 @@
 
             {% if can_prepare and payroll_list.status == 'BROUILLON' and item_form %}
             <div class="card mb-3">
-                <div class="card-header bg-light"><h6 class="mb-0">{% trans "Ajouter un ouvrier" %}</h6></div>
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">{% trans "Ajouter un ouvrier" %}</h6>
+                    <a class="btn btn-falcon-primary btn-sm" href="{% url 'finance:payroll_allocate' pk=payroll_list.pk %}">
+                        <span class="fas fa-list-check me-1"></span>{% trans "Allocation groupée par affectation" %}
+                    </a>
+                </div>
                 <div class="card-body bg-light">
                     <form method="post" action="{% url 'finance:payroll_item_create' pk=payroll_list.pk %}" enctype="multipart/form-data" class="row g-3 align-items-end">
                         {% csrf_token %}

@@ -157,39 +157,12 @@ class TestSalaryPayment:
             sp.full_clean()
 
 
-@pytest.mark.django_db
-class TestSalaryPaymentViews:
-    def test_director_can_pay_salary(self, director_client, personnel_factory, caisse):
-        p = personnel_factory(monthly_salary=Decimal('300.00'))
-        response = director_client.post(reverse('finance:salary_payment_create'), {
-            'personnel': p.pk, 'period': '2026-09', 'amount': '300.00', 'caisse': caisse.pk, 'notes': '',
-        })
-        assert response.status_code == 302
-        assert SalaryPayment.objects.filter(personnel=p, period='2026-09').exists()
-        caisse.refresh_from_db() if hasattr(caisse, 'refresh_from_db') else None
-        assert caisse.balance == Decimal('4700.00')
-
-    def test_engineer_cannot_access_salary_payment_create(self, engineer_client, personnel_factory, caisse):
-        p = personnel_factory(monthly_salary=Decimal('300.00'))
-        response = engineer_client.post(reverse('finance:salary_payment_create'), {
-            'personnel': p.pk, 'period': '2026-09', 'amount': '300.00', 'caisse': caisse.pk, 'notes': '',
-        })
-        assert not SalaryPayment.objects.filter(personnel=p).exists()
-
-    def test_personnel_without_monthly_salary_not_offered(self, director_client, personnel_factory, caisse):
-        p = personnel_factory(monthly_salary=None)
-        response = director_client.get(reverse('finance:salary_payment_create'))
-        assert p not in response.context['form'].fields['personnel'].queryset
-
-    def test_duplicate_period_shows_form_error_not_double_payment(self, director_client, personnel_factory, caisse, user):
-        p = personnel_factory(monthly_salary=Decimal('300.00'))
-        SalaryPayment.objects.create(personnel=p, period='2026-09', amount=Decimal('300.00'), caisse=caisse)
-        caisse.record(CaisseTransactionType.SORTIE, Decimal('300.00'), user)  # mirror a prior disbursement
-        response = director_client.post(reverse('finance:salary_payment_create'), {
-            'personnel': p.pk, 'period': '2026-09', 'amount': '300.00', 'caisse': caisse.pk, 'notes': '',
-        })
-        assert response.status_code == 200  # form re-rendered with error, not redirected
-        assert SalaryPayment.objects.filter(personnel=p, period='2026-09').count() == 1
+# NOTE: the view-level TestSalaryPaymentViews class (salary_payment_create /
+# salary_payment_list) was removed along with the "Salaires du bureau" UI —
+# see finance.models.SalaryPayment's DEPRECATED docstring and
+# tests/test_personnel_payroll_overhaul.py for the replacement Liste de
+# paie flow (Personnel.payroll_type == INGENIEUR). TestSalaryPayment above
+# still covers the model itself, which is kept for historical data.
 
 
 @pytest.fixture

@@ -4,7 +4,7 @@ from core.models import BaseModel
 from accounts.models import Cabinet, User
 from projects.models import Site
 from chantiermobile.constants import (
-    PersonnelType, AgentCategory, PersonnelStatus, Trade, LeaveType, ApprovalStatus,
+    PersonnelType, AgentCategory, PersonnelStatus, PersonnelPayrollType, Trade, LeaveType, ApprovalStatus,
 )
 
 class Skill(BaseModel):
@@ -45,6 +45,14 @@ class Personnel(BaseModel):
         max_length=20, choices=PersonnelStatus.choices, default=PersonnelStatus.ACTIF,
         verbose_name=_('Statut'),
     )
+    payroll_type = models.CharField(
+        max_length=20, choices=PersonnelPayrollType.choices, default=PersonnelPayrollType.OUVRIER,
+        verbose_name=_('Catégorie de paie'),
+        help_text=_(
+            "Ouvrier (main d'œuvre, payé selon convention par chantier) ou Ingénieur (salarié) — "
+            "détermine la catégorie de décaissement sur la liste de paie."
+        ),
+    )
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
@@ -77,6 +85,15 @@ class SiteAssignment(BaseModel):
         blank=True, verbose_name=_('Termes de la convention'),
         help_text=_("Conditions particulières de la convention de main-d'œuvre."),
     )
+    convention_amount = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True,
+        verbose_name=_('Montant de la convention'),
+        help_text=_(
+            "Montant total convenu pour cette tâche (ex : communiqué par l'Archi à la caisse). "
+            "Laisser vide si aucun plafond n'est suivi. Un même personnel peut avoir plusieurs "
+            "conventions actives sur un même chantier — une par tâche."
+        ),
+    )
 
     def clean(self):
         from django.core.exceptions import ValidationError
@@ -91,6 +108,22 @@ class SiteAssignment(BaseModel):
 
     def __str__(self):
         return f"{self.personnel} -> {self.site} ({self.role})"
+
+    @property
+    def paid_amount(self):
+        """Sum of all liste-de-paie payments made against this specific
+        assignment/convention so far."""
+        agg = self.payroll_items.aggregate(t=models.Sum('amount'))
+        return agg['t'] or 0
+
+    @property
+    def remaining_convention(self):
+        """None means no cap is tracked for this assignment. Can go
+        negative if items were entered before a cap was added — treated
+        the same as any exceeded cap by callers."""
+        if self.convention_amount is None:
+            return None
+        return self.convention_amount - self.paid_amount
 
 
 class PersonnelDocument(BaseModel):

@@ -209,6 +209,19 @@ class PersonnelStatus(models.TextChoices):
     NON_ELIGIBLE = 'NON_ELIGIBLE', _('Non éligible')
 
 
+class PersonnelPayrollType(models.TextChoices):
+    """Which Liste de paie category a Personnel's payments fall under.
+
+    Drives two things on the payroll workflow: whether the SiteAssignment
+    convention cap applies (Ouvriers only — see SiteAssignment.
+    convention_amount) and which caisse category a décaissement is booked
+    under (Main d'œuvre Ouvriers vs Salaire Ingénieurs), replacing the
+    separate "Salaire bureau" screen — an Ingénieur is now paid through the
+    same chantier-scoped Liste de paie as everyone else."""
+    OUVRIER = 'OUVRIER', _("Ouvrier (main d'œuvre)")
+    INGENIEUR = 'INGENIEUR', _('Ingénieur')
+
+
 class Trade(models.TextChoices):
     """Fixed trade/function list for ouvriers, as specified by the client."""
     MACON = 'MACON', _('Maçon')

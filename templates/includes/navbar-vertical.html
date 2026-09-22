@@ -126,16 +126,6 @@
                             </a>
                         </li>
                         {% endif %}
-                        {% if request.user|has_role:'DIRECTOR,ACCOUNTANT,CASHIER,FINANCIER' or request.user.is_superuser %}
-                        <li class="nav-item">
-                            <a class="nav-link {% if on == 'salary_payment_list' %}active{% endif %}"
-                                href="{% url 'finance:salary_payment_list' %}">
-                                <div class="d-flex align-items-center">
-                                    <span class="nav-link-text ps-1">{% trans "Salaires du bureau" %}</span>
-                                </div>
-                            </a>
-                        </li>
-                        {% endif %}
                         <li class="nav-item">
                             <a class="nav-link {% if on == 'payroll_list' %}active{% endif %}"
                                 href="{% url 'finance:payroll_list' %}">

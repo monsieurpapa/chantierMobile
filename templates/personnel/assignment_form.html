@@ -94,6 +94,15 @@
                         </div>
 
                         <div class="mb-3">
+                            <label class="form-label" for="{{ form.convention_amount.id_for_label }}">{% trans "Montant de la convention ($, optionnel)" %}</label>
+                            {{ form.convention_amount }}
+                            <p class="fs--2 text-500">{% trans "Montant total convenu pour cette tâche. Un même personnel peut avoir plusieurs conventions actives sur un même chantier — une par tâche. Laisser vide si aucun plafond n'est suivi." %}</p>
+                            {% if form.convention_amount.errors %}
+                            <div class="text-danger fs--2">{{ form.convention_amount.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
                             <label class="form-label" for="{{ form.agreement_document.id_for_label }}">{% trans "Convention de main-d'œuvre (document)" %}</label>
                             {{ form.agreement_document }}
                             {% if form.agreement_document.errors %}

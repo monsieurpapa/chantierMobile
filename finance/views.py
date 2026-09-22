@@ -1,4 +1,4 @@
-from django.views.generic import ListView, CreateView, DetailView, UpdateView, DeleteView
+from django.views.generic import ListView, CreateView, DetailView, UpdateView, DeleteView, TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
@@ -10,20 +10,21 @@ from django.db.models import Sum, Count, Q
 from django.http import HttpResponseRedirect
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from .models import (
     Expense, ExpenseApproval, Budget, Caisse, CaisseTransaction, CaisseTransactionCategory, CaisseLoan,
-    PayrollList, PayrollListItem, Avenant, SalaryPayment,
+    PayrollList, PayrollListItem, Avenant,
 )
 from .forms import (
     ExpenseForm, ExpensePayForm, BudgetForm, CaisseForm, CaisseTransactionForm, CaisseTransferForm,
     CaisseLoanForm, CaisseLoanRepayForm, PayrollListForm, PayrollListItemForm,
-    PayrollDisburseForm, AvenantForm, AvenantDecisionForm, SalaryPaymentForm,
+    PayrollDisburseForm, AvenantForm, AvenantDecisionForm,
 )
 from projects.models import Site
+from personnel.models import SiteAssignment
 from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet, can_act_for_cabinet
 from chantiermobile.constants import (
-    ExpenseStatus, UserRoles, CaisseTransactionType, FINAL_AUTHORIZATION_ROLES, PayrollListStatus,
+    ExpenseStatus, UserRoles, CaisseTransactionType, FINAL_AUTHORIZATION_ROLES, PayrollListStatus, PersonnelPayrollType,
 )
 
 # Roles that may view the expenses report / export it to PDF — mirrors
@@ -33,9 +34,6 @@ EXPENSE_REPORT_ROLES = ['DIRECTOR', 'ACCOUNTANT', 'CASHIER']
 
 # Roles that may manage caisses and record ledger movements.
 CAISSE_MANAGE_ROLES = ['DIRECTOR', 'ACCOUNTANT', 'CASHIER', 'FINANCIER']
-# Salaires mensuels du bureau (ingénieurs/agents administratifs) — same
-# audience as caisse management, since disbursing one is a caisse outflow.
-SALARY_PAYMENT_ROLES = CAISSE_MANAGE_ROLES
 
 # "L'archi" — whoever prepares/submits a payroll list from worker payment requests.
 PAYROLL_PREPARE_ROLES = ['DIRECTOR', 'CHIEF_ENGINEER', 'ENGINEER']
@@ -1197,6 +1195,101 @@ class PayrollListItemCreateView(LoginRequiredMixin, RoleRequiredMixin, CreateVie
         return reverse_lazy('finance:payroll_detail', kwargs={'pk': self.payroll_list.pk})
 
 
+class PayrollListAllocateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, TemplateView):
+    """Bulk allocation screen: one row per SiteAssignment (convention) on
+    the payroll list's chantier, each with a Montant input the Chef de
+    chantier fills in, capped by the convention's remaining balance for
+    Ouvriers. Replaces adding items one at a time via
+    PayrollListItemCreateView for the common case (that older single-item
+    flow is kept working for edge cases / manual entry)."""
+    template_name = 'finance/payroll_list_allocate.html'
+    allowed_roles = PAYROLL_PREPARE_ROLES
+
+    def dispatch(self, request, *args, **kwargs):
+        self.payroll_list = get_object_or_404(PayrollList, pk=kwargs['pk'])
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_role_cabinet(self):
+        return self.payroll_list.site.cabinet
+
+    def get_header_title(self):
+        return _("Allocation — %(list)s") % {'list': self.payroll_list}
+
+    def get_back_url(self):
+        return str(reverse_lazy('finance:payroll_detail', kwargs={'pk': self.payroll_list.pk}))
+
+    def get_rows(self):
+        assignments = SiteAssignment.objects.filter(
+            site=self.payroll_list.site,
+        ).select_related('personnel').order_by('personnel__last_name', 'personnel__first_name')
+        rows = []
+        for assignment in assignments:
+            personnel = assignment.personnel
+            if not personnel.is_eligible:
+                continue
+            is_capped = (
+                personnel.payroll_type == PersonnelPayrollType.OUVRIER
+                and assignment.convention_amount is not None
+            )
+            rows.append({
+                'assignment': assignment,
+                'personnel': personnel,
+                'is_capped': is_capped,
+                'remaining': assignment.remaining_convention,
+            })
+        return rows
+
+    def get(self, request, *args, **kwargs):
+        if self.payroll_list.status != PayrollListStatus.BROUILLON:
+            messages.error(request, _("Cette liste n'est plus modifiable."))
+            return redirect('finance:payroll_detail', pk=self.payroll_list.pk)
+        context = self.get_context_data(payroll_list=self.payroll_list, rows=self.get_rows())
+        return self.render_to_response(context)
+
+    def post(self, request, *args, **kwargs):
+        if self.payroll_list.status != PayrollListStatus.BROUILLON:
+            messages.error(request, _("Cette liste n'est plus modifiable."))
+            return redirect('finance:payroll_detail', pk=self.payroll_list.pk)
+
+        rows = self.get_rows()
+        created_count = 0
+        row_errors = []
+        for row in rows:
+            assignment = row['assignment']
+            raw = (request.POST.get(f'amount_{assignment.pk}') or '').strip()
+            if not raw:
+                continue
+            try:
+                amount = Decimal(raw)
+            except (InvalidOperation, ValueError):
+                row_errors.append(_("%(name)s : montant invalide.") % {'name': assignment.personnel})
+                continue
+            item = PayrollListItem(
+                payroll_list=self.payroll_list, personnel=assignment.personnel,
+                assignment=assignment, amount=amount,
+            )
+            try:
+                with transaction.atomic():
+                    item.full_clean()
+                    item.save()
+                created_count += 1
+            except ValidationError as e:
+                message_dict = getattr(e, 'message_dict', None)
+                if message_dict:
+                    text = '; '.join(msg for msgs in message_dict.values() for msg in msgs)
+                else:
+                    text = '; '.join(e.messages)
+                row_errors.append(f"{assignment.personnel}: {text}")
+
+        if created_count:
+            messages.success(request, _("%(n)d paiement(s) ajouté(s) à la liste.") % {'n': created_count})
+        for err in row_errors:
+            messages.error(request, err)
+        if not created_count and not row_errors:
+            messages.warning(request, _("Aucun montant saisi."))
+        return redirect('finance:payroll_detail', pk=self.payroll_list.pk)
+
+
 @login_required
 def payroll_submit(request, pk):
     payroll_list = get_object_or_404(PayrollList, pk=pk)
@@ -1235,68 +1328,12 @@ def payroll_disburse(request, pk):
 
 
 # ---------------------------------------------------------------------
-# Salaires mensuels du bureau (ingénieurs / agents administratifs)
+# NOTE: "Salaires du bureau" (SalaryPayment views) removed per finance-team
+# demo feedback — engineer/office salaries now go through the same
+# chantier-scoped Liste de paie as everyone else. See finance.models
+# .SalaryPayment's own DEPRECATED docstring: the model/table stays for
+# historical data, but there's no nav link and no URL for it anymore.
 # ---------------------------------------------------------------------
-
-class SalaryPaymentListView(LoginRequiredMixin, CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, ListView):
-    model = SalaryPayment
-    context_object_name = 'salary_payments'
-    template_name = 'finance/salary_payment_list.html'
-    allowed_roles = SALARY_PAYMENT_ROLES
-    cabinet_lookup_field = 'personnel__cabinet'
-    header_title = _("Salaires du bureau")
-    header_subtitle = _("Paiements des salaires mensuels — ingénieurs et agents administratifs")
-
-    def get_queryset(self):
-        return super().get_queryset().select_related('personnel', 'caisse', 'paid_by').order_by('-period', 'personnel__last_name')
-
-    def get_header_actions(self):
-        return [{
-            'label': _("Payer un salaire"),
-            'url': str(reverse_lazy('finance:salary_payment_create')),
-            'icon': 'plus',
-            'class': 'btn-falcon-primary',
-        }]
-
-
-class SalaryPaymentCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, CreateView):
-    model = SalaryPayment
-    form_class = SalaryPaymentForm
-    template_name = 'finance/salary_payment_form.html'
-    allowed_roles = SALARY_PAYMENT_ROLES
-    success_url = reverse_lazy('finance:salary_payment_list')
-    header_title = _("Payer un salaire mensuel")
-    header_subtitle = _("Enregistrer et décaisser le salaire d'un agent de bureau ou d'un ingénieur")
-    back_url = reverse_lazy('finance:salary_payment_list')
-
-    def get_breadcrumb_items(self):
-        return [
-            {'title': _("Salaires du bureau"), 'url': str(reverse_lazy('finance:salary_payment_list'))},
-            {'title': _("Nouveau paiement"), 'url': None},
-        ]
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs['cabinet'] = self.get_user_cabinet()
-        return kwargs
-
-    def form_valid(self, form):
-        cabinet = self.get_user_cabinet()
-        if not cabinet:
-            messages.error(self.request, _("Identification du cabinet échouée."))
-            return self.form_invalid(form)
-        try:
-            with transaction.atomic():
-                self.object = form.save()
-                self.object.disburse(self.request.user)
-        except ValidationError as e:
-            self.object = None
-            form.add_error(None, str(e.message) if hasattr(e, 'message') else str(e))
-            return self.form_invalid(form)
-        messages.success(self.request, _("Salaire de %(personnel)s payé pour %(period)s.") % {
-            'personnel': self.object.personnel, 'period': self.object.period,
-        })
-        return HttpResponseRedirect(self.get_success_url())
 
 
 # ---------------------------------------------------------------------

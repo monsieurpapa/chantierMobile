@@ -5,8 +5,15 @@ from core.models import BaseModel
 from projects.models import Site, ProjectPhase
 from chantiermobile.constants import (
     ExpenseStatus, ExpenseNature, FileUploadConfig, CaisseType, CaisseTransactionType,
-    PayrollListStatus, AvenantStatus,
+    PayrollListStatus, AvenantStatus, PersonnelPayrollType,
 )
+
+# Caisse category names used when splitting a liste de paie décaissement —
+# seeded once via a data migration (finance.0015) so they're always
+# available in the "Catégorie" dropdown/filter, referenced here by name
+# rather than re-created on the fly.
+PAYROLL_OUVRIER_CATEGORY_NAME = "Main d'œuvre Ouvriers"
+PAYROLL_INGENIEUR_CATEGORY_NAME = "Salaire Ingénieurs"
 
 class Budget(BaseModel):
     site = models.OneToOneField(Site, on_delete=models.CASCADE, related_name='budget')
@@ -508,10 +515,31 @@ class PayrollList(BaseModel):
             raise ValidationError(_("Le montant total doit être positif."))
         if total > caisse.balance:
             raise ValidationError(_("Solde de caisse insuffisant."))
-        caisse.record(
-            CaisseTransactionType.SORTIE, total, user, site=self.site, phase=self.phase,
-            description=_("Paiement liste de paie — %(site)s") % {'site': self.site.name},
-        )
+
+        # Split the décaissement by payroll category (Ouvrier vs Ingénieur)
+        # into separate, categorized caisse transactions rather than one
+        # lump sum, so the two are tracked and filterable independently.
+        ouvrier_total = self.items.filter(
+            personnel__payroll_type=PersonnelPayrollType.OUVRIER
+        ).aggregate(t=models.Sum('amount'))['t'] or 0
+        ingenieur_total = self.items.filter(
+            personnel__payroll_type=PersonnelPayrollType.INGENIEUR
+        ).aggregate(t=models.Sum('amount'))['t'] or 0
+        ouvrier_category = CaisseTransactionCategory.objects.filter(name=PAYROLL_OUVRIER_CATEGORY_NAME).first()
+        ingenieur_category = CaisseTransactionCategory.objects.filter(name=PAYROLL_INGENIEUR_CATEGORY_NAME).first()
+
+        if ouvrier_total > 0:
+            caisse.record(
+                CaisseTransactionType.SORTIE, ouvrier_total, user, site=self.site, phase=self.phase,
+                category=ouvrier_category,
+                description=_("Paiement liste de paie (main d'œuvre) — %(site)s") % {'site': self.site.name},
+            )
+        if ingenieur_total > 0:
+            caisse.record(
+                CaisseTransactionType.SORTIE, ingenieur_total, user, site=self.site, phase=self.phase,
+                category=ingenieur_category,
+                description=_("Paiement liste de paie (ingénieurs) — %(site)s") % {'site': self.site.name},
+            )
         self.status = PayrollListStatus.PAYEE
         self.caisse = caisse
         self.paid_at = _tz.now()
@@ -522,6 +550,11 @@ class PayrollList(BaseModel):
 class PayrollListItem(BaseModel):
     payroll_list = models.ForeignKey(PayrollList, on_delete=models.CASCADE, related_name='items')
     personnel = models.ForeignKey('personnel.Personnel', on_delete=models.CASCADE, related_name='payroll_items')
+    assignment = models.ForeignKey(
+        'personnel.SiteAssignment', on_delete=models.SET_NULL, null=True, blank=True, related_name='payroll_items',
+        verbose_name=_('Convention / affectation'),
+        help_text=_("La convention (SiteAssignment) précise que ce paiement couvre — permet le plafond par convention et le rapprochement déjà payé/reste à payer."),
+    )
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     progress_note = models.TextField(blank=True, verbose_name=_("Avancement / justification"))
     signed_receipt = models.FileField(
@@ -546,16 +579,42 @@ class PayrollListItem(BaseModel):
                     "%(name)s n'est pas éligible (statut : %(status)s) et ne peut pas être payé(e)."
                 ) % {'name': self.personnel, 'status': self.personnel.get_status_display()},
             })
+        if self.assignment_id and self.personnel_id and self.assignment.personnel_id != self.personnel_id:
+            raise ValidationError({
+                'assignment': _("Cette convention n'appartient pas à ce membre du personnel."),
+            })
+        # The convention cap only applies to Ouvriers (main d'œuvre) — an
+        # Ingénieur's Liste de paie payment is a plain salary line, not
+        # capped against a per-task convention amount.
+        if (
+            self.assignment_id and self.personnel_id and self.amount is not None
+            and self.personnel.payroll_type == PersonnelPayrollType.OUVRIER
+            and self.assignment.convention_amount is not None
+        ):
+            already_paid = self.assignment.paid_amount
+            if self.pk:
+                # Editing an existing item: don't double-count its own
+                # prior amount as "already paid" against itself.
+                prior = PayrollListItem.all_objects.filter(pk=self.pk).values_list('amount', flat=True).first()
+                already_paid -= (prior or 0)
+            remaining = self.assignment.convention_amount - already_paid
+            if self.amount > remaining:
+                raise ValidationError({'amount': _(
+                    "Ce montant dépasse le reste à payer sur la convention de %(name)s : "
+                    "%(remaining)s restant sur %(total)s."
+                ) % {
+                    'name': self.personnel, 'remaining': remaining, 'total': self.assignment.convention_amount,
+                }})
 
 
 # ---------------------------------------------------------------------
-# Office/admin monthly salary payments — "enregistrer une sortie liée au
-# chargé du bureau / paiement des salaires mensuels pour les ingénieurs
-# et agents administratifs". Unlike PayrollList (progressive worker pay,
-# always tied to one chantier), this covers Personnel.monthly_salary,
-# which is cabinet-level, not site-level — so it draws straight from a
-# caisse (typically the caisse de gestion administrative) rather than
-# from a specific project's budget.
+# DEPRECATED — kept for historical data only, no longer reachable from the
+# UI (no nav link, no URLs). Per finance-team demo feedback, engineer/
+# office salaries now go through the same chantier-scoped Liste de paie as
+# everyone else (Personnel.payroll_type == INGENIEUR, booked under the
+# "Salaire Ingénieurs" caisse category on décaissement — see
+# PayrollList.disburse()) instead of this separate "Salaire bureau" screen.
+# The table isn't dropped so any rows already created stay queryable.
 # ---------------------------------------------------------------------
 
 class SalaryPayment(BaseModel):

@@ -98,17 +98,11 @@ class TestPersonnelEligibilityEnforcement:
         with pytest.raises(ValidationError):
             sp.full_clean()
 
-    def test_salary_payment_create_view_rejects_ineligible_personnel(self, director_client, ineligible_personnel, caisse):
-        # Not offered in the dropdown at all (queryset only filters by
-        # monthly_salary though, not eligibility — status can still change
-        # after the page loaded), so post directly to prove the model-level
-        # guard is what actually blocks it, defense in depth.
-        response = director_client.post(reverse('finance:salary_payment_create'), {
-            'personnel': ineligible_personnel.pk, 'period': '2026-09', 'amount': '300.00',
-            'caisse': caisse.pk, 'notes': '',
-        })
-        assert response.status_code == 200
-        assert not SalaryPayment.objects.filter(personnel=ineligible_personnel).exists()
+    # NOTE: the view-level "salary_payment_create rejects ineligible
+    # personnel" test was removed along with the "Salaires du bureau" URL —
+    # see finance.models.SalaryPayment's DEPRECATED docstring. The
+    # model-level guard above (test_salary_payment_rejects_ineligible_personnel)
+    # still applies to any code still using the model directly.
 
 
 @pytest.fixture
