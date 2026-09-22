@@ -13,7 +13,7 @@ from django.core import mail
 from django.urls import reverse
 
 from chantiermobile.constants import (
-    UserRoles, ApprovalStatus, ExpenseNature, CaisseType, StockMovementType,
+    UserRoles, ApprovalStatus, ExpenseNature, ExpenseStatus, CaisseType, StockMovementType,
     PurchaseOrderStatus, InvoiceStatus, DevisStatus, PaymentMethod,
 )
 
@@ -204,6 +204,28 @@ class TestExpenseNatureAndPersonnel:
         response = accountant_client.get(reverse('finance:expense_report_pdf'))
         assert response.status_code == 200
         assert response['Content-Type'] == 'application/pdf'
+
+    def test_expense_report_per_site_summary_ignores_site_filter(
+        self, accountant_client, site, site_factory, expense_factory,
+    ):
+        """expenses_by_site (the "Dépenses par chantier" summary at the top
+        of the report) stays a whole-cabinet overview even when the report's
+        own 'site' filter narrows the detail table below — that's what lets
+        a director scan every chantier at once, then drill into one."""
+        other_site = site_factory(name='Autre Chantier')
+        expense_factory(site=site, amount=Decimal('400.00'), status=ExpenseStatus.APPROVED)
+        expense_factory(site=other_site, amount=Decimal('600.00'), status=ExpenseStatus.PAID)
+        expense_factory(site=other_site, amount=Decimal('1000.00'), status=ExpenseStatus.PENDING)
+
+        response = accountant_client.get(reverse('finance:expense_report'), {'site': site.pk})
+        rows = {row['site'].pk: row['total'] for row in response.context['expenses_by_site']}
+        assert rows[site.pk] == Decimal('400.00')
+        assert rows[other_site.pk] == Decimal('600.00')  # pending expense excluded
+
+    def test_expense_report_per_site_summary_link_drills_into_site(self, accountant_client, site, expense_factory):
+        expense_factory(site=site, amount=Decimal('123.00'), status=ExpenseStatus.APPROVED)
+        response = accountant_client.get(reverse('finance:expense_report'))
+        assert f'site={site.pk}' in response.content.decode()
 
 
 # ============================================================================

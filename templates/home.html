@@ -260,6 +260,54 @@
   </div>
 
   <!-- ============================================================ -->
+  <!-- Per-site expense totals — at-a-glance spend per site, so the
+       director doesn't have to call the accountant to ask. Covers every
+       site (not just active+budgeted ones, unlike the budget-usage
+       card further down) and links into the filterable expense report
+       for the detailed historique. -->
+  <!-- ============================================================ -->
+  {% if can_view_financials %}
+  <div class="row g-3 mb-3">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+          <h6 class="mb-0"><i class="fas fa-money-bill-wave me-2 text-success"></i>{% trans "Dépenses par chantier" %}</h6>
+          <a href="{% url 'finance:expense_report' %}" class="fs--2">{% trans "Voir l'historique complet" %}</a>
+        </div>
+        <div class="card-body p-0">
+          {% if expenses_by_site_rows %}
+          <div class="table-responsive">
+            <table class="table table-sm table-striped mb-0 fs--1">
+              <thead>
+                <tr>
+                  <th>{% trans "Chantier" %}</th>
+                  <th class="text-end">{% trans "Total dépensé" %}</th>
+                  <th class="text-end"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in expenses_by_site_rows %}
+                <tr>
+                  <td>{{ row.name }}</td>
+                  <td class="text-end fw-semibold">${{ row.spent|floatformat:2|intcomma }}</td>
+                  <td class="text-end">
+                    <a href="{{ row.url }}" class="btn btn-falcon-default btn-sm">{% trans "Historique" %}</a>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <p class="text-center py-4 text-500 mb-0">{% trans "Aucune dépense approuvée pour l'instant." %}</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ============================================================ -->
   <!-- Charts row 1: Cash flow + Devis pipeline -->
   <!-- ============================================================ -->
   {% if can_view_financials %}

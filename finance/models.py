@@ -83,6 +83,10 @@ class Expense(BaseModel):
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     expense_date = models.DateField(help_text=_("Date the expense was incurred (used for budget period matching)"))
     description = models.TextField(verbose_name=_('Désignation'))
+    recipient = models.CharField(
+        max_length=255, blank=True, verbose_name=_('Bénéficiaire'),
+        help_text=_("Qui a reçu ce paiement (fournisseur, ouvrier, tiers...) — pour la traçabilité, pas forcément une fiche du système."),
+    )
     status = models.CharField(max_length=20, choices=ExpenseStatus.choices, default=ExpenseStatus.PENDING)
     receipt_image = models.ImageField(upload_to=FileUploadConfig.EXPENSE_RECEIPT_PATH, blank=True, null=True)
 
@@ -183,6 +187,22 @@ class Expense(BaseModel):
     def can_be_paid(self):
         """Check if expense can be marked as paid."""
         return self.status == ExpenseStatus.APPROVED
+
+    @property
+    def latest_approval(self):
+        """The most recent approve/reject decision on this expense, if any
+        — the audit trail behind the "who approved this" question, kept
+        as its own ExpenseApproval record (with date + comments) rather
+        than a single denormalized field, since a rejected-then-resubmitted
+        expense can go through this more than once."""
+        return self.approvals.order_by('-approval_date').first()
+
+    @property
+    def approved_by(self):
+        """The user who approved this expense, or None if it isn't
+        (yet) approved — what the director/accountant actually asks for."""
+        approval = self.approvals.filter(status=ExpenseApproval.Status.APPROVED).order_by('-approval_date').first()
+        return approval.approver if approval else None
 
     def __str__(self):
         return f"{self.amount} - {self.category} ({self.status})"

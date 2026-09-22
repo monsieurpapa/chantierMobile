@@ -48,6 +48,10 @@
                                         </span>
                                     </div>
                                 </div>
+                                <div class="col-sm-6 mb-3">
+                                    <label class="form-label text-600">{% trans "Bénéficiaire" %}</label>
+                                    <p class="fs-0">{{ expense.recipient|default:"—" }}</p>
+                                </div>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label text-600">{% trans "Description" %}</label>
@@ -150,6 +154,10 @@
                                 <div class="col-7 fw-semi-bold">{{ expense.requester }}</div>
                                 <div class="col-5">{% trans "Submitted" %}:</div>
                                 <div class="col-7">{{ expense.created_at|date }}</div>
+                                {% if expense.approved_by %}
+                                <div class="col-5">{% trans "Approved by" %}:</div>
+                                <div class="col-7 fw-semi-bold">{{ expense.approved_by }}</div>
+                                {% endif %}
                             </div>
                         </div>
                     </div>

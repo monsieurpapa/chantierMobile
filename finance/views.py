@@ -431,6 +431,54 @@ def _expense_report_queryset(request):
     return qs
 
 
+def _expenses_by_site_rows(request):
+    """Per-chantier expense totals for the report's "Dépenses par chantier"
+    summary — the answer to "how much has each site spent so far" that used
+    to mean calling the accountant. Deliberately ignores the report's own
+    'site' filter (that filter narrows the detail table below; this summary
+    stays a whole-cabinet overview so a director can see every chantier at
+    once) but still respects the date/period filters, so the summary and
+    the detail table underneath always describe the same time window.
+    Only APPROVED/PAID amounts count, matching Site.total_spent."""
+    qs = Expense.objects.filter(status__in=[ExpenseStatus.APPROVED, ExpenseStatus.PAID])
+    if request.user.is_superuser:
+        active_cabinet = get_session_cabinet(request)
+        if active_cabinet:
+            qs = qs.filter(site__cabinet=active_cabinet)
+    else:
+        user_cabinet_ids = request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+        qs = qs.filter(site__cabinet__id__in=user_cabinet_ids)
+
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+    if date_from:
+        qs = qs.filter(expense_date__gte=date_from)
+    if date_to:
+        qs = qs.filter(expense_date__lte=date_to)
+
+    period = request.GET.get('period')
+    today = timezone.localdate()
+    if period == 'week':
+        qs = qs.filter(expense_date__gte=today - timezone.timedelta(days=7))
+    elif period == 'month':
+        qs = qs.filter(expense_date__gte=today.replace(day=1))
+
+    totals = {
+        row['site']: row['total']
+        for row in qs.values('site').annotate(total=Sum('amount'))
+    }
+    if not totals:
+        return []
+
+    sites = Site.objects.filter(pk__in=totals.keys()).order_by('name')
+    rows = [
+        {'site': s, 'total': totals[s.pk]}
+        for s in sites
+    ]
+    rows.sort(key=lambda r: r['total'], reverse=True)
+    return rows
+
+
 class ExpenseReportView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, ListView):
     """Filterable expense report (by chantier, by date range/period) with a
     PDF export — the "Rapport" the cashier asked for alongside the
@@ -464,6 +512,7 @@ class ExpenseReportView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, 
         context = super().get_context_data(**kwargs)
         qs = context['expenses']
         context['total_amount'] = qs.aggregate(total=Sum('amount'))['total'] or 0
+        context['expenses_by_site'] = _expenses_by_site_rows(self.request)
         if self.request.user.is_superuser:
             active_cabinet = get_session_cabinet(self.request)
             context['sites'] = Site.objects.filter(cabinet=active_cabinet) if active_cabinet else Site.objects.all()
@@ -497,20 +546,27 @@ def expense_report_pdf(request):
             e.category.name,
             e.get_nature_display(),
             (e.personnel.get_full_name() if e.personnel else '-'),
+            e.recipient or '-',
             e.description[:60],
             f"{e.amount:.2f} $",
             e.get_status_display(),
+            (str(e.approved_by) if e.approved_by else '-'),
         )
         for e in qs
     ]
     total = qs.aggregate(total=Sum('amount'))['total'] or 0
+    by_site = _expenses_by_site_rows(request)
+    subtitle_parts = [_("%(count)s dépense(s)") % {'count': qs.count()}]
+    if by_site:
+        summary = ", ".join(f"{row['site'].name}: {row['total']:.2f} $" for row in by_site)
+        subtitle_parts.append(_("Par chantier — %(summary)s") % {'summary': summary})
     return render_table_report_pdf(
         filename=f"depenses-{timezone.localdate().isoformat()}.pdf",
         title="Rapport des dépenses",
-        subtitle=_("%(count)s dépense(s)") % {'count': qs.count()},
-        columns=["Date", "Chantier", "Catégorie", "Nature", "Personnel", "Désignation", "Montant", "Statut"],
+        subtitle=" | ".join(str(p) for p in subtitle_parts),
+        columns=["Date", "Chantier", "Catégorie", "Nature", "Personnel", "Bénéficiaire", "Désignation", "Montant", "Statut", "Approuvé par"],
         rows=rows,
-        totals_row=["", "", "", "", "", "Total", f"{total:.2f} $", ""],
+        totals_row=["", "", "", "", "", "", "Total", f"{total:.2f} $", "", ""],
         generated_by=request.user.get_full_name() or request.user.username,
     )
 

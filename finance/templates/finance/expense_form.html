@@ -90,6 +90,14 @@
                 </div>
 
                 <div class="mb-3">
+                    <label class="form-label" for="{{ form.recipient.id_for_label }}">{% trans "Bénéficiaire" %}</label>
+                    {{ form.recipient }}
+                    <p class="fs--2 text-500">{% trans "Qui a reçu ce paiement (fournisseur, ouvrier, tiers...)." %}</p>
+                    {% if form.recipient.errors %}<div class="text-danger fs--2">{{ form.recipient.errors }}
+                    </div>{% endif %}
+                </div>
+
+                <div class="mb-3">
                     <label class="form-label" for="{{ form.description.id_for_label }}">{% trans "Désignation" %}</label>
                     {{ form.description }}
                     {% if form.description.errors %}<div class="text-danger fs--2">{{ form.description.errors }}

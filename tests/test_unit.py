@@ -67,6 +67,39 @@ class TestModels:
         expense.refresh_from_db()
         assert expense.status == ExpenseStatus.REJECTED
 
+    def test_expense_recipient_field(self, expense_factory):
+        """recipient is a free-text field (not a system record) for
+        traceability of who actually received the payment."""
+        expense = expense_factory(recipient='Quincaillerie Kivu')
+        expense.refresh_from_db()
+        assert expense.recipient == 'Quincaillerie Kivu'
+
+    def test_expense_recipient_optional(self, expense):
+        """recipient is blank=True — omitting it must not break existing
+        callers (form submissions, factories, the pre-existing test suite)."""
+        assert expense.recipient == ''
+
+    def test_expense_approved_by_and_latest_approval(self, expense, user, director_user):
+        """approved_by / latest_approval surface the existing
+        ExpenseApproval audit trail — "who approved this" — without
+        duplicating it as a separate denormalized field."""
+        assert expense.approved_by is None
+        assert expense.latest_approval is None
+
+        expense.approve(director_user, "Looks good")
+        expense.refresh_from_db()
+        assert expense.approved_by == director_user
+        assert expense.latest_approval.approver == director_user
+        assert expense.latest_approval.status == 'APPROVED'
+
+    def test_expense_approved_by_none_when_rejected(self, expense, director_user):
+        """A rejected expense has approval history, but no *approver* —
+        approved_by should stay None even though latest_approval exists."""
+        expense.reject(director_user, "Not approved")
+        expense.refresh_from_db()
+        assert expense.latest_approval is not None
+        assert expense.approved_by is None
+
 
 @pytest.mark.unit
 class TestForms:
@@ -87,7 +120,14 @@ class TestForms:
         }
         form = ExpenseForm(data=form_data)
         assert form.is_valid(), form.errors
-        
+        assert form.fields['recipient'].required is False
+
+        # recipient is accepted and saved when provided
+        form_data['recipient'] = 'Quincaillerie Kivu'
+        form = ExpenseForm(data=form_data)
+        assert form.is_valid(), form.errors
+        assert form.cleaned_data['recipient'] == 'Quincaillerie Kivu'
+
         # Invalid amount
         form_data['amount'] = '-100.00'
         form = ExpenseForm(data=form_data)
@@ -127,6 +167,8 @@ class TestViews:
         assert 'cashflow_labels' in response.context
         assert 'devis_chart' in response.context
         assert 'task_chart' in response.context
+        assert 'budget_rows' in response.context
+        assert 'expenses_by_site_rows' in response.context
         # Watchlists + activity feed
         assert 'overdue_invoices' in response.context
         assert 'overdue_tasks' in response.context
@@ -421,6 +463,54 @@ class TestDashboardRBAC:
         assert response.status_code == 200
         assert response.context['can_view_financials'] is True
         assert 'Encaissé ce mois-ci' in response.content.decode()
+
+
+@pytest.mark.unit
+@pytest.mark.django_db
+class TestExpensesBySiteWidget:
+    """Tests for the dashboard's "Dépenses par chantier" widget
+    (core.dashboard.build_dashboard_context's expenses_by_site_rows) — the
+    at-a-glance total-per-site view added so the director no longer has to
+    call the accountant to ask. Unlike budget_rows, this covers every site
+    with approved/paid spend, regardless of budget or ACTIVE status."""
+
+    def test_covers_sites_without_a_budget(self, director_client, site_factory, expense_factory, director_user):
+        # A site with no Budget configured at all — invisible to budget_rows,
+        # which is exactly the gap this widget closes.
+        unbudgeted_site = site_factory(name='Chantier Sans Budget', status=SiteStatus.PLANNING)
+        expense_factory(site=unbudgeted_site, amount=Decimal('750.00'), status=ExpenseStatus.APPROVED)
+
+        response = director_client.get(reverse('home'))
+        rows = response.context['expenses_by_site_rows']
+        names = {r['name']: r['spent'] for r in rows}
+        assert names.get('Chantier Sans Budget') == Decimal('750.00')
+
+    def test_only_counts_approved_or_paid(self, director_client, site, expense_factory):
+        expense_factory(site=site, amount=Decimal('100.00'), status=ExpenseStatus.PENDING)
+        expense_factory(site=site, amount=Decimal('50.00'), status=ExpenseStatus.REJECTED)
+        expense_factory(site=site, amount=Decimal('200.00'), status=ExpenseStatus.APPROVED)
+        expense_factory(site=site, amount=Decimal('300.00'), status=ExpenseStatus.PAID)
+
+        response = director_client.get(reverse('home'))
+        rows = {r['name']: r['spent'] for r in response.context['expenses_by_site_rows']}
+        assert rows[site.name] == Decimal('500.00')
+
+    def test_sorted_by_amount_spent_descending(self, director_client, site_factory, expense_factory):
+        low = site_factory(name='Chantier Bas')
+        high = site_factory(name='Chantier Haut')
+        expense_factory(site=low, amount=Decimal('100.00'), status=ExpenseStatus.APPROVED)
+        expense_factory(site=high, amount=Decimal('9000.00'), status=ExpenseStatus.APPROVED)
+
+        response = director_client.get(reverse('home'))
+        rows = response.context['expenses_by_site_rows']
+        names_in_order = [r['name'] for r in rows if r['name'] in ('Chantier Bas', 'Chantier Haut')]
+        assert names_in_order == ['Chantier Haut', 'Chantier Bas']
+
+    def test_hidden_for_non_financial_roles(self, engineer_client, site, expense_factory):
+        expense_factory(site=site, amount=Decimal('100.00'), status=ExpenseStatus.APPROVED)
+        response = engineer_client.get(reverse('home'))
+        assert response.status_code == 200
+        assert 'Dépenses par chantier' not in response.content.decode()
 
     def test_system_admin_tile_hidden_for_non_superuser(self, engineer_client):
         response = engineer_client.get(reverse('home'))

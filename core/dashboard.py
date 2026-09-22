@@ -249,6 +249,29 @@ def build_dashboard_context(request):
     )[:6]
 
     # ------------------------------------------------------------------
+    # Total expenses per chantier, ALL sites (not just active+budgeted
+    # ones like budget_rows above) — what the director used to have to
+    # call the accountant for. Sorted by amount spent, so the biggest
+    # spenders surface first; links straight into the filterable expense
+    # report, pre-filtered to that site, for the "historique en détail".
+    # ------------------------------------------------------------------
+    site_expense_totals = dict(
+        approved_expenses.values('site').annotate(total=Sum('amount')).values_list('site', 'total')
+    )
+    expenses_by_site_rows = sorted(
+        (
+            {
+                'name': s.name,
+                'spent': site_expense_totals[s.id],
+                'url': f"{reverse('finance:expense_report')}?site={s.id}",
+            }
+            for s in sites if s.id in site_expense_totals
+        ),
+        key=lambda r: r['spent'],
+        reverse=True,
+    )[:8]
+
+    # ------------------------------------------------------------------
     # Task status distribution (donut)
     # ------------------------------------------------------------------
     task_status_counts = dict(tasks.values_list('status').annotate(n=Count('id')))
@@ -369,6 +392,7 @@ def build_dashboard_context(request):
         'task_chart': task_chart,
         'personnel_chart': personnel_chart,
         'budget_rows': budget_rows,
+        'expenses_by_site_rows': expenses_by_site_rows,
         'mobilized_count': mobilized_count,
         'total_personnel_count': total_personnel_count,
 

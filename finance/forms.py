@@ -12,7 +12,7 @@ from core.widgets import DynamicSelectWidget
 class ExpenseForm(forms.ModelForm):
     class Meta:
         model = Expense
-        fields = ['site', 'phase', 'category', 'nature', 'personnel', 'amount', 'expense_date', 'description', 'receipt_image']
+        fields = ['site', 'phase', 'category', 'nature', 'personnel', 'recipient', 'amount', 'expense_date', 'description', 'receipt_image']
         widgets = {
             'site': forms.Select(attrs={'class': 'form-select'}),
             'phase': forms.Select(attrs={'class': 'form-select'}),
@@ -23,6 +23,10 @@ class ExpenseForm(forms.ModelForm):
                 placeholder=_('Rechercher un membre du personnel...'),
                 depends_on='id_site', depends_param='site',
             ),
+            'recipient': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': _("Ex: Quincaillerie Kivu, Jean Mukendi..."),
+            }),
             'amount': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.AMOUNT}),
             'expense_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': FormPlaceholders.EXPENSE_DETAILS}),
