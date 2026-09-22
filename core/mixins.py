@@ -59,6 +59,25 @@ def can_act_for_cabinet(request, cabinet, allowed_roles):
     ).exists()
 
 
+def can_view_cabinet(request, cabinet):
+    """Looser sibling of can_act_for_cabinet: true for any authenticated
+    user who has *some* role in this cabinet (or a superuser), regardless
+    of which role. For actions that are shared/collaborative rather than
+    role-gated — e.g. commenting on a progress report, where anyone with
+    access to the site should be able to join the discussion, not just the
+    roles that can file the report itself.
+    """
+    user = request.user
+    if not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        active_cabinet = get_session_cabinet(request)
+        if active_cabinet and cabinet != active_cabinet:
+            return False
+        return True
+    return UserCabinetRole.objects.filter(user=user, cabinet=cabinet).exists()
+
+
 class CabinetAccessMixin:
     """
     Mixin to filter querysets based on the user's cabinet.

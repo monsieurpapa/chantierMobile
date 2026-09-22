@@ -29,8 +29,11 @@ class Site(BaseModel):
         self.expenses.filter(is_deleted=False).update(is_deleted=True, deleted_at=now)
         # Cascade soft-delete to material requests
         self.material_requests.filter(is_deleted=False).update(is_deleted=True, deleted_at=now)
-        # Cascade soft-delete to phases (and their progress reports)
+        # Cascade soft-delete to phases (and their progress reports, photos, comments)
         for phase in self.phases.filter(is_deleted=False):
+            for progress in phase.progress_reports.filter(is_deleted=False):
+                progress.photos.filter(is_deleted=False).update(is_deleted=True, deleted_at=now)
+                progress.comments.filter(is_deleted=False).update(is_deleted=True, deleted_at=now)
             phase.progress_reports.filter(is_deleted=False).update(is_deleted=True, deleted_at=now)
         self.phases.filter(is_deleted=False).update(is_deleted=True, deleted_at=now)
         # Cascade soft-delete to personnel assignments
@@ -233,3 +236,52 @@ class SiteProgress(BaseModel):
     
     def __str__(self):
         return f"{self.phase.name} - {self.percentage_complete}% on {self.report_date}"
+
+
+class ProgressPhoto(BaseModel):
+    """A photo attached to a site progress report — the visual evidence
+    behind the percentage/description an engineer files (rebar laid, a
+    wall poured, a defect found). Multiple photos per report, addable at
+    any time (not only when the report is first filed), since follow-up
+    photos often come in over the following days."""
+    progress = models.ForeignKey(SiteProgress, on_delete=models.CASCADE, related_name='photos')
+    image = models.ImageField(upload_to='projects/progress_photos/', verbose_name=_('Photo'))
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='progress_photos_uploaded', verbose_name=_('Ajoutée par'),
+    )
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"Photo — {self.progress}"
+
+
+class ProgressComment(BaseModel):
+    """A comment on a progress report, or — when `photo` is set — on one
+    specific photo within it (e.g. the Director asking about a crack
+    visible in photo 3). Open to anyone with access to the site, not just
+    the roles that can file progress reports, so it works as a shared
+    discussion thread rather than an engineer-only channel."""
+    progress = models.ForeignKey(SiteProgress, on_delete=models.CASCADE, related_name='comments')
+    photo = models.ForeignKey(
+        ProgressPhoto, on_delete=models.CASCADE, related_name='comments',
+        null=True, blank=True, verbose_name=_('Photo commentée'),
+    )
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='progress_comments', verbose_name=_('Auteur'),
+    )
+    body = models.TextField(verbose_name=_('Commentaire'))
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"{self.author} on {self.progress}"
+
+    def clean(self):
+        if self.photo_id and self.progress_id and self.photo.progress_id != self.progress_id:
+            from django.core.exceptions import ValidationError
+            raise ValidationError(_("La photo commentée doit appartenir au même rapport d'avancement."))

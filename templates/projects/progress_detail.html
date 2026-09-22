@@ -1,0 +1,160 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Rapport d'avancement" %} - {{ progress.phase.name }} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    <!-- vertical nav -->
+    {% include 'includes/navbar-vertical.html' with on="projects" %}
+    <!-- /vertical nav -->
+
+    <div class="content">
+        <!-- navbar-top -->
+        {% include 'includes/navbar-top.html' %}
+        <!-- /navbar-top -->
+
+        <!-- Main Content -->
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            <div class="row g-3">
+                <div class="col-lg-8 pe-lg-2">
+                    <!-- Report info -->
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <div class="row g-0">
+                                <div class="col-sm-4 mb-3">
+                                    <label class="form-label text-600">{% trans "Étape" %}</label>
+                                    <p class="fs-0">{{ progress.phase.name }}</p>
+                                </div>
+                                <div class="col-sm-4 mb-3">
+                                    <label class="form-label text-600">{% trans "Date du rapport" %}</label>
+                                    <p class="fs-0">{{ progress.report_date }}</p>
+                                </div>
+                                <div class="col-sm-4 mb-3">
+                                    <label class="form-label text-600">{% trans "Avancement" %}</label>
+                                    <p class="fs-2 fw-bold text-primary">{{ progress.percentage_complete }}%</p>
+                                </div>
+                            </div>
+                            <div class="mb-0">
+                                <label class="form-label text-600">{% trans "Description" %}</label>
+                                <p class="fs-0">{{ progress.description }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Photo gallery -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0"><i class="fas fa-images me-2 text-info"></i>{% trans "Photos" %} ({{ photos|length }})</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if photos %}
+                            <div class="row g-2 mb-3">
+                                {% for photo in photos %}
+                                <div class="col-6 col-md-4 col-lg-3">
+                                    <a href="{{ photo.image.url }}" target="_blank" rel="noopener" class="d-block">
+                                        <img src="{{ photo.image.url }}" alt="{% trans "Photo du rapport" %}"
+                                            class="img-fluid rounded border" style="aspect-ratio: 1 / 1; object-fit: cover; width: 100%;">
+                                    </a>
+                                    <p class="fs--2 text-500 mb-0 mt-1">
+                                        {{ photo.uploaded_by|default:"—" }} · {{ photo.created_at|date:"d/m/Y H:i" }}
+                                    </p>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <p class="text-center py-3 text-500 mb-3">{% trans "Aucune photo pour ce rapport." %}</p>
+                            {% endif %}
+
+                            {% if can_add_photo %}
+                            <form method="post" action="{% url 'projects:progress_photo_add' unique_id=progress.unique_id %}"
+                                enctype="multipart/form-data" class="border-top pt-3">
+                                {% csrf_token %}
+                                <label class="form-label fs--1 fw-semibold" for="id_more_photos">{% trans "Ajouter des photos" %}</label>
+                                <div class="d-flex gap-2">
+                                    <input class="form-control" id="id_more_photos" name="photos" type="file" accept="image/*" multiple>
+                                    <button type="submit" class="btn btn-falcon-primary flex-shrink-0">{% trans "Ajouter" %}</button>
+                                </div>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Comments -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0"><i class="fas fa-comments me-2 text-secondary"></i>{% trans "Commentaires" %} ({{ comments|length }})</h5>
+                        </div>
+                        <div class="card-body fs--1">
+                            {% if comments %}
+                            {% for comment in comments %}
+                            <div class="d-flex mb-3">
+                                <div class="flex-1 ms-2">
+                                    <h6 class="mb-0">{{ comment.author|default:_("Utilisateur supprimé") }}</h6>
+                                    <p class="text-500 mb-1">
+                                        {{ comment.created_at|date:"d/m/Y H:i" }}
+                                        {% if comment.photo %}
+                                        · {% trans "en réponse à" %}
+                                        <a href="{{ comment.photo.image.url }}" target="_blank" rel="noopener">{% trans "une photo" %}</a>
+                                        {% endif %}
+                                    </p>
+                                    <p class="text-1000 bg-100 p-2 rounded mt-1 mb-0">{{ comment.body }}</p>
+                                </div>
+                            </div>
+                            {% endfor %}
+                            {% else %}
+                            <p class="text-center py-3 text-500">{% trans "Aucun commentaire pour l'instant." %}</p>
+                            {% endif %}
+
+                            {% if can_comment %}
+                            <form method="post" action="{% url 'projects:progress_comment_add' unique_id=progress.unique_id %}"
+                                class="border-top pt-3">
+                                {% csrf_token %}
+                                {% if photos %}
+                                <div class="mb-2">
+                                    <label class="form-label fs--2 text-600" for="id_comment_photo">{% trans "Concernant (optionnel)" %}</label>
+                                    <select class="form-select form-select-sm" id="id_comment_photo" name="photo">
+                                        <option value="">{% trans "Le rapport en général" %}</option>
+                                        {% for photo in photos %}
+                                        <option value="{{ photo.unique_id }}">{% blocktrans with n=forloop.counter %}Photo {{ n }}{% endblocktrans %} — {{ photo.created_at|date:"d/m/Y" }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                {% endif %}
+                                <textarea class="form-control mb-2" name="body" rows="2" placeholder="{% trans 'Ajouter un commentaire...' %}" required></textarea>
+                                <div class="d-flex justify-content-end">
+                                    <button type="submit" class="btn btn-primary btn-sm">{% trans "Publier" %}</button>
+                                </div>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4 ps-lg-2">
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">{% trans "Chantier" %}</h5>
+                        </div>
+                        <div class="card-body fs--1">
+                            <p class="mb-2">
+                                <a href="{% url 'projects:site_detail' unique_id=progress.phase.site.unique_id %}">{{ progress.phase.site.name }}</a>
+                            </p>
+                            <div class="row">
+                                <div class="col-5">{% trans "Créé par" %}:</div>
+                                <div class="col-7 fw-semi-bold">{{ progress.created_by|default:"—" }}</div>
+                                <div class="col-5">{% trans "Soumis le" %}:</div>
+                                <div class="col-7">{{ progress.created_at|date }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}

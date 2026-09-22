@@ -23,7 +23,7 @@
             {% include 'includes/page_header.html' %}
             <div class="card mb-3">
                 <div class="card-body bg-light">
-                    <form method="post">
+                    <form method="post" enctype="multipart/form-data">
                         {% csrf_token %}
 
                         <div class="mb-3">
@@ -47,6 +47,13 @@
                             <label class="form-label" for="id_description">{% trans "Description / Notes" %}</label>
                             <textarea class="form-control" id="id_description" name="description" rows="4"
                                 required></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="id_photos">{% trans "Photos" %} ({% trans "Optional" %})</label>
+                            <input class="form-control" id="id_photos" name="photos" type="file" accept="image/*"
+                                multiple />
+                            <p class="fs--2 text-500 mt-1">{% trans "Vous pourrez ajouter d'autres photos à ce rapport plus tard." %}</p>
                         </div>
 
                         <div class="col-12 d-flex justify-content-end">

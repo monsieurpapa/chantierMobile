@@ -19,6 +19,9 @@ urlpatterns = [
 
     # Progress
     path('phases/<uuid:phase_id>/progress/add/', views.SiteProgressCreateView.as_view(), name='progress_create'),
+    path('progress/<uuid:unique_id>/', views.ProgressDetailView.as_view(), name='progress_detail'),
+    path('progress/<uuid:unique_id>/photos/add/', views.progress_photo_add, name='progress_photo_add'),
+    path('progress/<uuid:unique_id>/comments/add/', views.progress_comment_add, name='progress_comment_add'),
 
     # Planning submissions
     path('sites/<uuid:site_id>/planning/add/', views.PlanningSubmissionCreateView.as_view(), name='planning_submission_create'),

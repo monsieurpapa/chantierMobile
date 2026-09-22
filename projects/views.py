@@ -5,16 +5,21 @@ from django.urls import reverse_lazy
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from django.core.exceptions import ValidationError
+from django.db.models import Count
 from django.utils.translation import gettext_lazy as _
-from .models import Site, ProjectPhase, SiteProgress, PlanningSubmission
+from .models import Site, ProjectPhase, SiteProgress, ProgressPhoto, ProgressComment, PlanningSubmission
 from .forms import SiteForm, ProjectPhaseForm, SiteProgressForm, PlanningSubmissionForm
-from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet, can_act_for_cabinet
+from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet, can_act_for_cabinet, can_view_cabinet
 from chantiermobile.constants import UserRoles
 
 LEAD_ENGINEER_ROLES = ['ENGINEER', 'CHIEF_ENGINEER']
 PHASE_CLOSE_ROLES = ['DIRECTOR', 'CHIEF_ENGINEER', 'ENGINEER']
 PLANNING_REVIEW_ROLES = ['DIRECTOR', 'CHIEF_ENGINEER', 'ENGINEER']
 PLANNING_SUBMIT_ROLES = ['DIRECTOR', 'CHIEF_ENGINEER']
+# Who can file a progress report or add photos to one afterward — the
+# field/engineering side. Commenting is deliberately looser (see
+# progress_comment_add): anyone with cabinet access, not just these roles.
+PROGRESS_PHOTO_ROLES = ['DIRECTOR', 'CHIEF_ENGINEER', 'ENGINEER']
 
 
 def _scope_lead_engineer_queryset(form, cabinet):
@@ -203,15 +208,23 @@ class SiteDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, De
         timeline = []
 
         # 1. Progress Reports
-        for progress in SiteProgress.objects.filter(phase__site=site).select_related('phase'):
+        for progress in SiteProgress.objects.filter(phase__site=site).select_related('phase').annotate(
+            photo_count=Count('photos', distinct=True), comment_count=Count('comments', distinct=True)
+        ):
+            content = _("Complété : %(pct)s%% — %(desc)s") % {'pct': progress.percentage_complete, 'desc': progress.description}
+            if progress.photo_count or progress.comment_count:
+                content += " " + _("(%(photos)s photo(s), %(comments)s commentaire(s))") % {
+                    'photos': progress.photo_count, 'comments': progress.comment_count,
+                }
             timeline.append({
                 'type': 'PROGRESS',
                 'date': progress.report_date,
                 'timestamp': progress.created_at,
                 'title': _("Avancement : %(phase)s") % {'phase': progress.phase.name},
-                'content': _("Complété : %(pct)s%% — %(desc)s") % {'pct': progress.percentage_complete, 'desc': progress.description},
+                'content': content,
                 'icon': 'fas fa-chart-line',
-                'color': 'primary'
+                'color': 'primary',
+                'url': str(reverse_lazy('projects:progress_detail', kwargs={'unique_id': progress.unique_id})),
             })
 
         # 2. Expenses — reuse the already-evaluated queryset, no second DB round-trip
@@ -373,8 +386,16 @@ class SiteProgressCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMi
 
     def form_valid(self, form):
         form.instance.phase = self.phase
+        form.instance.created_by = self.request.user
+        response = super().form_valid(form)
+        # Photos are a plain multi-file input (name="photos"), not part of
+        # the ModelForm — Django has no built-in multi-file model field, so
+        # each upload becomes its own ProgressPhoto row here rather than
+        # forcing a formset for what's really a single "attach these" action.
+        for f in self.request.FILES.getlist('photos'):
+            ProgressPhoto.objects.create(progress=self.object, image=f, uploaded_by=self.request.user)
         messages.success(self.request, _("Rapport d'avancement enregistré avec succès !"))
-        return super().form_valid(form)
+        return response
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -382,7 +403,94 @@ class SiteProgressCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMi
         return context
 
     def get_success_url(self):
-        return reverse_lazy('projects:site_detail', kwargs={'unique_id': self.phase.site.unique_id})
+        return reverse_lazy('projects:progress_detail', kwargs={'unique_id': self.object.unique_id})
+
+
+class ProgressDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, DetailView):
+    """A single progress report: its photos (gallery) and its comment
+    thread — the "historique en détail" a report only got as a one-line
+    timeline entry before. Reachable from the site's Activity Timeline."""
+    model = SiteProgress
+    template_name = 'projects/progress_detail.html'
+    context_object_name = 'progress'
+    slug_field = 'unique_id'
+    slug_url_kwarg = 'unique_id'
+    cabinet_lookup_field = 'phase__site__cabinet'
+
+    def get_header_title(self):
+        return _("Rapport d'avancement : %(name)s") % {'name': self.object.phase.name}
+
+    def get_header_subtitle(self):
+        return _("Projet : %(name)s") % {'name': self.object.phase.site.name}
+
+    def get_back_url(self):
+        return str(reverse_lazy('projects:site_detail', kwargs={'unique_id': self.object.phase.site.unique_id}))
+
+    def get_breadcrumb_items(self):
+        site = self.object.phase.site
+        return [
+            {'title': _("Projets & Chantiers"), 'url': str(reverse_lazy('projects:site_list'))},
+            {'title': site.name, 'url': str(reverse_lazy('projects:site_detail', kwargs={'unique_id': site.unique_id}))},
+            {'title': _("Rapport d'avancement"), 'url': None},
+        ]
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        progress = self.object
+        context['photos'] = progress.photos.select_related('uploaded_by')
+        context['comments'] = progress.comments.select_related('author', 'photo')
+        context['can_add_photo'] = can_act_for_cabinet(self.request, progress.phase.site.cabinet, PROGRESS_PHOTO_ROLES)
+        context['can_comment'] = can_view_cabinet(self.request, progress.phase.site.cabinet)
+        return context
+
+
+@login_required
+def progress_photo_add(request, unique_id):
+    """Attach one or more follow-up photos to an existing progress report
+    — kept as a small standalone action rather than folded into an "edit
+    report" view, since the report's own fields (date/%/description) don't
+    change, only its evidence grows over time."""
+    progress = get_object_or_404(SiteProgress, unique_id=unique_id)
+    if request.method != 'POST':
+        return redirect('projects:progress_detail', unique_id=progress.unique_id)
+    if not can_act_for_cabinet(request, progress.phase.site.cabinet, PROGRESS_PHOTO_ROLES):
+        messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+        return redirect('projects:progress_detail', unique_id=progress.unique_id)
+    files = request.FILES.getlist('photos')
+    if not files:
+        messages.error(request, _("Sélectionnez au moins une photo à ajouter."))
+    else:
+        for f in files:
+            ProgressPhoto.objects.create(progress=progress, image=f, uploaded_by=request.user)
+        messages.success(request, _("%(count)s photo(s) ajoutée(s).") % {'count': len(files)})
+    return redirect('projects:progress_detail', unique_id=progress.unique_id)
+
+
+@login_required
+def progress_comment_add(request, unique_id):
+    """Comment on a progress report, or — if a photo id is posted — on one
+    specific photo within it. Open to anyone with access to the site
+    (see core.mixins.can_view_cabinet), not just the roles that can file
+    the report: this is meant as a shared discussion thread (e.g. the
+    Director asking about something visible in a photo), not another
+    engineer-only channel."""
+    progress = get_object_or_404(SiteProgress, unique_id=unique_id)
+    if request.method != 'POST':
+        return redirect('projects:progress_detail', unique_id=progress.unique_id)
+    if not can_view_cabinet(request, progress.phase.site.cabinet):
+        messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+        return redirect('projects:progress_detail', unique_id=progress.unique_id)
+    body = request.POST.get('body', '').strip()
+    if not body:
+        messages.error(request, _("Le commentaire ne peut pas être vide."))
+        return redirect('projects:progress_detail', unique_id=progress.unique_id)
+    photo = None
+    photo_id = request.POST.get('photo')
+    if photo_id:
+        photo = get_object_or_404(ProgressPhoto, unique_id=photo_id, progress=progress)
+    ProgressComment.objects.create(progress=progress, photo=photo, author=request.user, body=body)
+    messages.success(request, _("Commentaire ajouté."))
+    return redirect('projects:progress_detail', unique_id=progress.unique_id)
 
 
 @login_required
