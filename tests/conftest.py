@@ -284,6 +284,25 @@ def active_site(db, site_factory):
 
 
 @pytest.fixture
+def phase_factory(db):
+    """Factory for creating ProjectPhase objects."""
+    from projects.models import ProjectPhase
+
+    def create_phase(site, **kwargs):
+        defaults = {'name': 'Fondations', 'start_date': date.today()}
+        defaults.update(kwargs)
+        return ProjectPhase.objects.create(site=site, **defaults)
+
+    return create_phase
+
+
+@pytest.fixture
+def phase(db, site, phase_factory):
+    """Create a test phase on the default `site`."""
+    return phase_factory(site)
+
+
+@pytest.fixture
 def expense_category_factory(db):
     """Factory for creating ExpenseCategory objects."""
     from finance.models import ExpenseCategory

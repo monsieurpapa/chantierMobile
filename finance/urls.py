@@ -13,6 +13,7 @@ urlpatterns = [
     path('expenses/report/', views.ExpenseReportView.as_view(), name='expense_report'),
     path('expenses/report/pdf/', views.expense_report_pdf, name='expense_report_pdf'),
     path('api/site-personnel/', views.site_personnel_data, name='site_personnel_data'),
+    path('api/site-phases/', views.site_phases_data, name='site_phases_data'),
 
     # Budgets
     path('budgets/', views.BudgetListView.as_view(), name='budget_list'),

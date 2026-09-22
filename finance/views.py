@@ -398,6 +398,34 @@ def site_personnel_data(request):
     })
 
 
+@login_required
+def site_phases_data(request):
+    """JSON endpoint used by the expense form's "Étape" picker: given a
+    ?site=<id>, returns that site's phases, so they can be loaded as soon
+    as a site is picked instead of requiring the form to be saved and
+    reopened (the phase field's queryset is otherwise empty on a fresh GET
+    — see ExpenseForm.__init__). Mirrors site_personnel_data above."""
+    from django.http import JsonResponse
+    from projects.models import ProjectPhase
+
+    site_id = request.GET.get('site')
+    if not site_id:
+        return JsonResponse({'results': []})
+
+    site_qs = Site.objects.filter(pk=site_id)
+    if not request.user.is_superuser:
+        user_cabinet_ids = request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+        site_qs = site_qs.filter(cabinet__id__in=user_cabinet_ids)
+    site = site_qs.first()
+    if not site:
+        return JsonResponse({'results': []})
+
+    phases = ProjectPhase.objects.filter(site=site).order_by('start_date')
+    return JsonResponse({
+        'results': [{'id': p.id, 'text': p.name} for p in phases]
+    })
+
+
 def _expense_report_queryset(request):
     """Shared filtering for the expense report view and its PDF export:
     cabinet-scoped, optionally filtered by site and by expense_date range."""

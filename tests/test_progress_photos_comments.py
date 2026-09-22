@@ -15,7 +15,10 @@ from datetime import date
 from django.core.exceptions import ValidationError
 from django.urls import reverse
 
-from projects.models import ProjectPhase, SiteProgress, ProgressPhoto, ProgressComment
+from projects.models import SiteProgress, ProgressPhoto, ProgressComment
+
+# `phase` fixture comes from tests/conftest.py (shared with the expense-form
+# dynamic-fields tests, which also need a phase on a site).
 
 
 def _image(name='photo.png'):
@@ -24,11 +27,6 @@ def _image(name='photo.png'):
     buffer = io.BytesIO()
     Image.new('RGB', (2, 2), color='white').save(buffer, format='PNG')
     return SimpleUploadedFile(name, buffer.getvalue(), content_type='image/png')
-
-
-@pytest.fixture
-def phase(db, site):
-    return ProjectPhase.objects.create(site=site, name='Fondations', start_date=date.today())
 
 
 @pytest.fixture

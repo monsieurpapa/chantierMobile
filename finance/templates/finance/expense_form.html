@@ -46,7 +46,7 @@
                         <div class="mb-3">
                             <label class="form-label" for="{{ form.phase.id_for_label }}">{% trans "Étape (optionnel)" %}</label>
                             {{ form.phase }}
-                            <p class="fs--2 text-500">{% trans "Enregistrez d'abord le chantier, puis rouvrez ce formulaire pour choisir l'étape." %}</p>
+                            <p class="fs--2 text-500">{% trans "Sélectionnez d'abord un chantier pour voir ses étapes." %}</p>
                             {% if form.phase.errors %}<div class="text-danger fs--2">{{ form.phase.errors }}</div>{% endif %}
                         </div>
 
@@ -130,17 +130,24 @@
         var siteSelect = document.getElementById('{{ form.site.id_for_label }}');
         var personnelSelect = document.getElementById('{{ form.personnel.id_for_label }}');
         var personnelWrapper = document.getElementById('personnel-field-wrapper');
-        if (!natureSelect || !siteSelect || !personnelSelect || !personnelWrapper) return;
+        var phaseSelect = document.getElementById('{{ form.phase.id_for_label }}');
 
         function togglePersonnelField() {
+            if (!natureSelect || !personnelWrapper) return;
             personnelWrapper.style.display = (natureSelect.value === 'MAIN_DOEUVRE') ? '' : 'none';
         }
 
-        function loadPersonnelForSite(preselectId) {
+        // Shared by both the personnel and phase pickers: fetch options for
+        // the currently selected site from a small JSON endpoint (they're
+        // otherwise empty on a fresh GET — see ExpenseForm.__init__), and
+        // refresh select2 so the "select or add new" picker (personnel)
+        // picks up the rebuilt list.
+        function loadSiteScopedOptions(select, url, preselectId, useSelect2) {
+            if (!select) return;
             var siteId = siteSelect.value;
-            personnelSelect.innerHTML = '';
+            select.innerHTML = '';
             if (!siteId) return;
-            fetch('{% url "finance:site_personnel_data" %}?site=' + encodeURIComponent(siteId), {
+            fetch(url + '?site=' + encodeURIComponent(siteId), {
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }
             })
             .then(function (r) { return r.json(); })
@@ -148,28 +155,42 @@
                 var blank = document.createElement('option');
                 blank.value = '';
                 blank.textContent = '{% trans "-- Sélectionner --" %}';
-                personnelSelect.appendChild(blank);
-                (data.results || []).forEach(function (p) {
+                select.appendChild(blank);
+                (data.results || []).forEach(function (item) {
                     var opt = document.createElement('option');
-                    opt.value = p.id;
-                    opt.textContent = p.text;
-                    if (preselectId && String(p.id) === String(preselectId)) opt.selected = true;
-                    personnelSelect.appendChild(opt);
+                    opt.value = item.id;
+                    opt.textContent = item.text;
+                    if (preselectId && String(item.id) === String(preselectId)) opt.selected = true;
+                    select.appendChild(opt);
                 });
-                // Refresh the select2 "select or add new" picker so it
-                // picks up the freshly (re)built option list — see
-                // static/js/dynamic-select.js.
-                if (window.jQuery) { window.jQuery(personnelSelect).trigger('change'); }
+                if (useSelect2 && window.jQuery) { window.jQuery(select).trigger('change'); }
             })
-            .catch(function (err) { console.error('Error loading site personnel:', err); });
+            .catch(function (err) { console.error('Error loading options for ' + url + ':', err); });
         }
 
-        var initialPersonnelId = personnelSelect.getAttribute('data-initial') || personnelSelect.value;
-        togglePersonnelField();
-        if (siteSelect.value) loadPersonnelForSite(initialPersonnelId);
+        function loadPersonnelForSite(preselectId) {
+            loadSiteScopedOptions(personnelSelect, '{% url "finance:site_personnel_data" %}', preselectId, true);
+        }
 
-        natureSelect.addEventListener('change', togglePersonnelField);
-        siteSelect.addEventListener('change', function () { loadPersonnelForSite(null); });
+        function loadPhasesForSite(preselectId) {
+            loadSiteScopedOptions(phaseSelect, '{% url "finance:site_phases_data" %}', preselectId, false);
+        }
+
+        var initialPersonnelId = personnelSelect ? (personnelSelect.getAttribute('data-initial') || personnelSelect.value) : null;
+        var initialPhaseId = phaseSelect ? phaseSelect.value : null;
+        togglePersonnelField();
+        if (siteSelect && siteSelect.value) {
+            if (personnelSelect) loadPersonnelForSite(initialPersonnelId);
+            loadPhasesForSite(initialPhaseId);
+        }
+
+        if (natureSelect) natureSelect.addEventListener('change', togglePersonnelField);
+        if (siteSelect) {
+            siteSelect.addEventListener('change', function () {
+                if (personnelSelect) loadPersonnelForSite(null);
+                loadPhasesForSite(null);
+            });
+        }
     });
 </script>
 {% endblock %}
