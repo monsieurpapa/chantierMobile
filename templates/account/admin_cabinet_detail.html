@@ -202,12 +202,26 @@
                                     </td>
                                     <td class="text-center">
                                         <div class="btn-group" role="group">
-                                            <a href="{% url 'accounts:admin_cabinet_user_role_edit' role.pk %}" 
+                                            <form method="post" action="{% url 'accounts:admin_cabinet_user_role_status' role.pk %}" class="d-inline">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="status" value="APPROVED">
+                                                <button type="submit" class="btn btn-sm btn-outline-success" title="{% trans 'Approve' %}">
+                                                    <span class="fas fa-check"></span>
+                                                </button>
+                                            </form>
+                                            <form method="post" action="{% url 'accounts:admin_cabinet_user_role_status' role.pk %}" class="d-inline">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="status" value="REJECTED">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger" title="{% trans 'Reject' %}">
+                                                    <span class="fas fa-times"></span>
+                                                </button>
+                                            </form>
+                                            <a href="{% url 'accounts:admin_cabinet_user_role_edit' role.pk %}"
                                                class="btn btn-sm btn-falcon-default" title="{% trans 'Edit' %}">
                                                 <span class="fas fa-edit"></span>
                                             </a>
                                             {% if request.user.is_superuser %}
-                                            <a href="{% url 'accounts:admin_cabinet_user_role_delete' role.pk %}" 
+                                            <a href="{% url 'accounts:admin_cabinet_user_role_delete' role.pk %}"
                                                class="btn btn-sm btn-outline-danger" title="{% trans 'Remove' %}"
                                                onclick="return confirm('{% trans "Remove this user from the cabinet?" %}');">
                                                 <span class="fas fa-trash"></span>

@@ -1,7 +1,7 @@
 {% extends 'falcon_base.html' %}
 {% load static i18n %}
 
-{% block title %}{% trans "Edit User" %} - {{ target_user.username }} - ChantiérMobile{% endblock %}
+{% block title %}{% trans "New User" %} - ChantiérMobile{% endblock %}
 
 {% block content %}
 <div class="container" data-layout="container-fluid">
@@ -26,21 +26,43 @@
         {% endif %}
 
         <div class="row g-3">
-            <!-- Left Column: Personal Info -->
+            <!-- Left Column: Form -->
             <div class="col-lg-8">
-                <!-- Personal Information -->
-                <div class="card mb-3">
+                <div class="card">
                     <div class="card-header bg-light">
                         <h5 class="mb-0">
-                            <span class="fas fa-user me-2"></span>{% trans "Personal Information" %}
+                            <span class="fas fa-user-plus me-2"></span>{% trans "Account Information" %}
                         </h5>
                     </div>
                     <div class="card-body">
                         <form method="post" class="needs-validation">
                             {% csrf_token %}
-                            
+
+                            {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {% for error in form.non_field_errors %}
+                                    <p class="mb-0">{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+
                             <div class="row mb-3">
-                                <label class="col-sm-3 col-form-label" for="id_first_name">
+                                <label class="col-sm-3 col-form-label" for="{{ form.username.id_for_label }}">
+                                    {% trans "Username" %} <span class="text-danger">*</span>
+                                </label>
+                                <div class="col-sm-9">
+                                    {{ form.username }}
+                                    {% if form.username.errors %}
+                                    <div class="text-danger fs--1 mt-1">{{ form.username.errors.0 }}</div>
+                                    {% endif %}
+                                    {% if form.username.help_text %}
+                                    <small class="d-block text-muted mt-1">{{ form.username.help_text }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <label class="col-sm-3 col-form-label" for="{{ form.first_name.id_for_label }}">
                                     {% trans "First Name" %}
                                 </label>
                                 <div class="col-sm-9">
@@ -49,7 +71,7 @@
                             </div>
 
                             <div class="row mb-3">
-                                <label class="col-sm-3 col-form-label" for="id_last_name">
+                                <label class="col-sm-3 col-form-label" for="{{ form.last_name.id_for_label }}">
                                     {% trans "Last Name" %}
                                 </label>
                                 <div class="col-sm-9">
@@ -58,16 +80,19 @@
                             </div>
 
                             <div class="row mb-3">
-                                <label class="col-sm-3 col-form-label" for="id_email">
-                                    {% trans "Email Address" %}
+                                <label class="col-sm-3 col-form-label" for="{{ form.email.id_for_label }}">
+                                    {% trans "Email Address" %} <span class="text-danger">*</span>
                                 </label>
                                 <div class="col-sm-9">
                                     {{ form.email }}
+                                    {% if form.email.errors %}
+                                    <div class="text-danger fs--1 mt-1">{{ form.email.errors.0 }}</div>
+                                    {% endif %}
                                 </div>
                             </div>
 
                             <div class="row mb-3">
-                                <label class="col-sm-3 col-form-label" for="id_phone_number">
+                                <label class="col-sm-3 col-form-label" for="{{ form.phone_number.id_for_label }}">
                                     {% trans "Phone Number" %}
                                 </label>
                                 <div class="col-sm-9">
@@ -89,7 +114,7 @@
                                                 {% trans "Account Active" %}
                                             </label>
                                             <small class="d-block text-muted mt-1">
-                                                {% trans "Uncheck to deactivate user account" %}
+                                                {% trans "Uncheck to create the account already deactivated" %}
                                             </small>
                                         </div>
                                     </div>
@@ -127,7 +152,7 @@
 
                             <div class="border-top pt-3 mt-4">
                                 <button type="submit" class="btn btn-primary">
-                                    <span class="fas fa-save me-2"></span>{% trans "Save Changes" %}
+                                    <span class="fas fa-user-plus me-2"></span>{% trans "Create User" %}
                                 </button>
                                 <a href="{% url 'accounts:admin_users_list' %}" class="btn btn-secondary">
                                     {% trans "Cancel" %}
@@ -138,91 +163,20 @@
                 </div>
             </div>
 
-            <!-- Right Column: Information -->
+            <!-- Right Column: Info -->
             <div class="col-lg-4">
                 <div class="sticky-top" style="top: 80px;">
-                    <!-- User Info Card -->
-                    <div class="card mb-3">
-                        <div class="card-header bg-light">
-                            <h5 class="mb-0">{% trans "Account Information" %}</h5>
-                        </div>
-                        <div class="card-body">
-                            <p class="fs--2">
-                                <strong>{% trans "Username" %}:</strong><br>
-                                <code>{{ target_user.username }}</code>
-                            </p>
-                            <p class="fs--2">
-                                <strong>{% trans "Member Since" %}:</strong><br>
-                                {{ target_user.date_joined|date:"d F Y H:i" }}
-                            </p>
-                            <p class="fs--2">
-                                <strong>{% trans "Last Login" %}:</strong><br>
-                                {% if target_user.last_login %}
-                                    {{ target_user.last_login|date:"d F Y H:i" }}
-                                {% else %}
-                                    <span class="text-muted">{% trans "Never" %}</span>
-                                {% endif %}
-                            </p>
-                        </div>
-                    </div>
-
-                    <!-- Cabinet Roles -->
-                    {% if cabinet_roles %}
-                    <div class="card mb-3">
-                        <div class="card-header bg-light">
-                            <h5 class="mb-0">
-                                <span class="fas fa-building me-2"></span>{% trans "Cabinet Roles" %}
-                            </h5>
-                        </div>
-                        <div class="card-body p-0">
-                            <div class="list-group list-group-flush">
-                                {% for role in cabinet_roles %}
-                                <div class="list-group-item px-3 py-2">
-                                    <div class="fw-semi-bold">{{ role.cabinet.name }}</div>
-                                    <small class="text-500">
-                                        {{ role.get_role_display }}
-                                        {% if role.status == 'APPROVED' %}
-                                            <span class="badge badge-subtle-success ms-2">{{ role.get_status_display }}</span>
-                                        {% elif role.status == 'PENDING' %}
-                                            <span class="badge badge-subtle-warning ms-2">{{ role.get_status_display }}</span>
-                                        {% else %}
-                                            <span class="badge badge-subtle-danger ms-2">{{ role.get_status_display }}</span>
-                                        {% endif %}
-                                    </small>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    <!-- Actions -->
                     <div class="card">
                         <div class="card-header bg-light">
-                            <h5 class="mb-0">{% trans "Actions" %}</h5>
+                            <h5 class="mb-0">{% trans "About Password Setup" %}</h5>
                         </div>
                         <div class="card-body">
-                            <a href="{% url 'accounts:admin_user_detail' target_user.pk %}" class="btn btn-falcon-default btn-sm w-100 mb-2">
-                                <span class="fas fa-eye me-2"></span>{% trans "View Details" %}
-                            </a>
-                            <form method="post" action="{% url 'accounts:admin_user_reset_password' target_user.pk %}" class="mb-2"
-                                  onsubmit="return confirm('{% trans 'Generate a new temporary password for this user?' %}');">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-falcon-default btn-sm w-100">
-                                    <span class="fas fa-key me-2"></span>{% trans "Reset Password" %}
-                                </button>
-                            </form>
-                            {% if target_user.id != request.user.id %}
-                            <a href="{% url 'accounts:admin_user_delete' target_user.pk %}" 
-                               class="btn btn-danger btn-sm w-100"
-                               onclick="return confirm('{% trans 'Are you sure? This cannot be undone.' %}');">
-                                <span class="fas fa-trash me-2"></span>{% trans "Delete User" %}
-                            </a>
-                            {% else %}
-                            <button type="button" class="btn btn-danger btn-sm w-100" disabled>
-                                <span class="fas fa-lock me-2"></span>{% trans "Cannot Delete Own Account" %}
-                            </button>
-                            {% endif %}
+                            <p class="fs--2 text-muted mb-2">
+                                {% trans "There's no password field here on purpose: creating the account generates a random temporary password, shown once on the next screen." %}
+                            </p>
+                            <p class="fs--2 text-muted mb-0">
+                                {% trans "Copy it immediately and share it securely — the new user will be required to set their own password the first time they log in." %}
+                            </p>
                         </div>
                     </div>
                 </div>

@@ -1,6 +1,11 @@
+import secrets
+import string
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
+from django.contrib.auth import update_session_auth_hash
+from django.db.models import Q
 from django.views.generic import DetailView, UpdateView, ListView, DeleteView, CreateView, View
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse_lazy
@@ -8,14 +13,22 @@ from django.utils.translation import gettext_lazy as _
 from django.contrib.auth import get_user_model
 from django.http import Http404
 from .models import UserCabinetRole, Cabinet, CabinetContextLog
-from .forms import UserProfileForm, UserCabinetRoleForm, UserAdminForm, AssignUserToCabinetForm, AssignUserToCabinetFromCabinetForm, CabinetForm, AssignRoleToCabinetUserForm
+from .forms import UserProfileForm, UserCabinetRoleForm, UserAdminForm, UserCreateForm, AssignUserToCabinetForm, AssignUserToCabinetFromCabinetForm, CabinetForm, AssignRoleToCabinetUserForm
 from projects.models import Site, ProjectPhase
 from materials.models import MaterialRequest
 from finance.models import Expense
 from revenue.models import Invoice
 from core.mixins import PageHeaderMixin
+from chantiermobile.constants import UserRoles, ApprovalStatus
 
 User = get_user_model()
+
+
+def _generate_temp_password():
+    """Same convention as bootstrap_admin_and_roles: a random temporary
+    password the recipient must change on first login (must_change_password)."""
+    alphabet = string.ascii_letters + string.digits
+    return 'Cm-' + ''.join(secrets.choice(alphabet) for _ in range(10)) + '!'
 
 
 class UserProfileUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
@@ -180,13 +193,13 @@ class IsSuperAdminMixin(UserPassesTestMixin):
 class UserListAdminView(LoginRequiredMixin, IsSuperAdminMixin, PageHeaderMixin, ListView):
     """
     SUPERADMIN ONLY: List all users with management capabilities
-    
+
     Features:
     - View all system users
     - Search by username, email, name
     - Filter by status (active/inactive/staff/superadmin)
-    - Bulk actions (activate, deactivate, make staff, remove staff)
-    - Quick links to edit or delete users
+    - Per-row quick actions: activate/deactivate, reset password
+    - Quick links to view, edit or delete users
     """
     model = User
     template_name = 'account/admin_users_list.html'
@@ -200,6 +213,22 @@ class UserListAdminView(LoginRequiredMixin, IsSuperAdminMixin, PageHeaderMixin, 
         return [
             {'title': 'Admin', 'url': None},
             {'title': 'Users', 'url': None},
+        ]
+
+    def get_header_actions(self):
+        return [
+            {
+                'label': _("Nouvel utilisateur"),
+                'url': str(reverse_lazy('accounts:admin_user_create')),
+                'icon': 'user-plus',
+                'class': 'btn-falcon-primary',
+            },
+            {
+                'label': _("Affectations de rôles"),
+                'url': str(reverse_lazy('accounts:admin_role_assignments_list')),
+                'icon': 'sitemap',
+                'class': 'btn-falcon-default',
+            },
         ]
 
     def get_queryset(self):
@@ -288,6 +317,32 @@ class UserEditAdminView(LoginRequiredMixin, IsSuperAdminMixin, PageHeaderMixin, 
     def form_valid(self, form):
         """Handle successful form submission"""
         user = form.save(commit=False)
+
+        # Guard: a superadmin editing their own account cannot revoke the
+        # very access they're using right now — that would either lock
+        # them out immediately (is_active) or leave the system with one
+        # fewer superadmin able to undo the mistake. Other profile edits
+        # in the same submission still go through.
+        if user.pk == self.request.user.pk:
+            original = User.objects.get(pk=user.pk)
+            blocked = []
+            if not user.is_active and original.is_active:
+                user.is_active = True
+                blocked.append(_('deactivate'))
+            if not user.is_staff and original.is_staff:
+                user.is_staff = True
+                blocked.append(_('remove staff access from'))
+            if not user.is_superuser and original.is_superuser:
+                user.is_superuser = True
+                blocked.append(_('remove superadmin access from'))
+            if blocked:
+                messages.warning(
+                    self.request,
+                    _('You cannot {actions} your own account — those changes were ignored. Ask another superadmin instead.').format(
+                        actions=' / '.join(str(action) for action in blocked)
+                    )
+                )
+
         user.save()
         messages.success(
             self.request,
@@ -429,6 +484,96 @@ class UserDetailAdminView(LoginRequiredMixin, IsSuperAdminMixin, PageHeaderMixin
         context['is_superuser'] = user.is_superuser
         
         return context
+
+
+class UserCreateAdminView(LoginRequiredMixin, IsSuperAdminMixin, PageHeaderMixin, CreateView):
+    """
+    SUPERADMIN ONLY: Create a brand-new user account.
+
+    No password field in the form — a random temporary password is
+    generated here and shown once in the success message, with
+    must_change_password forced on so the new user sets their own
+    password the first time they log in.
+    """
+    model = User
+    form_class = UserCreateForm
+    template_name = 'account/admin_user_create.html'
+    header_title = _("Nouvel utilisateur")
+    header_subtitle = _("Créez un compte et affectez ses accès initiaux")
+    back_url = reverse_lazy('accounts:admin_users_list')
+
+    def get_breadcrumb_items(self):
+        return [
+            {'title': _("Admin"), 'url': None},
+            {'title': _("Utilisateurs"), 'url': str(reverse_lazy('accounts:admin_users_list'))},
+            {'title': _("Nouvel utilisateur"), 'url': None},
+        ]
+
+    def form_valid(self, form):
+        self.object = form.save(commit=False)
+        temp_password = _generate_temp_password()
+        self.object.set_password(temp_password)
+        self.object.must_change_password = True
+        self.object.save()
+        messages.success(
+            self.request,
+            _('User {username} created. Temporary password: {password} — copy it now and share it securely; they must set their own password on first login.').format(
+                username=self.object.username, password=temp_password
+            )
+        )
+        return redirect(self.get_success_url())
+
+    def get_success_url(self):
+        return reverse_lazy('accounts:admin_user_detail', kwargs={'pk': self.object.pk})
+
+
+class UserResetPasswordAdminView(LoginRequiredMixin, IsSuperAdminMixin, View):
+    """
+    SUPERADMIN ONLY: Generate a new temporary password for any user
+    (including, edge case, themselves) and force a change on next login.
+    POST-only — triggered by a one-click button with a JS confirm.
+    """
+
+    def post(self, request, pk):
+        user = get_object_or_404(User, pk=pk)
+        temp_password = _generate_temp_password()
+        user.set_password(temp_password)
+        user.must_change_password = True
+        user.save(update_fields=['password', 'must_change_password'])
+
+        if user.pk == request.user.pk:
+            # Changing your own password invalidates the session auth hash;
+            # keep the current session alive instead of logging them out.
+            update_session_auth_hash(request, user)
+
+        messages.success(
+            request,
+            _('Password reset for {username}. New temporary password: {password} — copy it now and share it securely; they must set their own password on next login.').format(
+                username=user.username, password=temp_password
+            )
+        )
+        return redirect(request.META.get('HTTP_REFERER') or reverse_lazy('accounts:admin_user_detail', kwargs={'pk': user.pk}))
+
+
+class UserToggleActiveAdminView(LoginRequiredMixin, IsSuperAdminMixin, View):
+    """
+    SUPERADMIN ONLY: One-click activate/deactivate toggle.
+    POST-only. Blocks self-deactivation (mirrors the self-delete guard).
+    """
+
+    def post(self, request, pk):
+        user = get_object_or_404(User, pk=pk)
+        if user.pk == request.user.pk:
+            messages.error(request, _('You cannot deactivate your own account.'))
+            return redirect(request.META.get('HTTP_REFERER') or reverse_lazy('accounts:admin_user_detail', kwargs={'pk': pk}))
+
+        user.is_active = not user.is_active
+        user.save(update_fields=['is_active'])
+        if user.is_active:
+            messages.success(request, _('{username} has been activated.').format(username=user.username))
+        else:
+            messages.warning(request, _('{username} has been deactivated.').format(username=user.username))
+        return redirect(request.META.get('HTTP_REFERER') or reverse_lazy('accounts:admin_user_detail', kwargs={'pk': pk}))
 
 
 # ============================================
@@ -911,4 +1056,92 @@ class CabinetUserRoleDeleteView(LoginRequiredMixin, IsSuperAdminMixin, PageHeade
         cabinet_id = self.object.cabinet.pk
         messages.success(self.request, _('User removed from cabinet successfully.'))
         return reverse_lazy('accounts:admin_cabinet_detail', kwargs={'pk': cabinet_id})
+
+
+class CabinetUserRoleQuickStatusView(LoginRequiredMixin, IsSuperAdminMixin, View):
+    """
+    SUPERADMIN ONLY: One-click approve/reject for a cabinet role assignment
+    — the fast path for the common case, without opening the full edit
+    form. POST-only, status passed as a form field ('APPROVED'/'REJECTED').
+    """
+
+    def post(self, request, pk):
+        role = get_object_or_404(UserCabinetRole, pk=pk)
+        new_status = request.POST.get('status', '')
+        valid_statuses = dict(ApprovalStatus.choices)
+
+        if new_status not in valid_statuses:
+            messages.error(request, _('Invalid status.'))
+        else:
+            role.status = new_status
+            role.save(update_fields=['status'])
+            messages.success(
+                request,
+                _('{user} is now {status} for {cabinet}.').format(
+                    user=role.user.username,
+                    status=valid_statuses[new_status],
+                    cabinet=role.cabinet.name,
+                )
+            )
+        return redirect(request.META.get('HTTP_REFERER') or reverse_lazy('accounts:admin_cabinet_detail', kwargs={'pk': role.cabinet.pk}))
+
+
+class RoleAssignmentListAdminView(LoginRequiredMixin, IsSuperAdminMixin, PageHeaderMixin, ListView):
+    """
+    SUPERADMIN ONLY: System-wide view of every cabinet role assignment,
+    across all cabinets — answers "show me every DIRECTOR" or "show me
+    every pending request" without going cabinet-by-cabinet.
+    """
+    model = UserCabinetRole
+    template_name = 'account/admin_role_assignments_list.html'
+    context_object_name = 'roles'
+    paginate_by = 50
+    header_title = _("Affectations de rôles")
+    header_subtitle = _("Vue globale de tous les rôles attribués, tous cabinets confondus")
+    back_url = reverse_lazy('accounts:admin_cabinets_list')
+
+    def get_breadcrumb_items(self):
+        return [
+            {'title': _("Admin"), 'url': None},
+            {'title': _("Rôles"), 'url': None},
+        ]
+
+    def get_queryset(self):
+        qs = UserCabinetRole.objects.select_related('user', 'cabinet').order_by('cabinet__name', '-status', 'user__username')
+
+        search = self.request.GET.get('search', '')
+        if search:
+            qs = qs.filter(
+                Q(user__username__icontains=search) |
+                Q(user__email__icontains=search) |
+                Q(user__first_name__icontains=search) |
+                Q(user__last_name__icontains=search) |
+                Q(cabinet__name__icontains=search)
+            )
+
+        role = self.request.GET.get('role', '')
+        if role:
+            qs = qs.filter(role=role)
+
+        status = self.request.GET.get('status', '')
+        if status:
+            qs = qs.filter(status=status)
+
+        cabinet_id = self.request.GET.get('cabinet', '')
+        if cabinet_id:
+            qs = qs.filter(cabinet_id=cabinet_id)
+
+        return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['search'] = self.request.GET.get('search', '')
+        context['role_filter'] = self.request.GET.get('role', '')
+        context['status_filter'] = self.request.GET.get('status', '')
+        context['cabinet_filter'] = self.request.GET.get('cabinet', '')
+        context['role_choices'] = UserRoles.choices
+        context['status_choices'] = ApprovalStatus.choices
+        context['cabinets'] = Cabinet.objects.order_by('name')
+        context['total_pending'] = UserCabinetRole.objects.filter(status=ApprovalStatus.PENDING).count()
+        return context
 

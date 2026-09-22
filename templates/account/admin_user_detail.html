@@ -189,7 +189,7 @@
                                         </td>
                                         {% if request.user.is_superuser %}
                                         <td>
-                                            <a href="{% url 'admin:accounts_usercabinetrole_change' role.id %}" class="btn btn-sm btn-outline-primary">
+                                            <a href="{% url 'accounts:admin_cabinet_user_role_edit' role.id %}" class="btn btn-sm btn-outline-primary">
                                                 <span class="fas fa-edit me-1"></span>{% trans "Edit" %}
                                             </a>
                                         </td>
@@ -321,8 +321,26 @@
                             <a href="{% url 'accounts:admin_user_edit' object.pk %}" class="btn btn-primary btn-sm w-100 mb-2">
                                 <span class="fas fa-edit me-2"></span>{% trans "Edit User" %}
                             </a>
+                            <form method="post" action="{% url 'accounts:admin_user_reset_password' object.pk %}" class="mb-2"
+                                  onsubmit="return confirm('{% trans 'Generate a new temporary password for this user?' %}');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-falcon-default btn-sm w-100">
+                                    <span class="fas fa-key me-2"></span>{% trans "Reset Password" %}
+                                </button>
+                            </form>
                             {% if object.id != request.user.id %}
-                            <a href="{% url 'accounts:admin_user_delete' object.pk %}" 
+                            <form method="post" action="{% url 'accounts:admin_user_toggle_active' object.pk %}" class="mb-2"
+                                  onsubmit="return confirm('{% if object.is_active %}{% trans 'Deactivate this user?' %}{% else %}{% trans 'Activate this user?' %}{% endif %}');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-falcon-default btn-sm w-100">
+                                    {% if object.is_active %}
+                                    <span class="fas fa-ban me-2"></span>{% trans "Deactivate User" %}
+                                    {% else %}
+                                    <span class="fas fa-check me-2"></span>{% trans "Activate User" %}
+                                    {% endif %}
+                                </button>
+                            </form>
+                            <a href="{% url 'accounts:admin_user_delete' object.pk %}"
                                class="btn btn-danger btn-sm w-100"
                                onclick="return confirm('{% trans 'Are you sure? This cannot be undone.' %}');">
                                 <span class="fas fa-trash me-2"></span>{% trans "Delete User" %}

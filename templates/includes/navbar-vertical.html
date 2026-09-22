@@ -325,8 +325,10 @@
 
                 <li class="nav-divider">{% trans "Administration" %}</li>
 
-                <!-- Administration (Superadmin/Staff) -->
-                {% if user.is_superuser or user.is_staff %}
+                <!-- Administration (Superadmin only — every item below is now -->
+                <!-- gated on is_superuser, including the /admin/ link, so the -->
+                <!-- whole section stays hidden from staff-only accounts too. -->
+                {% if user.is_superuser %}
                 <li class="nav-item">
                     <a class="nav-link dropdown-indicator" href="#administration" role="button" data-bs-toggle="collapse"
                         aria-expanded="false" aria-controls="administration">
@@ -336,8 +338,6 @@
                         </div>
                     </a>
                     <ul class="nav collapse" id="administration">
-                        <!-- User Management (Superadmin Only) -->
-                        {% if user.is_superuser %}
                         <li class="nav-item">
                             <a class="nav-link {% if on == 'admin_users' %}active{% endif %}"
                                 href="{% url 'accounts:admin_users_list' %}">
@@ -356,10 +356,21 @@
                                 </div>
                             </a>
                         </li>
-                        {% endif %}
 
-                        <!-- System Admin (Staff Only) -->
-                        {% if user.is_staff %}
+                        <!-- Role Assignments, system-wide (Superadmin Only) -->
+                        <li class="nav-item">
+                            <a class="nav-link {% if on == 'admin_roles' %}active{% endif %}"
+                                href="{% url 'accounts:admin_role_assignments_list' %}">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-text ps-1">{% trans "Role Assignments" %}</span>
+                                </div>
+                            </a>
+                        </li>
+
+                        <!-- System Admin (Superadmin Only — Django admin bypasses the -->
+                        <!-- app's own safeguards, e.g. no self-delete protection, so it -->
+                        <!-- stays a fallback for superadmins rather than a parallel, -->
+                        <!-- unaudited path any is_staff user could reach). -->
                         <li class="nav-item">
                             <a class="nav-link" href="/admin/" target="_blank">
                                 <div class="d-flex align-items-center">
@@ -367,7 +378,6 @@
                                 </div>
                             </a>
                         </li>
-                        {% endif %}
                     </ul>
                 </li>
                 {% endif %}
