@@ -21,7 +21,7 @@
             <div class="card mb-3">
                 <div class="card-body bg-light">
                     <form method="get" class="row g-3 align-items-end">
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label class="form-label fs--1 fw-semibold">{% trans "Chantier" %}</label>
                             <select name="site" class="form-select">
                                 <option value="">{% trans "Tous les chantiers" %}</option>
@@ -31,11 +31,25 @@
                             </select>
                         </div>
                         <div class="col-md-2">
+                            <label class="form-label fs--1 fw-semibold">{% trans "Étape" %}</label>
+                            <select name="phase" class="form-select" {% if not selected_site %}disabled{% endif %}>
+                                <option value="">{% trans "Toutes" %}</option>
+                                {% for p in phases %}
+                                <option value="{{ p.pk }}" {% if selected_phase == p.pk|stringformat:"s" %}selected{% endif %}>{{ p.name }}</option>
+                                {% endfor %}
+                            </select>
+                            {% if not selected_site %}
+                            <p class="fs--2 text-500 mb-0">{% trans "Sélectionnez d'abord un chantier." %}</p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-2">
                             <label class="form-label fs--1 fw-semibold">{% trans "Période" %}</label>
                             <select name="period" class="form-select">
                                 <option value="">{% trans "Personnalisée" %}</option>
+                                <option value="day" {% if period == "day" %}selected{% endif %}>{% trans "Aujourd'hui" %}</option>
                                 <option value="week" {% if period == "week" %}selected{% endif %}>{% trans "7 derniers jours" %}</option>
                                 <option value="month" {% if period == "month" %}selected{% endif %}>{% trans "Ce mois-ci" %}</option>
+                                <option value="year" {% if period == "year" %}selected{% endif %}>{% trans "Cette année" %}</option>
                             </select>
                         </div>
                         <div class="col-md-2">
@@ -46,7 +60,7 @@
                             <label class="form-label fs--1 fw-semibold">{% trans "Au" %}</label>
                             <input type="date" name="date_to" value="{{ date_to }}" class="form-control">
                         </div>
-                        <div class="col-md-3 d-flex gap-2">
+                        <div class="col-md-2 d-flex gap-2">
                             <button type="submit" class="btn btn-falcon-primary flex-fill">
                                 <i class="fas fa-filter me-1"></i>{% trans "Filtrer" %}
                             </button>

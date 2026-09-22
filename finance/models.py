@@ -109,6 +109,12 @@ class Expense(BaseModel):
                 raise ValidationError({
                     'personnel': _("Ce membre du personnel n'est pas affecté à ce chantier."),
                 })
+            if not self.personnel.is_eligible:
+                raise ValidationError({
+                    'personnel': _(
+                        "%(name)s n'est pas éligible (statut : %(status)s)."
+                    ) % {'name': self.personnel, 'status': self.personnel.get_status_display()},
+                })
 
         # Validate status transition
         original = None
@@ -484,6 +490,12 @@ class PayrollListItem(BaseModel):
         from django.core.exceptions import ValidationError
         if self.amount is not None and self.amount <= 0:
             raise ValidationError({'amount': _('Le montant doit être positif.')})
+        if self.personnel_id and not self.personnel.is_eligible:
+            raise ValidationError({
+                'personnel': _(
+                    "%(name)s n'est pas éligible (statut : %(status)s) et ne peut pas être payé(e)."
+                ) % {'name': self.personnel, 'status': self.personnel.get_status_display()},
+            })
 
 
 # ---------------------------------------------------------------------
@@ -527,6 +539,12 @@ class SalaryPayment(BaseModel):
             raise ValidationError({'amount': _('Le montant doit être positif.')})
         if self.period and not re.match(r'^\d{4}-(0[1-9]|1[0-2])$', self.period):
             raise ValidationError({'period': _("Format attendu : AAAA-MM (ex : 2026-09).")})
+        if self.personnel_id and not self.personnel.is_eligible:
+            raise ValidationError({
+                'personnel': _(
+                    "%(name)s n'est pas éligible (statut : %(status)s) et ne peut pas être payé(e)."
+                ) % {'name': self.personnel, 'status': self.personnel.get_status_display()},
+            })
 
     @transaction.atomic
     def disburse(self, user):

@@ -79,9 +79,15 @@ class SiteAssignment(BaseModel):
     )
 
     def clean(self):
+        from django.core.exceptions import ValidationError
         # Validation logic for overlapping assignments could go here
         # For MVP, we'll enforce it in the form/view or simple clean method
-        pass
+        if self.personnel_id and not self.personnel.is_eligible:
+            raise ValidationError({
+                'personnel': _(
+                    "%(name)s n'est pas éligible (statut : %(status)s) et ne peut pas être affecté(e) à un chantier."
+                ) % {'name': self.personnel, 'status': self.personnel.get_status_display()},
+            })
 
     def __str__(self):
         return f"{self.personnel} -> {self.site} ({self.role})"

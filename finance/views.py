@@ -460,6 +460,10 @@ def _expense_report_queryset(request):
     if site_id:
         qs = qs.filter(site_id=site_id)
 
+    phase_id = request.GET.get('phase')
+    if phase_id:
+        qs = qs.filter(phase_id=phase_id)
+
     date_from = request.GET.get('date_from')
     date_to = request.GET.get('date_to')
     if date_from:
@@ -469,10 +473,14 @@ def _expense_report_queryset(request):
 
     period = request.GET.get('period')
     today = timezone.localdate()
-    if period == 'week':
+    if period == 'day':
+        qs = qs.filter(expense_date=today)
+    elif period == 'week':
         qs = qs.filter(expense_date__gte=today - timezone.timedelta(days=7))
     elif period == 'month':
         qs = qs.filter(expense_date__gte=today.replace(day=1))
+    elif period == 'year':
+        qs = qs.filter(expense_date__gte=today.replace(month=1, day=1))
 
     return qs
 
@@ -504,10 +512,14 @@ def _expenses_by_site_rows(request):
 
     period = request.GET.get('period')
     today = timezone.localdate()
-    if period == 'week':
+    if period == 'day':
+        qs = qs.filter(expense_date=today)
+    elif period == 'week':
         qs = qs.filter(expense_date__gte=today - timezone.timedelta(days=7))
     elif period == 'month':
         qs = qs.filter(expense_date__gte=today.replace(day=1))
+    elif period == 'year':
+        qs = qs.filter(expense_date__gte=today.replace(month=1, day=1))
 
     totals = {
         row['site']: row['total']
@@ -566,6 +578,11 @@ class ExpenseReportView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, 
             user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
             context['sites'] = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
         context['selected_site'] = self.request.GET.get('site', '')
+        context['selected_phase'] = self.request.GET.get('phase', '')
+        context['phases'] = []
+        if context['selected_site']:
+            from projects.models import ProjectPhase
+            context['phases'] = ProjectPhase.objects.filter(site_id=context['selected_site']).order_by('start_date')
         context['date_from'] = self.request.GET.get('date_from', '')
         context['date_to'] = self.request.GET.get('date_to', '')
         context['period'] = self.request.GET.get('period', '')
