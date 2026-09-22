@@ -1,0 +1,96 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Congés" %} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    <!-- vertical nav -->
+    {% include 'includes/navbar-vertical.html' with on="personnel" %}
+    <!-- /vertical nav -->
+
+    <div class="content">
+        <!-- navbar-top -->
+        {% include 'includes/navbar-top.html' %}
+        <!-- /navbar-top -->
+
+        <!-- Main Content -->
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <ul class="nav nav-pills mb-0">
+                    <li class="nav-item"><a class="nav-link {% if not current_status_filter %}active{% endif %}" href="?">{% trans "Tous" %}</a></li>
+                    <li class="nav-item"><a class="nav-link {% if current_status_filter == 'PENDING' %}active{% endif %}" href="?status=PENDING">{% trans "En attente" %}</a></li>
+                    <li class="nav-item"><a class="nav-link {% if current_status_filter == 'APPROVED' %}active{% endif %}" href="?status=APPROVED">{% trans "Approuvé" %}</a></li>
+                    <li class="nav-item"><a class="nav-link {% if current_status_filter == 'REJECTED' %}active{% endif %}" href="?status=REJECTED">{% trans "Rejeté" %}</a></li>
+                </ul>
+                {% if can_manage %}
+                <a href="{% url 'personnel:leave_create' %}" class="btn btn-falcon-primary btn-sm">
+                    <span class="fas fa-plus me-1"></span>{% trans "Déclarer un congé" %}
+                </a>
+                {% endif %}
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-body p-0">
+                    <div class="table-responsive scrollbar">
+                        <table class="table table-sm table-striped fs--1 mb-0">
+                            <thead class="bg-200 text-900">
+                                <tr>
+                                    <th>{% trans "Personnel" %}</th>
+                                    <th>{% trans "Type" %}</th>
+                                    <th>{% trans "Période" %}</th>
+                                    <th>{% trans "Jours" %}</th>
+                                    <th>{% trans "Statut" %}</th>
+                                    {% if can_manage %}<th class="text-end">{% trans "Actions" %}</th>{% endif %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for leave in leave_list %}
+                                <tr>
+                                    <td>{{ leave.personnel.get_full_name }}</td>
+                                    <td>{{ leave.get_leave_type_display }}</td>
+                                    <td>{{ leave.start_date }} → {{ leave.end_date }}</td>
+                                    <td>{{ leave.duration_days }}</td>
+                                    <td>
+                                        <span class="badge rounded-pill
+                                        {% if leave.status == 'APPROVED' %}bg-success
+                                        {% elif leave.status == 'REJECTED' %}bg-danger
+                                        {% else %}bg-warning{% endif %}">
+                                            {{ leave.get_status_display }}
+                                        </span>
+                                    </td>
+                                    {% if can_manage %}
+                                    <td class="text-end">
+                                        {% if leave.status == 'PENDING' %}
+                                        <form method="post" action="{% url 'personnel:leave_approve' pk=leave.pk %}" class="d-inline">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-falcon-success btn-sm"><span class="fas fa-check"></span></button>
+                                        </form>
+                                        <form method="post" action="{% url 'personnel:leave_reject' pk=leave.pk %}" class="d-inline">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-falcon-danger btn-sm"><span class="fas fa-times"></span></button>
+                                        </form>
+                                        {% endif %}
+                                    </td>
+                                    {% endif %}
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center py-5">
+                                        <p class="text-600 mb-0">{% trans "Aucun congé enregistré." %}</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}

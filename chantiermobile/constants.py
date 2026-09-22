@@ -11,11 +11,23 @@ from django.db import models
 class UserRoles(models.TextChoices):
     """User role choices for cabinet assignments"""
     DIRECTOR = 'DIRECTOR', _('Directeur de Cabinet')
+    DIRECTEUR_TECHNIQUE = 'DIRECTEUR_TECHNIQUE', _('Directeur Technique')
+    DIRECTEUR_GENERAL = 'DIRECTEUR_GENERAL', _('Directeur Général')
     CHIEF_ENGINEER = 'CHIEF_ENGINEER', _('Chef des Ingénieurs')
     ENGINEER = 'ENGINEER', _('Ingénieur')
+    FINANCIER = 'FINANCIER', _('Financier')
     ACCOUNTANT = 'ACCOUNTANT', _('Comptable')
     CASHIER = 'CASHIER', _('Caissier')
+    MAGASINIER = 'MAGASINIER', _('Magasinier')
     WORKER = 'WORKER', _('Ouvrier')
+
+
+# Roles empowered to give the second/final authorization on a state-of-need
+# (état de besoin) or an avenant — the "Directeur Technique ou le Directeur
+# Général" step named explicitly in the client's spec. DIRECTOR (Directeur
+# de Cabinet) is included so existing single-cabinet setups that never
+# created a dedicated DT/DG role keep working.
+FINAL_AUTHORIZATION_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL']
 
 
 class ApprovalStatus(models.TextChoices):
@@ -34,8 +46,12 @@ class ExpenseStatus(models.TextChoices):
 
 
 class MaterialRequestStatus(models.TextChoices):
-    """Material request specific status choices"""
+    """Material request (état de besoin) status choices — a two-stage
+    approval: the magasinier validates the request first, then a
+    Directeur Technique/Général (or Directeur de Cabinet) gives the
+    final authorization."""
     PENDING = 'PENDING', _('En attente')
+    VALIDATED = 'VALIDATED', _('Validé par le magasinier')
     APPROVED = 'APPROVED', _('Approuvé')
     REJECTED = 'REJECTED', _('Rejeté')
     ORDERED = 'ORDERED', _('Commandé')
@@ -66,6 +82,50 @@ class PaymentMethod(models.TextChoices):
     CHECK = 'CHECK', _('Chèque')
     CASH = 'CASH', _('Espèces')
     MOBILE_MONEY = 'MOBILE_MONEY', _('Mobile Money')
+
+
+class ExpenseNature(models.TextChoices):
+    """Whether an expense pays for a material/purchase or for labor
+    (main-d'œuvre) — drives whether the Personnel field is shown/required
+    on the expense form."""
+    MATERIEL = 'MATERIEL', _('Matériel')
+    MAIN_DOEUVRE = 'MAIN_DOEUVRE', _("Main d'œuvre")
+    AUTRE = 'AUTRE', _('Autre')
+
+
+class CaisseType(models.TextChoices):
+    """Which cash register (caisse) a purchase was funded from. A simple
+    tag used for filtering/report purposes — not a balance-tracked ledger."""
+    PRINCIPALE = 'PRINCIPALE', _('Caisse principale')
+    SECONDAIRE = 'SECONDAIRE', _('Caisse secondaire')
+
+
+class CaisseTransactionType(models.TextChoices):
+    """Movement direction on a balance-tracked Caisse ledger entry."""
+    ENTREE = 'ENTREE', _('Entrée')
+    SORTIE = 'SORTIE', _('Sortie')
+
+
+class PayrollListStatus(models.TextChoices):
+    """Progressive worker-payment workflow: architecte prépare -> soumet à
+    la caisse -> la caisse débourse."""
+    BROUILLON = 'BROUILLON', _('Brouillon')
+    SOUMISE = 'SOUMISE', _('Soumise à la caisse')
+    PAYEE = 'PAYEE', _('Payée')
+
+
+class AvenantStatus(models.TextChoices):
+    """Project change-order (avenant) authorization workflow."""
+    PENDING = 'PENDING', _("En attente d'autorisation")
+    APPROVED = 'APPROVED', _('Autorisé')
+    REJECTED = 'REJECTED', _('Rejeté')
+
+
+class PurchasePaymentMethod(models.TextChoices):
+    """How a PurchaseOrder was funded — caisse cash-on-hand, or a wire
+    transfer initiated by the financier."""
+    CAISSE = 'CAISSE', _('Caisse')
+    VIREMENT = 'VIREMENT', _('Virement bancaire')
 
 
 class DevisStatus(models.TextChoices):
@@ -114,6 +174,18 @@ class StockMovementType(models.TextChoices):
     IN = 'IN', _('Entrée')
     OUT = 'OUT', _('Sortie')
     ADJUSTMENT = 'ADJUSTMENT', _('Ajustement')
+    TRANSFER = 'TRANSFER', _('Transfert')
+
+
+class StockReportPeriod(models.TextChoices):
+    """Periodicity for the stock report — "rapports périodiques
+    (journalier/hebdomadaire/mensuel/trimestriel/annuel)" from the
+    client's spec."""
+    JOURNALIER = 'JOURNALIER', _('Journalier')
+    HEBDOMADAIRE = 'HEBDOMADAIRE', _('Hebdomadaire')
+    MENSUEL = 'MENSUEL', _('Mensuel')
+    TRIMESTRIEL = 'TRIMESTRIEL', _('Trimestriel')
+    ANNUEL = 'ANNUEL', _('Annuel')
 
 
 class PersonnelType(models.TextChoices):
@@ -121,6 +193,42 @@ class PersonnelType(models.TextChoices):
     EMPLOYE = 'EMPLOYE', _('Employé')
     TACHERON = 'TACHERON', _('Tâcheron (journalier)')
     PRESTATAIRE = 'PRESTATAIRE', _('Prestataire (sous-traitant)')
+
+
+class AgentCategory(models.TextChoices):
+    """Whether a Personnel record is field staff or office/administration
+    staff — "agent de terrain ou d'administration" in the client's spec."""
+    TERRAIN = 'TERRAIN', _('Agent de terrain')
+    ADMINISTRATION = 'ADMINISTRATION', _("Agent d'administration")
+
+
+class PersonnelStatus(models.TextChoices):
+    """Eligibility status for a worker/agent."""
+    ACTIF = 'ACTIF', _('Actif')
+    INACTIF = 'INACTIF', _('Inactif')
+    NON_ELIGIBLE = 'NON_ELIGIBLE', _('Non éligible')
+
+
+class Trade(models.TextChoices):
+    """Fixed trade/function list for ouvriers, as specified by the client."""
+    MACON = 'MACON', _('Maçon')
+    MENUISIER = 'MENUISIER', _('Menuisier')
+    FERRAILLEUR = 'FERRAILLEUR', _('Ferrailleur')
+    PLOMBIER = 'PLOMBIER', _('Plombier')
+    ELECTRICIEN = 'ELECTRICIEN', _('Électricien')
+    AJUSTEUR = 'AJUSTEUR', _('Ajusteur')
+    PEINTRE = 'PEINTRE', _('Peintre')
+    VITRIER = 'VITRIER', _('Vitrier')
+    CARRELEUR = 'CARRELEUR', _('Carreleur')
+    CONSULTANT = 'CONSULTANT', _('Consultant')
+
+
+class LeaveType(models.TextChoices):
+    """Kind of personnel absence."""
+    CONGE = 'CONGE', _('Congé')
+    JOUR_FERIE = 'JOUR_FERIE', _('Jour férié')
+    MALADIE = 'MALADIE', _('Congé maladie')
+    AUTRE = 'AUTRE', _('Autre')
 
 
 class TaskStatus(models.TextChoices):
@@ -137,6 +245,23 @@ class TaskPriority(models.TextChoices):
     NORMALE = 'NORMALE', _('Normale')
     HAUTE = 'HAUTE', _('Haute')
     URGENTE = 'URGENTE', _('Urgente')
+
+
+class PlanningStatus(models.TextChoices):
+    """Status of a site/phase planning submission awaiting review by the
+    concerned engineer(s) — "Soumettre la planification aux ingénieurs
+    concernés" from the client's spec."""
+    BROUILLON = 'BROUILLON', _('Brouillon')
+    SOUMISE = 'SOUMISE', _('Soumise')
+    APPROUVEE = 'APPROUVEE', _('Approuvée')
+    REJETEE = 'REJETEE', _('Rejetée')
+
+
+class PhaseStatus(models.TextChoices):
+    """Status of a ProjectPhase (étape) — closed by the site's lead
+    engineer ("l'ingénieur principal clôture les étapes du projet")."""
+    EN_COURS = 'EN_COURS', _('En cours')
+    CLOTUREE = 'CLOTUREE', _('Clôturée')
 
 
 # Form field placeholders and UI constants
@@ -222,6 +347,7 @@ class StatusBadgeClasses:
         MaterialRequestStatus.DELIVERED: 'bg-info',
         MaterialRequestStatus.REJECTED: 'bg-danger',
         MaterialRequestStatus.PENDING: 'bg-warning',
+        MaterialRequestStatus.VALIDATED: 'bg-primary',
         MaterialRequestStatus.ORDERED: 'bg-primary',
     }
     
@@ -280,6 +406,34 @@ class StatusBadgeClasses:
         PersonnelType.EMPLOYE: 'bg-primary',
         PersonnelType.TACHERON: 'bg-warning',
         PersonnelType.PRESTATAIRE: 'bg-info',
+    }
+
+    # Personnel status badge classes
+    PERSONNEL_STATUS = {
+        PersonnelStatus.ACTIF: 'bg-success',
+        PersonnelStatus.INACTIF: 'bg-secondary',
+        PersonnelStatus.NON_ELIGIBLE: 'bg-danger',
+    }
+
+    # Leave request status badge classes (reuses ApprovalStatus)
+    LEAVE_STATUS = {
+        ApprovalStatus.APPROVED: 'bg-success',
+        ApprovalStatus.REJECTED: 'bg-danger',
+        ApprovalStatus.PENDING: 'bg-warning',
+    }
+
+    # Planning submission status badge classes
+    PLANNING_STATUS = {
+        PlanningStatus.APPROUVEE: 'bg-success',
+        PlanningStatus.REJETEE: 'bg-danger',
+        PlanningStatus.SOUMISE: 'bg-info',
+        PlanningStatus.BROUILLON: 'bg-warning',
+    }
+
+    # Project phase status badge classes
+    PHASE_STATUS = {
+        PhaseStatus.CLOTUREE: 'bg-secondary',
+        PhaseStatus.EN_COURS: 'bg-info',
     }
 
 
@@ -358,6 +512,12 @@ __all__ = [
     'SiteStatus',
     'InvoiceStatus',
     'PaymentMethod',
+    'ExpenseNature',
+    'CaisseType',
+    'CaisseTransactionType',
+    'PayrollListStatus',
+    'AvenantStatus',
+    'PurchasePaymentMethod',
     'DevisStatus',
     'SituationStatus',
     'PriceItemType',
@@ -365,8 +525,16 @@ __all__ = [
     'PurchaseOrderStatus',
     'StockMovementType',
     'PersonnelType',
+    'AgentCategory',
+    'PersonnelStatus',
+    'Trade',
+    'LeaveType',
+    'FINAL_AUTHORIZATION_ROLES',
     'TaskStatus',
     'TaskPriority',
+    'PlanningStatus',
+    'PhaseStatus',
+    'StockReportPeriod',
 
     # Configuration classes
     'FormPlaceholders',

@@ -63,6 +63,7 @@
                                             <th scope="col">{% trans "Date" %}</th>
                                             <th scope="col">{% trans "Method" %}</th>
                                             <th scope="col">{% trans "Reference" %}</th>
+                                            <th scope="col">{% trans "Preuve" %}</th>
                                             <th scope="col" class="text-end">{% trans "Amount" %}</th>
                                         </tr>
                                     </thead>
@@ -72,11 +73,20 @@
                                             <td>{{ payment.payment_date }}</td>
                                             <td>{{ payment.get_method_display }}</td>
                                             <td>{{ payment.reference }}</td>
+                                            <td>
+                                                {% if payment.proof_of_payment %}
+                                                <a href="{{ payment.proof_of_payment.url }}" target="_blank" rel="noopener" title="{% trans 'Voir la preuve de paiement' %}">
+                                                    <span class="fas fa-paperclip"></span>
+                                                </a>
+                                                {% else %}
+                                                <span class="text-300">—</span>
+                                                {% endif %}
+                                            </td>
                                             <td class="text-end fw-semi-bold text-success">${{ payment.amount|floatformat:2 }}</td>
                                         </tr>
                                         {% empty %}
                                         <tr>
-                                            <td colspan="4" class="text-center py-3 text-500">
+                                            <td colspan="5" class="text-center py-3 text-500">
                                                 {% trans "No payments recorded for this invoice." %}
                                             </td>
                                         </tr>
@@ -111,6 +121,14 @@
                             <div class="d-flex justify-content-between mb-2">
                                 <span class="text-600">{% trans "Total Contract" %}:</span>
                                 <span class="fw-semi-bold">${{ invoice.contract.total_value|floatformat:2 }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-600">{% trans "Total payé (contrat)" %}:</span>
+                                <span class="fw-semi-bold text-success">${{ invoice.contract.total_paid|floatformat:2 }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-600">{% trans "Solde client" %}:</span>
+                                <span class="fw-bold {% if invoice.contract.client_balance > 0 %}text-danger{% else %}text-success{% endif %}">${{ invoice.contract.client_balance|floatformat:2 }}</span>
                             </div>
                             <div class="d-flex justify-content-between">
                                 <span class="text-600">{% trans "Site" %}:</span>

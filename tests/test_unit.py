@@ -80,12 +80,13 @@ class TestForms:
         form_data = {
             'site': site.pk,
             'category': expense_category.pk,
+            'nature': 'MATERIEL',
             'amount': '1000.00',
             'expense_date': date.today(),
             'description': 'Valid expense'
         }
         form = ExpenseForm(data=form_data)
-        assert form.is_valid()
+        assert form.is_valid(), form.errors
         
         # Invalid amount
         form_data['amount'] = '-100.00'
@@ -374,3 +375,97 @@ class TestMixins:
         user_cabinets = user.cabinet_roles.filter(status=ApprovalStatus.APPROVED)
         assert user_cabinets.exists()
         assert user_cabinets.first().cabinet == cabinet
+
+
+@pytest.mark.unit
+@pytest.mark.django_db
+class TestDashboardRBAC:
+    """Tests for core.dashboard.can_view_financials and its effect on the
+    home dashboard's context/rendering — financial widgets should only be
+    shown to DIRECTOR/ACCOUNTANT/CASHIER roles and superusers."""
+
+    def test_can_view_financials_true_for_director(self, rf, director_user):
+        from core.dashboard import can_view_financials
+        request = rf.get('/')
+        request.user = director_user
+        assert can_view_financials(request) is True
+
+    def test_can_view_financials_true_for_accountant(self, rf, accountant_user):
+        from core.dashboard import can_view_financials
+        request = rf.get('/')
+        request.user = accountant_user
+        assert can_view_financials(request) is True
+
+    def test_can_view_financials_false_for_engineer(self, rf, engineer_user):
+        from core.dashboard import can_view_financials
+        request = rf.get('/')
+        request.user = engineer_user
+        assert can_view_financials(request) is False
+
+    def test_can_view_financials_true_for_superuser(self, rf, superuser):
+        from core.dashboard import can_view_financials
+        request = rf.get('/')
+        request.user = superuser
+        assert can_view_financials(request) is True
+
+    def test_dashboard_context_flag_hides_financials_for_engineer(self, engineer_client):
+        """Non-financial roles get can_view_financials=False and the response
+        should not render the financial hero cards' markup."""
+        response = engineer_client.get(reverse('home'))
+        assert response.status_code == 200
+        assert response.context['can_view_financials'] is False
+        assert 'Encaissé ce mois-ci' not in response.content.decode()
+
+    def test_dashboard_context_flag_shows_financials_for_accountant(self, accountant_client):
+        response = accountant_client.get(reverse('home'))
+        assert response.status_code == 200
+        assert response.context['can_view_financials'] is True
+        assert 'Encaissé ce mois-ci' in response.content.decode()
+
+    def test_system_admin_tile_hidden_for_non_superuser(self, engineer_client):
+        response = engineer_client.get(reverse('home'))
+        assert 'System Admin' not in response.content.decode()
+
+    def test_system_admin_tile_shown_for_superuser(self, admin_client):
+        response = admin_client.get(reverse('home'))
+        assert 'System Admin' in response.content.decode()
+
+
+@pytest.mark.unit
+@pytest.mark.django_db
+class TestPasswordChangeRedirect:
+    """Tests for accounts.adapter.AccountAdapter — after a password change or
+    a forced password reset, the user should land on the dashboard rather
+    than allauth's default behaviour of looping back to the change-password
+    form itself."""
+
+    def test_adapter_redirects_to_home(self, rf):
+        from accounts.adapter import AccountAdapter
+        request = rf.get('/')
+        adapter = AccountAdapter()
+        assert adapter.get_password_change_redirect_url(request) == reverse('home')
+
+    def test_forced_password_change_then_redirects_to_dashboard(self, client, user):
+        """End-to-end: a user flagged with must_change_password is bounced to
+        the change-password form by ForcePasswordChangeMiddleware; once they
+        submit a valid password change, they should land on the dashboard."""
+        user.must_change_password = True
+        user.set_password('OldPass123!')
+        user.save()
+        client.login(username='testuser', password='OldPass123!')
+
+        # Forced onto the change-password page for any other request.
+        response = client.get(reverse('home'))
+        assert response.status_code == 302
+        assert reverse('account_change_password') in response.url
+
+        response = client.post(reverse('account_change_password'), {
+            'oldpassword': 'OldPass123!',
+            'password1': 'BrandNewPass456!',
+            'password2': 'BrandNewPass456!',
+        })
+        assert response.status_code == 302
+        assert response.url == reverse('home')
+
+        user.refresh_from_db()
+        assert user.must_change_password is False

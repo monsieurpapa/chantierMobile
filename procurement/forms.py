@@ -1,7 +1,7 @@
 from django import forms
 from django.utils.translation import gettext_lazy as _
 from django.forms import inlineformset_factory
-from .models import Supplier, StockItem, PurchaseOrder, PurchaseOrderLine, StockMovement
+from .models import Supplier, StockItem, PurchaseOrder, PurchaseOrderLine, StockMovement, SupplierCredit
 from chantiermobile.constants import FormPlaceholders, FormHelpTexts, DatePickerConfig
 
 
@@ -45,7 +45,7 @@ class StockItemForm(forms.ModelForm):
 class PurchaseOrderForm(forms.ModelForm):
     class Meta:
         model = PurchaseOrder
-        fields = ['site', 'supplier', 'order_number', 'order_date', 'expected_delivery_date', 'notes']
+        fields = ['site', 'supplier', 'order_number', 'order_date', 'expected_delivery_date', 'caisse', 'payment_method', 'notes']
         widgets = {
             'site': forms.Select(attrs={'class': 'form-select'}),
             'supplier': forms.Select(attrs={'class': 'form-select'}),
@@ -60,6 +60,8 @@ class PurchaseOrderForm(forms.ModelForm):
                 'placeholder': DatePickerConfig.DATE_FORMAT,
                 'data-options': DatePickerConfig.OPTIONS
             }),
+            'caisse': forms.Select(attrs={'class': 'form-select'}),
+            'payment_method': forms.Select(attrs={'class': 'form-select'}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
 
@@ -89,14 +91,85 @@ PurchaseOrderLineFormSet = inlineformset_factory(
 class StockMovementForm(forms.ModelForm):
     class Meta:
         model = StockMovement
-        fields = ['movement_type', 'quantity', 'movement_date', 'notes']
+        fields = ['movement_type', 'quantity', 'phase', 'motif', 'movement_date', 'notes', 'facture']
         widgets = {
             'movement_type': forms.Select(attrs={'class': 'form-select'}),
             'quantity': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': '0.00'}),
+            'phase': forms.Select(attrs={'class': 'form-select'}),
+            'motif': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('Raison du mouvement')}),
             'movement_date': forms.DateInput(attrs={
                 'class': 'form-control datetimepicker',
                 'placeholder': DatePickerConfig.DATE_FORMAT,
                 'data-options': DatePickerConfig.OPTIONS
             }),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'placeholder': FormHelpTexts.ITEM_NOTES, 'rows': 2}),
+            'facture': forms.FileInput(attrs={'class': 'form-control'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        stock_item = kwargs.pop('stock_item', None)
+        super().__init__(*args, **kwargs)
+        self.fields['facture'].required = False
+        self.fields['phase'].required = False
+        self.fields['motif'].required = False
+        # A manual movement here is always single-item — a Transfer must go
+        # through StockItem.transfer_to() (a dedicated flow) so both legs of
+        # the audit trail are always created together.
+        self.fields['movement_type'].choices = [
+            c for c in self.fields['movement_type'].choices if c[0] != 'TRANSFER'
+        ]
+        if stock_item is not None:
+            self.fields['phase'].queryset = stock_item.site.phases.all()
+        else:
+            self.fields['phase'].queryset = self.fields['phase'].queryset.none()
+
+
+class StockTransferForm(forms.Form):
+    """Move stock from one StockItem to another — typically the same
+    material at a different site of the same cabinet."""
+    destination_site = forms.ModelChoiceField(queryset=None, widget=forms.Select(attrs={'class': 'form-select'}), label=_('Chantier de destination'))
+    quantity = forms.DecimalField(min_value=0.01, decimal_places=2, widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}), label=_('Quantité'))
+    motif = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control'}), label=_('Motif'))
+    notes = forms.CharField(required=False, widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2}), label=_('Notes'))
+
+    def __init__(self, *args, **kwargs):
+        source_site = kwargs.pop('source_site', None)
+        super().__init__(*args, **kwargs)
+        from projects.models import Site
+        qs = Site.objects.filter(cabinet=source_site.cabinet).exclude(pk=source_site.pk) if source_site else Site.objects.none()
+        self.fields['destination_site'].queryset = qs
+
+
+class TransferProofForm(forms.Form):
+    """The cashier enters the wire-transfer proof the financier sent her."""
+    transfer_proof = forms.FileField(widget=forms.ClearableFileInput(attrs={'class': 'form-control'}), label=_('Preuve de virement'))
+
+
+class SupplierCreditForm(forms.ModelForm):
+    class Meta:
+        model = SupplierCredit
+        fields = ['supplier', 'purchase_order', 'amount', 'date', 'due_date', 'notes']
+        widgets = {
+            'supplier': forms.Select(attrs={'class': 'form-select'}),
+            'purchase_order': forms.Select(attrs={'class': 'form-select'}),
+            'amount': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.AMOUNT}),
+            'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'due_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['purchase_order'].required = False
+        self.fields['due_date'].required = False
+
+
+class SupplierCreditPaymentForm(forms.Form):
+    amount = forms.DecimalField(min_value=0.01, decimal_places=2, widget=forms.NumberInput(attrs={'class': 'form-control'}), label=_('Montant'))
+    caisse = forms.ModelChoiceField(required=False, queryset=None, widget=forms.Select(attrs={'class': 'form-select'}), label=_('Caisse (optionnel)'))
+
+    def __init__(self, *args, **kwargs):
+        cabinet = kwargs.pop('cabinet', None)
+        super().__init__(*args, **kwargs)
+        from finance.models import Caisse
+        self.fields['caisse'].queryset = Caisse.objects.filter(cabinet=cabinet) if cabinet else Caisse.objects.none()

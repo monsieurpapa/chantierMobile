@@ -32,9 +32,12 @@
                                             <th scope="col">{% trans "Date" %}</th>
                                             <th scope="col">{% trans "Type" %}</th>
                                             <th scope="col" class="text-end">{% trans "Quantité" %}</th>
+                                            <th scope="col">{% trans "Étape" %}</th>
+                                            <th scope="col">{% trans "Motif" %}</th>
                                             <th scope="col">{% trans "Origine" %}</th>
                                             <th scope="col">{% trans "Par" %}</th>
                                             <th scope="col">{% trans "Notes" %}</th>
+                                            <th scope="col">{% trans "Facture" %}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -45,17 +48,27 @@
                                                 <span class="badge
                                                 {% if movement.movement_type == 'IN' %}bg-success
                                                 {% elif movement.movement_type == 'OUT' %}bg-danger
+                                                {% elif movement.movement_type == 'TRANSFER' %}bg-info
                                                 {% else %}bg-secondary{% endif %}">
                                                     {{ movement.get_movement_type_display }}
+                                                    {% if movement.movement_type == 'TRANSFER' %}
+                                                        {% if movement.is_transfer_source %}({% trans "sortant" %}){% else %}({% trans "entrant" %}){% endif %}
+                                                    {% endif %}
                                                 </span>
                                             </td>
                                             <td class="text-end fw-semi-bold">
-                                                {% if movement.movement_type == 'OUT' %}-{% endif %}{{ movement.quantity }} {{ stock_item.unit }}
+                                                {% if movement.movement_type == 'OUT' or movement.is_transfer_source %}-{% endif %}{{ movement.quantity }} {{ stock_item.unit }}
                                             </td>
+                                            <td>{{ movement.phase.name|default:"-" }}</td>
+                                            <td class="text-600">{{ movement.motif|default:"-" }}</td>
                                             <td>
                                                 {% if movement.purchase_order_line %}
                                                 <a href="{% url 'procurement:purchase_order_detail' pk=movement.purchase_order_line.purchase_order_id %}">
                                                     {{ movement.purchase_order_line.purchase_order.order_number }}
+                                                </a>
+                                                {% elif movement.transfer_pair %}
+                                                <a href="{% url 'procurement:stock_item_detail' pk=movement.transfer_pair.stock_item_id %}">
+                                                    {% if movement.is_transfer_source %}{% trans "Vers" %}{% else %}{% trans "Depuis" %}{% endif %} {{ movement.transfer_pair.stock_item.site.name }}
                                                 </a>
                                                 {% else %}
                                                 <span class="text-500">{% trans "Manuel" %}</span>
@@ -63,9 +76,16 @@
                                             </td>
                                             <td>{{ movement.moved_by.get_full_name|default:movement.moved_by.username|default:"-" }}</td>
                                             <td class="text-600">{{ movement.notes|default:"-" }}</td>
+                                            <td>
+                                                {% if movement.facture %}
+                                                <a href="{{ movement.facture.url }}" target="_blank" title="{% trans 'Voir la facture' %}"><i class="fas fa-paperclip"></i></a>
+                                                {% else %}
+                                                <span class="text-500">-</span>
+                                                {% endif %}
+                                            </td>
                                         </tr>
                                         {% empty %}
-                                        <tr><td colspan="6" class="text-center py-3 text-500">{% trans "Aucun mouvement enregistré." %}</td></tr>
+                                        <tr><td colspan="9" class="text-center py-3 text-500">{% trans "Aucun mouvement enregistré." %}</td></tr>
                                         {% endfor %}
                                     </tbody>
                                 </table>
@@ -112,13 +132,15 @@
                             </a>
                         </div>
                     </div>
+                    {% endif %}
 
+                    {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER,MAGASINIER' or request.user.is_superuser %}
                     <div class="card">
                         <div class="card-header bg-light">
                             <h6 class="mb-0">{% trans "Enregistrer un mouvement" %}</h6>
                         </div>
                         <div class="card-body">
-                            <form method="post" id="movement-form" action="{% url 'procurement:stock_movement_create' pk=stock_item.pk %}">
+                            <form method="post" id="movement-form" enctype="multipart/form-data" action="{% url 'procurement:stock_movement_create' pk=stock_item.pk %}">
                                 {% csrf_token %}
                                 <div class="mb-3">
                                     <label class="form-label fs--1 fw-semibold" for="{{ movement_form.movement_type.id_for_label }}">{% trans "Type" %}</label>
@@ -129,6 +151,14 @@
                                     {{ movement_form.quantity }}
                                 </div>
                                 <div class="mb-3">
+                                    <label class="form-label fs--1 fw-semibold" for="{{ movement_form.phase.id_for_label }}">{% trans "Étape" %} ({% trans "Optionnel" %})</label>
+                                    {{ movement_form.phase }}
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fs--1 fw-semibold" for="{{ movement_form.motif.id_for_label }}">{% trans "Motif" %}</label>
+                                    {{ movement_form.motif }}
+                                </div>
+                                <div class="mb-3">
                                     <label class="form-label fs--1 fw-semibold" for="{{ movement_form.movement_date.id_for_label }}">{% trans "Date" %}</label>
                                     {{ movement_form.movement_date }}
                                 </div>
@@ -136,8 +166,42 @@
                                     <label class="form-label fs--1 fw-semibold" for="{{ movement_form.notes.id_for_label }}">{% trans "Notes" %}</label>
                                     {{ movement_form.notes }}
                                 </div>
+                                <div class="mb-3">
+                                    <label class="form-label fs--1 fw-semibold" for="{{ movement_form.facture.id_for_label }}">{% trans "Facture" %} ({% trans "Optionnel" %})</label>
+                                    {{ movement_form.facture }}
+                                </div>
                                 <button type="submit" class="btn btn-primary w-100">
                                     <i class="fas fa-plus me-1"></i>{% trans "Enregistrer" %}
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="card mt-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">{% trans "Transférer vers un autre chantier" %}</h6>
+                        </div>
+                        <div class="card-body">
+                            <form method="post" id="transfer-form" action="{% url 'procurement:stock_transfer_create' pk=stock_item.pk %}">
+                                {% csrf_token %}
+                                <div class="mb-3">
+                                    <label class="form-label fs--1 fw-semibold" for="{{ transfer_form.destination_site.id_for_label }}">{% trans "Chantier de destination" %}</label>
+                                    {{ transfer_form.destination_site }}
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fs--1 fw-semibold" for="{{ transfer_form.quantity.id_for_label }}">{% trans "Quantité" %}</label>
+                                    {{ transfer_form.quantity }}
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fs--1 fw-semibold" for="{{ transfer_form.motif.id_for_label }}">{% trans "Motif" %}</label>
+                                    {{ transfer_form.motif }}
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fs--1 fw-semibold" for="{{ transfer_form.notes.id_for_label }}">{% trans "Notes" %}</label>
+                                    {{ transfer_form.notes }}
+                                </div>
+                                <button type="submit" class="btn btn-outline-primary w-100">
+                                    <i class="fas fa-exchange-alt me-1"></i>{% trans "Transférer" %}
                                 </button>
                             </form>
                         </div>
@@ -155,7 +219,7 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    document.querySelectorAll('#movement-form input, #movement-form select, #movement-form textarea').forEach(function (input) {
+    document.querySelectorAll('#movement-form input, #movement-form select, #movement-form textarea, #transfer-form input, #transfer-form select, #transfer-form textarea').forEach(function (input) {
         if (input.type === 'checkbox' || input.type === 'hidden') return;
         if (input.tagName === 'SELECT') {
             input.classList.add('form-select');

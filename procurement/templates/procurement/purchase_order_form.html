@@ -51,6 +51,11 @@
                                 {{ form.expected_delivery_date }}
                                 {% if form.expected_delivery_date.errors %}<div class="text-danger fs--2 mt-1">{{ form.expected_delivery_date.errors }}</div>{% endif %}
                             </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold" for="{{ form.caisse.id_for_label }}">{% trans "Caisse" %}</label>
+                                {{ form.caisse }}
+                                {% if form.caisse.errors %}<div class="text-danger fs--2 mt-1">{{ form.caisse.errors }}</div>{% endif %}
+                            </div>
                         </div>
 
                         <!-- Lines formset -->

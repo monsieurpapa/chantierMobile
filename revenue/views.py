@@ -295,7 +295,10 @@ class PaymentCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixi
 
     def form_valid(self, form):
         # Payment.save() auto-marks the invoice PAID once fully covered.
-        return super().form_valid(form)
+        response = super().form_valid(form)
+        from .notifications import notify_directors_of_payment
+        notify_directors_of_payment(self.object, recorded_by=self.request.user)
+        return response
 
     def get_success_url(self):
         messages.success(self.request, _("Paiement enregistré avec succès."))
@@ -373,10 +376,19 @@ class DevisCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin,
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        has_photo = bool(self.request.POST.get('photo-clear') is None and (
+            (self.request.FILES.get('photo') if self.request.POST else None)
+            or (self.object and getattr(self.object, 'photo', None))
+        ))
         if self.request.POST:
-            context['lines_formset'] = DevisLineFormSet(self.request.POST, instance=self.object)
+            formset = DevisLineFormSet(self.request.POST, instance=self.object)
         else:
-            context['lines_formset'] = DevisLineFormSet(instance=self.object)
+            formset = DevisLineFormSet(instance=self.object)
+        # A devis attached as a photo doesn't need its line items typed in
+        # manually — only require at least one line when there's no photo.
+        formset.min_num = 0 if has_photo else 1
+        formset.validate_min = not has_photo
+        context['lines_formset'] = formset
         return context
 
     def form_valid(self, form):
@@ -431,10 +443,19 @@ class DevisUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin,
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        has_photo = bool(self.request.POST.get('photo-clear') is None and (
+            (self.request.FILES.get('photo') if self.request.POST else None)
+            or (self.object and getattr(self.object, 'photo', None))
+        ))
         if self.request.POST:
-            context['lines_formset'] = DevisLineFormSet(self.request.POST, instance=self.object)
+            formset = DevisLineFormSet(self.request.POST, instance=self.object)
         else:
-            context['lines_formset'] = DevisLineFormSet(instance=self.object)
+            formset = DevisLineFormSet(instance=self.object)
+        # A devis attached as a photo doesn't need its line items typed in
+        # manually — only require at least one line when there's no photo.
+        formset.min_num = 0 if has_photo else 1
+        formset.validate_min = not has_photo
+        context['lines_formset'] = formset
         return context
 
     def form_valid(self, form):

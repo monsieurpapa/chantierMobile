@@ -9,7 +9,12 @@ class Contract(BaseModel):
     client_name = models.CharField(max_length=255)
     total_value = models.DecimalField(max_digits=14, decimal_places=2, help_text=_("Total contract value"))
     signed_date = models.DateField()
-    
+    avenant_debt = models.DecimalField(
+        max_digits=14, decimal_places=2, default=0,
+        verbose_name=_('Dette avenants'),
+        help_text=_("Dépenses au-delà du budget initial, autorisées par avenant : dette du client en plus du prix du contrat."),
+    )
+
     def __str__(self):
         return f"Contract for {self.site.name} - {self.client_name}"
 
@@ -17,6 +22,23 @@ class Contract(BaseModel):
     def source_devis(self):
         """The accepted Devis this contract was created from, if any."""
         return self.site.devis_set.filter(status=DevisStatus.ACCEPTE).first()
+
+    @property
+    def total_paid(self):
+        """Sum of all payments received across this contract's invoices."""
+        return Payment.objects.filter(invoice__contract=self).aggregate(
+            total=models.Sum('amount')
+        )['total'] or 0
+
+    @property
+    def client_balance(self):
+        """What the client still owes: contract value (plus any avenant
+        debt from budget overages the client authorized) minus what
+        they've paid so far. Surfaced next to the site's (expense) budget
+        so the cashier/director can see both sides — money owed by the
+        client and money spent on the site — at a glance."""
+        from decimal import Decimal
+        return self.total_value + Decimal(self.avenant_debt) - Decimal(self.total_paid)
 
 class Invoice(BaseModel):
     contract = models.ForeignKey(Contract, on_delete=models.CASCADE, related_name='invoices')
@@ -93,6 +115,11 @@ class Payment(BaseModel):
     payment_date = models.DateField()
     method = models.CharField(max_length=50, choices=PaymentMethod.choices)
     reference = models.CharField(max_length=100, blank=True, help_text=_("Transaction ID or Check Number"))
+    proof_of_payment = models.FileField(
+        upload_to='payments/proofs/', blank=True, null=True,
+        verbose_name=_('Preuve de paiement'),
+        help_text=_('Reçu, capture de virement ou autre justificatif — facultatif'),
+    )
 
     def save(self, *args, **kwargs):
         is_new = self._state.adding
@@ -118,6 +145,11 @@ class Devis(BaseModel):
     validity_date = models.DateField(null=True, blank=True, verbose_name=_('Valable jusqu\'au'))
     status = models.CharField(max_length=20, choices=DevisStatus.choices, default=DevisStatus.BROUILLON)
     notes = models.TextField(blank=True, verbose_name=_('Notes'))
+    photo = models.ImageField(
+        upload_to='devis/photos/', blank=True, null=True,
+        verbose_name=_('Photo du devis'),
+        help_text=_("Photo/scan d'un devis papier — alternative à la saisie manuelle des lignes ci-dessous"),
+    )
 
     class Meta:
         verbose_name = _('Devis')

@@ -19,7 +19,7 @@
             {% include 'includes/page_header.html' %}
             <div class="card mb-3">
                 <div class="card-body bg-light">
-                    <form method="post">
+                    <form method="post" enctype="multipart/form-data">
                         {% csrf_token %}
                         <div class="mb-3">
                             <label class="form-label" for="{{ form.invoice.id_for_label }}">{% trans "Selected Invoice" %}</label>
@@ -43,6 +43,12 @@
                             <label class="form-label" for="{{ form.reference.id_for_label }}">{% trans "Transaction Reference(s)" %}</label>
                             {{ form.reference }}
                         </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ form.proof_of_payment.id_for_label }}">{% trans "Preuve de paiement" %}</label>
+                            {{ form.proof_of_payment }}
+                            <div class="form-text fs--1">{% trans "Facultatif : reçu, capture de virement ou autre justificatif." %}</div>
+                            {% if form.proof_of_payment.errors %}<div class="text-danger fs--2 mt-1">{{ form.proof_of_payment.errors }}</div>{% endif %}
+                        </div>
                         <div class="mt-4">
                             <button class="btn btn-success" type="submit">{% trans "Record Payment" %}</button>
                             <a class="btn btn-link link-danger" href="javascript:history.back()">{% trans "Cancel" %}</a>
@@ -62,6 +68,7 @@
     document.addEventListener('DOMContentLoaded', function () {
         const inputs = document.querySelectorAll('input, select, textarea');
         inputs.forEach(input => {
+            if (input.type === 'checkbox' || input.type === 'hidden') return;
             if (input.tagName === 'SELECT') {
                 input.classList.add('form-select');
             } else {

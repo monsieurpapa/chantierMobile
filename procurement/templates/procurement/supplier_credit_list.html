@@ -1,0 +1,84 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n humanize %}
+
+{% block title %}{% trans "Crédits fournisseurs" %} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    {% include 'includes/navbar-vertical.html' with on="supplier_credit_list" %}
+
+    <div class="content">
+        {% include 'includes/navbar-top.html' %}
+
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            <div class="card mb-3">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped mb-0 fs--1">
+                            <thead>
+                                <tr>
+                                    <th>{% trans "Date" %}</th>
+                                    <th>{% trans "Fournisseur" %}</th>
+                                    <th>{% trans "Bon de commande" %}</th>
+                                    <th>{% trans "Échéance" %}</th>
+                                    <th class="text-end">{% trans "Montant" %}</th>
+                                    <th class="text-end">{% trans "Payé" %}</th>
+                                    <th class="text-end">{% trans "Restant dû" %}</th>
+                                    <th>{% trans "Statut" %}</th>
+                                    <th class="text-end">{% trans "Actions" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for credit in credits %}
+                                <tr>
+                                    <td>{{ credit.date }}</td>
+                                    <td>{{ credit.supplier.name }}</td>
+                                    <td>
+                                        {% if credit.purchase_order %}
+                                        <a href="{% url 'procurement:purchase_order_detail' pk=credit.purchase_order.pk %}">{{ credit.purchase_order.order_number }}</a>
+                                        {% else %}
+                                        <span class="text-500">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ credit.due_date|default:"-" }}</td>
+                                    <td class="text-end">${{ credit.amount|floatformat:2|intcomma }}</td>
+                                    <td class="text-end">${{ credit.paid_amount|floatformat:2|intcomma }}</td>
+                                    <td class="text-end fw-semibold">${{ credit.outstanding_balance|floatformat:2|intcomma }}</td>
+                                    <td>
+                                        {% if credit.is_fully_paid %}
+                                        <span class="badge bg-success">{% trans "Payé" %}</span>
+                                        {% else %}
+                                        <span class="badge bg-warning">{% trans "En cours" %}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        {% if not credit.is_fully_paid %}
+                                        <form method="post" action="{% url 'procurement:supplier_credit_repay' pk=credit.pk %}" class="d-flex gap-1 justify-content-end">
+                                            {% csrf_token %}
+                                            <input type="number" step="0.01" name="amount" class="form-control form-control-sm" style="width: 100px" placeholder="0.00" required>
+                                            <select name="caisse" class="form-select form-select-sm" style="width: 130px">
+                                                <option value="">{% trans "Caisse (opt.)" %}</option>
+                                                {% for caisse in caisses %}
+                                                <option value="{{ caisse.pk }}">{{ caisse.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <button type="submit" class="btn btn-falcon-success btn-sm">{% trans "Payer" %}</button>
+                                        </form>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="9" class="text-center py-4 text-500">{% trans "Aucun crédit fournisseur." %}</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}

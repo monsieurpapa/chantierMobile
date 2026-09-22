@@ -1,0 +1,128 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n humanize %}
+
+{% block title %}{% trans "Livre de caisse" %} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    {% include 'includes/navbar-vertical.html' with on="caisse_list" %}
+
+    <div class="content">
+        {% include 'includes/navbar-top.html' %}
+
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            <div class="card mb-3">
+                <div class="card-body bg-light">
+                    <form method="get" class="row g-3 align-items-end">
+                        <div class="col-md-2">
+                            <label class="form-label fs--1 fw-semibold">{% trans "Caisse" %}</label>
+                            <select name="caisse" class="form-select">
+                                <option value="">{% trans "Toutes" %}</option>
+                                {% for c in caisses %}
+                                <option value="{{ c.pk }}" {% if selected_caisse == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fs--1 fw-semibold">{% trans "Chantier" %}</label>
+                            <select name="site" class="form-select">
+                                <option value="">{% trans "Tous" %}</option>
+                                {% for s in sites %}
+                                <option value="{{ s.pk }}" {% if selected_site == s.pk|stringformat:"s" %}selected{% endif %}>{{ s.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fs--1 fw-semibold">{% trans "Période" %}</label>
+                            <select name="period" class="form-select">
+                                <option value="">{% trans "Personnalisée" %}</option>
+                                <option value="day" {% if period == "day" %}selected{% endif %}>{% trans "Aujourd'hui" %}</option>
+                                <option value="week" {% if period == "week" %}selected{% endif %}>{% trans "7 derniers jours" %}</option>
+                                <option value="month" {% if period == "month" %}selected{% endif %}>{% trans "Ce mois-ci" %}</option>
+                                <option value="year" {% if period == "year" %}selected{% endif %}>{% trans "Cette année" %}</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fs--1 fw-semibold">{% trans "Du" %}</label>
+                            <input type="date" name="date_from" value="{{ date_from }}" class="form-control">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fs--1 fw-semibold">{% trans "Au" %}</label>
+                            <input type="date" name="date_to" value="{{ date_to }}" class="form-control">
+                        </div>
+                        <div class="col-md-2 d-flex gap-2">
+                            <button type="submit" class="btn btn-falcon-primary flex-fill">
+                                <i class="fas fa-filter me-1"></i>{% trans "Filtrer" %}
+                            </button>
+                            <a href="{% url 'finance:caisse_report_pdf' %}?{{ request.GET.urlencode }}" class="btn btn-falcon-danger flex-fill">
+                                <i class="fas fa-file-pdf me-1"></i>PDF
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <label class="text-600 fs--1">{% trans "Total Entrées" %}</label>
+                            <p class="fs-1 fw-bold text-success mb-0">${{ total_entrees|floatformat:2|intcomma }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <label class="text-600 fs--1">{% trans "Total Sorties" %}</label>
+                            <p class="fs-1 fw-bold text-danger mb-0">${{ total_sorties|floatformat:2|intcomma }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped mb-0 fs--1">
+                            <thead>
+                                <tr>
+                                    <th>{% trans "Date" %}</th>
+                                    <th>{% trans "Caisse" %}</th>
+                                    <th>{% trans "Type" %}</th>
+                                    <th>{% trans "Chantier" %}</th>
+                                    <th>{% trans "Étape" %}</th>
+                                    <th>{% trans "Description" %}</th>
+                                    <th class="text-end">{% trans "Montant" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for tx in transactions %}
+                                <tr>
+                                    <td>{{ tx.date }}</td>
+                                    <td><a href="{% url 'finance:caisse_detail' pk=tx.caisse.pk %}">{{ tx.caisse.name }}</a></td>
+                                    <td>
+                                        <span class="badge {% if tx.transaction_type == 'ENTREE' %}bg-success{% else %}bg-danger{% endif %}">
+                                            {{ tx.get_transaction_type_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ tx.site.name|default:"-" }}</td>
+                                    <td>{{ tx.phase.name|default:"-" }}</td>
+                                    <td>{{ tx.description|default:"-" }}</td>
+                                    <td class="text-end fw-semibold">${{ tx.amount|floatformat:2|intcomma }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="7" class="text-center py-4 text-500">{% trans "Aucun mouvement pour cette sélection." %}</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}

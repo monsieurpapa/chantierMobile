@@ -32,6 +32,9 @@
                                         <div>
                                             <h2 class="mb-1">{{ site.name }}</h2>
                                             <p class="fs-0 mb-2 text-600"><i class="fas fa-map-marker-alt me-2"></i>{{ site.location }}</p>
+                                            {% if site.lead_engineer %}
+                                            <p class="fs--1 mb-2 text-600"><i class="fas fa-user-hard-hat me-2"></i>{% trans "Ingénieur principal :" %} {{ site.lead_engineer.get_full_name|default:site.lead_engineer.username }}</p>
+                                            {% endif %}
                                             <div>
                                                 <span class="badge rounded-pill {% if site.status == 'ACTIVE' %}bg-success{% else %}bg-warning{% endif %} me-2">{{ site.get_status_display }}</span>
                                                 {% if site.phases.exists %}
@@ -142,10 +145,15 @@
                                             <div class="p-3 border rounded-3 border-200">
                                                 <div class="d-flex justify-content-between align-items-start mb-3">
                                                     <div>
-                                                        <h6 class="mb-1 fw-bold text-900">{{ phase.name }}</h6>
+                                                        <h6 class="mb-1 fw-bold text-900">
+                                                            {{ phase.name }}
+                                                            {% if phase.is_closed %}
+                                                            <span class="badge bg-secondary ms-1">{% trans "Clôturée" %}</span>
+                                                            {% endif %}
+                                                        </h6>
                                                         <p class="fs--1 mb-0 text-600">
                                                             <i class="fas fa-calendar-alt me-1"></i>
-                                                            {{ phase.start_date|date:"M d, Y" }} 
+                                                            {{ phase.start_date|date:"M d, Y" }}
                                                             {% if phase.end_date %}
                                                                 - {{ phase.end_date|date:"M d, Y" }}
                                                             {% else %}
@@ -153,18 +161,29 @@
                                                             {% endif %}
                                                         </p>
                                                     </div>
-                                                    {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER' %}
+                                                    {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER,ENGINEER' %}
                                                     <div class="dropdown">
                                                         <button class="btn btn-link btn-sm text-600" type="button" data-bs-toggle="dropdown">
                                                             <i class="fas fa-ellipsis-v"></i>
                                                         </button>
                                                         <div class="dropdown-menu dropdown-menu-end">
+                                                            {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER' %}
                                                             <a class="dropdown-item" href="{% url 'projects:phase_update' unique_id=phase.unique_id %}">
                                                                 <i class="fas fa-edit me-2"></i>{% trans "Edit" %}
                                                             </a>
                                                             <a class="dropdown-item text-danger" href="{% url 'projects:phase_delete' unique_id=phase.unique_id %}">
                                                                 <i class="fas fa-trash me-2"></i>{% trans "Delete" %}
                                                             </a>
+                                                            {% endif %}
+                                                            {% if not phase.is_closed %}
+                                                            <form method="post" action="{% url 'projects:phase_close' unique_id=phase.unique_id %}"
+                                                                data-confirm="{% trans 'Clôturer cette étape ? Cette action est définitive.' %}">
+                                                                {% csrf_token %}
+                                                                <button type="submit" class="dropdown-item">
+                                                                    <i class="fas fa-flag-checkered me-2"></i>{% trans "Clôturer l'étape" %}
+                                                                </button>
+                                                            </form>
+                                                            {% endif %}
                                                         </div>
                                                     </div>
                                                     {% endif %}
@@ -199,6 +218,67 @@
                                         <div class="alert alert-info d-flex align-items-center p-3 mb-0" role="alert">
                                             <i class="fas fa-info-circle me-2"></i>
                                             <span>{% trans "No project phases defined yet. Start by creating the first phase." %}</span>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+
+                                    <div class="mb-4">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <h5 class="mb-0"><i class="fas fa-clipboard-list text-primary me-2"></i>{% trans "Planification" %}</h5>
+                                            {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER' %}
+                                            <a class="btn btn-primary btn-sm" href="{% url 'projects:planning_submission_create' site_id=site.unique_id %}">
+                                                <span class="fas fa-plus me-1"></span>{% trans "Soumettre une planification" %}
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                        {% if site.planning_submissions.exists %}
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-striped mb-0 fs--1">
+                                                <thead>
+                                                    <tr>
+                                                        <th>{% trans "Date" %}</th>
+                                                        <th>{% trans "Étape" %}</th>
+                                                        <th>{% trans "Description" %}</th>
+                                                        <th>{% trans "Statut" %}</th>
+                                                        <th class="text-end">{% trans "Actions" %}</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for submission in site.planning_submissions.all %}
+                                                    <tr>
+                                                        <td>{{ submission.created_at|date:"d/m/Y" }}</td>
+                                                        <td>{{ submission.phase.name|default:"-" }}</td>
+                                                        <td>{{ submission.description|truncatechars:60 }}</td>
+                                                        <td>
+                                                            <span class="badge
+                                                                {% if submission.status == 'APPROUVEE' %}bg-success
+                                                                {% elif submission.status == 'REJETEE' %}bg-danger
+                                                                {% elif submission.status == 'SOUMISE' %}bg-info
+                                                                {% else %}bg-warning{% endif %}">
+                                                                {{ submission.get_status_display }}
+                                                            </span>
+                                                        </td>
+                                                        <td class="text-end">
+                                                            {% if submission.status == 'SOUMISE' and request.user|has_role:'DIRECTOR,CHIEF_ENGINEER,ENGINEER' %}
+                                                            <form method="post" action="{% url 'projects:planning_submission_approve' pk=submission.pk %}" class="d-inline">
+                                                                {% csrf_token %}
+                                                                <button type="submit" class="btn btn-falcon-success btn-sm">{% trans "Approuver" %}</button>
+                                                            </form>
+                                                            <form method="post" action="{% url 'projects:planning_submission_reject' pk=submission.pk %}" class="d-inline">
+                                                                {% csrf_token %}
+                                                                <button type="submit" class="btn btn-falcon-danger btn-sm">{% trans "Rejeter" %}</button>
+                                                            </form>
+                                                            {% endif %}
+                                                        </td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        {% else %}
+                                        <div class="alert alert-info d-flex align-items-center p-3 mb-0" role="alert">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            <span>{% trans "Aucune planification soumise pour ce chantier." %}</span>
                                         </div>
                                         {% endif %}
                                     </div>
