@@ -1,37 +1,35 @@
-{% extends 'base.html' %}
-{% load static %}
-
-{% block body_class %}auth-pages{% endblock %}
-
-{% block top_nav %}{% endblock %}
-
+{% extends 'falcon_base.html' %}
+{% load static i18n account %}
 {% block content %}
-<section>
-  <div class="logo">
-    <img src="{% static 'falcon/assets/img/logos/cran/png/logo.png' %}" alt="" width="200">
-  </div>  
-  <div class="box login-box">
-      {% if confirmation %}    
-        <form method="post" action="{% url 'account_confirm_email' confirmation.key %}">
-          <h1>Verify Your <br>E-mail Address</h1>
-            <p class="text-center">Please confirm that <b><a href="mailto:{{ confirmation.email_address.email }}">{{ confirmation.email_address.email }} </a></b>is an e-mail address for user <b>{{ confirmation.email_address.user.display_name }}.</b></p>
-            {% csrf_token %}
-            <button type="submit" class="m-button m-button-venice-blue">Confirm</button>
-        </form>        
-      {% else %}
-        <form method="post" action=".">      
+<div class="container" data-layout="container">
+  <div class="row flex-center min-vh-100 py-6">
+    <div class="col-sm-10 col-md-8 col-lg-6 col-xl-5 col-xxl-4">
+      <a class="d-flex flex-center mb-4" href="{% url 'home' %}">
+        <img src="{% static 'app/img/chantiermobile-logo.svg' %}" alt="ChantierMobile" width="200">
+      </a>
+      <div class="card">
+        <div class="card-body p-4 p-sm-5">
+          {% if confirmation %}
+            {% user_display confirmation.email_address.user as user_display %}
+            <h5 class="text-center mb-3">{% trans "Confirmer l'adresse e-mail" %}</h5>
+            <p class="fs--1 text-600 text-center">
+              {% blocktrans with email=confirmation.email_address.email %}Merci de confirmer que <b><a href="mailto:{{ email }}">{{ email }}</a></b> est bien l'adresse e-mail de l'utilisateur <b>{{ user_display }}</b>.{% endblocktrans %}
+            </p>
+            <form method="post" action="{% url 'account_confirm_email' confirmation.key %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-primary d-block w-100">{% trans "Confirmer" %}</button>
+            </form>
+          {% else %}
             {% url 'account_email' as email_url %}
-            <p class="text-center">This e-mail confirmation link expired or is invalid. 
-
-              {% comment %}
-                Please <b><a href="{{ email_url }}">issue a new e-mail confirmation request</a></b>.</p>
-              {% endcomment %}
-        </form>
-        <br>
-        <p class="text-center">
-          <a href="{% url 'home' %}" class="m-button m-button-cerulean">Home</a>
-        </p>         
-      {% endif %}        
+            <h5 class="text-center mb-3">{% trans "Lien invalide" %}</h5>
+            <p class="fs--1 text-600 text-center">
+              {% trans "Ce lien de confirmation a expiré ou est invalide." %}
+            </p>
+            <a href="{% url 'home' %}" class="btn btn-primary d-block w-100 mt-3">{% trans "Accueil" %}</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
   </div>
-</section>
+</div>
 {% endblock %}
