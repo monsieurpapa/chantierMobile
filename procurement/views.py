@@ -16,6 +16,7 @@ from .forms import (
     StockMovementForm, StockTransferForm, TransferProofForm, SupplierCreditForm, SupplierCreditPaymentForm,
 )
 from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet, can_act_for_cabinet
+from core.quickcreate import QuickCreateView
 from projects.models import Site, ProjectPhase
 from chantiermobile.constants import PurchaseOrderStatus, UserRoles, CaisseType, StockMovementType, StockReportPeriod
 
@@ -988,3 +989,13 @@ def supplier_credit_repay(request, pk):
     else:
         messages.error(request, _("Montant invalide."))
     return redirect('procurement:supplier_credit_list')
+
+
+class SupplierQuickCreateView(QuickCreateView):
+    """Backs the "select or add a supplier" pickers (purchase orders,
+    supplier credits). Only a name is captured — contact details, phone,
+    etc. get filled in later from the supplier's own edit screen."""
+    model = Supplier
+
+    def build_instance(self, name, request, cabinet, payload):
+        return Supplier(cabinet=cabinet, name=name)

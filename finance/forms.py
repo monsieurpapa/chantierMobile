@@ -1,3 +1,5 @@
+import json
+
 from django import forms
 from django.utils.translation import gettext_lazy as _
 from .models import (
@@ -5,6 +7,7 @@ from .models import (
     PayrollList, PayrollListItem, Avenant,
 )
 from chantiermobile.constants import FormPlaceholders, DatePickerConfig, ValidationMessages, ExpenseNature
+from core.widgets import DynamicSelectWidget
 
 class ExpenseForm(forms.ModelForm):
     class Meta:
@@ -15,10 +18,11 @@ class ExpenseForm(forms.ModelForm):
             'phase': forms.Select(attrs={'class': 'form-select'}),
             'category': forms.Select(attrs={'class': 'form-select'}),
             'nature': forms.Select(attrs={'class': 'form-select', 'id': 'id_expense_nature'}),
-            'personnel': forms.Select(attrs={
-                'class': 'form-select', 'data-control': 'select2',
-                'data-placeholder': _('Rechercher un membre du personnel...'),
-            }),
+            'personnel': DynamicSelectWidget(
+                create_url_name='personnel:personnel_quick_create',
+                placeholder=_('Rechercher un membre du personnel...'),
+                depends_on='id_site', depends_param='site',
+            ),
             'amount': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.AMOUNT}),
             'expense_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': FormPlaceholders.EXPENSE_DETAILS}),
@@ -217,7 +221,10 @@ class PayrollListItemForm(forms.ModelForm):
         model = PayrollListItem
         fields = ['personnel', 'amount', 'progress_note', 'signed_receipt']
         widgets = {
-            'personnel': forms.Select(attrs={'class': 'form-select'}),
+            'personnel': DynamicSelectWidget(
+                create_url_name='personnel:personnel_quick_create',
+                placeholder=_('Sélectionner ou ajouter un ouvrier...'),
+            ),
             'amount': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.AMOUNT}),
             'progress_note': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
             'signed_receipt': forms.ClearableFileInput(attrs={'class': 'form-control'}),
@@ -230,6 +237,10 @@ class PayrollListItemForm(forms.ModelForm):
         from personnel.models import Personnel
         if site:
             self.fields['personnel'].queryset = Personnel.objects.filter(assignments__site=site).distinct()
+            # This form has no "site" field of its own to depend on — the
+            # site comes in as a fixed constructor kwarg — so bake it in as
+            # a static extra param instead (see DynamicSelectWidget.create_extra).
+            self.fields['personnel'].widget.attrs['data-create-extra'] = json.dumps({'site': site.pk})
 
 
 class PayrollDisburseForm(forms.Form):

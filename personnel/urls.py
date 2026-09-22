@@ -9,9 +9,11 @@ urlpatterns = [
     path('staff/<uuid:unique_id>/', views.PersonnelDetailView.as_view(), name='personnel_detail'),
     path('staff/<uuid:unique_id>/edit/', views.PersonnelUpdateView.as_view(), name='personnel_update'),
     path('staff/<uuid:unique_id>/delete/', views.PersonnelDeleteView.as_view(), name='personnel_delete'),
-    
+    path('staff/quick-create/', views.PersonnelQuickCreateView.as_view(), name='personnel_quick_create'),
+
     # Skills
     path('skills/', views.SkillListView.as_view(), name='skill_list'),
+    path('skills/quick-create/', views.SkillQuickCreateView.as_view(), name='skill_quick_create'),
 
     # Assignments
     path('assignments/add/', views.SiteAssignmentCreateView.as_view(), name='assignment_create'),

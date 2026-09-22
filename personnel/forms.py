@@ -2,6 +2,7 @@ from django import forms
 from django.utils.translation import gettext_lazy as _
 from .models import Personnel, SiteAssignment, Skill, PersonnelDocument, Leave, Holiday
 from chantiermobile.constants import FormPlaceholders, FormHelpTexts, DatePickerConfig
+from core.widgets import DynamicSelectWidget, DynamicSelectMultipleWidget
 
 class PersonnelForm(forms.ModelForm):
     class Meta:
@@ -17,7 +18,10 @@ class PersonnelForm(forms.ModelForm):
             'category': forms.Select(attrs={'class': 'form-select'}),
             'trade': forms.Select(attrs={'class': 'form-select'}),
             'status': forms.Select(attrs={'class': 'form-select'}),
-            'skills': forms.SelectMultiple(attrs={'class': 'form-select js-choice', 'multiple': 'multiple'}),
+            'skills': DynamicSelectMultipleWidget(
+                create_url_name='personnel:skill_quick_create',
+                placeholder=_('Sélectionner ou ajouter une compétence...'),
+            ),
             'default_daily_rate': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.AMOUNT}),
             'monthly_salary': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.AMOUNT}),
             'user': forms.Select(attrs={'class': 'form-select'}),
@@ -39,7 +43,10 @@ class LeaveForm(forms.ModelForm):
         model = Leave
         fields = ['personnel', 'leave_type', 'start_date', 'end_date', 'reason']
         widgets = {
-            'personnel': forms.Select(attrs={'class': 'form-select'}),
+            'personnel': DynamicSelectWidget(
+                create_url_name='personnel:personnel_quick_create',
+                placeholder=_('Sélectionner ou ajouter un ouvrier...'),
+            ),
             'leave_type': forms.Select(attrs={'class': 'form-select'}),
             'start_date': forms.DateInput(attrs={
                 'class': 'form-control datetimepicker', 'placeholder': DatePickerConfig.DATE_FORMAT,
@@ -80,7 +87,10 @@ class SiteAssignmentForm(forms.ModelForm):
             'agreement_document', 'agreement_notes',
         ]
         widgets = {
-            'personnel': forms.Select(attrs={'class': 'form-select'}),
+            'personnel': DynamicSelectWidget(
+                create_url_name='personnel:personnel_quick_create',
+                placeholder=_('Sélectionner ou ajouter un ouvrier...'),
+            ),
             'site': forms.Select(attrs={'class': 'form-select'}),
             'role': forms.TextInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.ROLE_EXAMPLE}),
             'start_date': forms.DateInput(attrs={

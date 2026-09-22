@@ -1,3 +1,6 @@
+from decimal import Decimal
+import datetime
+
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views.generic import ListView, CreateView, UpdateView, DetailView, DeleteView
 from django.urls import reverse_lazy
@@ -8,6 +11,7 @@ from django.utils.translation import gettext_lazy as _
 from .models import Personnel, Skill, SiteAssignment, PersonnelDocument, Leave, Holiday
 from .forms import PersonnelForm, SiteAssignmentForm, SkillForm, PersonnelDocumentForm, LeaveForm, HolidayForm
 from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet, can_act_for_cabinet
+from core.quickcreate import QuickCreateView
 from chantiermobile.constants import UserRoles
 from projects.models import Site
 
@@ -476,3 +480,52 @@ class HolidayDeleteView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixi
     def post(self, request, *args, **kwargs):
         messages.success(request, _("Jour férié supprimé."))
         return self.delete(request, *args, **kwargs)
+
+
+class PersonnelQuickCreateView(QuickCreateView):
+    """Backs the "select or add a worker" pickers (Leave, SiteAssignment,
+    Task assignment, Expense/Payroll main-d'œuvre, ...). Only a name is
+    typed at this point — the rest of the profile (type, rate, category,
+    ...) gets filled in later from the worker's own edit screen."""
+    model = Personnel
+
+    def build_instance(self, name, request, cabinet, payload):
+        parts = name.split(None, 1)
+        first_name, last_name = parts[0], (parts[1] if len(parts) > 1 else '')
+        return Personnel(
+            cabinet=cabinet,
+            first_name=first_name,
+            last_name=last_name,
+            default_daily_rate=Decimal('0.00'),
+        )
+
+    def display_text(self, instance):
+        return instance.get_full_name()
+
+    def after_create(self, instance, request, payload):
+        # If this picker was scoped to a site (e.g. the expense form's
+        # site-assigned personnel list), assign the new worker to that
+        # site right away so they immediately show up wherever that
+        # scoping is re-applied.
+        site_id = payload.get('site')
+        if not site_id:
+            return
+        site = Site.objects.filter(pk=site_id, cabinet=instance.cabinet).first()
+        if site:
+            SiteAssignment.objects.create(
+                personnel=instance,
+                site=site,
+                role=_('Ouvrier'),
+                start_date=datetime.date.today(),
+                daily_rate=Decimal('0.00'),
+            )
+
+
+class SkillQuickCreateView(QuickCreateView):
+    """Backs the worker "skills" tag picker. Skills aren't cabinet-scoped —
+    they're a shared tag list across the whole system."""
+    model = Skill
+    cabinet_scoped = False
+
+    def build_instance(self, name, request, cabinet, payload):
+        return Skill(name=name)

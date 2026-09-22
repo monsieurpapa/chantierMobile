@@ -3,6 +3,7 @@ from django.utils.translation import gettext_lazy as _
 from django.forms import inlineformset_factory
 from .models import Supplier, StockItem, PurchaseOrder, PurchaseOrderLine, StockMovement, SupplierCredit
 from chantiermobile.constants import FormPlaceholders, FormHelpTexts, DatePickerConfig
+from core.widgets import DynamicSelectWidget
 
 
 class SupplierForm(forms.ModelForm):
@@ -25,7 +26,10 @@ class StockItemForm(forms.ModelForm):
         fields = ['site', 'material', 'name', 'unit', 'quantity_on_hand', 'reorder_threshold']
         widgets = {
             'site': forms.Select(attrs={'class': 'form-select'}),
-            'material': forms.Select(attrs={'class': 'form-select'}),
+            'material': DynamicSelectWidget(
+                create_url_name='materials:material_quick_create',
+                placeholder=_('Sélectionner ou ajouter un matériel...'),
+            ),
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.MATERIAL_NAME}),
             'unit': forms.TextInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.MATERIAL_UNIT}),
             'quantity_on_hand': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
@@ -48,7 +52,10 @@ class PurchaseOrderForm(forms.ModelForm):
         fields = ['site', 'supplier', 'order_number', 'order_date', 'expected_delivery_date', 'caisse', 'payment_method', 'notes']
         widgets = {
             'site': forms.Select(attrs={'class': 'form-select'}),
-            'supplier': forms.Select(attrs={'class': 'form-select'}),
+            'supplier': DynamicSelectWidget(
+                create_url_name='procurement:supplier_quick_create',
+                placeholder=_('Sélectionner ou ajouter un fournisseur...'),
+            ),
             'order_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.PURCHASE_ORDER_NUMBER}),
             'order_date': forms.DateInput(attrs={
                 'class': 'form-control datetimepicker',
@@ -150,7 +157,10 @@ class SupplierCreditForm(forms.ModelForm):
         model = SupplierCredit
         fields = ['supplier', 'purchase_order', 'amount', 'date', 'due_date', 'notes']
         widgets = {
-            'supplier': forms.Select(attrs={'class': 'form-select'}),
+            'supplier': DynamicSelectWidget(
+                create_url_name='procurement:supplier_quick_create',
+                placeholder=_('Sélectionner ou ajouter un fournisseur...'),
+            ),
             'purchase_order': forms.Select(attrs={'class': 'form-select'}),
             'amount': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.AMOUNT}),
             'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),

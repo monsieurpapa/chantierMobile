@@ -8,6 +8,7 @@ urlpatterns = [
     path('suppliers/', views.SupplierListView.as_view(), name='supplier_list'),
     path('suppliers/add/', views.SupplierCreateView.as_view(), name='supplier_create'),
     path('suppliers/<int:pk>/edit/', views.SupplierUpdateView.as_view(), name='supplier_update'),
+    path('suppliers/quick-create/', views.SupplierQuickCreateView.as_view(), name='supplier_quick_create'),
 
     # Purchase orders
     path('orders/', views.PurchaseOrderListView.as_view(), name='purchase_order_list'),

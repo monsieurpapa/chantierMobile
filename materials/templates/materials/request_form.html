@@ -341,7 +341,9 @@ document.addEventListener('DOMContentLoaded', function () {
             <div class="row g-2 align-items-end">
                 <div class="col-md-5">
                     <label class="form-label fs--1 fw-semibold">Material</label>
-                    <select name="items-${newIndex}-material" class="form-select">
+                    <select name="items-${newIndex}-material" id="id_items-${newIndex}-material" class="form-select"
+                        data-control="select2" data-create-url="{% url 'materials:material_quick_create' %}"
+                        data-placeholder="Sélectionner ou ajouter un matériel...">
                         <option value="">-- Select Material --</option>
                         {% for material in materials %}
                         <option value="${material.id}" data-unit="${material.unit}" data-cost="${material.estimated_cost_per_unit|default:0}">${material.name} (${material.unit})</option>
@@ -380,9 +382,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
         container.appendChild(newForm);
         totalFormsInput.value = currentCount + 1;
-        
+
         initializeItem(newForm);
         updateItemCount();
+        if (window.initDynamicSelects) { window.initDynamicSelects(newForm); }
     });
 
     // Update item count

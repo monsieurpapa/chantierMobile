@@ -148,6 +148,10 @@
                     if (preselectId && String(p.id) === String(preselectId)) opt.selected = true;
                     personnelSelect.appendChild(opt);
                 });
+                // Refresh the select2 "select or add new" picker so it
+                // picks up the freshly (re)built option list — see
+                // static/js/dynamic-select.js.
+                if (window.jQuery) { window.jQuery(personnelSelect).trigger('change'); }
             })
             .catch(function (err) { console.error('Error loading site personnel:', err); });
         }

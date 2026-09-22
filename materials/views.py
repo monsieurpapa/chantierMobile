@@ -11,6 +11,7 @@ from .models import Material, MaterialRequest
 from .forms import MaterialForm, MaterialRequestForm, MaterialRequestItemFormSet
 from projects.models import Site
 from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet, can_act_for_cabinet
+from core.quickcreate import QuickCreateView
 from chantiermobile.constants import UserRoles, FINAL_AUTHORIZATION_ROLES
 
 # État de besoin — two-stage approval: the magasinier validates first,
@@ -308,3 +309,15 @@ def materials_data_api(request):
         }
     
     return JsonResponse(data)
+
+
+class MaterialQuickCreateView(QuickCreateView):
+    """Backs the "select or add a material" pickers (material request
+    items, stock items). Material has no cabinet FK — it's a shared
+    catalog across the whole system, matching how it's already used."""
+    model = Material
+    cabinet_scoped = False
+
+    def build_instance(self, name, request, cabinet, payload):
+        unit = (payload.get('unit') or '').strip() or _('unité')
+        return Material(name=name, unit=unit)

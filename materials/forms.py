@@ -3,6 +3,7 @@ from django.utils.translation import gettext_lazy as _
 from django.forms import inlineformset_factory
 from .models import Material, MaterialRequest, MaterialRequestItem
 from chantiermobile.constants import FormPlaceholders, FormHelpTexts
+from core.widgets import DynamicSelectWidget
 
 class MaterialForm(forms.ModelForm):
     class Meta:
@@ -35,7 +36,10 @@ class MaterialRequestItemForm(forms.ModelForm):
         model = MaterialRequestItem
         fields = ['material', 'material_name', 'quantity', 'notes']
         widgets = {
-            'material': forms.Select(attrs={'class': 'form-select', 'data-control': 'select2'}),
+            'material': DynamicSelectWidget(
+                create_url_name='materials:material_quick_create',
+                placeholder=_('Sélectionner ou ajouter un matériel...'),
+            ),
             'material_name': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': _("Ou écrire le nom du matériel..."),

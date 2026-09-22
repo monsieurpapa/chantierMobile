@@ -26,6 +26,7 @@
   <meta name="msapplication-TileImage" content="{% static 'assets/img/favicons/cmc/mstile-150x150.png' %}">
   {% endcomment %}
   <meta name="theme-color" content="#ffffff">
+  <meta name="csrf-token" content="{{ csrf_token }}">
   <script src="{% static 'assets/js/config.js' %}"></script>
   <script src="{% static 'vendors/overlayscrollbars/OverlayScrollbars.min.js' %}"></script>
   <script src="{% static 'vendors/leaflet/leaflet.js' %}"></script>
@@ -49,6 +50,8 @@
   <link href="{% static 'vendors/leaflet/leaflet.css' %}" rel="stylesheet" />
   <link href="{% static 'vendors/leaflet.markercluster/MarkerCluster.css' %}" rel="stylesheet" />
   <link href="{% static 'vendors/leaflet.markercluster/MarkerCluster.Default.css' %}" rel="stylesheet" />
+  <link href="{% static 'vendors/select2/select2.min.css' %}" rel="stylesheet" />
+  <link href="{% static 'vendors/select2-bootstrap-5-theme/select2-bootstrap-5-theme.min.css' %}" rel="stylesheet" />
   <!-- <link href="https://cdn.datatables.net/1.13.1/css/jquery.dataTables.min.css" rel="stylesheet" />    -->
 
 
@@ -294,6 +297,8 @@
   <script src="{% static 'assets/js/theme.js' %}"></script>
   <script src="{% static 'assets/data/world.js' %}"></script>
   <script src="https://cdn.datatables.net/1.13.1/js/jquery.dataTables.min.js"></script>
+  <script src="{% static 'vendors/select2/select2.min.js' %}"></script>
+  <script src="{% static 'js/dynamic-select.js' %}"></script>
 
   {% block echarts %}{% endblock %}
   {% block extra_js %}{% endblock %}

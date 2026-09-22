@@ -8,7 +8,8 @@ urlpatterns = [
     path('catalog/', views.MaterialListView.as_view(), name='material_list'),
     path('catalog/add/', views.MaterialCreateView.as_view(), name='material_create'),
     path('catalog/<int:pk>/edit/', views.MaterialUpdateView.as_view(), name='material_update'),
-    
+    path('catalog/quick-create/', views.MaterialQuickCreateView.as_view(), name='material_quick_create'),
+
     # Requests
     path('requests/', views.MaterialRequestListView.as_view(), name='request_list'),
     path('requests/add/', views.MaterialRequestCreateView.as_view(), name='request_create'),

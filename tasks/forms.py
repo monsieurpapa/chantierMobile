@@ -2,6 +2,7 @@ from django import forms
 from django.utils.translation import gettext_lazy as _
 from .models import Task
 from chantiermobile.constants import FormPlaceholders, FormHelpTexts, DatePickerConfig
+from core.widgets import DynamicSelectWidget
 
 
 class TaskForm(forms.ModelForm):
@@ -19,5 +20,8 @@ class TaskForm(forms.ModelForm):
                 'placeholder': DatePickerConfig.DATE_FORMAT,
                 'data-options': DatePickerConfig.OPTIONS
             }),
-            'assigned_to': forms.Select(attrs={'class': 'form-select'}),
+            'assigned_to': DynamicSelectWidget(
+                create_url_name='personnel:personnel_quick_create',
+                placeholder=_('Sélectionner ou ajouter un ouvrier...'),
+            ),
         }
