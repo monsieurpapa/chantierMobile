@@ -72,3 +72,9 @@ build/
 dist/
 *.egg-info/
 .gstack/
+
+# Bootstrap run output (contains generated demo passwords)
+bootstrapped.txt
+
+# Personal reference docs, not for the public repo
+Marketing/
