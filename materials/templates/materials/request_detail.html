@@ -52,6 +52,31 @@
                                 </div>
                             </div>
 
+                            {% if req.expense_id %}
+                            <div class="p-3 bg-light rounded-3 mb-4">
+                                <h6 class="mb-1">
+                                    <i class="fas fa-receipt me-1"></i>{% trans "Dépense liée" %}
+                                </h6>
+                                <p class="mb-0">
+                                    <a href="{% url 'finance:expense_detail' pk=req.expense_id %}">EX-{{ req.expense_id }}</a>
+                                    — ${{ req.expense.amount|floatformat:2 }} —
+                                    <span class="badge rounded-pill
+                                        {% if req.expense.status == 'PAID' %}badge-subtle-info
+                                        {% elif req.expense.status == 'APPROVED' %}badge-subtle-success
+                                        {% else %}badge-subtle-warning{% endif %}">
+                                        {{ req.expense.get_status_display }}
+                                    </span>
+                                </p>
+                            </div>
+                            {% elif req.status == 'APPROVED' %}
+                            <div class="p-3 bg-light rounded-3 mb-4">
+                                <p class="mb-0 fs--1 text-500">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    {% trans "Aucune dépense liée : coût estimé indisponible au moment de l'autorisation." %}
+                                </p>
+                            </div>
+                            {% endif %}
+
                             <!-- General Notes -->
                             {% if req.notes %}
                             <div class="p-3 bg-light rounded-3 mb-4">

@@ -287,7 +287,14 @@ def approve_material_request(request, pk):
             messages.error(request, _("Demande de matériaux rejetée."))
         else:
             mat_request.authorize(request.user)
-            messages.success(request, _("Demande de matériaux autorisée."))
+            if mat_request.expense_id:
+                messages.success(request, _(
+                    "Demande de matériaux autorisée — dépense EX-%(id)s créée (%(amount)s$), en attente de paiement."
+                ) % {'id': mat_request.expense_id, 'amount': mat_request.expense.amount})
+            else:
+                messages.success(request, _(
+                    "Demande de matériaux autorisée. Aucune dépense liée créée automatiquement (coût estimé indisponible) — enregistrez-la manuellement si nécessaire."
+                ))
     except ValidationError as e:
         messages.error(request, str(e.message) if hasattr(e, 'message') else str(e))
     return redirect('materials:request_detail', pk=pk)

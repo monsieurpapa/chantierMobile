@@ -50,15 +50,65 @@ class MaterialRequest(BaseModel):
     def authorize(self, user, notes=''):
         """Second/final stage: Directeur Technique, Directeur Général (or
         Directeur de Cabinet) gives the final authorization once the
-        magasinier has validated the request."""
+        magasinier has validated the request.
+
+        This is also where "exécuter une sortie financière venant d'un état
+        de besoin, validée, liée à un projet" happens: authorizing the
+        request creates the matching Expense (already APPROVED, since the
+        two-stage état de besoin approval IS the approval — it only remains
+        for the cashier to pay it) and links it back via `self.expense`, so
+        the promised amount is no longer a number that only lives on this
+        request."""
+        from django.db import transaction
         from django.core.exceptions import ValidationError
         from core.models import StatusChangeLog
         if self.status != MaterialRequestStatus.VALIDATED:
             raise ValidationError(_("Seule une demande validée par le magasinier peut être autorisée."))
-        old_status = self.status
-        self.status = MaterialRequestStatus.APPROVED
-        self.save(update_fields=['status', 'updated_at'])
-        StatusChangeLog.log(self, changed_by=user, old_status=old_status, new_status=self.status, note=notes)
+        with transaction.atomic():
+            old_status = self.status
+            self.status = MaterialRequestStatus.APPROVED
+            self.save(update_fields=['status', 'updated_at'])
+            StatusChangeLog.log(self, changed_by=user, old_status=old_status, new_status=self.status, note=notes)
+            if not self.expense_id and self.total_estimated_cost and self.total_estimated_cost > 0:
+                self._create_linked_expense(user)
+
+    def _create_linked_expense(self, user):
+        """Create the Expense this material request's authorization
+        promises, pre-approved, and link it via the expense OneToOne.
+        Only called when there's a positive estimated cost to charge —
+        a request made up entirely of free-text (hors catalogue) items
+        with no catalog price has nothing to attach yet, so it's left
+        for whoever pays to record that expense manually instead."""
+        from decimal import Decimal, ROUND_HALF_UP
+        from django.utils import timezone
+        from finance.models import Expense, ExpenseApproval, ExpenseCategory
+        from chantiermobile.constants import ExpenseStatus, ExpenseNature
+        category, _created = ExpenseCategory.objects.get_or_create(name='Matériaux de Construction')
+        item_names = ', '.join(self.items.values_list('material__name', flat=True)[:3]) or \
+            ', '.join(self.items.values_list('material_name', flat=True)[:3])
+        # The catalog's cost-per-unit × a fractional quantity can carry more
+        # than 2 decimal places — round to cents so it always fits
+        # Expense.amount's DecimalField(max_digits=12, decimal_places=2)
+        # instead of tripping full_clean()'s DecimalValidator below.
+        amount = Decimal(self.total_estimated_cost).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        expense = Expense(
+            site=self.site,
+            requester=self.requested_by or user,
+            category=category,
+            nature=ExpenseNature.MATERIEL,
+            amount=amount,
+            expense_date=timezone.localdate(),
+            description=_("État de besoin #%(id)s autorisé — %(items)s") % {'id': self.pk, 'items': item_names or _('matériaux')},
+            status=ExpenseStatus.APPROVED,
+        )
+        expense.full_clean()
+        expense.save()
+        ExpenseApproval.objects.create(
+            expense=expense, approver=user, status=ExpenseApproval.Status.APPROVED,
+            comments=_("Approuvé automatiquement via l'autorisation de l'état de besoin #%(id)s.") % {'id': self.pk},
+        )
+        self.expense = expense
+        self.save(update_fields=['expense', 'updated_at'])
 
     def reject(self, user, notes=''):
         """Either stage may reject the request."""

@@ -5,18 +5,20 @@ from django.core.exceptions import ValidationError
 from django.urls import reverse_lazy
 from django.shortcuts import redirect, get_object_or_404
 from django.contrib import messages
+from django.db import transaction
 from django.db.models import Sum, Count, Q
+from django.http import HttpResponseRedirect
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from decimal import Decimal
 from .models import (
     Expense, ExpenseApproval, Budget, Caisse, CaisseTransaction, CaisseLoan,
-    PayrollList, PayrollListItem, Avenant,
+    PayrollList, PayrollListItem, Avenant, SalaryPayment,
 )
 from .forms import (
-    ExpenseForm, BudgetForm, CaisseForm, CaisseTransactionForm, CaisseTransferForm,
+    ExpenseForm, ExpensePayForm, BudgetForm, CaisseForm, CaisseTransactionForm, CaisseTransferForm,
     CaisseLoanForm, CaisseLoanRepayForm, PayrollListForm, PayrollListItemForm,
-    PayrollDisburseForm, AvenantForm, AvenantDecisionForm,
+    PayrollDisburseForm, AvenantForm, AvenantDecisionForm, SalaryPaymentForm,
 )
 from projects.models import Site
 from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet, can_act_for_cabinet
@@ -31,6 +33,9 @@ EXPENSE_REPORT_ROLES = ['DIRECTOR', 'ACCOUNTANT', 'CASHIER']
 
 # Roles that may manage caisses and record ledger movements.
 CAISSE_MANAGE_ROLES = ['DIRECTOR', 'ACCOUNTANT', 'CASHIER', 'FINANCIER']
+# Salaires mensuels du bureau (ingénieurs/agents administratifs) — same
+# audience as caisse management, since disbursing one is a caisse outflow.
+SALARY_PAYMENT_ROLES = CAISSE_MANAGE_ROLES
 
 # "L'archi" — whoever prepares/submits a payroll list from worker payment requests.
 PAYROLL_PREPARE_ROLES = ['DIRECTOR', 'CHIEF_ENGINEER', 'ENGINEER']
@@ -140,6 +145,16 @@ class ExpenseDetailView(LoginRequiredMixin, PageHeaderMixin, DetailView):
             qs = qs.filter(site__cabinet__id__in=user_cabinet_ids)
         return qs
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.object.status == ExpenseStatus.APPROVED and can_act_for_cabinet(
+            self.request, self.object.site.cabinet, [UserRoles.DIRECTOR, UserRoles.CASHIER]
+        ):
+            pay_form = ExpensePayForm()
+            pay_form.fields['caisse'].queryset = Caisse.objects.filter(cabinet=self.object.site.cabinet)
+            context['pay_form'] = pay_form
+        return context
+
 @login_required
 def approve_expense(request, pk):
     if request.method == 'POST':
@@ -194,13 +209,16 @@ def mark_expense_paid(request, pk):
             if not expense.can_be_paid():
                 messages.error(request, _("Seules les dépenses approuvées peuvent être payées. Statut actuel : %(status)s.") % {'status': expense.get_status_display()})
             else:
-                try:
-                    expense.status = ExpenseStatus.PAID
-                    expense.full_clean()
-                    expense.save()
-                    messages.success(request, _("Dépense marquée comme PAYÉE."))
-                except ValidationError as e:
-                    messages.error(request, _("Erreur lors du paiement de la dépense : %(error)s") % {'error': str(e)})
+                form = ExpensePayForm(request.POST)
+                form.fields['caisse'].queryset = Caisse.objects.filter(cabinet=expense.site.cabinet)
+                if form.is_valid():
+                    try:
+                        expense.pay(request.user, form.cleaned_data['caisse'])
+                        messages.success(request, _("Dépense marquée comme PAYÉE et enregistrée dans le livre de caisse."))
+                    except ValidationError as e:
+                        messages.error(request, _("Erreur lors du paiement de la dépense : %(error)s") % {'error': str(e)})
+                else:
+                    messages.error(request, _("Sélectionnez une caisse valide pour effectuer ce paiement."))
         else:
             messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
         return redirect('finance:expense_detail', pk=pk)
@@ -1130,6 +1148,71 @@ def payroll_disburse(request, pk):
     else:
         messages.error(request, _("Sélectionnez une caisse valide."))
     return redirect('finance:payroll_detail', pk=pk)
+
+
+# ---------------------------------------------------------------------
+# Salaires mensuels du bureau (ingénieurs / agents administratifs)
+# ---------------------------------------------------------------------
+
+class SalaryPaymentListView(LoginRequiredMixin, CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, ListView):
+    model = SalaryPayment
+    context_object_name = 'salary_payments'
+    template_name = 'finance/salary_payment_list.html'
+    allowed_roles = SALARY_PAYMENT_ROLES
+    cabinet_lookup_field = 'personnel__cabinet'
+    header_title = _("Salaires du bureau")
+    header_subtitle = _("Paiements des salaires mensuels — ingénieurs et agents administratifs")
+
+    def get_queryset(self):
+        return super().get_queryset().select_related('personnel', 'caisse', 'paid_by').order_by('-period', 'personnel__last_name')
+
+    def get_header_actions(self):
+        return [{
+            'label': _("Payer un salaire"),
+            'url': str(reverse_lazy('finance:salary_payment_create')),
+            'icon': 'plus',
+            'class': 'btn-falcon-primary',
+        }]
+
+
+class SalaryPaymentCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, CreateView):
+    model = SalaryPayment
+    form_class = SalaryPaymentForm
+    template_name = 'finance/salary_payment_form.html'
+    allowed_roles = SALARY_PAYMENT_ROLES
+    success_url = reverse_lazy('finance:salary_payment_list')
+    header_title = _("Payer un salaire mensuel")
+    header_subtitle = _("Enregistrer et décaisser le salaire d'un agent de bureau ou d'un ingénieur")
+    back_url = reverse_lazy('finance:salary_payment_list')
+
+    def get_breadcrumb_items(self):
+        return [
+            {'title': _("Salaires du bureau"), 'url': str(reverse_lazy('finance:salary_payment_list'))},
+            {'title': _("Nouveau paiement"), 'url': None},
+        ]
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['cabinet'] = self.get_user_cabinet()
+        return kwargs
+
+    def form_valid(self, form):
+        cabinet = self.get_user_cabinet()
+        if not cabinet:
+            messages.error(self.request, _("Identification du cabinet échouée."))
+            return self.form_invalid(form)
+        try:
+            with transaction.atomic():
+                self.object = form.save()
+                self.object.disburse(self.request.user)
+        except ValidationError as e:
+            self.object = None
+            form.add_error(None, str(e.message) if hasattr(e, 'message') else str(e))
+            return self.form_invalid(form)
+        messages.success(self.request, _("Salaire de %(personnel)s payé pour %(period)s.") % {
+            'personnel': self.object.personnel, 'period': self.object.period,
+        })
+        return HttpResponseRedirect(self.get_success_url())
 
 
 # ---------------------------------------------------------------------

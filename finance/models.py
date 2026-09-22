@@ -188,6 +188,28 @@ class Expense(BaseModel):
         """Check if expense can be marked as paid."""
         return self.status == ExpenseStatus.APPROVED
 
+    @transaction.atomic
+    def pay(self, user, caisse):
+        """Mark this expense as PAID and record the matching outflow on the
+        given caisse, atomically — mirrors PayrollList.disburse(). Before
+        this, marking an expense PAID never touched any Caisse, so paid
+        expenses were invisible in the livre de caisse; now every payout
+        actually leaves the ledger it came from and shows up on
+        CaisseTransaction.expense."""
+        from django.core.exceptions import ValidationError
+        if not self.can_be_paid():
+            raise ValidationError(_("Seules les dépenses approuvées peuvent être payées."))
+        if self.amount > caisse.balance:
+            raise ValidationError(_("Solde de caisse insuffisant pour payer cette dépense."))
+        caisse.record(
+            CaisseTransactionType.SORTIE, self.amount, user,
+            site=self.site, phase=self.phase, expense=self,
+            description=_("Paiement dépense — %(desc)s") % {'desc': self.description[:80]},
+        )
+        self.status = ExpenseStatus.PAID
+        self.full_clean()
+        self.save()
+
     @property
     def latest_approval(self):
         """The most recent approve/reject decision on this expense, if any
@@ -462,6 +484,65 @@ class PayrollListItem(BaseModel):
         from django.core.exceptions import ValidationError
         if self.amount is not None and self.amount <= 0:
             raise ValidationError({'amount': _('Le montant doit être positif.')})
+
+
+# ---------------------------------------------------------------------
+# Office/admin monthly salary payments — "enregistrer une sortie liée au
+# chargé du bureau / paiement des salaires mensuels pour les ingénieurs
+# et agents administratifs". Unlike PayrollList (progressive worker pay,
+# always tied to one chantier), this covers Personnel.monthly_salary,
+# which is cabinet-level, not site-level — so it draws straight from a
+# caisse (typically the caisse de gestion administrative) rather than
+# from a specific project's budget.
+# ---------------------------------------------------------------------
+
+class SalaryPayment(BaseModel):
+    personnel = models.ForeignKey(
+        'personnel.Personnel', on_delete=models.CASCADE, related_name='salary_payments',
+        verbose_name=_('Agent'),
+    )
+    period = models.CharField(
+        max_length=7, verbose_name=_('Période (AAAA-MM)'),
+        help_text=_("Mois concerné par ce paiement, ex : 2026-09"),
+    )
+    amount = models.DecimalField(max_digits=12, decimal_places=2, verbose_name=_('Montant'))
+    caisse = models.ForeignKey(Caisse, on_delete=models.PROTECT, related_name='salary_payments', verbose_name=_('Caisse'))
+    notes = models.TextField(blank=True, verbose_name=_('Notes'))
+    paid_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
+        related_name='salary_payments_disbursed',
+    )
+
+    class Meta:
+        ordering = ['-period', 'personnel__last_name']
+        unique_together = ('personnel', 'period')
+
+    def __str__(self):
+        return f"{self.personnel} — {self.period} — {self.amount}"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        import re
+        if self.amount is not None and self.amount <= 0:
+            raise ValidationError({'amount': _('Le montant doit être positif.')})
+        if self.period and not re.match(r'^\d{4}-(0[1-9]|1[0-2])$', self.period):
+            raise ValidationError({'period': _("Format attendu : AAAA-MM (ex : 2026-09).")})
+
+    @transaction.atomic
+    def disburse(self, user):
+        """Record the caisse outflow for this salary payment. Called once,
+        right when the payment is created — office salaries are a single
+        cabinet-level outflow, not a multi-worker list built up over time
+        like PayrollList, so there's no separate draft/submit stage."""
+        from django.core.exceptions import ValidationError
+        if self.amount > self.caisse.balance:
+            raise ValidationError(_("Solde de caisse insuffisant."))
+        self.caisse.record(
+            CaisseTransactionType.SORTIE, self.amount, user,
+            description=_("Salaire %(period)s — %(personnel)s") % {'period': self.period, 'personnel': self.personnel},
+        )
+        self.paid_by = user
+        self.save(update_fields=['paid_by', 'updated_at'])
 
 
 # ---------------------------------------------------------------------

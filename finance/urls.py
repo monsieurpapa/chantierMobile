@@ -43,6 +43,10 @@ urlpatterns = [
     path('payroll/<int:pk>/submit/', views.payroll_submit, name='payroll_submit'),
     path('payroll/<int:pk>/disburse/', views.payroll_disburse, name='payroll_disburse'),
 
+    # Salaires du bureau (ingénieurs / agents administratifs)
+    path('salaries/', views.SalaryPaymentListView.as_view(), name='salary_payment_list'),
+    path('salaries/add/', views.SalaryPaymentCreateView.as_view(), name='salary_payment_create'),
+
     # Avenants
     path('avenants/', views.AvenantListView.as_view(), name='avenant_list'),
     path('avenants/add/', views.AvenantCreateView.as_view(), name='avenant_create'),

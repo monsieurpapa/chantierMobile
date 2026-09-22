@@ -4,7 +4,7 @@ from django import forms
 from django.utils.translation import gettext_lazy as _
 from .models import (
     Expense, Budget, ExpenseCategory, Caisse, CaisseTransaction, CaisseLoan,
-    PayrollList, PayrollListItem, Avenant,
+    PayrollList, PayrollListItem, Avenant, SalaryPayment,
 )
 from chantiermobile.constants import FormPlaceholders, DatePickerConfig, ValidationMessages, ExpenseNature
 from core.widgets import DynamicSelectWidget
@@ -92,6 +92,10 @@ class ExpenseForm(forms.ModelForm):
                 )
 
         return cleaned_data
+
+class ExpensePayForm(forms.Form):
+    caisse = forms.ModelChoiceField(queryset=Caisse.objects.none(), widget=forms.Select(attrs={'class': 'form-select'}), label=_('Caisse de décaissement'))
+
 
 class BudgetForm(forms.ModelForm):
     class Meta:
@@ -249,6 +253,49 @@ class PayrollListItemForm(forms.ModelForm):
 
 class PayrollDisburseForm(forms.Form):
     caisse = forms.ModelChoiceField(queryset=Caisse.objects.none(), widget=forms.Select(attrs={'class': 'form-select'}), label=_('Caisse de décaissement'))
+
+
+class SalaryPaymentForm(forms.ModelForm):
+    class Meta:
+        model = SalaryPayment
+        fields = ['personnel', 'period', 'amount', 'caisse', 'notes']
+        widgets = {
+            'personnel': forms.Select(attrs={'class': 'form-select'}),
+            'period': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'AAAA-MM'}),
+            'amount': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.AMOUNT}),
+            'caisse': forms.Select(attrs={'class': 'form-select'}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        cabinet = kwargs.pop('cabinet', None)
+        super().__init__(*args, **kwargs)
+        self.fields['notes'].required = False
+        from personnel.models import Personnel
+        if cabinet:
+            self.fields['personnel'].queryset = Personnel.objects.filter(
+                cabinet=cabinet, monthly_salary__isnull=False,
+            ).order_by('last_name', 'first_name')
+            self.fields['caisse'].queryset = Caisse.objects.filter(cabinet=cabinet)
+        else:
+            self.fields['personnel'].queryset = Personnel.objects.none()
+            self.fields['caisse'].queryset = Caisse.objects.none()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        personnel = cleaned_data.get('personnel')
+        period = cleaned_data.get('period')
+        if personnel and period:
+            existing = SalaryPayment.objects.filter(personnel=personnel, period=period)
+            if self.instance.pk:
+                existing = existing.exclude(pk=self.instance.pk)
+            if existing.exists():
+                raise forms.ValidationError(
+                    _("Le salaire de %(personnel)s pour %(period)s a déjà été enregistré.") % {
+                        'personnel': personnel, 'period': period,
+                    }
+                )
+        return cleaned_data
 
 
 class AvenantForm(forms.ModelForm):

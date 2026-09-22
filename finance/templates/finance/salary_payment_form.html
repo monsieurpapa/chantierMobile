@@ -1,0 +1,73 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Payer un salaire" %} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    {% include 'includes/navbar-vertical.html' with on="salary_payment_list" %}
+
+    <div class="content">
+        {% include 'includes/navbar-top.html' %}
+
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+            <div class="card mb-3">
+                <div class="card-body bg-light">
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                    {% endif %}
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label" for="{{ form.personnel.id_for_label }}">{% trans "Agent" %}</label>
+                                {{ form.personnel }}
+                                <p class="fs--2 text-500">{% trans "Seuls les agents avec un salaire mensuel enregistré apparaissent ici." %}</p>
+                                {% if form.personnel.errors %}<div class="text-danger fs--2">{{ form.personnel.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="{{ form.period.id_for_label }}">{% trans "Période" %}</label>
+                                {{ form.period }}
+                                {% if form.period.errors %}<div class="text-danger fs--2">{{ form.period.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label" for="{{ form.amount.id_for_label }}">{% trans "Montant" %} ($)</label>
+                                {{ form.amount }}
+                                {% if form.amount.errors %}<div class="text-danger fs--2">{{ form.amount.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="{{ form.caisse.id_for_label }}">{% trans "Caisse de décaissement" %}</label>
+                                {{ form.caisse }}
+                                {% if form.caisse.errors %}<div class="text-danger fs--2">{{ form.caisse.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ form.notes.id_for_label }}">{% trans "Notes" %} ({% trans "Optional" %})</label>
+                            {{ form.notes }}
+                            {% if form.notes.errors %}<div class="text-danger fs--2">{{ form.notes.errors }}</div>{% endif %}
+                        </div>
+                        <div class="col-12 d-flex justify-content-end gap-2">
+                            <a class="btn btn-falcon-default" href="{{ back_url }}">{% trans "Cancel" %}</a>
+                            <button class="btn btn-primary" type="submit"
+                                data-confirm="{% trans 'Confirmer le paiement de ce salaire ? Le montant sera immédiatement débité de la caisse choisie.' %}">{% trans "Payer" %}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.querySelectorAll('input, select, textarea').forEach(el => {
+        if (!el.classList.contains('form-range')) el.classList.add('form-control');
+        if (el.tagName === 'SELECT') { el.classList.remove('form-control'); el.classList.add('form-select'); }
+    });
+</script>
+{% endblock %}

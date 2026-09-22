@@ -126,15 +126,19 @@
                     </div>
                     {% endif %}
 
-                    {% if expense.status == 'APPROVED' and request.user|has_role:'DIRECTOR,CASHIER' %}
+                    {% if expense.status == 'APPROVED' and pay_form %}
                     <div class="card mb-3">
                         <div class="card-header bg-light text-white bg-primary">
                             <h5 class="mb-0">{% trans "Cashier Payment" %}</h5>
                         </div>
                         <div class="card-body">
-                            <p class="fs--1">{% trans "Mark this expense as PAID once funds are disbursed." %}</p>
+                            <p class="fs--1">{% trans "Mark this expense as PAID once funds are disbursed — this records the outflow on the caisse selected below." %}</p>
                             <form action="{% url 'finance:expense_pay' pk=expense.pk %}" method="post">
                                 {% csrf_token %}
+                                <div class="mb-2">
+                                    <label class="form-label">{% trans "Caisse" %}</label>
+                                    {{ pay_form.caisse }}
+                                </div>
                                 <div class="d-grid">
                                     <button type="submit" class="btn btn-success"
                                         data-confirm="{% trans 'Confirm that funds have been disbursed for this expense?' %}">{% trans "Confirm Disbursement" %}</button>
