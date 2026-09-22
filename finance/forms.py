@@ -3,7 +3,7 @@ import json
 from django import forms
 from django.utils.translation import gettext_lazy as _
 from .models import (
-    Expense, Budget, ExpenseCategory, Caisse, CaisseTransaction, CaisseLoan,
+    Expense, Budget, ExpenseCategory, Caisse, CaisseTransaction, CaisseTransactionCategory, CaisseLoan,
     PayrollList, PayrollListItem, Avenant, SalaryPayment,
 )
 from chantiermobile.constants import FormPlaceholders, DatePickerConfig, ValidationMessages, ExpenseNature
@@ -129,12 +129,13 @@ class BudgetForm(forms.ModelForm):
 class CaisseForm(forms.ModelForm):
     class Meta:
         model = Caisse
-        fields = ['name', 'caisse_type', 'site', 'is_administrative']
+        fields = ['name', 'caisse_type', 'site', 'is_administrative', 'manual_site_entry']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('Ex: Caisse principale')}),
             'caisse_type': forms.Select(attrs={'class': 'form-select'}),
             'site': forms.Select(attrs={'class': 'form-select'}),
             'is_administrative': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'manual_site_entry': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -145,30 +146,50 @@ class CaisseForm(forms.ModelForm):
 class CaisseTransactionForm(forms.ModelForm):
     class Meta:
         model = CaisseTransaction
-        fields = ['transaction_type', 'amount', 'date', 'description', 'site', 'phase', 'proof']
+        fields = [
+            'transaction_type', 'amount', 'date', 'description', 'site', 'external_site_label',
+            'phase', 'recipient', 'category', 'proof',
+        ]
         widgets = {
             'transaction_type': forms.Select(attrs={'class': 'form-select'}),
             'amount': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.AMOUNT}),
             'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'description': forms.TextInput(attrs={'class': 'form-control'}),
             'site': forms.Select(attrs={'class': 'form-select'}),
+            'external_site_label': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('Ex: Chantier ou client externe')}),
             'phase': forms.Select(attrs={'class': 'form-select'}),
+            'recipient': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('Qui a reçu / remis ce montant')}),
+            'category': forms.Select(attrs={'class': 'form-select'}),
             'proof': forms.FileInput(attrs={'class': 'form-control'}),
         }
 
     def __init__(self, *args, **kwargs):
+        self.caisse = kwargs.pop('caisse', None)
         super().__init__(*args, **kwargs)
         self.fields['site'].required = False
         self.fields['phase'].required = False
+        self.fields['external_site_label'].required = False
+        self.fields['category'].required = False
+        self.fields['category'].queryset = CaisseTransactionCategory.objects.all()
+        # Bétonnière-style caisses (manual_site_entry) serve external clients
+        # who aren't in the system as a Site — show the free-text field
+        # instead of forcing an internal chantier link. Regular caisses keep
+        # the Site dropdown and never see the free-text field.
+        if self.caisse and self.caisse.manual_site_entry:
+            del self.fields['site']
+            del self.fields['phase']
+        else:
+            del self.fields['external_site_label']
         from projects.models import ProjectPhase
         site = None
         if self.data.get('site'):
             from projects.models import Site
             site = Site.objects.filter(pk=self.data.get('site')).first()
-        if site:
-            self.fields['phase'].queryset = ProjectPhase.objects.filter(site=site).order_by('start_date')
-        else:
-            self.fields['phase'].queryset = ProjectPhase.objects.none()
+        if 'phase' in self.fields:
+            if site:
+                self.fields['phase'].queryset = ProjectPhase.objects.filter(site=site).order_by('start_date')
+            else:
+                self.fields['phase'].queryset = ProjectPhase.objects.none()
 
 
 class CaisseTransferForm(forms.Form):

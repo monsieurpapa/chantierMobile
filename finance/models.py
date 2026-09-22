@@ -269,6 +269,14 @@ class Caisse(BaseModel):
         default=False, verbose_name=_('Caisse de gestion administrative'),
         help_text=_("La caisse vers laquelle les autres caisses transfèrent leurs recettes quotidiennes."),
     )
+    manual_site_entry = models.BooleanField(
+        default=False, verbose_name=_('Chantier saisi manuellement (clients externes)'),
+        help_text=_(
+            "Pour une caisse qui sert aussi des clients externes (ex : location de la bétonnière) : "
+            "sur cette caisse, le formulaire de mouvement demande un chantier/client en texte libre "
+            "au lieu d'imposer un chantier interne."
+        ),
+    )
 
     class Meta:
         ordering = ['-is_administrative', 'name']
@@ -284,7 +292,8 @@ class Caisse(BaseModel):
         )
         return (agg['entrees'] or 0) - (agg['sorties'] or 0)
 
-    def record(self, transaction_type, amount, user, description='', date=None, site=None, phase=None, expense=None, proof=None):
+    def record(self, transaction_type, amount, user, description='', date=None, site=None, phase=None,
+               expense=None, proof=None, recipient='', category=None, external_site_label=''):
         """Create a single ledger entry. Use transfer_to()/CaisseLoan for
         moves between two caisses so both legs are created atomically."""
         from django.utils import timezone as _tz
@@ -299,6 +308,9 @@ class Caisse(BaseModel):
             expense=expense,
             proof=proof,
             recorded_by=user,
+            recipient=recipient,
+            category=category,
+            external_site_label=external_site_label,
         )
 
     @transaction.atomic
@@ -313,15 +325,45 @@ class Caisse(BaseModel):
         return out_tx, in_tx
 
 
+class CaisseTransactionCategory(BaseModel):
+    """A filterable tag for what a caisse movement was for (entrée or
+    sortie) — separate from ExpenseCategory, which only classifies
+    Dépenses. Managed from Django admin, like ExpenseCategory."""
+    name = models.CharField(max_length=100, verbose_name=_('Nom'))
+    description = models.TextField(blank=True, verbose_name=_('Description'))
+
+    class Meta:
+        verbose_name_plural = 'Caisse Transaction Categories'
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
 class CaisseTransaction(BaseModel):
     caisse = models.ForeignKey(Caisse, on_delete=models.CASCADE, related_name='transactions')
     transaction_type = models.CharField(max_length=10, choices=CaisseTransactionType.choices, verbose_name=_('Type'))
     amount = models.DecimalField(max_digits=14, decimal_places=2, verbose_name=_('Montant'))
     date = models.DateField(verbose_name=_('Date'))
     description = models.CharField(max_length=255, blank=True, verbose_name=_('Description'))
-    site = models.ForeignKey(Site, on_delete=models.SET_NULL, null=True, blank=True, related_name='caisse_transactions', verbose_name=_('Chantier'))
+    site = models.ForeignKey(
+        Site, on_delete=models.SET_NULL, null=True, blank=True, related_name='caisse_transactions', verbose_name=_('Chantier'),
+        help_text=_("Chantier interne. Laisser vide et utiliser le champ texte libre pour un client externe (ex : Bétonnière)."),
+    )
+    external_site_label = models.CharField(
+        max_length=255, blank=True, verbose_name=_('Chantier / Client (texte libre)'),
+        help_text=_("Pour les caisses à clients externes : nom du chantier ou du client tel que communiqué, sans lien vers un chantier interne."),
+    )
     phase = models.ForeignKey(ProjectPhase, on_delete=models.SET_NULL, null=True, blank=True, related_name='caisse_transactions', verbose_name=_('Étape'))
     expense = models.ForeignKey(Expense, on_delete=models.SET_NULL, null=True, blank=True, related_name='caisse_transactions')
+    recipient = models.CharField(
+        max_length=255, blank=True, verbose_name=_('Bénéficiaire'),
+        help_text=_("Qui a reçu ou remis ce montant — pour la traçabilité, pas forcément une fiche du système."),
+    )
+    category = models.ForeignKey(
+        CaisseTransactionCategory, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='transactions', verbose_name=_('Catégorie'),
+    )
     proof = models.FileField(upload_to='caisse/proofs/', null=True, blank=True, verbose_name=_('Justificatif'))
     recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='caisse_transactions_recorded')
 
@@ -362,6 +404,14 @@ class CaisseLoan(BaseModel):
             raise ValidationError(_("La caisse prêteuse et la caisse emprunteuse doivent être différentes."))
         if self.amount is not None and self.amount <= 0:
             raise ValidationError({'amount': _('Le montant doit être positif.')})
+        if self.amount is not None and self.lender_caisse_id and not self.pk:
+            # Only checked on creation — a loan is disbursed immediately
+            # once created (see disburse()), so this is the one moment that
+            # matters: the lender caisse must actually hold the funds.
+            if self.amount > self.lender_caisse.balance:
+                raise ValidationError({'amount': _(
+                    "Solde insuffisant sur %(caisse)s : solde disponible %(balance)s, montant demandé %(amount)s."
+                ) % {'caisse': self.lender_caisse, 'balance': self.lender_caisse.balance, 'amount': self.amount}})
 
     @property
     def outstanding_balance(self):

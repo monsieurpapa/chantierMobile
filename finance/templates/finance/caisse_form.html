@@ -37,6 +37,11 @@
                             {{ form.is_administrative }}
                             <label class="form-check-label" for="{{ form.is_administrative.id_for_label }}">{% trans "Caisse de gestion administrative" %}</label>
                         </div>
+                        <div class="form-check mb-3">
+                            {{ form.manual_site_entry }}
+                            <label class="form-check-label" for="{{ form.manual_site_entry.id_for_label }}">{% trans "Chantier saisi manuellement (clients externes)" %}</label>
+                            <p class="fs--2 text-500 mb-0">{% trans "Pour une caisse qui sert aussi des clients externes (ex : location de la bétonnière) : le formulaire de mouvement demandera un chantier/client en texte libre au lieu d'un chantier interne." %}</p>
+                        </div>
                         <div class="col-12 d-flex justify-content-end gap-2">
                             <a class="btn btn-falcon-default" href="{{ back_url }}">{% trans "Cancel" %}</a>
                             <button class="btn btn-primary" type="submit">{% trans "Enregistrer" %}</button>

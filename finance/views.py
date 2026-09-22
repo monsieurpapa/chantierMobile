@@ -1,4 +1,4 @@
-from django.views.generic import ListView, CreateView, DetailView, UpdateView
+from django.views.generic import ListView, CreateView, DetailView, UpdateView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
@@ -12,7 +12,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from decimal import Decimal
 from .models import (
-    Expense, ExpenseApproval, Budget, Caisse, CaisseTransaction, CaisseLoan,
+    Expense, ExpenseApproval, Budget, Caisse, CaisseTransaction, CaisseTransactionCategory, CaisseLoan,
     PayrollList, PayrollListItem, Avenant, SalaryPayment,
 )
 from .forms import (
@@ -687,6 +687,32 @@ class CaisseCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin
         return super().form_valid(form)
 
 
+class CaisseUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, UpdateView):
+    """Lets DIRECTOR/ACCOUNTANT edit a caisse's settings after creation —
+    in particular, toggling manual_site_entry on for a caisse that serves
+    external clients (e.g. the bétonnière) without needing shell access."""
+    model = Caisse
+    form_class = CaisseForm
+    template_name = 'finance/caisse_form.html'
+    allowed_roles = ['DIRECTOR', 'ACCOUNTANT']
+    header_title = _("Modifier la caisse")
+
+    def get_back_url(self):
+        return str(reverse_lazy('finance:caisse_detail', kwargs={'pk': self.object.pk}))
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        form.fields['site'].queryset = Site.objects.filter(cabinet=self.object.cabinet)
+        return form
+
+    def form_valid(self, form):
+        messages.success(self.request, _("Caisse mise à jour."))
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return str(reverse_lazy('finance:caisse_detail', kwargs={'pk': self.object.pk}))
+
+
 class CaisseDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, DetailView):
     """The livre de caisse: chronological ledger with a running balance,
     optionally filtered to a date range (day/week/month/year)."""
@@ -703,11 +729,13 @@ class CaisseDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         caisse = self.object
-        qs = caisse.transactions.select_related('site', 'phase', 'expense').order_by('date', 'created_at')
+        qs = caisse.transactions.select_related('site', 'phase', 'expense', 'category').order_by('date', 'created_at')
 
         date_from = self.request.GET.get('date_from')
         date_to = self.request.GET.get('date_to')
         period = self.request.GET.get('period')
+        selected_type = self.request.GET.get('type', '')
+        selected_category = self.request.GET.get('category', '')
         today = timezone.localdate()
         if period == 'day':
             qs = qs.filter(date=today)
@@ -722,9 +750,11 @@ class CaisseDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, 
         if date_to:
             qs = qs.filter(date__lte=date_to)
 
-        # Running balance across the filtered rows, seeded with the balance
-        # carried in from before the range so the ledger reads like a bank
-        # statement rather than resetting to zero.
+        # Running balance across ALL rows in the date range (regardless of
+        # the type/category filters below), seeded with the balance carried
+        # in from before the range, so "Solde" always reads like a real bank
+        # statement. Type/category only narrow which rows are then *shown* —
+        # they never change what the displayed balances mean.
         opening = caisse.transactions.filter(date__lt=(qs.first().date if qs.exists() else today)).aggregate(
             entrees=Sum('amount', filter=Q(transaction_type=CaisseTransactionType.ENTREE)),
             sorties=Sum('amount', filter=Q(transaction_type=CaisseTransactionType.SORTIE)),
@@ -733,6 +763,10 @@ class CaisseDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, 
         rows = []
         for tx in qs:
             running += tx.amount if tx.transaction_type == CaisseTransactionType.ENTREE else -tx.amount
+            if selected_type and tx.transaction_type != selected_type:
+                continue
+            if selected_category and str(tx.category_id) != selected_category:
+                continue
             rows.append({'tx': tx, 'running_balance': running})
 
         context['ledger_rows'] = rows
@@ -741,6 +775,9 @@ class CaisseDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, 
         context['period'] = period or ''
         context['date_from'] = date_from or ''
         context['date_to'] = date_to or ''
+        context['selected_type'] = selected_type
+        context['selected_category'] = selected_category
+        context['categories'] = CaisseTransactionCategory.objects.all()
         context['can_manage'] = can_act_for_cabinet(self.request, caisse.cabinet, CAISSE_MANAGE_ROLES)
         context['other_caisses'] = Caisse.objects.filter(cabinet=caisse.cabinet).exclude(pk=caisse.pk)
         context['transfer_form'] = CaisseTransferForm()
@@ -765,6 +802,11 @@ class CaisseTransactionCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHea
     def get_back_url(self):
         return str(reverse_lazy('finance:caisse_detail', kwargs={'pk': self.caisse.pk}))
 
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['caisse'] = self.caisse
+        return kwargs
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['caisse'] = self.caisse
@@ -778,6 +820,22 @@ class CaisseTransactionCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHea
 
     def get_success_url(self):
         return reverse_lazy('finance:caisse_detail', kwargs={'pk': self.caisse.pk})
+
+
+class CaisseTransactionDeleteView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, DeleteView):
+    """Soft-deletes a single ledger entry. Caisse.balance is a live
+    aggregate over non-deleted transactions, so nothing else needs to be
+    reversed or recalculated."""
+    model = CaisseTransaction
+    allowed_roles = CAISSE_MANAGE_ROLES
+    cabinet_lookup_field = 'caisse__cabinet'
+
+    def get_success_url(self):
+        return str(reverse_lazy('finance:caisse_detail', kwargs={'pk': self.object.caisse_id}))
+
+    def post(self, request, *args, **kwargs):
+        messages.success(request, _("Mouvement supprimé."))
+        return self.delete(request, *args, **kwargs)
 
 
 @login_required
@@ -882,7 +940,7 @@ def _caisse_ledger_queryset(request):
     """Shared filtering for the combined caisse (livre de caisse) report
     and its PDF export — cabinet-scoped, filterable by caisse/site/phase and
     by date range or period (jour/semaine/mois/an)."""
-    qs = CaisseTransaction.objects.select_related('caisse', 'site', 'phase').order_by('-date', '-id')
+    qs = CaisseTransaction.objects.select_related('caisse', 'site', 'phase', 'category').order_by('-date', '-id')
     if request.user.is_superuser:
         active_cabinet = get_session_cabinet(request)
         if active_cabinet:
@@ -900,6 +958,12 @@ def _caisse_ledger_queryset(request):
     phase_id = request.GET.get('phase')
     if phase_id:
         qs = qs.filter(phase_id=phase_id)
+    transaction_type = request.GET.get('type')
+    if transaction_type:
+        qs = qs.filter(transaction_type=transaction_type)
+    category_id = request.GET.get('category')
+    if category_id:
+        qs = qs.filter(category_id=category_id)
 
     date_from = request.GET.get('date_from')
     date_to = request.GET.get('date_to')
@@ -962,6 +1026,9 @@ class CaisseReportView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, L
         context['date_from'] = self.request.GET.get('date_from', '')
         context['date_to'] = self.request.GET.get('date_to', '')
         context['period'] = self.request.GET.get('period', '')
+        context['selected_type'] = self.request.GET.get('type', '')
+        context['selected_category'] = self.request.GET.get('category', '')
+        context['categories'] = CaisseTransactionCategory.objects.all()
         return context
 
 

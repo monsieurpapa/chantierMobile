@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Budget, ExpenseCategory, Expense, ExpenseApproval
+from .models import Budget, ExpenseCategory, Expense, ExpenseApproval, CaisseTransactionCategory
 
 @admin.register(Budget)
 class BudgetAdmin(admin.ModelAdmin):
@@ -7,6 +7,10 @@ class BudgetAdmin(admin.ModelAdmin):
 
 @admin.register(ExpenseCategory)
 class ExpenseCategoryAdmin(admin.ModelAdmin):
+    list_display = ('name',)
+
+@admin.register(CaisseTransactionCategory)
+class CaisseTransactionCategoryAdmin(admin.ModelAdmin):
     list_display = ('name',)
 
 class ApprovalInline(admin.TabularInline):

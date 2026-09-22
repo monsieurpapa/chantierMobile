@@ -35,17 +35,40 @@
                                 {{ form.date }}
                                 {% if form.date.errors %}<div class="text-danger fs--2">{{ form.date.errors }}</div>{% endif %}
                             </div>
+                            {% if form.site %}
                             <div class="col-md-6">
                                 <label class="form-label" for="{{ form.site.id_for_label }}">{% trans "Chantier (optionnel)" %}</label>
                                 {{ form.site }}
                                 {% if form.site.errors %}<div class="text-danger fs--2">{{ form.site.errors }}</div>{% endif %}
                             </div>
+                            {% elif form.external_site_label %}
+                            <div class="col-md-6">
+                                <label class="form-label" for="{{ form.external_site_label.id_for_label }}">{% trans "Chantier / Client" %}</label>
+                                {{ form.external_site_label }}
+                                {% if form.external_site_label.errors %}<div class="text-danger fs--2">{{ form.external_site_label.errors }}</div>{% endif %}
+                                <p class="fs--2 text-500 mb-0">{% trans "Cette caisse sert des clients externes : saisissez le chantier ou le client tel que communiqué." %}</p>
+                            </div>
+                            {% endif %}
                         </div>
                         <div class="row mb-3">
+                            {% if form.phase %}
                             <div class="col-md-6">
                                 <label class="form-label" for="{{ form.phase.id_for_label }}">{% trans "Étape (optionnel)" %}</label>
                                 {{ form.phase }}
                                 {% if form.phase.errors %}<div class="text-danger fs--2">{{ form.phase.errors }}</div>{% endif %}
+                            </div>
+                            {% endif %}
+                            <div class="col-md-6">
+                                <label class="form-label" for="{{ form.recipient.id_for_label }}">{% trans "Bénéficiaire (optionnel)" %}</label>
+                                {{ form.recipient }}
+                                {% if form.recipient.errors %}<div class="text-danger fs--2">{{ form.recipient.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label" for="{{ form.category.id_for_label }}">{% trans "Catégorie (optionnel)" %}</label>
+                                {{ form.category }}
+                                {% if form.category.errors %}<div class="text-danger fs--2">{{ form.category.errors }}</div>{% endif %}
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label" for="{{ form.proof.id_for_label }}">{% trans "Justificatif (optionnel)" %}</label>

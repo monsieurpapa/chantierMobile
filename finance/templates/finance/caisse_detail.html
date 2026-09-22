@@ -40,6 +40,9 @@
                             <button class="btn btn-falcon-default btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#transferForm">
                                 <span class="fas fa-exchange-alt me-1"></span>{% trans "Transférer" %}
                             </button>
+                            <a href="{% url 'finance:caisse_update' pk=caisse.pk %}" class="btn btn-falcon-default btn-sm">
+                                <span class="fas fa-cog me-1"></span>{% trans "Paramètres de la caisse" %}
+                            </a>
                         </div>
                     </div>
                     {% endif %}
@@ -76,7 +79,7 @@
             <div class="card mb-3">
                 <div class="card-body bg-light">
                     <form method="get" class="row g-3 align-items-end">
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label class="form-label fs--1 fw-semibold">{% trans "Période" %}</label>
                             <select name="period" class="form-select">
                                 <option value="">{% trans "Personnalisée" %}</option>
@@ -86,15 +89,32 @@
                                 <option value="year" {% if period == "year" %}selected{% endif %}>{% trans "Cette année" %}</option>
                             </select>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label class="form-label fs--1 fw-semibold">{% trans "Du" %}</label>
                             <input type="date" name="date_from" value="{{ date_from }}" class="form-control">
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label class="form-label fs--1 fw-semibold">{% trans "Au" %}</label>
                             <input type="date" name="date_to" value="{{ date_to }}" class="form-control">
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
+                            <label class="form-label fs--1 fw-semibold">{% trans "Type" %}</label>
+                            <select name="type" class="form-select">
+                                <option value="">{% trans "Tous" %}</option>
+                                <option value="ENTREE" {% if selected_type == "ENTREE" %}selected{% endif %}>{% trans "Entrée" %}</option>
+                                <option value="SORTIE" {% if selected_type == "SORTIE" %}selected{% endif %}>{% trans "Sortie" %}</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fs--1 fw-semibold">{% trans "Catégorie" %}</label>
+                            <select name="category" class="form-select">
+                                <option value="">{% trans "Toutes" %}</option>
+                                {% for cat in categories %}
+                                <option value="{{ cat.pk }}" {% if selected_category == cat.pk|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
                             <button type="submit" class="btn btn-falcon-primary w-100"><i class="fas fa-filter me-1"></i>{% trans "Filtrer" %}</button>
                         </div>
                     </form>
@@ -111,10 +131,13 @@
                                     <th>{% trans "Type" %}</th>
                                     <th>{% trans "Chantier" %}</th>
                                     <th>{% trans "Étape" %}</th>
+                                    <th>{% trans "Bénéficiaire" %}</th>
+                                    <th>{% trans "Catégorie" %}</th>
                                     <th>{% trans "Description" %}</th>
                                     <th class="text-end">{% trans "Montant" %}</th>
                                     <th class="text-end">{% trans "Solde" %}</th>
                                     <th>{% trans "Justificatif" %}</th>
+                                    {% if can_manage %}<th></th>{% endif %}
                                 </tr>
                             </thead>
                             <tbody>
@@ -126,8 +149,10 @@
                                             {{ row.tx.get_transaction_type_display }}
                                         </span>
                                     </td>
-                                    <td>{{ row.tx.site.name|default:"-" }}</td>
+                                    <td>{{ row.tx.site.name|default:row.tx.external_site_label|default:"-" }}</td>
                                     <td>{{ row.tx.phase.name|default:"-" }}</td>
+                                    <td>{{ row.tx.recipient|default:"-" }}</td>
+                                    <td>{{ row.tx.category.name|default:"-" }}</td>
                                     <td>{{ row.tx.description|default:"-" }}</td>
                                     <td class="text-end fw-semibold">${{ row.tx.amount|floatformat:2|intcomma }}</td>
                                     <td class="text-end">${{ row.running_balance|floatformat:2|intcomma }}</td>
@@ -136,9 +161,17 @@
                                         <a href="{{ row.tx.proof.url }}" target="_blank" rel="noopener"><span class="fas fa-paperclip"></span></a>
                                         {% else %}—{% endif %}
                                     </td>
+                                    {% if can_manage %}
+                                    <td>
+                                        <form method="post" action="{% url 'finance:caisse_transaction_delete' pk=row.tx.pk %}" class="d-inline" onsubmit="return confirm('{% trans "Supprimer ce mouvement ?" %}');">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-link text-danger btn-sm p-0"><span class="fas fa-trash"></span></button>
+                                        </form>
+                                    </td>
+                                    {% endif %}
                                 </tr>
                                 {% empty %}
-                                <tr><td colspan="8" class="text-center py-4 text-500">{% trans "Aucun mouvement pour cette période." %}</td></tr>
+                                <tr><td colspan="11" class="text-center py-4 text-500">{% trans "Aucun mouvement pour cette période." %}</td></tr>
                                 {% endfor %}
                             </tbody>
                         </table>

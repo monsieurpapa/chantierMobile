@@ -52,6 +52,23 @@
                             <label class="form-label fs--1 fw-semibold">{% trans "Au" %}</label>
                             <input type="date" name="date_to" value="{{ date_to }}" class="form-control">
                         </div>
+                        <div class="col-md-2">
+                            <label class="form-label fs--1 fw-semibold">{% trans "Type" %}</label>
+                            <select name="type" class="form-select">
+                                <option value="">{% trans "Tous" %}</option>
+                                <option value="ENTREE" {% if selected_type == "ENTREE" %}selected{% endif %}>{% trans "Entrée" %}</option>
+                                <option value="SORTIE" {% if selected_type == "SORTIE" %}selected{% endif %}>{% trans "Sortie" %}</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fs--1 fw-semibold">{% trans "Catégorie" %}</label>
+                            <select name="category" class="form-select">
+                                <option value="">{% trans "Toutes" %}</option>
+                                {% for cat in categories %}
+                                <option value="{{ cat.pk }}" {% if selected_category == cat.pk|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
                         <div class="col-md-2 d-flex gap-2">
                             <button type="submit" class="btn btn-falcon-primary flex-fill">
                                 <i class="fas fa-filter me-1"></i>{% trans "Filtrer" %}
@@ -94,6 +111,8 @@
                                     <th>{% trans "Type" %}</th>
                                     <th>{% trans "Chantier" %}</th>
                                     <th>{% trans "Étape" %}</th>
+                                    <th>{% trans "Bénéficiaire" %}</th>
+                                    <th>{% trans "Catégorie" %}</th>
                                     <th>{% trans "Description" %}</th>
                                     <th class="text-end">{% trans "Montant" %}</th>
                                 </tr>
@@ -108,13 +127,15 @@
                                             {{ tx.get_transaction_type_display }}
                                         </span>
                                     </td>
-                                    <td>{{ tx.site.name|default:"-" }}</td>
+                                    <td>{{ tx.site.name|default:tx.external_site_label|default:"-" }}</td>
                                     <td>{{ tx.phase.name|default:"-" }}</td>
+                                    <td>{{ tx.recipient|default:"-" }}</td>
+                                    <td>{{ tx.category.name|default:"-" }}</td>
                                     <td>{{ tx.description|default:"-" }}</td>
                                     <td class="text-end fw-semibold">${{ tx.amount|floatformat:2|intcomma }}</td>
                                 </tr>
                                 {% empty %}
-                                <tr><td colspan="7" class="text-center py-4 text-500">{% trans "Aucun mouvement pour cette sélection." %}</td></tr>
+                                <tr><td colspan="9" class="text-center py-4 text-500">{% trans "Aucun mouvement pour cette sélection." %}</td></tr>
                                 {% endfor %}
                             </tbody>
                         </table>
