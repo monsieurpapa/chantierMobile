@@ -577,17 +577,28 @@ class UserToggleActiveAdminView(LoginRequiredMixin, IsSuperAdminMixin, View):
 
 
 # ============================================
-# Superadmin Cabinet Assignment Views
+# Cabinet Context Switching
 # ============================================
 
-class SwitchCabinetView(LoginRequiredMixin, IsSuperAdminMixin, View):
-    """POST-only view for superadmins to switch their active cabinet context."""
+class SwitchCabinetView(LoginRequiredMixin, View):
+    """POST-only view to switch the caller's active cabinet context.
+
+    A superuser can switch into any cabinet in the system (platform-admin
+    impersonation). A regular user can only switch into a cabinet they
+    actually belong to — get_object_or_404 below is scoped accordingly,
+    so this can never be used to activate a session cabinet outside the
+    user's own memberships. Regular users with only one cabinet (or none)
+    have nothing to disambiguate and the template never offers them this
+    control, but the view enforces the same rule regardless of what the
+    UI shows.
+    """
 
     def post(self, request):
         cabinet_id = request.POST.get('cabinet_id', '').strip()
 
         if not cabinet_id:
-            # Clear active cabinet → back to "all cabinets"
+            # Clear active cabinet → back to "all cabinets" (superuser) or
+            # "all of my cabinets" (multi-cabinet regular user).
             old_cabinet_id = request.session.pop('active_cabinet_id', None)
             if old_cabinet_id:
                 CabinetContextLog.objects.create(
@@ -602,7 +613,10 @@ class SwitchCabinetView(LoginRequiredMixin, IsSuperAdminMixin, View):
                 messages.error(request, _('Invalid cabinet selection.'))
                 return redirect(request.META.get('HTTP_REFERER') or 'home')
 
-            cabinet = get_object_or_404(Cabinet, pk=cabinet_pk)
+            if request.user.is_superuser:
+                cabinet = get_object_or_404(Cabinet, pk=cabinet_pk)
+            else:
+                cabinet = get_object_or_404(Cabinet, pk=cabinet_pk, user_roles__user=request.user)
             request.session['active_cabinet_id'] = cabinet_pk
             CabinetContextLog.objects.create(
                 cabinet=cabinet,

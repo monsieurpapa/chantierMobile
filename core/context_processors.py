@@ -42,6 +42,18 @@ def site_info_context(request):
 def active_cabinet_context(request):
     """
     Inject active_cabinet and all_cabinets for superadmin cabinet switcher.
+
+    Deliberately superuser-only: this runs on *every* request that renders
+    a template, so it must stay free for the common case. Extending it to
+    also query a regular user's own cabinet memberships on every page load
+    was tried and reverted — it broke the app's query-count budget (see
+    tests/test_performance.py), for a switcher most users would never use
+    (multi-cabinet *regular* staff are the rare case, not the default).
+    A regular multi-cabinet user's cabinet ambiguity on *creation* forms
+    (PriceLibraryItemCreateView, DQECreateView, ...) is instead resolved
+    locally on those specific forms — see get_session_cabinet's docstring
+    in core/mixins.py, which regular users can still populate via
+    accounts:switch_cabinet even though no navbar UI links to it for them.
     """
     if not request.user.is_authenticated or not request.user.is_superuser:
         return {}

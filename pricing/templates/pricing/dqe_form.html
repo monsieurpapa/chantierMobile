@@ -23,6 +23,17 @@
                     <form method="post" id="dqe-form">
                         {% csrf_token %}
 
+                        {% if form.cabinet %}
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold" for="{{ form.cabinet.id_for_label }}">{{ form.cabinet.label }}</label>
+                                {{ form.cabinet }}
+                                <div class="form-text">{{ form.cabinet.help_text }}</div>
+                                {% if form.cabinet.errors %}<div class="text-danger fs--2 mt-1">{{ form.cabinet.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+
                         <!-- Header fields -->
                         <div class="row g-3 mb-4">
                             <div class="col-md-4">

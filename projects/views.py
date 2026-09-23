@@ -265,9 +265,34 @@ class ProjectPhaseCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMi
     template_name = 'projects/phase_form.html'
     allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER']
 
+    @staticmethod
+    def _site_queryset(request):
+        """Cabinet-scoped Site lookup so a phase can't be created under a
+        site the requester has no access to (site_id is a raw URL kwarg,
+        not a form field Django can validate against a scoped queryset).
+        Mirrors the superuser/regular-user branching used everywhere else
+        (e.g. SiteAssignmentCreateView.get_form). Unauthenticated requests
+        fall through unscoped so LoginRequiredMixin's redirect (triggered
+        by super().dispatch() right after) still fires instead of a 404.
+        """
+        user = request.user
+        if not user.is_authenticated:
+            return Site.objects.all()
+        if user.is_superuser:
+            active_cabinet = get_session_cabinet(request)
+            return Site.objects.filter(cabinet=active_cabinet) if active_cabinet else Site.objects.all()
+        cabinets = user.cabinet_roles.values_list('cabinet', flat=True)
+        return Site.objects.filter(cabinet__in=cabinets)
+
     def dispatch(self, request, *args, **kwargs):
-        self.site = get_object_or_404(Site, unique_id=self.kwargs.get('site_id'))
+        self.site = get_object_or_404(self._site_queryset(request), unique_id=self.kwargs.get('site_id'))
         return super().dispatch(request, *args, **kwargs)
+
+    def get_role_cabinet(self):
+        # Scopes the DIRECTOR/CHIEF_ENGINEER check to the site's own
+        # cabinet, not just "has this role somewhere" — a Director in
+        # Cabinet A has no authority to add phases to Cabinet B's sites.
+        return self.site.cabinet
 
     def get_header_title(self):
         return _("Ajouter une phase : %(name)s") % {'name': self.site.name}
@@ -298,13 +323,14 @@ class ProjectPhaseCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMi
     def get_success_url(self):
         return reverse_lazy('projects:site_detail', kwargs={'unique_id': self.site.unique_id})
 
-class ProjectPhaseUpdateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, UpdateView):
+class ProjectPhaseUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, UpdateView):
     model = ProjectPhase
     form_class = ProjectPhaseForm
     template_name = 'projects/phase_form.html'
     slug_field = 'unique_id'
     slug_url_kwarg = 'unique_id'
     allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER']
+    cabinet_lookup_field = 'site__cabinet'
 
     def get_header_title(self):
         return _("Modifier la phase : %(name)s") % {'name': self.object.name}
@@ -328,12 +354,13 @@ class ProjectPhaseUpdateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMi
         messages.success(self.request, _("Phase mise à jour avec succès !"))
         return reverse_lazy('projects:site_detail', kwargs={'unique_id': self.object.site.unique_id})
 
-class ProjectPhaseDeleteView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, DeleteView):
+class ProjectPhaseDeleteView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, DeleteView):
     model = ProjectPhase
     template_name = 'projects/confirm_delete.html'
     slug_field = 'unique_id'
     slug_url_kwarg = 'unique_id'
     allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER']
+    cabinet_lookup_field = 'site__cabinet'
 
     def get_header_title(self):
         return _("Supprimer la phase : %(name)s") % {'name': self.object.name}

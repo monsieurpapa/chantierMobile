@@ -108,7 +108,11 @@ class MaterialRequestListView(LoginRequiredMixin, PageHeaderMixin, ListView):
 
     def get_queryset(self):
         qs = super().get_queryset().prefetch_related('items__material').select_related('site', 'requested_by')
-        if not self.request.user.is_superuser:
+        if self.request.user.is_superuser:
+            active_cabinet = get_session_cabinet(self.request)
+            if active_cabinet:
+                qs = qs.filter(site__cabinet=active_cabinet)
+        else:
             user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
             qs = qs.filter(site__cabinet__id__in=user_cabinet_ids)
         return qs.order_by('-created_at')

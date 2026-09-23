@@ -7,23 +7,46 @@ from accounts.models import UserCabinetRole
 
 def get_session_cabinet(request):
     """
-    Returns the session-scoped Cabinet for a superuser, or None.
-    Clears the session key if the cabinet no longer exists.
+    Returns the session-scoped "active cabinet" for the current user, or
+    None if none is set.
+
+    Historically superuser-only (used to impersonate/browse a single
+    cabinet at a time). Now also usable for a regular user who belongs to
+    more than one cabinet, so multi-cabinet staff can disambiguate which
+    cabinet a new record should be tagged with (see
+    CabinetAccessMixin.get_user_cabinet) — a non-superuser's stored
+    selection is always re-validated against their own UserCabinetRole
+    memberships below, so the session can never grant access to a cabinet
+    the user doesn't actually belong to.
     """
-    if not request.user.is_authenticated or not request.user.is_superuser:
+    if not request.user.is_authenticated:
         return None
     cabinet_id = request.session.get('active_cabinet_id')
     if not cabinet_id:
         return None
     try:
         from accounts.models import Cabinet
-        return Cabinet.objects.get(pk=int(cabinet_id))
+        cabinet = Cabinet.objects.get(pk=int(cabinet_id))
     except (Cabinet.DoesNotExist, ValueError, TypeError):
         try:
             del request.session['active_cabinet_id']
         except KeyError:
             pass
         return None
+
+    if not request.user.is_superuser and not UserCabinetRole.objects.filter(
+        user=request.user, cabinet=cabinet
+    ).exists():
+        # Stale/foreign selection (e.g. the role was revoked after they
+        # switched into it) — never trust it, and drop it so it isn't
+        # re-checked on every request.
+        try:
+            del request.session['active_cabinet_id']
+        except KeyError:
+            pass
+        return None
+
+    return cabinet
 
 
 def can_act_for_cabinet(request, cabinet, allowed_roles):
@@ -107,7 +130,23 @@ class CabinetAccessMixin:
         return qs.none()
 
     def get_user_cabinet(self):
-        """Returns the cabinet for object creation."""
+        """Returns the cabinet to tag a newly-created object with.
+
+        - Superuser: the cabinet they've switched into, or (unchanged
+          legacy default) the oldest cabinet in the system if they haven't.
+        - Regular user with exactly one cabinet: that cabinet — unambiguous.
+        - Regular user with several cabinets: the one they've explicitly
+          switched into (accounts:switch_cabinet — no navbar UI links
+          there for a regular user, but a form can offer it inline; see
+          get_ambiguous_cabinet_choices), or None if they haven't chosen
+          one yet. This used to silently pick whichever cabinet happened
+          to sort first, which could tag a new record to the wrong
+          tenant for multi-cabinet staff; every caller already treats a
+          None return as "ask the user to identify their cabinet" (see
+          e.g. SiteCreateView, PersonnelCreateView), so an unresolved
+          multi-cabinet user now hits that same prompt instead of a
+          silent guess.
+        """
         if self.request.user.is_superuser:
             active_cabinet = get_session_cabinet(self.request)
             if active_cabinet:
@@ -115,10 +154,37 @@ class CabinetAccessMixin:
             from accounts.models import Cabinet
             return Cabinet.objects.order_by('created_at').first()
 
-        if hasattr(self.request.user, 'cabinet_roles') and self.request.user.cabinet_roles.exists():
-            return self.request.user.cabinet_roles.first().cabinet
+        if hasattr(self.request.user, 'cabinet_roles'):
+            cabinet_ids = list(self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)[:2])
+            if len(cabinet_ids) == 1:
+                from accounts.models import Cabinet
+                return Cabinet.objects.filter(pk=cabinet_ids[0]).first()
+            if len(cabinet_ids) > 1:
+                return get_session_cabinet(self.request)
 
         return None
+
+    def get_ambiguous_cabinet_choices(self):
+        """Companion to get_user_cabinet() for a creation form that wants
+        to let an unresolved multi-cabinet user pick explicitly (e.g. via
+        an extra 'cabinet' form field) instead of just being blocked.
+
+        Returns the queryset of cabinets to choose from, or None when
+        there's nothing to disambiguate — either get_user_cabinet()
+        already resolved one (superuser, single-cabinet user, or a
+        multi-cabinet user who has an active cabinet switched in), or the
+        user has no cabinet at all. Deliberately not called from
+        get_queryset()/get_user_cabinet() themselves, or from any global
+        context processor — it costs an extra query and is only worth
+        that cost on the specific forms that need it.
+        """
+        if self.request.user.is_superuser:
+            return None
+        if self.get_user_cabinet() is not None:
+            return None
+        from accounts.models import Cabinet
+        cabinets = Cabinet.objects.filter(user_roles__user=self.request.user).distinct().order_by('name')
+        return cabinets if cabinets.count() > 1 else None
 
 class RoleRequiredMixin:
     """

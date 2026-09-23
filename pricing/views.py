@@ -1,3 +1,4 @@
+from django import forms
 from django.views.generic import ListView, CreateView, UpdateView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
@@ -7,8 +8,25 @@ from django.utils.translation import gettext_lazy as _
 from .models import PriceLibraryItem, DQE
 from .forms import PriceLibraryItemForm, DQEForm, DQELineFormSet
 from projects.models import Site
-from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet
+from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin
 from chantiermobile.constants import UserRoles
+
+
+def _add_ambiguous_cabinet_field(view, form):
+    """Shared by PriceLibraryItemCreateView and DQECreateView: when the
+    requester belongs to more than one cabinet and hasn't got an active
+    one resolved (CabinetAccessMixin.get_ambiguous_cabinet_choices), add
+    an explicit 'cabinet' field — scoped to only their own cabinets — so
+    they can say which one this record belongs to, instead of either a
+    silent guess or being flatly blocked with no way forward."""
+    cabinets = view.get_ambiguous_cabinet_choices()
+    if cabinets is None:
+        return
+    form.fields['cabinet'] = forms.ModelChoiceField(
+        queryset=cabinets, required=True, label=_('Cabinet'),
+        help_text=_("Vous appartenez à plusieurs cabinets : précisez celui concerné par cet enregistrement."),
+        widget=forms.Select(attrs={'class': 'form-select'}),
+    )
 
 
 class PriceLibraryItemListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
@@ -36,7 +54,7 @@ class PriceLibraryItemListView(LoginRequiredMixin, CabinetAccessMixin, PageHeade
         return []
 
 
-class PriceLibraryItemCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, CreateView):
+class PriceLibraryItemCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, CreateView):
     model = PriceLibraryItem
     form_class = PriceLibraryItemForm
     template_name = 'pricing/price_item_form.html'
@@ -52,15 +70,24 @@ class PriceLibraryItemCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHead
             {'title': _("Nouvel article"), 'url': None},
         ]
 
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        _add_ambiguous_cabinet_field(self, form)
+        return form
+
     def form_valid(self, form):
-        from django.contrib import messages
-        cabinet = get_session_cabinet(self.request)
+        # get_user_cabinet() (CabinetAccessMixin) is the single source of
+        # truth for the unambiguous cases — the one cabinet for a
+        # single-cabinet user, or the resolved cabinet for a superuser.
+        # For a multi-cabinet user it used to silently guess
+        # (cabinet_roles.first()), which could tag this item to the wrong
+        # tenant; now it returns None and _add_ambiguous_cabinet_field
+        # (get_form above) adds an explicit, scoped-to-their-own-cabinets
+        # 'cabinet' field for them to pick from instead.
+        cabinet = self.get_user_cabinet() or form.cleaned_data.get('cabinet')
         if not cabinet:
-            if self.request.user.is_superuser:
-                from accounts.models import Cabinet
-                cabinet = Cabinet.objects.order_by('created_at').first()
-            elif self.request.user.cabinet_roles.exists():
-                cabinet = self.request.user.cabinet_roles.first().cabinet
+            messages.error(self.request, _("Identification du cabinet échouée."))
+            return self.form_invalid(form)
         form.instance.cabinet = cabinet
         messages.success(self.request, _("Article '%(name)s' ajouté à la bibliothèque de prix.") % {'name': form.instance.designation})
         return super().form_valid(form)
@@ -151,7 +178,7 @@ class DQEListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListV
         return []
 
 
-class DQECreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, CreateView):
+class DQECreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, CreateView):
     model = DQE
     form_class = DQEForm
     template_name = 'pricing/dqe_form.html'
@@ -170,7 +197,9 @@ class DQECreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, Crea
         ]
 
     def get_form(self, form_class=None):
-        return _scope_site_queryset(self.request, super().get_form(form_class))
+        form = _scope_site_queryset(self.request, super().get_form(form_class))
+        _add_ambiguous_cabinet_field(self, form)
+        return form
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -181,17 +210,18 @@ class DQECreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, Crea
         return context
 
     def form_valid(self, form):
+        # See PriceLibraryItemCreateView.form_valid — get_user_cabinet()
+        # (falling back to the form's explicit 'cabinet' field for an
+        # ambiguous multi-cabinet user) is the shared, non-guessing
+        # resolver for which cabinet a new record belongs to.
+        cabinet = self.get_user_cabinet() or form.cleaned_data.get('cabinet')
+        if not cabinet:
+            messages.error(self.request, _("Identification du cabinet échouée."))
+            return self.form_invalid(form)
+        form.instance.cabinet = cabinet
+
         context = self.get_context_data()
         lines_formset = context['lines_formset']
-
-        cabinet = get_session_cabinet(self.request)
-        if not cabinet:
-            if self.request.user.is_superuser:
-                from accounts.models import Cabinet
-                cabinet = Cabinet.objects.order_by('created_at').first()
-            elif self.request.user.cabinet_roles.exists():
-                cabinet = self.request.user.cabinet_roles.first().cabinet
-        form.instance.cabinet = cabinet
 
         if lines_formset.is_valid():
             self.object = form.save()
