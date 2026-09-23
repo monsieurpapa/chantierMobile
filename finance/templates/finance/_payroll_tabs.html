@@ -1,0 +1,13 @@
+{% load i18n %}
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item">
+        <a class="nav-link {% if active_tab == 'main_doeuvre' %}active{% endif %}" href="{% url 'finance:payroll_list' %}">
+            <span class="fas fa-hard-hat me-1"></span>{% trans "Main d'œuvre" %}
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if active_tab == 'salary_payment' %}active{% endif %}" href="{% url 'finance:salary_payment_list' %}">
+            <span class="fas fa-user-tie me-1"></span>{% trans "Ingénieurs & Staff" %}
+        </a>
+    </li>
+</ul>

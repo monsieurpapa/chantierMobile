@@ -37,7 +37,7 @@ urlpatterns = [
     path('caisse-loans/add/', views.CaisseLoanCreateView.as_view(), name='caisse_loan_create'),
     path('caisse-loans/<int:pk>/repay/', views.caisse_loan_repay, name='caisse_loan_repay'),
 
-    # Listes de paie
+    # Listes de paie — "Main d'œuvre" tab (Ouvriers, chantier-scoped)
     path('payroll/', views.PayrollListListView.as_view(), name='payroll_list'),
     path('payroll/add/', views.PayrollListCreateView.as_view(), name='payroll_create'),
     path('payroll/<int:pk>/', views.PayrollListDetailView.as_view(), name='payroll_detail'),
@@ -45,6 +45,10 @@ urlpatterns = [
     path('payroll/<int:pk>/allocate/', views.PayrollListAllocateView.as_view(), name='payroll_allocate'),
     path('payroll/<int:pk>/submit/', views.payroll_submit, name='payroll_submit'),
     path('payroll/<int:pk>/disburse/', views.payroll_disburse, name='payroll_disburse'),
+
+    # Paie du personnel — "Ingénieurs & Staff" tab (salaire mensuel, hors chantier)
+    path('payroll/salaries/', views.SalaryPaymentListView.as_view(), name='salary_payment_list'),
+    path('payroll/salaries/add/', views.SalaryPaymentCreateView.as_view(), name='salary_payment_create'),
 
     # Avenants
     path('avenants/', views.AvenantListView.as_view(), name='avenant_list'),

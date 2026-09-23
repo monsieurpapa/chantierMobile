@@ -210,16 +210,22 @@ class PersonnelStatus(models.TextChoices):
 
 
 class PersonnelPayrollType(models.TextChoices):
-    """Which Liste de paie category a Personnel's payments fall under.
+    """Which payroll track a Personnel's payments fall under — the two are
+    kept strictly separate, each with its own tab, workflow and caisse
+    category:
 
-    Drives two things on the payroll workflow: whether the SiteAssignment
-    convention cap applies (Ouvriers only — see SiteAssignment.
-    convention_amount) and which caisse category a décaissement is booked
-    under (Main d'œuvre Ouvriers vs Salaire Ingénieurs), replacing the
-    separate "Salaire bureau" screen — an Ingénieur is now paid through the
-    same chantier-scoped Liste de paie as everyone else."""
+    - OUVRIER: paid progressively per chantier, capped by the
+      SiteAssignment.convention_amount when one is set. Handled by the
+      chantier-scoped "Liste de paie" / PayrollList ("Main d'œuvre" tab) —
+      booked to the "Main d'œuvre Ouvriers" caisse category on décaissement.
+    - INGENIEUR: paid a fixed monthly salary, not tied to a chantier.
+      Handled by SalaryPayment ("Ingénieurs & Staff" tab) — booked to the
+      "Salaire Ingénieurs" caisse category on décaissement. Covers both
+      engineers and administrative/office staff (AgentCategory.
+      ADMINISTRATION), whether or not they're also assigned to a site.
+    """
     OUVRIER = 'OUVRIER', _("Ouvrier (main d'œuvre)")
-    INGENIEUR = 'INGENIEUR', _('Ingénieur')
+    INGENIEUR = 'INGENIEUR', _('Ingénieur / Staff')
 
 
 class Trade(models.TextChoices):

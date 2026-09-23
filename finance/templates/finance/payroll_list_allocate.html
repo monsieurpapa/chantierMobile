@@ -31,7 +31,6 @@
                                     <tr>
                                         <th>{% trans "Personnel" %}</th>
                                         <th>{% trans "Rôle / Tâche" %}</th>
-                                        <th>{% trans "Catégorie de paie" %}</th>
                                         <th class="text-end">{% trans "Déjà payé" %}</th>
                                         <th class="text-end">{% trans "Reste à payer (convention)" %}</th>
                                         <th class="text-end" style="min-width: 140px;">{% trans "Montant à allouer" %}</th>
@@ -42,7 +41,6 @@
                                     <tr>
                                         <td>{{ row.personnel.get_full_name }}</td>
                                         <td>{{ row.assignment.role }}</td>
-                                        <td>{{ row.personnel.get_payroll_type_display }}</td>
                                         <td class="text-end">${{ row.assignment.paid_amount|floatformat:2|intcomma }}</td>
                                         <td class="text-end">
                                             {% if row.is_capped %}
@@ -57,7 +55,7 @@
                                         </td>
                                     </tr>
                                     {% empty %}
-                                    <tr><td colspan="6" class="text-center py-4 text-500">{% trans "Aucune affectation active sur ce chantier." %}</td></tr>
+                                    <tr><td colspan="5" class="text-center py-4 text-500">{% trans "Aucune affectation active sur ce chantier (Main d'œuvre)." %}</td></tr>
                                     {% endfor %}
                                 </tbody>
                             </table>

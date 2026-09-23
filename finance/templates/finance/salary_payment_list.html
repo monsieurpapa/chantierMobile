@@ -1,0 +1,53 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n humanize %}
+
+{% block title %}{% trans "Paie du personnel" %} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    {% include 'includes/navbar-vertical.html' with on="salary_payment_list" %}
+
+    <div class="content">
+        {% include 'includes/navbar-top.html' %}
+
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+            {% include 'finance/_payroll_tabs.html' %}
+
+            <div class="card mb-3">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped mb-0 fs--1">
+                            <thead>
+                                <tr>
+                                    <th>{% trans "Agent" %}</th>
+                                    <th>{% trans "Période" %}</th>
+                                    <th class="text-end">{% trans "Montant" %}</th>
+                                    <th>{% trans "Caisse" %}</th>
+                                    <th>{% trans "Payé par" %}</th>
+                                    <th>{% trans "Payé le" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for sp in salary_payments %}
+                                <tr>
+                                    <td>{{ sp.personnel.get_full_name }}</td>
+                                    <td>{{ sp.period }}</td>
+                                    <td class="text-end fw-semibold">${{ sp.amount|floatformat:2|intcomma }}</td>
+                                    <td>{{ sp.caisse.name }}</td>
+                                    <td>{{ sp.paid_by.get_full_name|default:sp.paid_by|default:"-" }}</td>
+                                    <td>{{ sp.updated_at|date:"d/m/Y" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="6" class="text-center py-4 text-500">{% trans "Aucun paiement enregistré." %}</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}

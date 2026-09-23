@@ -127,7 +127,7 @@
                         </li>
                         {% endif %}
                         <li class="nav-item">
-                            <a class="nav-link {% if on == 'payroll_list' %}active{% endif %}"
+                            <a class="nav-link {% if on == 'payroll_list' or on == 'salary_payment_list' %}active{% endif %}"
                                 href="{% url 'finance:payroll_list' %}">
                                 <div class="d-flex align-items-center">
                                     <span class="nav-link-text ps-1">{% trans "Listes de paie" %}</span>

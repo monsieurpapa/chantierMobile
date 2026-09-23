@@ -13,12 +13,12 @@ from django.utils.translation import gettext_lazy as _
 from decimal import Decimal, InvalidOperation
 from .models import (
     Expense, ExpenseApproval, Budget, Caisse, CaisseTransaction, CaisseTransactionCategory, CaisseLoan,
-    PayrollList, PayrollListItem, Avenant,
+    PayrollList, PayrollListItem, SalaryPayment, Avenant,
 )
 from .forms import (
     ExpenseForm, ExpensePayForm, BudgetForm, CaisseForm, CaisseTransactionForm, CaisseTransferForm,
     CaisseLoanForm, CaisseLoanRepayForm, PayrollListForm, PayrollListItemForm,
-    PayrollDisburseForm, AvenantForm, AvenantDecisionForm,
+    PayrollDisburseForm, SalaryPaymentForm, AvenantForm, AvenantDecisionForm,
 )
 from projects.models import Site
 from personnel.models import SiteAssignment
@@ -1079,7 +1079,7 @@ class PayrollListListView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin
     context_object_name = 'payroll_lists'
     allowed_roles = PAYROLL_VIEW_ROLES
     header_title = _("Listes de paie")
-    header_subtitle = _("Paiement progressif des ouvriers, par avancement")
+    header_subtitle = _("Main d'œuvre — paiement progressif des ouvriers par chantier, par avancement")
 
     def get_queryset(self):
         qs = PayrollList.objects.select_related('site', 'prepared_by').order_by('-created_at')
@@ -1092,6 +1092,11 @@ class PayrollListListView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin
             if active_cabinet:
                 qs = qs.filter(site__cabinet=active_cabinet)
         return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['active_tab'] = 'main_doeuvre'
+        return context
 
     def get_header_actions(self):
         from accounts.models import UserCabinetRole
@@ -1219,18 +1224,19 @@ class PayrollListAllocateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderM
         return str(reverse_lazy('finance:payroll_detail', kwargs={'pk': self.payroll_list.pk}))
 
     def get_rows(self):
+        # Main d'œuvre only — Ingénieurs & Staff are paid via SalaryPayment
+        # (onglet "Ingénieurs & Staff"), not through a chantier's Liste de
+        # paie. See PayrollListItem.clean() for the matching model-level guard.
         assignments = SiteAssignment.objects.filter(
             site=self.payroll_list.site,
+            personnel__payroll_type=PersonnelPayrollType.OUVRIER,
         ).select_related('personnel').order_by('personnel__last_name', 'personnel__first_name')
         rows = []
         for assignment in assignments:
             personnel = assignment.personnel
             if not personnel.is_eligible:
                 continue
-            is_capped = (
-                personnel.payroll_type == PersonnelPayrollType.OUVRIER
-                and assignment.convention_amount is not None
-            )
+            is_capped = assignment.convention_amount is not None
             rows.append({
                 'assignment': assignment,
                 'personnel': personnel,
@@ -1328,12 +1334,94 @@ def payroll_disburse(request, pk):
 
 
 # ---------------------------------------------------------------------
-# NOTE: "Salaires du bureau" (SalaryPayment views) removed per finance-team
-# demo feedback — engineer/office salaries now go through the same
-# chantier-scoped Liste de paie as everyone else. See finance.models
-# .SalaryPayment's own DEPRECATED docstring: the model/table stays for
-# historical data, but there's no nav link and no URL for it anymore.
+# Paie du personnel — "Ingénieurs & Staff" tab (SalaryPayment): a fixed
+# monthly salary, not tied to a chantier. Sibling of the PayrollList views
+# above ("Main d'œuvre" tab) — same role gates, same "Liste de paie"
+# landing area, switched between via the tabs in the templates.
 # ---------------------------------------------------------------------
+
+class SalaryPaymentListView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, ListView):
+    model = SalaryPayment
+    template_name = 'finance/salary_payment_list.html'
+    context_object_name = 'salary_payments'
+    allowed_roles = PAYROLL_VIEW_ROLES
+    header_title = _("Paie du personnel")
+    header_subtitle = _("Ingénieurs & Staff — salaire mensuel fixe, hors chantier")
+
+    def get_queryset(self):
+        qs = SalaryPayment.objects.select_related('personnel', 'caisse', 'paid_by').order_by('-period', 'personnel__last_name')
+        user = self.request.user
+        if not user.is_superuser:
+            cabinets = user.cabinet_roles.values_list('cabinet', flat=True) if hasattr(user, 'cabinet_roles') else []
+            qs = qs.filter(personnel__cabinet__in=cabinets)
+        else:
+            active_cabinet = get_session_cabinet(self.request)
+            if active_cabinet:
+                qs = qs.filter(personnel__cabinet=active_cabinet)
+        return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['active_tab'] = 'salary_payment'
+        return context
+
+    def get_header_actions(self):
+        from accounts.models import UserCabinetRole
+        if self.request.user.is_superuser or UserCabinetRole.objects.filter(
+            user=self.request.user, role__in=PAYROLL_DISBURSE_ROLES
+        ).exists():
+            return [{
+                'label': _("Nouveau paiement"),
+                'url': str(reverse_lazy('finance:salary_payment_create')),
+                'icon': 'plus',
+                'class': 'btn-falcon-primary',
+            }]
+        return []
+
+
+class SalaryPaymentCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, CreateView):
+    """Creating a SalaryPayment disburses it immediately (see
+    SalaryPayment.disburse's own docstring) — a single cabinet-level cash
+    outflow, unlike PayrollList's multi-step brouillon/soumise/payée
+    workflow. Gated by the disburse-level roles for that reason."""
+    model = SalaryPayment
+    form_class = SalaryPaymentForm
+    template_name = 'finance/salary_payment_form.html'
+    allowed_roles = PAYROLL_DISBURSE_ROLES
+    header_title = _("Nouveau paiement — Ingénieurs & Staff")
+    back_url = reverse_lazy('finance:salary_payment_list')
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        user = self.request.user
+        from personnel.models import Personnel
+        if user.is_superuser:
+            active_cabinet = get_session_cabinet(self.request)
+            personnel_qs = Personnel.objects.filter(cabinet=active_cabinet) if active_cabinet else Personnel.objects.all()
+            caisse_qs = Caisse.objects.filter(cabinet=active_cabinet) if active_cabinet else Caisse.objects.all()
+        else:
+            cabinets = user.cabinet_roles.values_list('cabinet', flat=True)
+            personnel_qs = Personnel.objects.filter(cabinet__in=cabinets)
+            caisse_qs = Caisse.objects.filter(cabinet__in=cabinets)
+        form.fields['personnel'].queryset = form.fields['personnel'].queryset.filter(pk__in=personnel_qs)
+        form.fields['caisse'].queryset = caisse_qs
+        return form
+
+    def form_valid(self, form):
+        try:
+            with transaction.atomic():
+                self.object = form.save()
+                self.object.disburse(self.request.user)
+        except ValidationError as e:
+            message_dict = getattr(e, 'message_dict', None)
+            text = '; '.join(msg for msgs in message_dict.values() for msg in msgs) if message_dict else '; '.join(e.messages)
+            form.add_error(None, text)
+            return self.form_invalid(form)
+        messages.success(self.request, _("Salaire payé et enregistré à la caisse."))
+        return HttpResponseRedirect(self.get_success_url())
+
+    def get_success_url(self):
+        return str(reverse_lazy('finance:salary_payment_list'))
 
 
 # ---------------------------------------------------------------------

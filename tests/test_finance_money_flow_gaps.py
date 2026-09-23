@@ -4,8 +4,10 @@ proposal audit and fixed in this phase:
 
 1. Expense payments never touched the caisse ledger — Expense.pay() now
    records the matching CaisseTransaction (finance/models.py, mark_expense_paid).
-2. No way to pay office/admin monthly salaries — new SalaryPayment model,
-   drawing on Personnel.monthly_salary, disbursed from a Caisse.
+2. No way to pay office/admin monthly salaries — SalaryPayment model
+   ("Ingénieurs & Staff" tab), drawing on Personnel.monthly_salary,
+   disbursed from a Caisse under the "Salaire Ingénieurs" caisse category —
+   the counterpart to PayrollList's chantier-scoped "Main d'œuvre" tab.
 3. MaterialRequest.expense was a dead field — MaterialRequest.authorize()
    now creates and links the matching, pre-approved Expense.
 """
@@ -17,10 +19,11 @@ from django.core.exceptions import ValidationError
 
 from finance.models import (
     Expense, ExpenseApproval, Caisse, CaisseTransaction, SalaryPayment,
+    PAYROLL_INGENIEUR_CATEGORY_NAME,
 )
 from chantiermobile.constants import (
     CaisseTransactionType, CaisseType, ExpenseStatus, ExpenseNature,
-    UserRoles, ApprovalStatus,
+    UserRoles, ApprovalStatus, PersonnelPayrollType,
 )
 from materials.models import MaterialRequest, MaterialRequestItem, Material
 
@@ -126,17 +129,19 @@ class TestMarkExpensePaidView:
 @pytest.mark.django_db
 class TestSalaryPayment:
     def test_disburse_records_caisse_outflow(self, personnel_factory, caisse, user):
-        p = personnel_factory(monthly_salary=Decimal('450.00'))
+        p = personnel_factory(monthly_salary=Decimal('450.00'), payroll_type=PersonnelPayrollType.INGENIEUR)
         sp = SalaryPayment.objects.create(personnel=p, period='2026-09', amount=Decimal('450.00'), caisse=caisse)
         sp.disburse(user)
         assert caisse.balance == Decimal('4550.00')
         tx = CaisseTransaction.objects.get(caisse=caisse, transaction_type=CaisseTransactionType.SORTIE)
         assert tx.amount == Decimal('450.00')
+        assert tx.category.name == PAYROLL_INGENIEUR_CATEGORY_NAME
+        assert tx.recipient == str(p)
         sp.refresh_from_db()
         assert sp.paid_by == user
 
     def test_disburse_rejects_insufficient_balance(self, personnel_factory, caisse_factory, user):
-        p = personnel_factory(monthly_salary=Decimal('450.00'))
+        p = personnel_factory(monthly_salary=Decimal('450.00'), payroll_type=PersonnelPayrollType.INGENIEUR)
         empty_caisse = caisse_factory(name='Vide')
         sp = SalaryPayment.objects.create(personnel=p, period='2026-09', amount=Decimal('450.00'), caisse=empty_caisse)
         with pytest.raises(ValidationError):
@@ -144,25 +149,33 @@ class TestSalaryPayment:
 
     def test_duplicate_period_for_same_personnel_rejected_by_db(self, personnel_factory, caisse):
         from django.db import IntegrityError, transaction as db_transaction
-        p = personnel_factory(monthly_salary=Decimal('450.00'))
+        p = personnel_factory(monthly_salary=Decimal('450.00'), payroll_type=PersonnelPayrollType.INGENIEUR)
         SalaryPayment.objects.create(personnel=p, period='2026-09', amount=Decimal('450.00'), caisse=caisse)
         with pytest.raises(IntegrityError):
             with db_transaction.atomic():
                 SalaryPayment.objects.create(personnel=p, period='2026-09', amount=Decimal('450.00'), caisse=caisse)
 
     def test_invalid_period_format_rejected(self, personnel_factory, caisse):
-        p = personnel_factory(monthly_salary=Decimal('450.00'))
+        p = personnel_factory(monthly_salary=Decimal('450.00'), payroll_type=PersonnelPayrollType.INGENIEUR)
         sp = SalaryPayment(personnel=p, period='sept-2026', amount=Decimal('450.00'), caisse=caisse)
         with pytest.raises(ValidationError):
             sp.full_clean()
 
+    def test_ouvrier_personnel_rejected(self, personnel_factory, caisse):
+        """Mirror image of PayrollListItem's Ingénieur guard — an Ouvrier
+        belongs on the chantier-scoped Liste de paie (Main d'œuvre tab),
+        not on a SalaryPayment."""
+        p = personnel_factory(payroll_type=PersonnelPayrollType.OUVRIER)
+        sp = SalaryPayment(personnel=p, period='2026-09', amount=Decimal('300.00'), caisse=caisse)
+        with pytest.raises(ValidationError):
+            sp.full_clean()
 
-# NOTE: the view-level TestSalaryPaymentViews class (salary_payment_create /
-# salary_payment_list) was removed along with the "Salaires du bureau" UI —
-# see finance.models.SalaryPayment's DEPRECATED docstring and
-# tests/test_personnel_payroll_overhaul.py for the replacement Liste de
-# paie flow (Personnel.payroll_type == INGENIEUR). TestSalaryPayment above
-# still covers the model itself, which is kept for historical data.
+
+# See tests/test_personnel_payroll_overhaul.py::TestSalaryPaymentTabRevived
+# for the view-level coverage (salary_payment_create / salary_payment_list,
+# role gating, the tab navigation, and the Ingénieur-only personnel
+# queryset) — kept there alongside the sibling PayrollList/"Main d'œuvre"
+# view tests rather than duplicated here.
 
 
 @pytest.fixture

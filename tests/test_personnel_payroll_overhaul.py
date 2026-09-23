@@ -1,20 +1,25 @@
 """
-Tests for the Personnel / Liste de paie overhaul — demo feedback from the
-finance team:
+Tests for the Personnel / Liste de paie overhaul.
 
-1. Personnel.payroll_type (Ouvrier vs Ingénieur) drives which caisse
-   category a décaissement is booked under, and whether the per-convention
-   cap applies.
-2. SiteAssignment.convention_amount tracks a per-task convention cap
+Two strictly separate payroll tracks, each its own tab under "Liste de
+paie", both ultimately booked to a caisse under their own category:
+
+1. "Main d'œuvre" tab (PayrollList/PayrollListItem) — Ouvriers only, paid
+   progressively per chantier, capped by SiteAssignment.convention_amount
+   when one is set. PayrollListItem.clean() rejects Ingénieur/Staff
+   personnel outright.
+2. "Ingénieurs & Staff" tab (SalaryPayment) — Ingénieur/Staff personnel
+   only, paid a fixed monthly salary not tied to a chantier.
+   SalaryPayment.clean() rejects Ouvrier personnel outright.
+3. SiteAssignment.convention_amount tracks a per-task convention cap
    (a worker can have several active conventions on the same chantier —
    see MO.xlsx from the demo, e.g. "Peinture alain" vs "Etancheité alain").
-3. PayrollList.disburse() splits the décaissement into two categorized
-   caisse transactions ("Main d'œuvre Ouvriers" / "Salaire Ingénieurs").
-4. The bulk allocation screen (PayrollListAllocateView) lets the Archi
-   allocate a Montant per SiteAssignment in one page, capped by the
-   convention's remaining balance for Ouvriers.
-5. "Salaire bureau" is gone from the UI (no nav link, no URLs) — the
-   SalaryPayment model/table stays for historical data only.
+4. PayrollList.disburse() books to "Main d'œuvre Ouvriers"; the split by
+   category is kept as a safety net for any pre-existing legacy item, but
+   new items can no longer be anything but Ouvrier (see get_rows() below).
+5. The bulk allocation screen (PayrollListAllocateView) lets the Archi
+   allocate a Montant per SiteAssignment in one page — Ouvrier rows only —
+   capped by the convention's remaining balance.
 """
 import pytest
 from decimal import Decimal
@@ -23,7 +28,7 @@ from django.urls import reverse
 from django.core.exceptions import ValidationError
 
 from finance.models import (
-    Caisse, CaisseTransaction, CaisseTransactionCategory, PayrollList, PayrollListItem,
+    Caisse, CaisseTransaction, CaisseTransactionCategory, PayrollList, PayrollListItem, SalaryPayment,
     PAYROLL_OUVRIER_CATEGORY_NAME, PAYROLL_INGENIEUR_CATEGORY_NAME,
 )
 from personnel.models import SiteAssignment
@@ -121,12 +126,15 @@ class TestConventionCap:
         item.amount = Decimal('90.00')  # still <= 100, editing shouldn't double-count the prior 60
         item.full_clean()  # should not raise
 
-    def test_cap_does_not_apply_to_ingenieur(self, site, personnel_factory, assignment_factory):
+    def test_ingenieur_rejected_from_payroll_list_item(self, site, personnel_factory, assignment_factory):
+        """Ingénieur/Staff personnel belong on SalaryPayment (Ingénieurs &
+        Staff tab), never on a chantier's Liste de paie."""
         p = personnel_factory(payroll_type=PersonnelPayrollType.INGENIEUR)
         a = assignment_factory(personnel=p, convention_amount=Decimal('50.00'))
         pl = PayrollList.objects.create(site=site, prepared_by=None)
-        item = PayrollListItem(payroll_list=pl, personnel=p, assignment=a, amount=Decimal('500.00'))
-        item.full_clean()  # Ingénieur: convention cap not enforced
+        item = PayrollListItem(payroll_list=pl, personnel=p, assignment=a, amount=Decimal('10.00'))
+        with pytest.raises(ValidationError):
+            item.full_clean()
 
     def test_assignment_must_belong_to_the_paid_personnel(self, site, personnel_factory, assignment_factory):
         p1 = personnel_factory(first_name='A')
@@ -140,6 +148,11 @@ class TestConventionCap:
 
 @pytest.mark.django_db
 class TestDisburseSplitsByCategory:
+    """disburse() itself still splits by category unconditionally — this is
+    what keeps any pre-existing Ingénieur item (from before PayrollListItem.
+    clean() started rejecting them) disbursing safely under its own
+    category. These tests use .objects.create(), which bypasses clean(),
+    to simulate that legacy/edge-case data on purpose."""
     def test_only_ouvrier_items_creates_one_transaction(self, site, personnel_factory, caisse, user):
         p = personnel_factory(payroll_type=PersonnelPayrollType.OUVRIER)
         pl = PayrollList.objects.create(site=site, prepared_by=user)
@@ -196,6 +209,20 @@ class TestBulkAllocationView:
         pl = PayrollList.objects.create(site=site, prepared_by=None)
         response = engineer_client.get(reverse('finance:payroll_allocate', kwargs={'pk': pl.pk}))
         assert response.context['rows'] == []
+
+    def test_ingenieur_assignments_excluded_from_rows(self, engineer_client, site, personnel_factory, assignment_factory):
+        """Main d'œuvre only — an Ingénieur/Staff assignment on the same
+        chantier must not show up here, even though SiteAssignment itself
+        doesn't care about payroll_type."""
+        ouvrier = personnel_factory(first_name='A', payroll_type=PersonnelPayrollType.OUVRIER)
+        ingenieur = personnel_factory(first_name='B', payroll_type=PersonnelPayrollType.INGENIEUR)
+        assignment_factory(personnel=ouvrier)
+        assignment_factory(personnel=ingenieur)
+        pl = PayrollList.objects.create(site=site, prepared_by=None)
+        response = engineer_client.get(reverse('finance:payroll_allocate', kwargs={'pk': pl.pk}))
+        rows = response.context['rows']
+        assert len(rows) == 1
+        assert rows[0]['personnel'] == ouvrier
 
     def test_post_creates_items_for_filled_rows_only(self, engineer_client, site, personnel_factory, assignment_factory):
         p1 = personnel_factory(first_name='A')
@@ -269,15 +296,64 @@ class TestLegacySingleItemPathStillWorks:
 
 
 @pytest.mark.django_db
-class TestSalaireBureauRemovedFromUI:
-    def test_salary_payment_urls_are_gone(self):
-        with pytest.raises(Exception):
-            reverse('finance:salary_payment_list')
-        with pytest.raises(Exception):
-            reverse('finance:salary_payment_create')
+class TestSalaryPaymentTabRevived:
+    """"Ingénieurs & Staff" tab (SalaryPayment) — the counterpart to "Main
+    d'œuvre", not the old deprecated/removed "Salaire bureau" screen."""
 
-    def test_nav_has_no_salary_payment_link(self, director_client):
-        response = director_client.get(reverse('finance:payroll_list'))
+    def test_salary_payment_urls_resolve(self):
+        assert reverse('finance:salary_payment_list')
+        assert reverse('finance:salary_payment_create')
+
+    def test_tabs_link_both_lists(self, director_client):
+        payroll_url = reverse('finance:payroll_list').encode()
+        salary_url = reverse('finance:salary_payment_list').encode()
+        for url_name in ('finance:payroll_list', 'finance:salary_payment_list'):
+            response = director_client.get(reverse(url_name))
+            assert response.status_code == 200
+            assert payroll_url in response.content
+            assert salary_url in response.content
+
+    def test_director_can_create_salary_payment(self, director_client, personnel_factory, caisse):
+        p = personnel_factory(payroll_type=PersonnelPayrollType.INGENIEUR, monthly_salary=Decimal('600.00'))
+        response = director_client.post(reverse('finance:salary_payment_create'), {
+            'personnel': p.pk, 'period': '2026-09', 'amount': '600.00', 'caisse': caisse.pk, 'notes': '',
+        })
+        assert response.status_code == 302
+        sp = SalaryPayment.objects.get(personnel=p, period='2026-09')
+        assert sp.paid_by is not None
+        tx = CaisseTransaction.objects.get(caisse=caisse, transaction_type=CaisseTransactionType.SORTIE)
+        assert tx.amount == Decimal('600.00')
+        assert tx.category.name == PAYROLL_INGENIEUR_CATEGORY_NAME
+        assert tx.recipient == str(p)
+
+    def test_engineer_role_cannot_create_salary_payment(self, engineer_client, personnel_factory, caisse):
+        # ENGINEER is in PAYROLL_PREPARE_ROLES but not PAYROLL_DISBURSE_ROLES —
+        # a salary payment is disbursed immediately, so it needs the
+        # disburse-level roles, unlike a draft PayrollList.
+        p = personnel_factory(payroll_type=PersonnelPayrollType.INGENIEUR)
+        response = engineer_client.post(reverse('finance:salary_payment_create'), {
+            'personnel': p.pk, 'period': '2026-09', 'amount': '600.00', 'caisse': caisse.pk, 'notes': '',
+        })
+        assert not SalaryPayment.objects.filter(personnel=p).exists()
+
+    def test_form_only_offers_ingenieur_personnel(self, director_client, personnel_factory):
+        ouvrier = personnel_factory(first_name='O', payroll_type=PersonnelPayrollType.OUVRIER)
+        ingenieur = personnel_factory(first_name='I', payroll_type=PersonnelPayrollType.INGENIEUR)
+        response = director_client.get(reverse('finance:salary_payment_create'))
         assert response.status_code == 200
-        assert b'salary_payment' not in response.content
-        assert 'Salaires du bureau'.encode('utf-8') not in response.content
+        qs = response.context['form'].fields['personnel'].queryset
+        assert ingenieur in qs
+        assert ouvrier not in qs
+
+    def test_ouvrier_rejected_by_view(self, director_client, personnel_factory, caisse):
+        """An Ouvrier's pk posted directly (bypassing the dropdown) is still
+        rejected — the form's personnel queryset excludes it, and
+        SalaryPayment.clean() would reject it too if that were bypassed
+        (see TestSalaryPayment.test_disburse_rejects_ouvrier_personnel in
+        test_finance_money_flow_gaps.py for the direct model-level check)."""
+        p = personnel_factory(payroll_type=PersonnelPayrollType.OUVRIER)
+        response = director_client.post(reverse('finance:salary_payment_create'), {
+            'personnel': p.pk, 'period': '2026-09', 'amount': '600.00', 'caisse': caisse.pk, 'notes': '',
+        })
+        assert response.status_code == 200  # form redisplayed with errors
+        assert not SalaryPayment.objects.filter(personnel=p).exists()

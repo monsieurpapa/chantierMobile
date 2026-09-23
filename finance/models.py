@@ -516,9 +516,12 @@ class PayrollList(BaseModel):
         if total > caisse.balance:
             raise ValidationError(_("Solde de caisse insuffisant."))
 
-        # Split the décaissement by payroll category (Ouvrier vs Ingénieur)
-        # into separate, categorized caisse transactions rather than one
-        # lump sum, so the two are tracked and filterable independently.
+        # Liste de paie is Main d'œuvre (Ouvrier) only — PayrollListItem.clean()
+        # rejects Ingénieur/Staff personnel, so ingenieur_total should always
+        # be 0 for lists created going forward. The split is kept here as a
+        # safety net for any item that predates that guard (created via
+        # .objects.create(), which bypasses clean()) so old/legacy data still
+        # disburses correctly under its own category.
         ouvrier_total = self.items.filter(
             personnel__payroll_type=PersonnelPayrollType.OUVRIER
         ).aggregate(t=models.Sum('amount'))['t'] or 0
@@ -579,6 +582,16 @@ class PayrollListItem(BaseModel):
                     "%(name)s n'est pas éligible (statut : %(status)s) et ne peut pas être payé(e)."
                 ) % {'name': self.personnel, 'status': self.personnel.get_status_display()},
             })
+        # Liste de paie (chantier-scoped) is Main d'œuvre only — Ingénieurs
+        # et Staff sont payés via SalaryPayment (onglet "Ingénieurs & Staff"),
+        # qui n'est pas rattaché à un chantier.
+        if self.personnel_id and self.personnel.payroll_type != PersonnelPayrollType.OUVRIER:
+            raise ValidationError({
+                'personnel': _(
+                    "%(name)s est payé(e) via la paie du personnel (Ingénieurs & Staff), "
+                    "pas via la liste de paie d'un chantier."
+                ) % {'name': self.personnel},
+            })
         if self.assignment_id and self.personnel_id and self.assignment.personnel_id != self.personnel_id:
             raise ValidationError({
                 'assignment': _("Cette convention n'appartient pas à ce membre du personnel."),
@@ -608,13 +621,14 @@ class PayrollListItem(BaseModel):
 
 
 # ---------------------------------------------------------------------
-# DEPRECATED — kept for historical data only, no longer reachable from the
-# UI (no nav link, no URLs). Per finance-team demo feedback, engineer/
-# office salaries now go through the same chantier-scoped Liste de paie as
-# everyone else (Personnel.payroll_type == INGENIEUR, booked under the
-# "Salaire Ingénieurs" caisse category on décaissement — see
-# PayrollList.disburse()) instead of this separate "Salaire bureau" screen.
-# The table isn't dropped so any rows already created stay queryable.
+# Paie du personnel — "Ingénieurs & Staff" tab: a fixed monthly salary for
+# personnel with Personnel.payroll_type == INGENIEUR (engineers and
+# administrative/office staff), not tied to any chantier. Complements
+# PayrollList, which is the chantier-scoped "Main d'œuvre" tab reserved
+# for Ouvriers (see PersonnelPayrollType and PayrollListItem.clean()).
+# One caisse outflow per personnel/period, booked under the same "Salaire
+# Ingénieurs" caisse category as historical PayrollList décaissements —
+# see PAYROLL_INGENIEUR_CATEGORY_NAME.
 # ---------------------------------------------------------------------
 
 class SalaryPayment(BaseModel):
@@ -654,6 +668,16 @@ class SalaryPayment(BaseModel):
                     "%(name)s n'est pas éligible (statut : %(status)s) et ne peut pas être payé(e)."
                 ) % {'name': self.personnel, 'status': self.personnel.get_status_display()},
             })
+        # Mirror image of PayrollListItem.clean(): this flow is for
+        # Ingénieurs & Staff only — Ouvriers are paid via the chantier-scoped
+        # Liste de paie (Main d'œuvre tab) instead.
+        if self.personnel_id and self.personnel.payroll_type != PersonnelPayrollType.INGENIEUR:
+            raise ValidationError({
+                'personnel': _(
+                    "%(name)s est un(e) Ouvrier(ère) et doit être payé(e) via la liste de paie "
+                    "d'un chantier (onglet Main d'œuvre), pas via la paie du personnel."
+                ) % {'name': self.personnel},
+            })
 
     @transaction.atomic
     def disburse(self, user):
@@ -664,8 +688,10 @@ class SalaryPayment(BaseModel):
         from django.core.exceptions import ValidationError
         if self.amount > self.caisse.balance:
             raise ValidationError(_("Solde de caisse insuffisant."))
+        category = CaisseTransactionCategory.objects.filter(name=PAYROLL_INGENIEUR_CATEGORY_NAME).first()
         self.caisse.record(
             CaisseTransactionType.SORTIE, self.amount, user,
+            category=category, recipient=str(self.personnel),
             description=_("Salaire %(period)s — %(personnel)s") % {'period': self.period, 'personnel': self.personnel},
         )
         self.paid_by = user

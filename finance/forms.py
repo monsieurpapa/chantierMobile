@@ -4,9 +4,12 @@ from django import forms
 from django.utils.translation import gettext_lazy as _
 from .models import (
     Expense, Budget, ExpenseCategory, Caisse, CaisseTransaction, CaisseTransactionCategory, CaisseLoan,
-    PayrollList, PayrollListItem, Avenant,
+    PayrollList, PayrollListItem, SalaryPayment, Avenant,
 )
-from chantiermobile.constants import FormPlaceholders, DatePickerConfig, ValidationMessages, ExpenseNature
+from chantiermobile.constants import (
+    FormPlaceholders, DatePickerConfig, ValidationMessages, ExpenseNature,
+    PersonnelPayrollType, PersonnelStatus,
+)
 from core.widgets import DynamicSelectWidget
 
 class ExpenseForm(forms.ModelForm):
@@ -265,7 +268,11 @@ class PayrollListItemForm(forms.ModelForm):
         self.fields['signed_receipt'].required = False
         from personnel.models import Personnel
         if site:
-            self.fields['personnel'].queryset = Personnel.objects.filter(assignments__site=site).distinct()
+            # Liste de paie (chantier) is Main d'œuvre only — Ingénieurs &
+            # Staff ne doivent pas apparaître ici, voir PayrollListItem.clean().
+            self.fields['personnel'].queryset = Personnel.objects.filter(
+                assignments__site=site, payroll_type=PersonnelPayrollType.OUVRIER,
+            ).distinct()
             # This form has no "site" field of its own to depend on — the
             # site comes in as a fixed constructor kwarg — so bake it in as
             # a static extra param instead (see DynamicSelectWidget.create_extra).
@@ -276,9 +283,34 @@ class PayrollDisburseForm(forms.Form):
     caisse = forms.ModelChoiceField(queryset=Caisse.objects.none(), widget=forms.Select(attrs={'class': 'form-select'}), label=_('Caisse de décaissement'))
 
 
-# NOTE: SalaryPaymentForm removed along with the "Salaires du bureau" UI —
-# see finance.models.SalaryPayment's DEPRECATED docstring. The model stays
-# for historical data but is no longer reachable from any form/view.
+class SalaryPaymentForm(forms.ModelForm):
+    """"Ingénieurs & Staff" tab — a fixed monthly salary payment, not tied
+    to a chantier. The personnel queryset is Ingénieur/Staff only; Ouvriers
+    belong on the chantier-scoped Liste de paie instead."""
+    class Meta:
+        model = SalaryPayment
+        fields = ['personnel', 'period', 'amount', 'caisse', 'notes']
+        widgets = {
+            'personnel': forms.Select(attrs={'class': 'form-select', 'id': 'id_salary_personnel'}),
+            'period': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'AAAA-MM'}),
+            'amount': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.AMOUNT}),
+            'caisse': forms.Select(attrs={'class': 'form-select'}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from personnel.models import Personnel
+        personnel_qs = Personnel.objects.filter(
+            payroll_type=PersonnelPayrollType.INGENIEUR, status=PersonnelStatus.ACTIF,
+        ).order_by('last_name', 'first_name')
+        self.fields['personnel'].queryset = personnel_qs
+        # Embedded so the template can auto-fill "amount" from
+        # Personnel.monthly_salary when a name is picked (pure UX nicety —
+        # the field stays editable, this just saves re-typing the usual figure).
+        self.fields['personnel'].widget.attrs['data-monthly-salaries'] = json.dumps({
+            str(p.pk): str(p.monthly_salary) for p in personnel_qs if p.monthly_salary is not None
+        })
 
 
 class AvenantForm(forms.ModelForm):
