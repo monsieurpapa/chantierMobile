@@ -35,7 +35,11 @@ jobs:
 
     env:
       SECRET_KEY: ci-test-key-not-for-production
-      DEBUG: "1"
+      # settings.py does `os.environ.get('DEBUG', 'False') == 'True'`, so this
+      # must be the literal string "True" — "1" evaluates to DEBUG=False,
+      # which flips ssl_require on and breaks the plain (non-SSL) postgres
+      # service container used here.
+      DEBUG: "True"
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
       REDIS_URL: redis://localhost:6379/0
       DJANGO_SETTINGS_MODULE: chantiermobile.settings
