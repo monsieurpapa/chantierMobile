@@ -444,8 +444,16 @@ class LeaveCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, Cr
         return form
 
     def form_valid(self, form):
+        response = super().form_valid(form)
+        from core.notifications import notify_role_holders
+        notify_role_holders(
+            self.object.personnel.cabinet, HR_ADMIN_ROLES,
+            _("Nouveau congé à examiner : %(name)s") % {'name': self.object.personnel.get_full_name()},
+            str(reverse_lazy('personnel:leave_list')),
+            exclude_user=self.request.user,
+        )
         messages.success(self.request, _("Congé enregistré avec succès."))
-        return super().form_valid(form)
+        return response
 
 
 def _decide_leave(request, pk, approve):
@@ -458,6 +466,13 @@ def _decide_leave(request, pk, approve):
     leave.decided_by = request.user
     leave.decided_at = timezone.now()
     leave.save(update_fields=['status', 'decided_by', 'decided_at', 'updated_at'])
+    if leave.personnel.user_id:
+        from core.notifications import notify_user
+        notify_user(
+            leave.personnel.user,
+            _("Votre congé a été approuvé.") if approve else _("Votre congé a été rejeté."),
+            str(reverse_lazy('personnel:leave_list')),
+        )
     messages.success(
         request,
         _("Congé approuvé.") if approve else _("Congé rejeté."),

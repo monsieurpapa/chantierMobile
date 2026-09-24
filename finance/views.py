@@ -116,8 +116,19 @@ class ExpenseCreateView(LoginRequiredMixin, PageHeaderMixin, CreateView):
     def form_valid(self, form):
         form.instance.requester = self.request.user
         from django.contrib import messages
+        response = super().form_valid(form)
+        from core.approvals import EXPENSE_APPROVAL_ROLES
+        from core.notifications import notify_role_holders
+        notify_role_holders(
+            self.object.site.cabinet, EXPENSE_APPROVAL_ROLES,
+            _("Nouvelle dépense à approuver : %(desc)s (%(amount)s $)") % {
+                'desc': self.object.description[:60], 'amount': self.object.amount,
+            },
+            str(reverse_lazy('finance:expense_detail', kwargs={'pk': self.object.pk})),
+            exclude_user=self.request.user,
+        )
         messages.success(self.request, _("Demande de dépense soumise avec succès !"))
-        return super().form_valid(form)
+        return response
 
 class ExpenseDetailView(LoginRequiredMixin, PageHeaderMixin, DetailView):
     model = Expense
@@ -167,6 +178,12 @@ def approve_expense(request, pk):
         if request.user.is_superuser or request.user.cabinet_roles.filter(cabinet=expense.site.cabinet, role__in=[UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.ACCOUNTANT]).exists():
             try:
                 expense.approve(request.user, comments=request.POST.get('comments', ''))
+                from core.notifications import notify_user
+                notify_user(
+                    expense.requester,
+                    _("Votre dépense a été approuvée : %(desc)s") % {'desc': expense.description[:60]},
+                    str(reverse_lazy('finance:expense_detail', kwargs={'pk': expense.pk})),
+                )
                 messages.success(request, _("Dépense approuvée."))
             except ValidationError as e:
                 messages.error(request, _("Impossible d'approuver la dépense : %(error)s") % {'error': e})
@@ -189,6 +206,12 @@ def reject_expense(request, pk):
             else:
                 try:
                     expense.reject(request.user, comments=request.POST.get('comments', ''))
+                    from core.notifications import notify_user
+                    notify_user(
+                        expense.requester,
+                        _("Votre dépense a été rejetée : %(desc)s") % {'desc': expense.description[:60]},
+                        str(reverse_lazy('finance:expense_detail', kwargs={'pk': expense.pk})),
+                    )
                     messages.success(request, _("Dépense rejetée."))
                 except ValidationError as e:
                     messages.error(request, _("Impossible de rejeter la dépense : %(error)s") % {'error': e})
@@ -1691,8 +1714,18 @@ class AvenantCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, 
 
     def form_valid(self, form):
         form.instance.requested_by = self.request.user
+        response = super().form_valid(form)
+        from core.notifications import notify_role_holders
+        notify_role_holders(
+            self.object.site.cabinet, FINAL_AUTHORIZATION_ROLES,
+            _("Nouvel avenant à autoriser : +%(amount)s $ (%(site)s)") % {
+                'amount': self.object.amount, 'site': self.object.site.name,
+            },
+            str(reverse_lazy('finance:avenant_list')),
+            exclude_user=self.request.user,
+        )
         messages.success(self.request, _("Avenant soumis pour autorisation."))
-        return super().form_valid(form)
+        return response
 
 
 def _avenant_decide(request, pk, approve):
@@ -1704,12 +1737,23 @@ def _avenant_decide(request, pk, approve):
         return redirect('finance:avenant_list')
     form = AvenantDecisionForm(request.POST)
     notes = form.data.get('notes', '') if form.is_valid() else ''
+    from core.notifications import notify_user
     try:
         if approve:
             avenant.approve(request.user, notes=notes)
+            notify_user(
+                avenant.requested_by,
+                _("Votre avenant a été autorisé : +%(amount)s $") % {'amount': avenant.amount},
+                str(reverse_lazy('finance:avenant_list')),
+            )
             messages.success(request, _("Avenant autorisé — budget et dette client mis à jour."))
         else:
             avenant.reject(request.user, notes=notes)
+            notify_user(
+                avenant.requested_by,
+                _("Votre avenant a été rejeté : +%(amount)s $") % {'amount': avenant.amount},
+                str(reverse_lazy('finance:avenant_list')),
+            )
             messages.success(request, _("Avenant rejeté."))
     except ValidationError as e:
         messages.error(request, str(e))

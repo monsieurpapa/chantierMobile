@@ -3,7 +3,10 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
-from core.views import HomeView, PendingApprovalsView, GlobalSearchView
+from core.views import (
+    HomeView, PendingApprovalsView, GlobalSearchView,
+    NotificationListView, notification_open, notifications_mark_all_read,
+)
 from django.views.i18n import set_language
 
 urlpatterns = [
@@ -11,6 +14,9 @@ urlpatterns = [
     path('', HomeView.as_view(), name='home'),
     path('approbations/', PendingApprovalsView.as_view(), name='pending_approvals'),
     path('recherche/', GlobalSearchView.as_view(), name='global_search'),
+    path('notifications/', NotificationListView.as_view(), name='notifications_list'),
+    path('notifications/<int:pk>/ouvrir/', notification_open, name='notification_open'),
+    path('notifications/tout-marquer-lu/', notifications_mark_all_read, name='notifications_mark_all_read'),
     path('finance/', include('finance.urls'), name='finance'),
     path('projects/', include('projects.urls'), name='projects'),
     path('personnel/', include('personnel.urls'), name='personnel'),

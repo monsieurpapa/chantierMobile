@@ -69,8 +69,12 @@ class TestDatabasePerformance:
         # navbar's "Approbations" link (another distinct has_role cache key,
         # 'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,ACCOUNTANT,
         # MAGASINIER,CHIEF_ENGINEER,ENGINEER', +1 more — the pending-approvals
-        # inbox link).
-        assert len(ctx.captured_queries) < 16
+        # inbox link), plus one more for the navbar's notification bell
+        # (core.context_processors.notifications_context — a single indexed
+        # COUNT of the user's unread Notification rows, run on every page
+        # for every authenticated user, item 13 of the Directors/Engineers
+        # audit).
+        assert len(ctx.captured_queries) < 17
     
     def test_dashboard_query_performance(self, director_client, user):
         """Test dashboard query performance."""

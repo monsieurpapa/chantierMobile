@@ -173,6 +173,16 @@ class MaterialRequestCreateView(LoginRequiredMixin, PageHeaderMixin, CreateView)
             self.object = form.save()
             items_formset.instance = self.object
             items_formset.save()
+            from core.approvals import MATERIAL_REQUEST_VALIDATE_ROLES
+            from core.notifications import notify_role_holders
+            notify_role_holders(
+                self.object.site.cabinet, MATERIAL_REQUEST_VALIDATE_ROLES,
+                _("Nouvelle demande de matériaux à valider : REQ-%(id)s (%(count)s article(s))") % {
+                    'id': self.object.pk, 'count': self.object.total_items,
+                },
+                str(reverse_lazy('materials:request_detail', kwargs={'pk': self.object.pk})),
+                exclude_user=self.request.user,
+            )
             messages.success(self.request, _("Demande de matériaux soumise avec %(count)s article(s).") % {'count': self.object.total_items})
             return HttpResponseRedirect(self.get_success_url())
         else:
@@ -291,12 +301,24 @@ def request_validate(request, pk):
         messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
         return redirect('materials:request_detail', pk=pk)
     action = request.POST.get('action')
+    from core.notifications import notify_role_holders, notify_user
     try:
         if action == 'reject':
             mat_request.reject(request.user)
+            notify_user(
+                mat_request.requested_by,
+                _("Votre demande de matériaux REQ-%(id)s a été rejetée.") % {'id': mat_request.pk},
+                str(reverse_lazy('materials:request_detail', kwargs={'pk': mat_request.pk})),
+            )
             messages.error(request, _("Demande de matériaux rejetée."))
         else:
             mat_request.magasinier_validate(request.user)
+            notify_role_holders(
+                mat_request.site.cabinet, FINAL_AUTHORIZATION_ROLES,
+                _("Demande de matériaux REQ-%(id)s validée — en attente d'autorisation finale.") % {'id': mat_request.pk},
+                str(reverse_lazy('materials:request_detail', kwargs={'pk': mat_request.pk})),
+                exclude_user=request.user,
+            )
             messages.success(request, _("Demande validée — en attente d'autorisation finale."))
     except ValidationError as e:
         messages.error(request, str(e.message) if hasattr(e, 'message') else str(e))
@@ -314,12 +336,23 @@ def approve_material_request(request, pk):
         messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
         return redirect('materials:request_detail', pk=pk)
     action = request.POST.get('action')
+    from core.notifications import notify_user
     try:
         if action == 'reject':
             mat_request.reject(request.user)
+            notify_user(
+                mat_request.requested_by,
+                _("Votre demande de matériaux REQ-%(id)s a été rejetée.") % {'id': mat_request.pk},
+                str(reverse_lazy('materials:request_detail', kwargs={'pk': mat_request.pk})),
+            )
             messages.error(request, _("Demande de matériaux rejetée."))
         else:
             mat_request.authorize(request.user)
+            notify_user(
+                mat_request.requested_by,
+                _("Votre demande de matériaux REQ-%(id)s a été autorisée.") % {'id': mat_request.pk},
+                str(reverse_lazy('materials:request_detail', kwargs={'pk': mat_request.pk})),
+            )
             if mat_request.expense_id:
                 messages.success(request, _(
                     "Demande de matériaux autorisée — dépense EX-%(id)s créée (%(amount)s$), en attente de paiement."

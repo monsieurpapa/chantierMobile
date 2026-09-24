@@ -594,6 +594,13 @@ class PlanningSubmissionCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHe
         form.instance.site = self.site
         response = super().form_valid(form)
         self.object.submit(self.request.user)
+        from core.notifications import notify_role_holders
+        notify_role_holders(
+            self.site.cabinet, PLANNING_REVIEW_ROLES,
+            _("Nouvelle planification à examiner : %(site)s") % {'site': self.site.name},
+            str(reverse_lazy('projects:site_detail', kwargs={'unique_id': self.site.unique_id})),
+            exclude_user=self.request.user,
+        )
         messages.success(self.request, _("Planification soumise pour examen."))
         return response
 
@@ -612,6 +619,12 @@ def planning_submission_approve(request, pk):
     notes = request.POST.get('notes', '')
     try:
         submission.approve(request.user, notes=notes)
+        from core.notifications import notify_user
+        notify_user(
+            submission.submitted_by,
+            _("Votre planification a été approuvée : %(site)s") % {'site': submission.site.name},
+            str(reverse_lazy('projects:site_detail', kwargs={'unique_id': submission.site.unique_id})),
+        )
         messages.success(request, _("Planification approuvée."))
     except ValidationError as e:
         messages.error(request, str(e.message) if hasattr(e, 'message') else str(e))
@@ -629,6 +642,12 @@ def planning_submission_reject(request, pk):
     notes = request.POST.get('notes', '')
     try:
         submission.reject(request.user, notes=notes)
+        from core.notifications import notify_user
+        notify_user(
+            submission.submitted_by,
+            _("Votre planification a été rejetée : %(site)s") % {'site': submission.site.name},
+            str(reverse_lazy('projects:site_detail', kwargs={'unique_id': submission.site.unique_id})),
+        )
         messages.success(request, _("Planification rejetée."))
     except ValidationError as e:
         messages.error(request, str(e.message) if hasattr(e, 'message') else str(e))

@@ -89,3 +89,26 @@ def active_cabinet_context(request):
         'active_cabinet': active_cabinet,
         'all_cabinets': Cabinet.objects.order_by('name'),
     }
+
+
+def notifications_context(request):
+    """
+    Unread in-app notification count for the navbar bell (item 13 of the
+    Directors/Engineers audit — see core/models.py's Notification and
+    core/notifications.py). One indexed COUNT query per page for an
+    authenticated user, the same order of cost as each `has_role` check
+    already rendered by navbar-vertical.html on every page (see the
+    documented query-count bumps in tests/test_performance.py); unlike
+    active_cabinet_context above, this doesn't fetch a per-cabinet list,
+    just a scalar count, so it stays cheap for every user rather than
+    superusers only.
+    """
+    if not request.user.is_authenticated:
+        return {}
+
+    from core.models import Notification
+    return {
+        'unread_notifications_count': Notification.objects.filter(
+            recipient=request.user, is_read=False,
+        ).count(),
+    }

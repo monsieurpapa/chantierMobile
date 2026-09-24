@@ -112,3 +112,35 @@ class StatusChangeLog(models.Model):
             new_status=new_status,
             note=note,
         )
+
+
+class Notification(models.Model):
+    """In-app notification (item 13 of the Directors/Engineers audit):
+    before this, the only signal that something needed attention was
+    email (revenue/notifications.py's single payment-received trigger)
+    or noticing it yourself on a list page — nothing showed up inside
+    the app itself. Created via core/notifications.py's helpers, from
+    both directions of a workflow: "something needs your decision"
+    (sent to the relevant role holders) and "your request was decided"
+    (sent back to whoever submitted it).
+
+    Deliberately plain — no generic FK to the source object, just a
+    ready-to-follow `url` — so it stays a thin, read-only fan-out layer
+    like core/approvals.py rather than another thing every app's models
+    have to import."""
+    recipient = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='notifications',
+    )
+    message = models.CharField(max_length=255)
+    url = models.CharField(max_length=255, blank=True)
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['recipient', 'is_read']),
+        ]
+
+    def __str__(self):
+        return f"{self.recipient} — {self.message}"
