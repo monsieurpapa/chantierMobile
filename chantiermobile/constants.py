@@ -219,10 +219,12 @@ class PersonnelPayrollType(models.TextChoices):
       chantier-scoped "Liste de paie" / PayrollList ("Main d'œuvre" tab) —
       booked to the "Main d'œuvre Ouvriers" caisse category on décaissement.
     - INGENIEUR: paid a fixed monthly salary, not tied to a chantier.
-      Handled by SalaryPayment ("Ingénieurs & Staff" tab) — booked to the
-      "Salaire Ingénieurs" caisse category on décaissement. Covers both
-      engineers and administrative/office staff (AgentCategory.
-      ADMINISTRATION), whether or not they're also assigned to a site.
+      Handled by SalaryPaymentList/SalaryPaymentItem ("Ingénieurs & Staff"
+      tab) — cabinet-scoped brouillon/soumise/payée workflow mirroring
+      PayrollList, booked to the "Salaire Ingénieurs" caisse category on
+      décaissement. Covers both engineers and administrative/office staff
+      (AgentCategory.ADMINISTRATION), whether or not they're also assigned
+      to a site.
     """
     OUVRIER = 'OUVRIER', _("Ouvrier (main d'œuvre)")
     INGENIEUR = 'INGENIEUR', _('Ingénieur / Staff')

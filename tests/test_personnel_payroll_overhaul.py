@@ -8,9 +8,10 @@ paie", both ultimately booked to a caisse under their own category:
    progressively per chantier, capped by SiteAssignment.convention_amount
    when one is set. PayrollListItem.clean() rejects Ingénieur/Staff
    personnel outright.
-2. "Ingénieurs & Staff" tab (SalaryPayment) — Ingénieur/Staff personnel
-   only, paid a fixed monthly salary not tied to a chantier.
-   SalaryPayment.clean() rejects Ouvrier personnel outright.
+2. "Ingénieurs & Staff" tab (SalaryPaymentList/SalaryPaymentItem) —
+   Ingénieur/Staff personnel only, paid a fixed monthly salary not tied to
+   a chantier, through the same brouillon/soumise/payée workflow as
+   PayrollList. SalaryPaymentItem.clean() rejects Ouvrier personnel outright.
 3. SiteAssignment.convention_amount tracks a per-task convention cap
    (a worker can have several active conventions on the same chantier —
    see MO.xlsx from the demo, e.g. "Peinture alain" vs "Etancheité alain").
@@ -28,7 +29,8 @@ from django.urls import reverse
 from django.core.exceptions import ValidationError
 
 from finance.models import (
-    Caisse, CaisseTransaction, CaisseTransactionCategory, PayrollList, PayrollListItem, SalaryPayment,
+    Caisse, CaisseTransaction, CaisseTransactionCategory, PayrollList, PayrollListItem,
+    SalaryPaymentList, SalaryPaymentItem,
     PAYROLL_OUVRIER_CATEGORY_NAME, PAYROLL_INGENIEUR_CATEGORY_NAME,
 )
 from personnel.models import SiteAssignment
@@ -127,7 +129,7 @@ class TestConventionCap:
         item.full_clean()  # should not raise
 
     def test_ingenieur_rejected_from_payroll_list_item(self, site, personnel_factory, assignment_factory):
-        """Ingénieur/Staff personnel belong on SalaryPayment (Ingénieurs &
+        """Ingénieur/Staff personnel belong on SalaryPaymentList (Ingénieurs &
         Staff tab), never on a chantier's Liste de paie."""
         p = personnel_factory(payroll_type=PersonnelPayrollType.INGENIEUR)
         a = assignment_factory(personnel=p, convention_amount=Decimal('50.00'))
@@ -297,12 +299,18 @@ class TestLegacySingleItemPathStillWorks:
 
 @pytest.mark.django_db
 class TestSalaryPaymentTabRevived:
-    """"Ingénieurs & Staff" tab (SalaryPayment) — the counterpart to "Main
-    d'œuvre", not the old deprecated/removed "Salaire bureau" screen."""
+    """"Ingénieurs & Staff" tab (SalaryPaymentList/SalaryPaymentItem) — the
+    counterpart to "Main d'œuvre", following the exact same brouillon ->
+    soumise -> payée workflow as PayrollList, just cabinet-scoped instead
+    of site-scoped since Ingénieurs & Staff aren't tied to a chantier."""
 
     def test_salary_payment_urls_resolve(self):
         assert reverse('finance:salary_payment_list')
         assert reverse('finance:salary_payment_create')
+        assert reverse('finance:salary_payment_detail', kwargs={'pk': 1})
+        assert reverse('finance:salary_payment_item_create', kwargs={'pk': 1})
+        assert reverse('finance:salary_payment_submit', kwargs={'pk': 1})
+        assert reverse('finance:salary_payment_disburse', kwargs={'pk': 1})
 
     def test_tabs_link_both_lists(self, director_client):
         payroll_url = reverse('finance:payroll_list').encode()
@@ -313,47 +321,83 @@ class TestSalaryPaymentTabRevived:
             assert payroll_url in response.content
             assert salary_url in response.content
 
-    def test_director_can_create_salary_payment(self, director_client, personnel_factory, caisse):
+    def test_engineer_can_create_list_and_add_item(self, engineer_client, personnel_factory):
         p = personnel_factory(payroll_type=PersonnelPayrollType.INGENIEUR, monthly_salary=Decimal('600.00'))
-        response = director_client.post(reverse('finance:salary_payment_create'), {
-            'personnel': p.pk, 'period': '2026-09', 'amount': '600.00', 'caisse': caisse.pk, 'notes': '',
+        response = engineer_client.post(reverse('finance:salary_payment_create'), {'notes': ''})
+        assert response.status_code == 302
+        spl = SalaryPaymentList.objects.get()
+        assert spl.status == PayrollListStatus.BROUILLON
+
+        response = engineer_client.post(reverse('finance:salary_payment_item_create', kwargs={'pk': spl.pk}), {
+            'personnel': p.pk, 'period': '2026-09', 'amount': '600.00', 'notes': '',
         })
         assert response.status_code == 302
-        sp = SalaryPayment.objects.get(personnel=p, period='2026-09')
-        assert sp.paid_by is not None
-        tx = CaisseTransaction.objects.get(caisse=caisse, transaction_type=CaisseTransactionType.SORTIE)
-        assert tx.amount == Decimal('600.00')
-        assert tx.category.name == PAYROLL_INGENIEUR_CATEGORY_NAME
-        assert tx.recipient == str(p)
+        assert SalaryPaymentItem.objects.filter(salary_payment_list=spl, personnel=p).exists()
+        assert spl.total_amount == Decimal('600.00')
 
-    def test_engineer_role_cannot_create_salary_payment(self, engineer_client, personnel_factory, caisse):
-        # ENGINEER is in PAYROLL_PREPARE_ROLES but not PAYROLL_DISBURSE_ROLES —
-        # a salary payment is disbursed immediately, so it needs the
-        # disburse-level roles, unlike a draft PayrollList.
-        p = personnel_factory(payroll_type=PersonnelPayrollType.INGENIEUR)
-        response = engineer_client.post(reverse('finance:salary_payment_create'), {
-            'personnel': p.pk, 'period': '2026-09', 'amount': '600.00', 'caisse': caisse.pk, 'notes': '',
-        })
-        assert not SalaryPayment.objects.filter(personnel=p).exists()
+    def test_accountant_cannot_create_list(self, accountant_client):
+        # ACCOUNTANT is in PAYROLL_DISBURSE_ROLES but not PAYROLL_PREPARE_ROLES —
+        # preparing (creating the draft list, adding agents) needs the
+        # prepare-level roles; only submit/disburse are accountant-reachable.
+        response = accountant_client.post(reverse('finance:salary_payment_create'), {'notes': ''})
+        assert response.status_code == 302
+        assert not SalaryPaymentList.objects.exists()
 
-    def test_form_only_offers_ingenieur_personnel(self, director_client, personnel_factory):
+    def test_item_form_only_offers_ingenieur_personnel(self, director_client, personnel_factory):
         ouvrier = personnel_factory(first_name='O', payroll_type=PersonnelPayrollType.OUVRIER)
         ingenieur = personnel_factory(first_name='I', payroll_type=PersonnelPayrollType.INGENIEUR)
-        response = director_client.get(reverse('finance:salary_payment_create'))
+        director_client.post(reverse('finance:salary_payment_create'), {'notes': ''})
+        spl = SalaryPaymentList.objects.get()
+        response = director_client.get(reverse('finance:salary_payment_detail', kwargs={'pk': spl.pk}))
         assert response.status_code == 200
-        qs = response.context['form'].fields['personnel'].queryset
+        qs = response.context['item_form'].fields['personnel'].queryset
         assert ingenieur in qs
         assert ouvrier not in qs
 
-    def test_ouvrier_rejected_by_view(self, director_client, personnel_factory, caisse):
+    def test_ouvrier_rejected_by_item_view(self, director_client, personnel_factory):
         """An Ouvrier's pk posted directly (bypassing the dropdown) is still
         rejected — the form's personnel queryset excludes it, and
-        SalaryPayment.clean() would reject it too if that were bypassed
-        (see TestSalaryPayment.test_disburse_rejects_ouvrier_personnel in
+        SalaryPaymentItem.clean() would reject it too if that were bypassed
+        (see TestSalaryPaymentList.test_ouvrier_personnel_rejected in
         test_finance_money_flow_gaps.py for the direct model-level check)."""
         p = personnel_factory(payroll_type=PersonnelPayrollType.OUVRIER)
-        response = director_client.post(reverse('finance:salary_payment_create'), {
-            'personnel': p.pk, 'period': '2026-09', 'amount': '600.00', 'caisse': caisse.pk, 'notes': '',
+        director_client.post(reverse('finance:salary_payment_create'), {'notes': ''})
+        spl = SalaryPaymentList.objects.get()
+        response = director_client.post(reverse('finance:salary_payment_item_create', kwargs={'pk': spl.pk}), {
+            'personnel': p.pk, 'period': '2026-09', 'amount': '600.00', 'notes': '',
         })
-        assert response.status_code == 200  # form redisplayed with errors
-        assert not SalaryPayment.objects.filter(personnel=p).exists()
+        assert response.status_code == 302  # redirected back to detail with an error message
+        assert not SalaryPaymentItem.objects.filter(salary_payment_list=spl, personnel=p).exists()
+
+    def test_full_workflow_submit_then_disburse(self, client, cabinet, django_user_model, engineer_client, personnel_factory, caisse):
+        from accounts.models import UserCabinetRole
+        from chantiermobile.constants import UserRoles, ApprovalStatus
+        p = personnel_factory(payroll_type=PersonnelPayrollType.INGENIEUR, monthly_salary=Decimal('600.00'))
+        engineer_client.post(reverse('finance:salary_payment_create'), {'notes': ''})
+        spl = SalaryPaymentList.objects.get()
+        engineer_client.post(reverse('finance:salary_payment_item_create', kwargs={'pk': spl.pk}), {
+            'personnel': p.pk, 'period': '2026-09', 'amount': '600.00', 'notes': '',
+        })
+
+        # ENGINEER is prepare-only — cannot disburse.
+        response = engineer_client.post(reverse('finance:salary_payment_submit', kwargs={'pk': spl.pk}))
+        assert response.status_code == 302
+        spl.refresh_from_db()
+        assert spl.status == PayrollListStatus.SOUMISE
+
+        response = engineer_client.post(
+            reverse('finance:salary_payment_disburse', kwargs={'pk': spl.pk}), {'caisse': caisse.pk}
+        )
+        spl.refresh_from_db()
+        assert spl.status == PayrollListStatus.SOUMISE  # unchanged — ENGINEER lacks disburse rights
+
+        cashier = django_user_model.objects.create_user(username='cashier_sp', password='testpass123')
+        UserCabinetRole.objects.create(user=cashier, cabinet=cabinet, role=UserRoles.CASHIER, status=ApprovalStatus.APPROVED)
+        client.login(username='cashier_sp', password='testpass123')
+        response = client.post(reverse('finance:salary_payment_disburse', kwargs={'pk': spl.pk}), {'caisse': caisse.pk})
+        assert response.status_code == 302
+        spl.refresh_from_db()
+        assert spl.status == PayrollListStatus.PAYEE
+        tx = CaisseTransaction.objects.get(caisse=caisse, transaction_type=CaisseTransactionType.SORTIE)
+        assert tx.amount == Decimal('600.00')
+        assert tx.category.name == PAYROLL_INGENIEUR_CATEGORY_NAME

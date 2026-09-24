@@ -4,7 +4,7 @@ from django import forms
 from django.utils.translation import gettext_lazy as _
 from .models import (
     Expense, Budget, ExpenseCategory, Caisse, CaisseTransaction, CaisseTransactionCategory, CaisseLoan,
-    PayrollList, PayrollListItem, SalaryPayment, Avenant,
+    PayrollList, PayrollListItem, SalaryPaymentList, SalaryPaymentItem, Avenant,
 )
 from chantiermobile.constants import (
     FormPlaceholders, DatePickerConfig, ValidationMessages, ExpenseNature,
@@ -283,27 +283,40 @@ class PayrollDisburseForm(forms.Form):
     caisse = forms.ModelChoiceField(queryset=Caisse.objects.none(), widget=forms.Select(attrs={'class': 'form-select'}), label=_('Caisse de décaissement'))
 
 
-class SalaryPaymentForm(forms.ModelForm):
-    """"Ingénieurs & Staff" tab — a fixed monthly salary payment, not tied
-    to a chantier. The personnel queryset is Ingénieur/Staff only; Ouvriers
-    belong on the chantier-scoped Liste de paie instead."""
+class SalaryPaymentListForm(forms.ModelForm):
+    """"Ingénieurs & Staff" tab — creates the draft (brouillon) list itself;
+    agents are added to it afterwards via SalaryPaymentItemForm, mirroring
+    PayrollListForm/PayrollListItemForm."""
     class Meta:
-        model = SalaryPayment
-        fields = ['personnel', 'period', 'amount', 'caisse', 'notes']
+        model = SalaryPaymentList
+        fields = ['notes']
+        widgets = {
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': _("Notes...")}),
+        }
+
+
+class SalaryPaymentItemForm(forms.ModelForm):
+    class Meta:
+        model = SalaryPaymentItem
+        fields = ['personnel', 'period', 'amount', 'notes']
         widgets = {
             'personnel': forms.Select(attrs={'class': 'form-select', 'id': 'id_salary_personnel'}),
             'period': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'AAAA-MM'}),
             'amount': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.AMOUNT}),
-            'caisse': forms.Select(attrs={'class': 'form-select'}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
         }
 
     def __init__(self, *args, **kwargs):
+        cabinet = kwargs.pop('cabinet', None)
         super().__init__(*args, **kwargs)
         from personnel.models import Personnel
+        # Paie du personnel is Ingénieurs & Staff only — Ouvriers belong on
+        # the chantier-scoped Liste de paie instead, see SalaryPaymentItem.clean().
         personnel_qs = Personnel.objects.filter(
             payroll_type=PersonnelPayrollType.INGENIEUR, status=PersonnelStatus.ACTIF,
         ).order_by('last_name', 'first_name')
+        if cabinet:
+            personnel_qs = personnel_qs.filter(cabinet=cabinet)
         self.fields['personnel'].queryset = personnel_qs
         # Embedded so the template can auto-fill "amount" from
         # Personnel.monthly_salary when a name is picked (pure UX nicety —

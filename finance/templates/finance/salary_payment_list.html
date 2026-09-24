@@ -20,26 +20,26 @@
                         <table class="table table-sm table-striped mb-0 fs--1">
                             <thead>
                                 <tr>
-                                    <th>{% trans "Agent" %}</th>
-                                    <th>{% trans "Période" %}</th>
-                                    <th class="text-end">{% trans "Montant" %}</th>
-                                    <th>{% trans "Caisse" %}</th>
-                                    <th>{% trans "Payé par" %}</th>
-                                    <th>{% trans "Payé le" %}</th>
+                                    <th>{% trans "Préparée par" %}</th>
+                                    <th class="text-end">{% trans "Total" %}</th>
+                                    <th>{% trans "Statut" %}</th>
+                                    <th>{% trans "Créée le" %}</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for sp in salary_payments %}
+                                {% for spl in salary_payment_lists %}
                                 <tr>
-                                    <td>{{ sp.personnel.get_full_name }}</td>
-                                    <td>{{ sp.period }}</td>
-                                    <td class="text-end fw-semibold">${{ sp.amount|floatformat:2|intcomma }}</td>
-                                    <td>{{ sp.caisse.name }}</td>
-                                    <td>{{ sp.paid_by.get_full_name|default:sp.paid_by|default:"-" }}</td>
-                                    <td>{{ sp.updated_at|date:"d/m/Y" }}</td>
+                                    <td><a href="{% url 'finance:salary_payment_detail' pk=spl.pk %}">{{ spl.prepared_by.get_full_name|default:spl.prepared_by }}</a></td>
+                                    <td class="text-end fw-semibold">${{ spl.total_amount|floatformat:2|intcomma }}</td>
+                                    <td>
+                                        <span class="badge {% if spl.status == 'PAYEE' %}bg-success{% elif spl.status == 'SOUMISE' %}bg-info{% else %}bg-warning{% endif %}">
+                                            {{ spl.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ spl.created_at|date:"d/m/Y" }}</td>
                                 </tr>
                                 {% empty %}
-                                <tr><td colspan="6" class="text-center py-4 text-500">{% trans "Aucun paiement enregistré." %}</td></tr>
+                                <tr><td colspan="4" class="text-center py-4 text-500">{% trans "Aucune liste de paie du personnel." %}</td></tr>
                                 {% endfor %}
                             </tbody>
                         </table>

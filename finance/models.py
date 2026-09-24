@@ -3,6 +3,7 @@ from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 from core.models import BaseModel
 from projects.models import Site, ProjectPhase
+from accounts.models import Cabinet
 from chantiermobile.constants import (
     ExpenseStatus, ExpenseNature, FileUploadConfig, CaisseType, CaisseTransactionType,
     PayrollListStatus, AvenantStatus, PersonnelPayrollType,
@@ -583,7 +584,7 @@ class PayrollListItem(BaseModel):
                 ) % {'name': self.personnel, 'status': self.personnel.get_status_display()},
             })
         # Liste de paie (chantier-scoped) is Main d'œuvre only — Ingénieurs
-        # et Staff sont payés via SalaryPayment (onglet "Ingénieurs & Staff"),
+        # et Staff sont payés via SalaryPaymentList (onglet "Ingénieurs & Staff"),
         # qui n'est pas rattaché à un chantier.
         if self.personnel_id and self.personnel.payroll_type != PersonnelPayrollType.OUVRIER:
             raise ValidationError({
@@ -621,19 +622,89 @@ class PayrollListItem(BaseModel):
 
 
 # ---------------------------------------------------------------------
-# Paie du personnel — "Ingénieurs & Staff" tab: a fixed monthly salary for
+# Paie du personnel — "Ingénieurs & Staff" tab: fixed monthly salaries for
 # personnel with Personnel.payroll_type == INGENIEUR (engineers and
-# administrative/office staff), not tied to any chantier. Complements
-# PayrollList, which is the chantier-scoped "Main d'œuvre" tab reserved
-# for Ouvriers (see PersonnelPayrollType and PayrollListItem.clean()).
-# One caisse outflow per personnel/period, booked under the same "Salaire
-# Ingénieurs" caisse category as historical PayrollList décaissements —
-# see PAYROLL_INGENIEUR_CATEGORY_NAME.
+# administrative/office staff), not tied to any chantier. Mirrors
+# PayrollList/PayrollListItem — the chantier-scoped "Main d'œuvre" tab
+# reserved for Ouvriers (see PersonnelPayrollType and
+# PayrollListItem.clean()) — but scoped by cabinet instead of by site,
+# since Ingénieurs & Staff aren't attached to a chantier. Same
+# brouillon -> soumise -> payée workflow: an engineer/staff member is
+# added to a draft list, the list is submitted, and the cashier/finance
+# team décaisse the whole list in one action.
 # ---------------------------------------------------------------------
 
-class SalaryPayment(BaseModel):
+class SalaryPaymentList(BaseModel):
+    cabinet = models.ForeignKey(Cabinet, on_delete=models.CASCADE, related_name='salary_payment_lists')
+    prepared_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
+        related_name='salary_payment_lists_prepared',
+    )
+    status = models.CharField(max_length=20, choices=PayrollListStatus.choices, default=PayrollListStatus.BROUILLON)
+    notes = models.TextField(blank=True, verbose_name=_('Notes'))
+    caisse = models.ForeignKey(
+        'finance.Caisse', on_delete=models.SET_NULL, null=True, blank=True, related_name='salary_payment_lists',
+    )
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    paid_at = models.DateTimeField(null=True, blank=True)
+    paid_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='salary_payment_lists_disbursed',
+    )
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Paie du personnel — {self.cabinet.name} ({self.get_status_display()})"
+
+    @property
+    def total_amount(self):
+        return self.items.aggregate(t=models.Sum('amount'))['t'] or 0
+
+    def submit(self, user):
+        from django.core.exceptions import ValidationError
+        from django.utils import timezone as _tz
+        if self.status != PayrollListStatus.BROUILLON:
+            raise ValidationError(_("Seule une liste en brouillon peut être soumise."))
+        if not self.items.exists():
+            raise ValidationError(_("Ajoutez au moins un agent avant de soumettre."))
+        self.status = PayrollListStatus.SOUMISE
+        self.submitted_at = _tz.now()
+        self.save(update_fields=['status', 'submitted_at', 'updated_at'])
+
+    @transaction.atomic
+    def disburse(self, user, caisse):
+        from django.core.exceptions import ValidationError
+        from django.utils import timezone as _tz
+        if self.status != PayrollListStatus.SOUMISE:
+            raise ValidationError(_("Seule une liste soumise peut être décaissée."))
+        total = self.total_amount
+        if total <= 0:
+            raise ValidationError(_("Le montant total doit être positif."))
+        if total > caisse.balance:
+            raise ValidationError(_("Solde de caisse insuffisant."))
+
+        # Paie du personnel is Ingénieurs & Staff only — SalaryPaymentItem.clean()
+        # rejects Ouvrier personnel, so this is always a single outflow under
+        # the "Salaire Ingénieurs" category.
+        category = CaisseTransactionCategory.objects.filter(name=PAYROLL_INGENIEUR_CATEGORY_NAME).first()
+        caisse.record(
+            CaisseTransactionType.SORTIE, total, user,
+            category=category,
+            description=_("Paie du personnel (ingénieurs & staff) — %(cabinet)s") % {'cabinet': self.cabinet.name},
+        )
+        self.status = PayrollListStatus.PAYEE
+        self.caisse = caisse
+        self.paid_at = _tz.now()
+        self.paid_by = user
+        self.save(update_fields=['status', 'caisse', 'paid_at', 'paid_by', 'updated_at'])
+
+
+class SalaryPaymentItem(BaseModel):
+    salary_payment_list = models.ForeignKey(SalaryPaymentList, on_delete=models.CASCADE, related_name='items')
     personnel = models.ForeignKey(
-        'personnel.Personnel', on_delete=models.CASCADE, related_name='salary_payments',
+        'personnel.Personnel', on_delete=models.CASCADE, related_name='salary_payment_items',
         verbose_name=_('Agent'),
     )
     period = models.CharField(
@@ -641,12 +712,7 @@ class SalaryPayment(BaseModel):
         help_text=_("Mois concerné par ce paiement, ex : 2026-09"),
     )
     amount = models.DecimalField(max_digits=12, decimal_places=2, verbose_name=_('Montant'))
-    caisse = models.ForeignKey(Caisse, on_delete=models.PROTECT, related_name='salary_payments', verbose_name=_('Caisse'))
     notes = models.TextField(blank=True, verbose_name=_('Notes'))
-    paid_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
-        related_name='salary_payments_disbursed',
-    )
 
     class Meta:
         ordering = ['-period', 'personnel__last_name']
@@ -678,24 +744,15 @@ class SalaryPayment(BaseModel):
                     "d'un chantier (onglet Main d'œuvre), pas via la paie du personnel."
                 ) % {'name': self.personnel},
             })
-
-    @transaction.atomic
-    def disburse(self, user):
-        """Record the caisse outflow for this salary payment. Called once,
-        right when the payment is created — office salaries are a single
-        cabinet-level outflow, not a multi-worker list built up over time
-        like PayrollList, so there's no separate draft/submit stage."""
-        from django.core.exceptions import ValidationError
-        if self.amount > self.caisse.balance:
-            raise ValidationError(_("Solde de caisse insuffisant."))
-        category = CaisseTransactionCategory.objects.filter(name=PAYROLL_INGENIEUR_CATEGORY_NAME).first()
-        self.caisse.record(
-            CaisseTransactionType.SORTIE, self.amount, user,
-            category=category, recipient=str(self.personnel),
-            description=_("Salaire %(period)s — %(personnel)s") % {'period': self.period, 'personnel': self.personnel},
-        )
-        self.paid_by = user
-        self.save(update_fields=['paid_by', 'updated_at'])
+        if (
+            self.personnel_id and self.salary_payment_list_id
+            and self.personnel.cabinet_id != self.salary_payment_list.cabinet_id
+        ):
+            raise ValidationError({
+                'personnel': _(
+                    "%(name)s n'appartient pas au même cabinet que cette liste de paie."
+                ) % {'name': self.personnel},
+            })
 
 
 # ---------------------------------------------------------------------

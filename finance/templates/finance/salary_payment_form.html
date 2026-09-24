@@ -1,7 +1,7 @@
 {% extends 'falcon_base.html' %}
 {% load static i18n %}
 
-{% block title %}{% trans "Nouveau paiement" %} - ChantierMobile{% endblock %}
+{% block title %}{% trans "Nouvelle liste — Ingénieurs & Staff" %} - ChantierMobile{% endblock %}
 
 {% block content %}
 <div class="container" data-layout="container-fluid">
@@ -21,42 +21,26 @@
                 <div class="card-body bg-light">
                     <form method="post">
                         {% csrf_token %}
+
+                        {% if form.cabinet %}
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label class="form-label" for="{{ form.personnel.id_for_label }}">{% trans "Agent (Ingénieur / Staff)" %}</label>
-                                {{ form.personnel }}
-                                {% if form.personnel.errors %}<div class="text-danger fs--2">{{ form.personnel.errors }}</div>{% endif %}
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label" for="{{ form.period.id_for_label }}">{% trans "Période" %}</label>
-                                {{ form.period }}
-                                {% if form.period.errors %}<div class="text-danger fs--2">{{ form.period.errors }}</div>{% endif %}
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label" for="{{ form.amount.id_for_label }}">{% trans "Montant" %}</label>
-                                {{ form.amount }}
-                                {% if form.amount.errors %}<div class="text-danger fs--2">{{ form.amount.errors }}</div>{% endif %}
+                                <label class="form-label" for="{{ form.cabinet.id_for_label }}">{{ form.cabinet.label }}</label>
+                                {{ form.cabinet }}
+                                <div class="form-text">{{ form.cabinet.help_text }}</div>
+                                {% if form.cabinet.errors %}<div class="text-danger fs--2">{{ form.cabinet.errors }}</div>{% endif %}
                             </div>
                         </div>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label" for="{{ form.caisse.id_for_label }}">{% trans "Caisse de décaissement" %}</label>
-                                {{ form.caisse }}
-                                {% if form.caisse.errors %}<div class="text-danger fs--2">{{ form.caisse.errors }}</div>{% endif %}
-                            </div>
-                        </div>
+                        {% endif %}
+
                         <div class="mb-3">
                             <label class="form-label" for="{{ form.notes.id_for_label }}">{% trans "Notes" %}</label>
                             {{ form.notes }}
                             {% if form.notes.errors %}<div class="text-danger fs--2">{{ form.notes.errors }}</div>{% endif %}
                         </div>
-                        <div class="alert alert-info fs--1">
-                            <span class="fas fa-info-circle me-1"></span>
-                            {% trans "Ce paiement est décaissé immédiatement de la caisse choisie dès l'enregistrement — un seul paiement par agent et par période." %}
-                        </div>
                         <div class="col-12 d-flex justify-content-end gap-2">
                             <a class="btn btn-falcon-default" href="{{ back_url }}">{% trans "Cancel" %}</a>
-                            <button class="btn btn-primary" type="submit">{% trans "Payer" %}</button>
+                            <button class="btn btn-primary" type="submit">{% trans "Créer" %}</button>
                         </div>
                     </form>
                 </div>
@@ -73,23 +57,5 @@
         if (!el.classList.contains('form-range')) el.classList.add('form-control');
         if (el.tagName === 'SELECT') { el.classList.remove('form-control'); el.classList.add('form-select'); }
     });
-
-    // Auto-fill "amount" from the selected agent's usual monthly salary —
-    // stays editable, just saves re-typing the usual figure each month.
-    (function () {
-        var personnelSelect = document.getElementById('id_salary_personnel');
-        var amountInput = document.getElementById('{{ form.amount.id_for_label }}');
-        if (!personnelSelect || !amountInput) return;
-        var salaries = {};
-        try {
-            salaries = JSON.parse(personnelSelect.getAttribute('data-monthly-salaries') || '{}');
-        } catch (e) { salaries = {}; }
-        personnelSelect.addEventListener('change', function () {
-            var salary = salaries[personnelSelect.value];
-            if (salary && !amountInput.value) {
-                amountInput.value = salary;
-            }
-        });
-    })();
 </script>
 {% endblock %}

@@ -46,9 +46,14 @@ urlpatterns = [
     path('payroll/<int:pk>/submit/', views.payroll_submit, name='payroll_submit'),
     path('payroll/<int:pk>/disburse/', views.payroll_disburse, name='payroll_disburse'),
 
-    # Paie du personnel — "Ingénieurs & Staff" tab (salaire mensuel, hors chantier)
-    path('payroll/salaries/', views.SalaryPaymentListView.as_view(), name='salary_payment_list'),
-    path('payroll/salaries/add/', views.SalaryPaymentCreateView.as_view(), name='salary_payment_create'),
+    # Paie du personnel — "Ingénieurs & Staff" tab (salaire mensuel, hors
+    # chantier, même workflow brouillon/soumise/payée que Listes de paie ci-dessus)
+    path('payroll/salaries/', views.SalaryPaymentListListView.as_view(), name='salary_payment_list'),
+    path('payroll/salaries/add/', views.SalaryPaymentListCreateView.as_view(), name='salary_payment_create'),
+    path('payroll/salaries/<int:pk>/', views.SalaryPaymentListDetailView.as_view(), name='salary_payment_detail'),
+    path('payroll/salaries/<int:pk>/items/add/', views.SalaryPaymentItemCreateView.as_view(), name='salary_payment_item_create'),
+    path('payroll/salaries/<int:pk>/submit/', views.salary_payment_submit, name='salary_payment_submit'),
+    path('payroll/salaries/<int:pk>/disburse/', views.salary_payment_disburse, name='salary_payment_disburse'),
 
     # Avenants
     path('avenants/', views.AvenantListView.as_view(), name='avenant_list'),

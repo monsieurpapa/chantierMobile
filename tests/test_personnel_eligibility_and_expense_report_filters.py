@@ -3,8 +3,9 @@ Tests for the two remaining "small" gaps flagged by the feature-vs-proposal
 audit:
 
 1. Personnel eligibility ("non éligible") was recorded but never enforced —
-   SiteAssignment, PayrollListItem, Expense (main d'œuvre) and SalaryPayment
-   now all reject an ineligible Personnel via model-level clean().
+   SiteAssignment, PayrollListItem, Expense (main d'œuvre) and
+   SalaryPaymentItem now all reject an ineligible Personnel via
+   model-level clean().
 2. The expense report's filters were weaker than the caisse report's (no
    day/year presets, no phase filter) — both are now added.
 """
@@ -15,7 +16,7 @@ from django.urls import reverse
 from django.core.exceptions import ValidationError
 
 from personnel.models import SiteAssignment
-from finance.models import Expense, PayrollList, PayrollListItem, SalaryPayment, Caisse
+from finance.models import Expense, PayrollList, PayrollListItem, SalaryPaymentList, SalaryPaymentItem, Caisse
 from chantiermobile.constants import (
     PersonnelStatus, ExpenseStatus, ExpenseNature, CaisseType, CaisseTransactionType,
 )
@@ -93,10 +94,13 @@ class TestPersonnelEligibilityEnforcement:
         with pytest.raises(ValidationError):
             expense.full_clean()
 
-    def test_salary_payment_rejects_ineligible_personnel(self, ineligible_personnel, caisse):
-        sp = SalaryPayment(personnel=ineligible_personnel, period='2026-09', amount=Decimal('300.00'), caisse=caisse)
+    def test_salary_payment_rejects_ineligible_personnel(self, ineligible_personnel, cabinet):
+        spl = SalaryPaymentList.objects.create(cabinet=cabinet)
+        item = SalaryPaymentItem(
+            salary_payment_list=spl, personnel=ineligible_personnel, period='2026-09', amount=Decimal('300.00'),
+        )
         with pytest.raises(ValidationError):
-            sp.full_clean()
+            item.full_clean()
 
     # NOTE: view-level coverage for salary_payment_create (the "Ingénieurs &
     # Staff" tab) lives in tests/test_personnel_payroll_overhaul.py::

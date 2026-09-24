@@ -1,0 +1,162 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n humanize %}
+
+{% block title %}{{ salary_payment_list }} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    {% include 'includes/navbar-vertical.html' with on="salary_payment_list" %}
+
+    <div class="content">
+        {% include 'includes/navbar-top.html' %}
+
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <label class="text-600 fs--1">{% trans "Cabinet" %}</label>
+                            <p class="fs-2 fw-bold mb-0">{{ salary_payment_list.cabinet.name }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <label class="text-600 fs--1">{% trans "Total" %}</label>
+                            <p class="fs-2 fw-bold text-primary mb-0">${{ salary_payment_list.total_amount|floatformat:2|intcomma }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <label class="text-600 fs--1">{% trans "Statut" %}</label>
+                            <p class="mb-0">
+                                <span class="badge fs-1 {% if salary_payment_list.status == 'PAYEE' %}bg-success{% elif salary_payment_list.status == 'SOUMISE' %}bg-info{% else %}bg-warning{% endif %}">
+                                    {{ salary_payment_list.get_status_display }}
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if salary_payment_list.notes %}
+            <div class="card mb-3">
+                <div class="card-body">
+                    <label class="text-600 fs--1">{% trans "Notes" %}</label>
+                    <p class="mb-0">{{ salary_payment_list.notes|linebreaksbr }}</p>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="card mb-3">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">{% trans "Ingénieurs & Staff" %}</h6>
+                    <div class="d-flex gap-2">
+                        {% if can_prepare and salary_payment_list.status == 'BROUILLON' %}
+                        <form method="post" action="{% url 'finance:salary_payment_submit' pk=salary_payment_list.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-falcon-primary btn-sm">{% trans "Soumettre à la caisse" %}</button>
+                        </form>
+                        {% endif %}
+                        {% if can_disburse and salary_payment_list.status == 'SOUMISE' %}
+                        <form method="post" action="{% url 'finance:salary_payment_disburse' pk=salary_payment_list.pk %}" class="d-flex gap-1">
+                            {% csrf_token %}
+                            {{ disburse_form.caisse }}
+                            <button type="submit" class="btn btn-falcon-success btn-sm">{% trans "Décaisser" %}</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped mb-0 fs--1">
+                            <thead>
+                                <tr>
+                                    <th>{% trans "Agent" %}</th>
+                                    <th>{% trans "Période" %}</th>
+                                    <th class="text-end">{% trans "Montant" %}</th>
+                                    <th>{% trans "Notes" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in salary_payment_list.items.all %}
+                                <tr>
+                                    <td>{{ item.personnel.get_full_name }}</td>
+                                    <td>{{ item.period }}</td>
+                                    <td class="text-end fw-semibold">${{ item.amount|floatformat:2|intcomma }}</td>
+                                    <td>{{ item.notes|default:"-" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="4" class="text-center py-4 text-500">{% trans "Aucun agent ajouté." %}</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            {% if can_prepare and salary_payment_list.status == 'BROUILLON' and item_form %}
+            <div class="card mb-3">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">{% trans "Ajouter un agent" %}</h6>
+                </div>
+                <div class="card-body bg-light">
+                    <form method="post" action="{% url 'finance:salary_payment_item_create' pk=salary_payment_list.pk %}" class="row g-3 align-items-end">
+                        {% csrf_token %}
+                        <div class="col-md-4">
+                            <label class="form-label fs--1">{% trans "Agent (Ingénieur / Staff)" %}</label>
+                            {{ item_form.personnel }}
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fs--1">{% trans "Période" %}</label>
+                            {{ item_form.period }}
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fs--1">{% trans "Montant" %}</label>
+                            {{ item_form.amount }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fs--1">{% trans "Notes" %}</label>
+                            {{ item_form.notes }}
+                        </div>
+                        <div class="col-md-1">
+                            <button type="submit" class="btn btn-falcon-primary w-100">{% trans "Ajouter" %}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.querySelectorAll('select').forEach(el => { el.classList.add('form-select'); });
+
+    // Auto-fill "amount" from the selected agent's usual monthly salary —
+    // stays editable, just saves re-typing the usual figure each month.
+    (function () {
+        var personnelSelect = document.getElementById('id_salary_personnel');
+        var amountInput = document.getElementById('{{ item_form.amount.id_for_label }}');
+        if (!personnelSelect || !amountInput) return;
+        var salaries = {};
+        try {
+            salaries = JSON.parse(personnelSelect.getAttribute('data-monthly-salaries') || '{}');
+        } catch (e) { salaries = {}; }
+        personnelSelect.addEventListener('change', function () {
+            var salary = salaries[personnelSelect.value];
+            if (salary && !amountInput.value) {
+                amountInput.value = salary;
+            }
+        });
+    })();
+</script>
+{% endblock %}

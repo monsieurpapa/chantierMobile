@@ -1,8 +1,27 @@
+from django import forms
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect
 from django.contrib import messages
 from django.utils.translation import gettext_lazy as _
 from accounts.models import UserCabinetRole
+
+
+def add_ambiguous_cabinet_field(view, form):
+    """Shared by any CreateView using CabinetAccessMixin (e.g.
+    PriceLibraryItemCreateView, DQECreateView, SalaryPaymentListCreateView):
+    when the requester belongs to more than one cabinet and hasn't got an
+    active one resolved (CabinetAccessMixin.get_ambiguous_cabinet_choices),
+    add an explicit 'cabinet' field — scoped to only their own cabinets —
+    so they can say which one this record belongs to, instead of either a
+    silent guess or being flatly blocked with no way forward."""
+    cabinets = view.get_ambiguous_cabinet_choices()
+    if cabinets is None:
+        return
+    form.fields['cabinet'] = forms.ModelChoiceField(
+        queryset=cabinets, required=True, label=_('Cabinet'),
+        help_text=_("Vous appartenez à plusieurs cabinets : précisez celui concerné par cet enregistrement."),
+        widget=forms.Select(attrs={'class': 'form-select'}),
+    )
 
 
 def get_session_cabinet(request):
