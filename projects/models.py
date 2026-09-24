@@ -210,6 +210,12 @@ class PlanningSubmission(BaseModel):
         from django.utils import timezone
         if self.status != PlanningStatus.SOUMISE:
             raise ValidationError(_('Seule une planification soumise peut être examinée.'))
+        # ENGINEER is in both PLANNING_SUBMIT_ROLES and PLANNING_REVIEW_ROLES
+        # (see projects/views.py) so a site engineer can draft their own
+        # planning — but not rubber-stamp it themselves. Mirrors
+        # Expense.approve()'s self-approval guard.
+        if not user.is_superuser and self.submitted_by_id == user.pk:
+            raise ValidationError(_("Vous ne pouvez pas examiner votre propre soumission."))
         self.status = new_status
         self.reviewed_by = user
         self.reviewed_at = timezone.now()

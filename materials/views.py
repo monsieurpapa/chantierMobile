@@ -12,13 +12,21 @@ from .forms import MaterialForm, MaterialRequestForm, MaterialRequestItemFormSet
 from projects.models import Site
 from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet, can_act_for_cabinet
 from core.quickcreate import QuickCreateView
-from chantiermobile.constants import UserRoles, FINAL_AUTHORIZATION_ROLES
+from chantiermobile.constants import UserRoles, FINAL_AUTHORIZATION_ROLES, MaterialRequestStatus
 
 # État de besoin — two-stage approval: the magasinier validates first,
 # then a Directeur Technique/Général (or Directeur de Cabinet, kept for
 # single-cabinet setups without a dedicated DT/DG role) gives the final
 # authorization.
 MAGASINIER_VALIDATE_ROLES = ['MAGASINIER', 'DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL']
+
+# Who besides the original requester may edit a still-pending request.
+# The request list/detail templates already hide the "Modifier" link once
+# a request leaves PENDING, but until now MaterialRequestUpdateView itself
+# enforced neither that status gate nor any ownership check, so anyone who
+# could guess or type the edit URL could rewrite someone else's request at
+# any stage, including one already validated or approved.
+MATERIAL_REQUEST_EDIT_ADMIN_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER']
 
 # Material Catalog Views
 class MaterialListView(LoginRequiredMixin, PageHeaderMixin, ListView):
@@ -176,6 +184,27 @@ class MaterialRequestUpdateView(LoginRequiredMixin, CabinetAccessMixin, PageHead
     template_name = 'materials/request_form.html'
     success_url = reverse_lazy('materials:request_list')
     cabinet_lookup_field = 'site__cabinet'
+
+    def dispatch(self, request, *args, **kwargs):
+        # CabinetAccessMixin.get_queryset() already scopes get_object() to
+        # the requesting user's own cabinet(s), so getting here at all
+        # means the user belongs to the right cabinet — but that alone
+        # would let any staff member of that cabinet rewrite anyone
+        # else's request, at any stage of its approval. Gate the actual
+        # edit on the same two conditions the templates already imply:
+        # only while the request is still PENDING, and only the original
+        # requester or an admin-tier role (matching the read-only
+        # ownership check pattern used by form.instance.requested_by =
+        # self.request.user at creation time).
+        self.object = self.get_object()
+        if self.object.status != MaterialRequestStatus.PENDING:
+            messages.error(request, _("Seule une demande en attente peut être modifiée."))
+            return redirect('materials:request_detail', pk=self.object.pk)
+        is_requester = self.object.requested_by_id == request.user.pk
+        if not is_requester and not can_act_for_cabinet(request, self.object.site.cabinet, MATERIAL_REQUEST_EDIT_ADMIN_ROLES):
+            messages.error(request, _("Vous n'avez pas la permission de modifier cette demande."))
+            return redirect('materials:request_detail', pk=self.object.pk)
+        return super().dispatch(request, *args, **kwargs)
 
     def get_header_title(self):
         return _("Modifier la demande n°%(id)s") % {'id': self.object.id}

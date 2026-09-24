@@ -216,8 +216,12 @@
                     </div>
                     {% endif %}
 
-                    <!-- Edit Button -->
+                    <!-- Edit Button: mirrors MaterialRequestUpdateView.dispatch() — only
+                         while still PENDING, and only for the original requester or an
+                         admin-tier role, so this link isn't offered to someone who would
+                         just be bounced back here with a permission error. -->
                     {% if req.status == 'PENDING' %}
+                    {% if req.requested_by_id == request.user.pk or request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,CHIEF_ENGINEER' %}
                     <div class="card mb-3 border-0 shadow-sm">
                         <div class="card-body p-3">
                             <a href="{% url 'materials:request_update' pk=req.pk %}" class="btn btn-outline-primary w-100">
@@ -225,6 +229,7 @@
                             </a>
                         </div>
                     </div>
+                    {% endif %}
                     {% endif %}
 
                     <!-- Summary Card -->

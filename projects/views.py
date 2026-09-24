@@ -15,7 +15,16 @@ from chantiermobile.constants import UserRoles
 LEAD_ENGINEER_ROLES = ['ENGINEER', 'CHIEF_ENGINEER']
 PHASE_CLOSE_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER', 'ENGINEER']
 PLANNING_REVIEW_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER', 'ENGINEER']
-PLANNING_SUBMIT_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER']
+# ENGINEER used to be missing here — only Director/Chief could submit a
+# planning at all. That matched the original one-directional design (a
+# plan authored centrally and pushed down "à examiner par l'ingénieur
+# principal du chantier"), but it meant the site's own engineer, who
+# usually knows the real sequencing best, had no way to draft and submit
+# their own schedule for a chief/director to approve. Adding ENGINEER
+# here is purely additive — the top-down flow still works — and pairs
+# with the self-review guard in PlanningSubmission._decide() so an
+# engineer can't submit a plan and then approve their own submission.
+PLANNING_SUBMIT_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER', 'ENGINEER']
 # Who can file a progress report or add photos to one afterward — the
 # field/engineering side. Commenting is deliberately looser (see
 # progress_comment_add): anyone with cabinet access, not just these roles.

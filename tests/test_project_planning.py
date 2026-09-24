@@ -136,3 +136,39 @@ class TestPlanningSubmission:
         response = client.post(reverse('projects:planning_submission_approve', kwargs={'pk': submission.pk}), {'notes': ''})
         submission.refresh_from_db()
         assert submission.status == PlanningStatus.SOUMISE
+
+    def test_engineer_can_create_and_submit_via_view(self, engineer_client, engineer_user, site):
+        """The site's own engineer usually knows the real sequencing best
+        and should be able to draft/submit a plan themselves, not only
+        receive one pushed down by a director/chief engineer."""
+        response = engineer_client.post(reverse('projects:planning_submission_create', kwargs={'site_id': site.unique_id}), {
+            'phase': '', 'description': "Planification proposée par l'ingénieur de chantier",
+        })
+        assert response.status_code == 302
+        submission = PlanningSubmission.objects.get(site=site)
+        assert submission.status == PlanningStatus.SOUMISE
+        assert submission.submitted_by == engineer_user
+
+    def test_engineer_cannot_approve_own_submission(self, engineer_client, engineer_user, site):
+        """Self-review guard, mirroring Expense.approve() — an engineer who
+        can now both submit and review plannings must not be able to
+        rubber-stamp their own submission."""
+        submission = PlanningSubmission.objects.create(site=site, description='x')
+        submission.submit(engineer_user)
+        response = engineer_client.post(reverse('projects:planning_submission_approve', kwargs={'pk': submission.pk}), {
+            'notes': 'auto-approved',
+        })
+        assert response.status_code == 302
+        submission.refresh_from_db()
+        assert submission.status == PlanningStatus.SOUMISE  # unchanged
+
+    def test_director_can_approve_an_engineers_submission(self, director_client, user, engineer_user, site):
+        submission = PlanningSubmission.objects.create(site=site, description='x')
+        submission.submit(engineer_user)
+        response = director_client.post(reverse('projects:planning_submission_approve', kwargs={'pk': submission.pk}), {
+            'notes': 'ok',
+        })
+        assert response.status_code == 302
+        submission.refresh_from_db()
+        assert submission.status == PlanningStatus.APPROUVEE
+        assert submission.reviewed_by == user
