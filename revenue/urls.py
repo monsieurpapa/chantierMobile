@@ -9,12 +9,14 @@ urlpatterns = [
     path('contract/add/', views.ContractCreateView.as_view(), name='contract_create'),
     path('site/<uuid:site_id>/contract/add/', views.ContractCreateView.as_view(), name='contract_create_from_site'),
     path('contract/<int:pk>/edit/', views.ContractUpdateView.as_view(), name='contract_update'),
-    
+    path('contract/<int:pk>/pdf/', views.contract_pdf, name='contract_pdf'),
+
     # Invoices
     path('invoices/', views.InvoiceListView.as_view(), name='invoice_list'),
     path('invoice/add/', views.InvoiceCreateView.as_view(), name='invoice_create'),
     path('contract/<int:contract_id>/invoice/add/', views.InvoiceCreateView.as_view(), name='invoice_create_from_contract'),
     path('invoice/<int:pk>/', views.InvoiceDetailView.as_view(), name='invoice_detail'),
+    path('invoice/<int:pk>/pdf/', views.invoice_pdf, name='invoice_pdf'),
     path('invoice/<int:pk>/envoyer/', views.invoice_send, name='invoice_send'),
     path('invoice/<int:pk>/annuler/', views.invoice_cancel, name='invoice_cancel'),
     

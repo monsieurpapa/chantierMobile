@@ -49,6 +49,10 @@
                                             href="{% url 'revenue:contract_update' pk=contract.pk %}">
                                             <span class="fas fa-edit"></span>
                                         </a>
+                                        <a class="btn btn-falcon-default btn-sm"
+                                            href="{% url 'revenue:contract_pdf' pk=contract.pk %}">
+                                            <span class="fas fa-file-pdf"></span>
+                                        </a>
                                     </td>
                                 </tr>
                                 {% empty %}

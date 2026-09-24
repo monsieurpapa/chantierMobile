@@ -1186,6 +1186,14 @@ class PayrollListDetailView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccess
     def get_back_url(self):
         return str(reverse_lazy('finance:payroll_list'))
 
+    def get_header_actions(self):
+        return [{
+            'label': _("Exporter en PDF"),
+            'url': str(reverse_lazy('finance:payroll_detail_pdf', kwargs={'pk': self.object.pk})),
+            'icon': 'file-pdf',
+            'class': 'btn-falcon-default',
+        }]
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['can_prepare'] = can_act_for_cabinet(self.request, self.object.site.cabinet, PAYROLL_PREPARE_ROLES)
@@ -1457,6 +1465,14 @@ class SalaryPaymentListDetailView(LoginRequiredMixin, RoleRequiredMixin, Cabinet
     def get_back_url(self):
         return str(reverse_lazy('finance:salary_payment_list'))
 
+    def get_header_actions(self):
+        return [{
+            'label': _("Exporter en PDF"),
+            'url': str(reverse_lazy('finance:salary_payment_detail_pdf', kwargs={'pk': self.object.pk})),
+            'icon': 'file-pdf',
+            'class': 'btn-falcon-default',
+        }]
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['can_prepare'] = can_act_for_cabinet(self.request, self.object.cabinet, PAYROLL_PREPARE_ROLES)
@@ -1501,6 +1517,73 @@ class SalaryPaymentItemCreateView(LoginRequiredMixin, RoleRequiredMixin, CreateV
 
     def get_success_url(self):
         return reverse_lazy('finance:salary_payment_detail', kwargs={'pk': self.salary_payment_list.pk})
+
+
+@login_required
+def payroll_detail_pdf(request, pk):
+    """PDF export of one payroll list — one row per worker, mirroring
+    expense_report_pdf's tabular use of render_table_report_pdf rather
+    than the single-document key/value layout used for invoices."""
+    payroll_list = get_object_or_404(PayrollList, pk=pk)
+    if not can_act_for_cabinet(request, payroll_list.site.cabinet, PAYROLL_VIEW_ROLES):
+        messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+        return redirect('finance:payroll_detail', pk=pk)
+
+    from core.pdf_utils import render_table_report_pdf
+
+    items = payroll_list.items.select_related('personnel', 'assignment').order_by('personnel__last_name')
+    rows = [
+        (
+            str(item.personnel),
+            (str(item.assignment) if item.assignment else '-'),
+            f"{item.amount:.2f} $",
+            item.progress_note[:60] if item.progress_note else '-',
+        )
+        for item in items
+    ]
+    total = payroll_list.total_amount
+    return render_table_report_pdf(
+        filename=f"liste-paie-{payroll_list.pk}.pdf",
+        title=_("Liste de paie — %(site)s") % {'site': payroll_list.site.name},
+        subtitle=_("Statut : %(status)s") % {'status': payroll_list.get_status_display()},
+        columns=[_("Ouvrier"), _("Convention"), _("Montant"), _("Avancement / justification")],
+        rows=rows,
+        totals_row=["", _("Total"), f"{total:.2f} $", ""],
+        generated_by=request.user.get_full_name() or request.user.username,
+    )
+
+
+@login_required
+def salary_payment_detail_pdf(request, pk):
+    """PDF export of one salary payment list — one row per agent, same
+    tabular pattern as payroll_detail_pdf."""
+    salary_payment_list = get_object_or_404(SalaryPaymentList, pk=pk)
+    if not can_act_for_cabinet(request, salary_payment_list.cabinet, PAYROLL_VIEW_ROLES):
+        messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+        return redirect('finance:salary_payment_detail', pk=pk)
+
+    from core.pdf_utils import render_table_report_pdf
+
+    items = salary_payment_list.items.select_related('personnel').order_by('personnel__last_name')
+    rows = [
+        (
+            str(item.personnel),
+            item.period,
+            f"{item.amount:.2f} $",
+            item.notes[:60] if item.notes else '-',
+        )
+        for item in items
+    ]
+    total = salary_payment_list.total_amount
+    return render_table_report_pdf(
+        filename=f"paie-personnel-{salary_payment_list.pk}.pdf",
+        title=_("Paie du personnel — %(cabinet)s") % {'cabinet': salary_payment_list.cabinet.name},
+        subtitle=_("Statut : %(status)s") % {'status': salary_payment_list.get_status_display()},
+        columns=[_("Agent"), _("Période"), _("Montant"), _("Notes")],
+        rows=rows,
+        totals_row=["", _("Total"), f"{total:.2f} $", ""],
+        generated_by=request.user.get_full_name() or request.user.username,
+    )
 
 
 @login_required

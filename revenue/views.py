@@ -216,15 +216,94 @@ class InvoiceDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin,
             {'title': self.object.invoice_number, 'url': None},
         ]
 
-    # No get_header_actions() override here on purpose: every status-driven
-    # action (envoyer/annuler/enregistrer un paiement) lives in a single,
-    # properly role-gated "Actions" card in invoice_detail.html instead —
-    # having both a header-level action AND a body-level one showed
-    # "Enregistrer un paiement" twice on the same page, and the header
-    # version wasn't role-gated (showed to any viewer, including one who'd
-    # get redirected on click) nor status-gated correctly (it showed for
-    # DRAFT/CANCELLED invoices too, which PaymentCreateView's own queryset
-    # never actually accepts).
+    # No status-driven action (envoyer/annuler/enregistrer un paiement) is
+    # added here on purpose: those live in a single, properly role-gated
+    # "Actions" card in invoice_detail.html instead — having both a
+    # header-level action AND a body-level one showed "Enregistrer un
+    # paiement" twice on the same page, and the header version wasn't
+    # role-gated (showed to any viewer, including one who'd get redirected
+    # on click) nor status-gated correctly (it showed for DRAFT/CANCELLED
+    # invoices too, which PaymentCreateView's own queryset never actually
+    # accepts). PDF export has none of those problems — it's a read-only
+    # action available at any status, to anyone who can already view this
+    # page (CabinetAccessMixin), so it's safe as a header action.
+    def get_header_actions(self):
+        return [{
+            'label': _("Exporter en PDF"),
+            'url': str(reverse_lazy('revenue:invoice_pdf', kwargs={'pk': self.object.pk})),
+            'icon': 'file-pdf',
+            'class': 'btn-falcon-default',
+        }]
+
+
+@login_required
+def invoice_pdf(request, pk):
+    """PDF export of a single invoice — a document to hand to the client,
+    not a multi-row report, so it reuses render_table_report_pdf's layout
+    as a simple two-column "field / value" table rather than a list."""
+    invoice = get_object_or_404(Invoice, pk=pk)
+    if not request.user.is_superuser:
+        user_cabinet_ids = request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+        if invoice.contract.site.cabinet_id not in user_cabinet_ids:
+            messages.error(request, _("Vous n'avez pas accès à cette facture."))
+            return redirect('revenue:invoice_list')
+
+    from core.pdf_utils import render_table_report_pdf
+    contract = invoice.contract
+    cabinet = contract.site.cabinet
+    payments_total = invoice.payments.aggregate(total=Sum('amount'))['total'] or 0
+    rows = [
+        (_("Émetteur"), cabinet.name),
+        (_("Client"), contract.client_name),
+        (_("Chantier"), contract.site.name),
+        (_("Numéro de facture"), invoice.invoice_number),
+        (_("Date d'émission"), invoice.issued_date.strftime('%d/%m/%Y')),
+        (_("Date d'échéance"), invoice.due_date.strftime('%d/%m/%Y')),
+        (_("Montant"), f"{invoice.amount:.2f} $"),
+        (_("Montant payé"), f"{payments_total:.2f} $"),
+        (_("Statut"), invoice.get_status_display()),
+    ]
+    return render_table_report_pdf(
+        filename=f"facture-{invoice.invoice_number}.pdf",
+        title=_("Facture %(num)s") % {'num': invoice.invoice_number},
+        subtitle=cabinet.address,
+        columns=[_("Champ"), _("Valeur")],
+        rows=rows,
+        generated_by=request.user.get_full_name() or request.user.username,
+    )
+
+
+@login_required
+def contract_pdf(request, pk):
+    """PDF export of a single contract — same key/value document layout
+    as invoice_pdf."""
+    contract = get_object_or_404(Contract, pk=pk)
+    if not request.user.is_superuser:
+        user_cabinet_ids = request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+        if contract.site.cabinet_id not in user_cabinet_ids:
+            messages.error(request, _("Vous n'avez pas accès à ce contrat."))
+            return redirect('revenue:contract_list')
+
+    from core.pdf_utils import render_table_report_pdf
+    cabinet = contract.site.cabinet
+    rows = [
+        (_("Émetteur"), cabinet.name),
+        (_("Client"), contract.client_name),
+        (_("Chantier"), contract.site.name),
+        (_("Valeur du contrat"), f"{contract.total_value:.2f} $"),
+        (_("Dette avenants"), f"{contract.avenant_debt:.2f} $"),
+        (_("Date de signature"), contract.signed_date.strftime('%d/%m/%Y')),
+        (_("Total payé à ce jour"), f"{contract.total_paid:.2f} $"),
+    ]
+    return render_table_report_pdf(
+        filename=f"contrat-{contract.pk}-{contract.client_name}.pdf",
+        title=_("Contrat — %(client)s") % {'client': contract.client_name},
+        subtitle=cabinet.address,
+        columns=[_("Champ"), _("Valeur")],
+        rows=rows,
+        generated_by=request.user.get_full_name() or request.user.username,
+    )
+
 
 class PaymentListView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
     model = Payment
