@@ -1,5 +1,5 @@
 {% extends 'falcon_base.html' %}
-{% load static i18n humanize %}
+{% load static i18n humanize rbac_tags %}
 {# can_view_financials: RBAC gate computed in core.dashboard.build_dashboard_context — #}
 {# DIRECTOR/ACCOUNTANT/CASHIER (and superusers) see revenue, expenses, margin, #}
 {# invoices and budgets; other roles see the same operational widgets without them. #}
@@ -33,7 +33,9 @@
               {% endif %}
               <div class="mt-3">
                 <a class="btn btn-falcon-primary btn-sm me-2" href="{% url 'projects:site_list' %}">{% trans "View Projects" %}</a>
+                {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,CHIEF_ENGINEER' %}
                 <a class="btn btn-falcon-default btn-sm" href="{% url 'projects:site_create' %}">{% trans "New Project" %}</a>
+                {% endif %}
               </div>
             </div>
           </div>
@@ -600,6 +602,12 @@
     <!-- Projects & Sites -->
     <div class="col-md-6 col-xxl-4">
       <div class="card h-100">
+        {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,CHIEF_ENGINEER' %}
+        <a href="{% url 'projects:site_create' %}" class="btn btn-sm btn-falcon-primary rounded-circle position-absolute top-0 end-0 m-3 z-2"
+           title="{% trans 'Nouveau chantier' %}" aria-label="{% trans 'Nouveau chantier' %}">
+          <span class="fas fa-plus"></span>
+        </a>
+        {% endif %}
         <div class="card-body p-x1 text-center">
           <div class="icon-item icon-item-xl shadow-none mx-auto mt-x1 bg-primary-subtle">
             <span class="text-primary fas fa-project-diagram fs-3"></span>
@@ -614,6 +622,12 @@
     <!-- Personnel -->
     <div class="col-md-6 col-xxl-4">
       <div class="card h-100">
+        {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,CHIEF_ENGINEER' %}
+        <a href="{% url 'personnel:personnel_create' %}" class="btn btn-sm btn-falcon-warning rounded-circle position-absolute top-0 end-0 m-3 z-2"
+           title="{% trans 'Nouveau personnel' %}" aria-label="{% trans 'Nouveau personnel' %}">
+          <span class="fas fa-plus"></span>
+        </a>
+        {% endif %}
         <div class="card-body p-x1 text-center">
           <div class="icon-item icon-item-xl shadow-none mx-auto mt-x1 bg-warning-subtle">
             <span class="text-warning fas fa-users fs-3"></span>
@@ -629,6 +643,10 @@
     <!-- Finance -->
     <div class="col-md-6 col-xxl-4">
       <div class="card h-100">
+        <a href="{% url 'finance:expense_create' %}" class="btn btn-sm btn-falcon-success rounded-circle position-absolute top-0 end-0 m-3 z-2"
+           title="{% trans 'Nouvelle dépense' %}" aria-label="{% trans 'Nouvelle dépense' %}">
+          <span class="fas fa-plus"></span>
+        </a>
         <div class="card-body p-x1 text-center">
           <div class="icon-item icon-item-xl shadow-none mx-auto mt-x1 bg-success-subtle">
             <span class="text-success fas fa-money-bill-wave fs-3"></span>
@@ -644,6 +662,10 @@
     <!-- Materials -->
     <div class="col-md-6 col-xxl-4">
       <div class="card h-100">
+        <a href="{% url 'materials:request_create' %}" class="btn btn-sm btn-falcon-info rounded-circle position-absolute top-0 end-0 m-3 z-2"
+           title="{% trans 'Nouvelle demande de matériaux' %}" aria-label="{% trans 'Nouvelle demande de matériaux' %}">
+          <span class="fas fa-plus"></span>
+        </a>
         <div class="card-body p-x1 text-center">
           <div class="icon-item icon-item-xl shadow-none mx-auto mt-x1 bg-info-subtle">
             <span class="text-info fas fa-boxes fs-3"></span>
@@ -658,6 +680,12 @@
     <!-- Revenue -->
     <div class="col-md-6 col-xxl-4">
       <div class="card h-100">
+        {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,ACCOUNTANT' %}
+        <a href="{% url 'revenue:contract_create' %}" class="btn btn-sm btn-falcon-default rounded-circle position-absolute top-0 end-0 m-3 z-2"
+           title="{% trans 'Nouveau contrat' %}" aria-label="{% trans 'Nouveau contrat' %}">
+          <span class="fas fa-plus"></span>
+        </a>
+        {% endif %}
         <div class="card-body p-x1 text-center">
           <div class="icon-item icon-item-xl shadow-none mx-auto mt-x1 bg-secondary-subtle">
             <span class="text-secondary fas fa-file-invoice-dollar fs-3"></span>
