@@ -1,18 +1,19 @@
 from decimal import Decimal
 import datetime
 
+from django.db import models
 from django.shortcuts import render, get_object_or_404, redirect
-from django.views.generic import ListView, CreateView, UpdateView, DetailView, DeleteView
+from django.views.generic import ListView, CreateView, UpdateView, DetailView, DeleteView, TemplateView
 from django.urls import reverse_lazy
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-from .models import Personnel, Skill, SiteAssignment, PersonnelDocument, Leave, Holiday
+from .models import Personnel, Skill, SiteAssignment, PersonnelDocument, Leave, Holiday, Attendance
 from .forms import PersonnelForm, SiteAssignmentForm, SkillForm, PersonnelDocumentForm, LeaveForm, HolidayForm
 from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet, can_act_for_cabinet
 from core.quickcreate import QuickCreateView
-from chantiermobile.constants import UserRoles, PersonnelPayrollType, DIRECTOR_ROLES
+from chantiermobile.constants import UserRoles, PersonnelPayrollType, DIRECTOR_ROLES, AttendanceStatus
 from projects.models import Site
 
 HR_ADMIN_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER']
@@ -27,6 +28,11 @@ HR_ADMIN_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF
 # engineer only ever sees/touches their own site's crew.
 SITE_ASSIGNMENT_ROLES = HR_ADMIN_ROLES + ['ENGINEER']
 LEAVE_CREATE_ROLES = HR_ADMIN_ROLES + ['ENGINEER']
+# Same shape as the two above: an ENGINEER can record pointage for their
+# own crew (the site(s) they lead), an HR_ADMIN_ROLES holder for any site
+# in the cabinet. Scoped explicitly in AttendanceDailyView.dispatch()
+# rather than via a queryset, since this is a per-site URL, not a form.
+ATTENDANCE_ROLES = HR_ADMIN_ROLES + ['ENGINEER']
 
 
 def _is_hr_admin(user, cabinets=None):
@@ -605,3 +611,115 @@ class SkillQuickCreateView(QuickCreateView):
 
     def build_instance(self, name, request, cabinet, payload):
         return Skill(name=name)
+
+
+def _attendance_can_act(request, site):
+    """An HR_ADMIN_ROLES holder can record any site's pointage; a plain
+    ENGINEER only their own led site — same ownership rule as item 6's
+    site-assignment/leave scoping (SiteAssignmentCreateView, LeaveCreateView)."""
+    if can_act_for_cabinet(request, site.cabinet, HR_ADMIN_ROLES):
+        return True
+    return site.lead_engineer_id == request.user.pk
+
+
+class AttendanceDailyView(LoginRequiredMixin, PageHeaderMixin, TemplateView):
+    """Item 14 of the Directors/Engineers audit: there was no attendance
+    tracking at all. One row per personnel currently assigned to this
+    site, with a status <select> for the selected date — mirrors
+    PayrollListAllocateView's bulk-row pattern (finance/views.py) rather
+    than a one-record-at-a-time CreateView, since pointage is filled in
+    for the whole crew at once, every day."""
+    template_name = 'personnel/attendance_daily.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        self.site = get_object_or_404(Site, unique_id=kwargs['unique_id'])
+        if not _attendance_can_act(request, self.site):
+            messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+            return redirect('projects:site_detail', unique_id=self.site.unique_id)
+        raw_date = request.GET.get('date') or request.POST.get('date')
+        try:
+            self.date = datetime.date.fromisoformat(raw_date) if raw_date else timezone.localdate()
+        except ValueError:
+            self.date = timezone.localdate()
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_header_title(self):
+        return _("Pointage — %(site)s") % {'site': self.site.name}
+
+    def get_header_subtitle(self):
+        return str(self.date)
+
+    def get_back_url(self):
+        return str(reverse_lazy('projects:site_detail', kwargs={'unique_id': self.site.unique_id}))
+
+    def get_rows(self):
+        assignments = SiteAssignment.objects.filter(
+            site=self.site, start_date__lte=self.date,
+        ).filter(
+            models.Q(end_date__isnull=True) | models.Q(end_date__gte=self.date)
+        ).select_related('personnel').order_by('personnel__last_name', 'personnel__first_name')
+        existing = {
+            a.personnel_id: a for a in Attendance.objects.filter(site=self.site, date=self.date)
+        }
+        rows = []
+        seen_personnel = set()
+        for assignment in assignments:
+            personnel = assignment.personnel
+            if personnel.pk in seen_personnel:
+                continue
+            seen_personnel.add(personnel.pk)
+            record = existing.get(personnel.pk)
+            rows.append({
+                'personnel': personnel,
+                'status': record.status if record else AttendanceStatus.PRESENT,
+                'notes': record.notes if record else '',
+            })
+        return rows
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['site'] = self.site
+        context['date'] = self.date
+        context['rows'] = self.get_rows()
+        context['status_choices'] = AttendanceStatus.choices
+        context['history_url'] = reverse_lazy('personnel:attendance_history', kwargs={'unique_id': self.site.unique_id})
+        return context
+
+    def post(self, request, *args, **kwargs):
+        for row in self.get_rows():
+            personnel = row['personnel']
+            status = request.POST.get(f'status_{personnel.pk}', AttendanceStatus.PRESENT)
+            if status not in AttendanceStatus.values:
+                status = AttendanceStatus.PRESENT
+            notes = (request.POST.get(f'notes_{personnel.pk}') or '').strip()
+            Attendance.objects.update_or_create(
+                personnel=personnel, site=self.site, date=self.date,
+                defaults={'status': status, 'notes': notes, 'recorded_by': request.user},
+            )
+        messages.success(request, _("Pointage enregistré pour le %(date)s.") % {'date': self.date})
+        return redirect(f"{reverse_lazy('personnel:attendance_daily', kwargs={'unique_id': self.site.unique_id})}?date={self.date.isoformat()}")
+
+
+class AttendanceHistoryView(LoginRequiredMixin, PageHeaderMixin, TemplateView):
+    """Read-only history for a site's pointage — the last 30 days'
+    records, newest first, one line per worker per day."""
+    template_name = 'personnel/attendance_history.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        self.site = get_object_or_404(Site, unique_id=kwargs['unique_id'])
+        if not _attendance_can_act(request, self.site):
+            messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+            return redirect('projects:site_detail', unique_id=self.site.unique_id)
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_header_title(self):
+        return _("Historique de pointage — %(site)s") % {'site': self.site.name}
+
+    def get_back_url(self):
+        return str(reverse_lazy('personnel:attendance_daily', kwargs={'unique_id': self.site.unique_id}))
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['site'] = self.site
+        context['records'] = Attendance.objects.filter(site=self.site).select_related('personnel', 'recorded_by')[:200]
+        return context

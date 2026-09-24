@@ -1,0 +1,59 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Historique de pointage" %} - {{ site.name }} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    {% include 'includes/navbar-vertical.html' with on="attendance" %}
+
+    <div class="content">
+        {% include 'includes/navbar-top.html' %}
+
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            <div class="card">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped fs--1 mb-0">
+                            <thead class="bg-200 text-900">
+                                <tr>
+                                    <th scope="col">{% trans "Date" %}</th>
+                                    <th scope="col">{% trans "Personnel" %}</th>
+                                    <th scope="col">{% trans "Statut" %}</th>
+                                    <th scope="col">{% trans "Notes" %}</th>
+                                    <th scope="col">{% trans "Enregistré par" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in records %}
+                                <tr class="align-middle">
+                                    <td>{{ record.date|date:"d/m/Y" }}</td>
+                                    <td>{{ record.personnel.get_full_name }}</td>
+                                    <td>
+                                        <span class="badge {% if record.status == 'PRESENT' %}badge-subtle-success{% elif record.status == 'ABSENT' %}badge-subtle-danger{% else %}badge-subtle-warning{% endif %}">
+                                            {{ record.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td class="text-600">{{ record.notes|default:"—" }}</td>
+                                    <td class="text-600">{{ record.recorded_by|default:"—" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-5">
+                                        <span class="fas fa-calendar-check fa-2x text-300 d-block mb-2"></span>
+                                        <p class="text-600 mb-0">{% trans "Aucun pointage enregistré pour ce chantier." %}</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}

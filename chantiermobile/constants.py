@@ -273,6 +273,18 @@ class TaskStatus(models.TextChoices):
     TERMINEE = 'TERMINEE', _('Terminée')
 
 
+class AttendanceStatus(models.TextChoices):
+    """Daily pointage status for one worker on one site (item 14 of the
+    Directors/Engineers audit: there was no attendance tracking at all —
+    Expense.personnel and PayrollListItem existed, but nothing recorded
+    who actually showed up on a given day, which is what a chef de
+    chantier fills in every morning in practice)."""
+    PRESENT = 'PRESENT', _('Présent')
+    ABSENT = 'ABSENT', _('Absent')
+    RETARD = 'RETARD', _('En retard')
+    DEMI_JOURNEE = 'DEMI_JOURNEE', _('Demi-journée')
+
+
 class TaskPriority(models.TextChoices):
     """Task priority choices"""
     BASSE = 'BASSE', _('Basse')

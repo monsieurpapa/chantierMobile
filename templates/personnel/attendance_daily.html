@@ -1,0 +1,76 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Pointage" %} - {{ site.name }} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    {% include 'includes/navbar-vertical.html' with on="attendance" %}
+
+    <div class="content">
+        {% include 'includes/navbar-top.html' %}
+
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            <div class="card mb-3">
+                <div class="card-header bg-light d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <form method="get" class="d-flex align-items-center gap-2">
+                        <label class="mb-0 fs--1 text-600">{% trans "Date" %}</label>
+                        <input type="date" name="date" class="form-control form-control-sm" value="{{ date|date:'Y-m-d' }}"
+                               onchange="this.form.submit()">
+                    </form>
+                    <a href="{{ history_url }}" class="btn btn-falcon-default btn-sm">
+                        <span class="fas fa-history me-1"></span>{% trans "Historique" %}
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="date" value="{{ date|date:'Y-m-d' }}">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped mb-0 fs--1">
+                                <thead>
+                                    <tr>
+                                        <th>{% trans "Personnel" %}</th>
+                                        <th style="min-width: 160px;">{% trans "Statut" %}</th>
+                                        <th>{% trans "Notes" %}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in rows %}
+                                    <tr>
+                                        <td>{{ row.personnel.get_full_name }}</td>
+                                        <td>
+                                            <select name="status_{{ row.personnel.pk }}" class="form-select form-select-sm">
+                                                {% for value, label in status_choices %}
+                                                <option value="{{ value }}" {% if row.status == value %}selected{% endif %}>{{ label }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <input type="text" name="notes_{{ row.personnel.pk }}" class="form-control form-control-sm"
+                                                   value="{{ row.notes }}" placeholder="{% trans 'Optionnel' %}">
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr><td colspan="3" class="text-center py-4 text-500">{% trans "Aucun personnel affecté à ce chantier." %}</td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% if rows %}
+                        <div class="p-3 d-flex justify-content-end gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <span class="fas fa-check me-1"></span>{% trans "Enregistrer le pointage" %}
+                            </button>
+                        </div>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}

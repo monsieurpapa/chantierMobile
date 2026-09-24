@@ -290,10 +290,16 @@
                                     <div class="d-flex justify-content-between align-items-center mb-4">
                                         <h5 class="mb-0"><i class="fas fa-users text-info me-2"></i>{% trans "Assigned Personnel" %}</h5>
                                         {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,CHIEF_ENGINEER' or site.lead_engineer_id == request.user.pk %}
-                                        <a class="btn btn-info btn-sm"
-                                            href="{% url 'personnel:assignment_create' %}?site={{ site.pk }}">
-                                            <span class="fas fa-user-plus me-1"></span>{% trans "Assign Staff" %}
-                                        </a>
+                                        <div class="d-flex gap-2">
+                                            <a class="btn btn-falcon-default btn-sm"
+                                                href="{% url 'personnel:attendance_daily' unique_id=site.unique_id %}">
+                                                <span class="fas fa-calendar-check me-1"></span>{% trans "Pointage" %}
+                                            </a>
+                                            <a class="btn btn-info btn-sm"
+                                                href="{% url 'personnel:assignment_create' %}?site={{ site.pk }}">
+                                                <span class="fas fa-user-plus me-1"></span>{% trans "Assign Staff" %}
+                                            </a>
+                                        </div>
                                         {% endif %}
                                     </div>
                                     

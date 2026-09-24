@@ -32,4 +32,8 @@ urlpatterns = [
     path('holidays/', views.HolidayListView.as_view(), name='holiday_list'),
     path('holidays/add/', views.HolidayCreateView.as_view(), name='holiday_create'),
     path('holidays/<int:pk>/delete/', views.HolidayDeleteView.as_view(), name='holiday_delete'),
+
+    # Pointage (attendance)
+    path('attendance/<uuid:unique_id>/', views.AttendanceDailyView.as_view(), name='attendance_daily'),
+    path('attendance/<uuid:unique_id>/historique/', views.AttendanceHistoryView.as_view(), name='attendance_history'),
 ]

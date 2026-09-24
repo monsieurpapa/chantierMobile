@@ -5,6 +5,7 @@ from accounts.models import Cabinet, User
 from projects.models import Site
 from chantiermobile.constants import (
     PersonnelType, AgentCategory, PersonnelStatus, PersonnelPayrollType, Trade, LeaveType, ApprovalStatus,
+    AttendanceStatus,
 )
 
 class Skill(BaseModel):
@@ -177,3 +178,30 @@ class Leave(BaseModel):
     @property
     def duration_days(self):
         return (self.end_date - self.start_date).days + 1
+
+
+class Attendance(BaseModel):
+    """Daily pointage: one row per (personnel, site, date) recording
+    whether that worker actually showed up (item 14 of the Directors/
+    Engineers audit). Keyed on personnel+site+date rather than the
+    SiteAssignment so a late/early assignment change on the same day
+    doesn't orphan the day's record, and so the same personnel/site/date
+    combination can never be recorded twice by accident."""
+    personnel = models.ForeignKey(Personnel, on_delete=models.CASCADE, related_name='attendance_records')
+    site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name='attendance_records')
+    date = models.DateField(verbose_name=_('Date'))
+    status = models.CharField(
+        max_length=20, choices=AttendanceStatus.choices, default=AttendanceStatus.PRESENT,
+        verbose_name=_('Statut'),
+    )
+    notes = models.CharField(max_length=255, blank=True, verbose_name=_('Notes'))
+    recorded_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name='attendance_recorded',
+    )
+
+    class Meta:
+        ordering = ['-date', 'personnel__last_name']
+        unique_together = ('personnel', 'site', 'date')
+
+    def __str__(self):
+        return f"{self.personnel} — {self.site} — {self.date} ({self.get_status_display()})"
