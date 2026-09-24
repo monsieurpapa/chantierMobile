@@ -1,0 +1,73 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Recherche" %} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    {% include 'includes/navbar-vertical.html' with on="global_search" %}
+
+    <div class="content">
+        {% include 'includes/navbar-top.html' %}
+
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            <div class="card mb-3">
+                <div class="card-body">
+                    <form method="get" action="{% url 'global_search' %}" class="d-flex">
+                        <input type="search" name="q" class="form-control me-2" placeholder="{% trans 'Rechercher un chantier, un employé, un contrat, une facture…' %}"
+                               value="{{ query }}" autofocus>
+                        <button type="submit" class="btn btn-falcon-primary">
+                            <span class="fas fa-search me-1"></span>{% trans "Rechercher" %}
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            {% if query %}
+                {% if results %}
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">
+                            {% blocktrans count counter=results|length %}{{ counter }} résultat{% plural %}{{ counter }} résultats{% endblocktrans %}
+                            {% trans "pour" %} «&nbsp;{{ query }}&nbsp;»
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped fs--1 mb-0">
+                                <tbody>
+                                    {% for item in results %}
+                                    <tr class="align-middle">
+                                        <td style="width:1%">
+                                            <span class="badge bg-{{ item.badge }}">
+                                                <span class="fas {{ item.icon }} me-1"></span>{{ item.type_label }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <a href="{{ item.url }}"><strong>{{ item.title }}</strong></a>
+                                            {% if item.subtitle %}<br><span class="text-600">{{ item.subtitle }}</span>{% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <span class="fas fa-search fa-2x text-300 d-block mb-3"></span>
+                        <h5 class="mb-1">{% trans "Aucun résultat" %}</h5>
+                        <p class="text-600 mb-0">{% blocktrans %}Aucun chantier, employé, contrat ou facture ne correspond à «&nbsp;{{ query }}&nbsp;».{% endblocktrans %}</p>
+                    </div>
+                </div>
+                {% endif %}
+            {% endif %}
+        </div>
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}
