@@ -17,6 +17,29 @@ from projects.models import Site
 
 HR_ADMIN_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER']
 
+# An ENGINEER should be able to assign personnel to, and record leave
+# for, their OWN crew — the site(s) where they're Site.lead_engineer —
+# without inheriting the rest of what HR_ADMIN_ROLES grants cabinet-wide
+# (public holidays, any personnel's dossier documents, deciding someone
+# else's leave request). So these two are deliberately their own
+# constants rather than just adding ENGINEER to HR_ADMIN_ROLES, and the
+# views below scope the actual querysets via _is_hr_admin() so a plain
+# engineer only ever sees/touches their own site's crew.
+SITE_ASSIGNMENT_ROLES = HR_ADMIN_ROLES + ['ENGINEER']
+LEAVE_CREATE_ROLES = HR_ADMIN_ROLES + ['ENGINEER']
+
+
+def _is_hr_admin(user, cabinets=None):
+    """True for a full HR_ADMIN_ROLES holder (cabinet-wide HR reach).
+    False for a plain ENGINEER, who should be scoped to their own led
+    site(s) instead of the whole cabinet's personnel."""
+    if user.is_superuser:
+        return True
+    qs = user.cabinet_roles.filter(role__in=HR_ADMIN_ROLES)
+    if cabinets is not None:
+        qs = qs.filter(cabinet__in=cabinets)
+    return qs.exists()
+
 class PersonnelListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
     model = Personnel
     template_name = 'personnel/personnel_list.html'
@@ -224,7 +247,7 @@ class SiteAssignmentCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAcc
     model = SiteAssignment
     form_class = SiteAssignmentForm
     template_name = 'personnel/assignment_form.html'
-    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER']
+    allowed_roles = SITE_ASSIGNMENT_ROLES
     cabinet_lookup_field = 'site__cabinet'
     header_title = _("Affecter un personnel à un chantier")
     header_subtitle = _("Associez un travailleur à un chantier de construction")
@@ -246,7 +269,13 @@ class SiteAssignmentCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAcc
                 form.fields['personnel'].queryset = Personnel.objects.filter(cabinet=active_cabinet)
         elif hasattr(user, 'cabinet_roles'):
             cabinets = user.cabinet_roles.values_list('cabinet', flat=True)
-            form.fields['site'].queryset = Site.objects.filter(cabinet__in=cabinets)
+            site_qs = Site.objects.filter(cabinet__in=cabinets)
+            if not _is_hr_admin(user, cabinets):
+                # Plain ENGINEER: assigning personnel is a cabinet-wide HR
+                # action for everyone else — restrict them to the site(s)
+                # they actually lead.
+                site_qs = site_qs.filter(lead_engineer=user)
+            form.fields['site'].queryset = site_qs
             form.fields['personnel'].queryset = Personnel.objects.filter(cabinet__in=cabinets)
         else:
             form.fields['site'].queryset = Site.objects.none()
@@ -260,6 +289,12 @@ class SiteAssignmentCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAcc
             person = get_object_or_404(Personnel, unique_id=personnel_id)
             initial['personnel'] = person
             initial['daily_rate'] = person.default_daily_rate
+        # "Assign Staff" on the site detail page links here with ?site=<pk>
+        # — prefill it so the field isn't left for the user to reselect
+        # from scratch (this was silently ignored before).
+        site_id = self.request.GET.get('site')
+        if site_id:
+            initial['site'] = site_id
         return initial
 
     def get_context_data(self, **kwargs):
@@ -364,10 +399,18 @@ class LeaveListView(LoginRequiredMixin, PageHeaderMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['current_status_filter'] = self.request.GET.get('status', '')
-        context['can_manage'] = (
-            self.request.user.is_superuser or
-            self.request.user.cabinet_roles.filter(role__in=HR_ADMIN_ROLES).exists()
+        # Deciding (approve/reject) someone's leave stays an HR_ADMIN_ROLES
+        # action; creating one is now open to an ENGINEER too (for their
+        # own crew) — these are two different template checks so the
+        # "Déclarer un congé" button doesn't imply approve/reject rights.
+        user = self.request.user
+        is_hr_admin = _is_hr_admin(user)
+        context['can_decide_leave'] = is_hr_admin
+        context['can_create_leave'] = is_hr_admin or (
+            user.is_authenticated and user.cabinet_roles.filter(role__in=LEAVE_CREATE_ROLES).exists()
         )
+        # Kept for any other template still relying on the old name.
+        context['can_manage'] = context['can_decide_leave']
         return context
 
 
@@ -375,7 +418,7 @@ class LeaveCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, Cr
     model = Leave
     form_class = LeaveForm
     template_name = 'personnel/leave_form.html'
-    allowed_roles = HR_ADMIN_ROLES
+    allowed_roles = LEAVE_CREATE_ROLES
     success_url = reverse_lazy('personnel:leave_list')
     header_title = _("Déclarer un congé")
     header_subtitle = _("Enregistrez un congé pour un membre du personnel")
@@ -391,7 +434,13 @@ class LeaveCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, Cr
             )
         elif hasattr(user, 'cabinet_roles'):
             cabinets = user.cabinet_roles.values_list('cabinet', flat=True)
-            form.fields['personnel'].queryset = Personnel.objects.filter(cabinet__in=cabinets)
+            personnel_qs = Personnel.objects.filter(cabinet__in=cabinets)
+            if not _is_hr_admin(user, cabinets):
+                # Plain ENGINEER: only personnel currently assigned to a
+                # site they lead — their own crew, not the whole
+                # cabinet's personnel roster.
+                personnel_qs = personnel_qs.filter(assignments__site__lead_engineer=user).distinct()
+            form.fields['personnel'].queryset = personnel_qs
         return form
 
     def form_valid(self, form):

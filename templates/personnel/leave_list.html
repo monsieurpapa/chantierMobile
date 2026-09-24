@@ -25,7 +25,7 @@
                     <li class="nav-item"><a class="nav-link {% if current_status_filter == 'APPROVED' %}active{% endif %}" href="?status=APPROVED">{% trans "Approuvé" %}</a></li>
                     <li class="nav-item"><a class="nav-link {% if current_status_filter == 'REJECTED' %}active{% endif %}" href="?status=REJECTED">{% trans "Rejeté" %}</a></li>
                 </ul>
-                {% if can_manage %}
+                {% if can_create_leave %}
                 <a href="{% url 'personnel:leave_create' %}" class="btn btn-falcon-primary btn-sm">
                     <span class="fas fa-plus me-1"></span>{% trans "Déclarer un congé" %}
                 </a>
@@ -43,7 +43,7 @@
                                     <th>{% trans "Période" %}</th>
                                     <th>{% trans "Jours" %}</th>
                                     <th>{% trans "Statut" %}</th>
-                                    {% if can_manage %}<th class="text-end">{% trans "Actions" %}</th>{% endif %}
+                                    {% if can_decide_leave %}<th class="text-end">{% trans "Actions" %}</th>{% endif %}
                                 </tr>
                             </thead>
                             <tbody>
@@ -61,7 +61,7 @@
                                             {{ leave.get_status_display }}
                                         </span>
                                     </td>
-                                    {% if can_manage %}
+                                    {% if can_decide_leave %}
                                     <td class="text-end">
                                         {% if leave.status == 'PENDING' %}
                                         <form method="post" action="{% url 'personnel:leave_approve' pk=leave.pk %}" class="d-inline">
