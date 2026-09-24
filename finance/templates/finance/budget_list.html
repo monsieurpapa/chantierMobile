@@ -53,10 +53,16 @@
                                 <tr>
                                     <td colspan="4" class="text-center py-5">
                                         <span class="fas fa-wallet fa-2x text-300 d-block mb-2"></span>
+                                        {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,ACCOUNTANT,CHIEF_ENGINEER' %}
                                         <p class="text-600 mb-2">{% trans "No budgets defined yet." %}</p>
+                                        {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,ACCOUNTANT' %}
                                         <a href="{% url 'finance:budget_create' %}" class="btn btn-falcon-primary btn-sm">
                                             <span class="fas fa-plus me-1"></span>{% trans "Create Budget" %}
                                         </a>
+                                        {% endif %}
+                                        {% else %}
+                                        <p class="text-600 mb-0">{% trans "No budget has been assigned to a site you lead yet." %}</p>
+                                        {% endif %}
                                     </td>
                                 </tr>
                                 {% endfor %}

@@ -98,6 +98,7 @@
                                 </div>
                             </a>
                         </li>
+                        {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,ACCOUNTANT,CHIEF_ENGINEER,ENGINEER' or request.user.is_superuser %}
                         <li class="nav-item">
                             <a class="nav-link {% if on == 'budget_list' %}active{% endif %}"
                                 href="{% url 'finance:budget_list' %}">
@@ -106,6 +107,7 @@
                                 </div>
                             </a>
                         </li>
+                        {% endif %}
                         {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,ACCOUNTANT,CASHIER' or request.user.is_superuser %}
                         <li class="nav-item">
                             <a class="nav-link {% if on == 'expense_report' %}active{% endif %}"

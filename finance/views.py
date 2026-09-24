@@ -226,14 +226,41 @@ def mark_expense_paid(request, pk):
     return redirect('finance:expense_list')
 
 # Budget Views
+
+# Full, cabinet-wide budget access (every budget in the cabinet). ENGINEER
+# is deliberately NOT in this list: a site engineer can see budgets, but
+# only for the site(s) they actually lead (see BUDGET_VIEW_ROLES and the
+# get_queryset() overrides below) — otherwise any engineer in the cabinet
+# could browse every other site's financials.
+BUDGET_FULL_ACCESS_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'ACCOUNTANT', 'CHIEF_ENGINEER']
+# Who may reach the budget list/detail views at all — full-access roles
+# above, plus ENGINEER (queryset-scoped to their own led site(s)).
+BUDGET_VIEW_ROLES = BUDGET_FULL_ACCESS_ROLES + ['ENGINEER']
+
+
+def _scope_budgets_for_viewer(qs, user):
+    """Cabinet-wide for a full-access role; otherwise (a plain ENGINEER)
+    restricted to budgets of sites where the user is the lead_engineer —
+    engineers previously had no way at all to see their own site's
+    budget, since BudgetListView/BudgetDetailView excluded ENGINEER
+    entirely."""
+    if user.is_superuser:
+        return qs
+    admin_cabinet_ids = user.cabinet_roles.filter(role__in=BUDGET_FULL_ACCESS_ROLES).values_list('cabinet_id', flat=True)
+    return qs.filter(Q(site__cabinet_id__in=admin_cabinet_ids) | Q(site__lead_engineer=user))
+
+
 class BudgetListView(LoginRequiredMixin, CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, ListView):
     model = Budget
     template_name = 'finance/budget_list.html'
     context_object_name = 'budgets'
-    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'ACCOUNTANT', 'CHIEF_ENGINEER']
+    allowed_roles = BUDGET_VIEW_ROLES
     cabinet_lookup_field = 'site__cabinet'
     header_title = _("Budgets des projets")
     header_subtitle = _("Surveillez et gérez les budgets de construction")
+
+    def get_queryset(self):
+        return _scope_budgets_for_viewer(super().get_queryset(), self.request.user)
 
     def get_header_actions(self):
         from accounts.models import UserCabinetRole
@@ -285,8 +312,11 @@ class BudgetDetailView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin
     model = Budget
     template_name = 'finance/budget_detail.html'
     context_object_name = 'budget'
-    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'ACCOUNTANT', 'CHIEF_ENGINEER']
+    allowed_roles = BUDGET_VIEW_ROLES
     cabinet_lookup_field = 'site__cabinet'
+
+    def get_queryset(self):
+        return _scope_budgets_for_viewer(super().get_queryset(), self.request.user)
 
     def get_header_title(self):
         return _("Budget : %(name)s") % {'name': self.object.site.name}

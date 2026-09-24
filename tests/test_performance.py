@@ -62,8 +62,11 @@ class TestDatabasePerformance:
         # 'DIRECTOR,ACCOUNTANT,CASHIER,FINANCIER', so +1 query of its own),
         # plus the navbar's "Rapport de stock" link (another distinct
         # has_role cache key, 'DIRECTOR,CHIEF_ENGINEER,ENGINEER,MAGASINIER',
-        # +1 more).
-        assert len(ctx.captured_queries) < 14
+        # +1 more), plus the navbar's "Budgets" link (another distinct
+        # has_role cache key, 'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,
+        # ACCOUNTANT,CHIEF_ENGINEER,ENGINEER', +1 more — added so the link
+        # isn't a dead end for roles that can't open BudgetListView).
+        assert len(ctx.captured_queries) < 15
     
     def test_dashboard_query_performance(self, director_client, user):
         """Test dashboard query performance."""
