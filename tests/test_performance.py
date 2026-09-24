@@ -65,8 +65,12 @@ class TestDatabasePerformance:
         # +1 more), plus the navbar's "Budgets" link (another distinct
         # has_role cache key, 'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,
         # ACCOUNTANT,CHIEF_ENGINEER,ENGINEER', +1 more — added so the link
-        # isn't a dead end for roles that can't open BudgetListView).
-        assert len(ctx.captured_queries) < 15
+        # isn't a dead end for roles that can't open BudgetListView), plus the
+        # navbar's "Approbations" link (another distinct has_role cache key,
+        # 'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,ACCOUNTANT,
+        # MAGASINIER,CHIEF_ENGINEER,ENGINEER', +1 more — the pending-approvals
+        # inbox link).
+        assert len(ctx.captured_queries) < 16
     
     def test_dashboard_query_performance(self, director_client, user):
         """Test dashboard query performance."""

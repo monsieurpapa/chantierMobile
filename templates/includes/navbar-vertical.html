@@ -45,6 +45,22 @@
                     </a>
                 </li>
 
+                <!-- Pending approvals inbox: gated to the union of every role that
+                     can decide something in it (see core/approvals.py's role
+                     constants) — a role with nothing to approve (WORKER, CASHIER,
+                     FINANCIER, ...) would otherwise get a link to a permanently
+                     empty page. -->
+                {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,ACCOUNTANT,MAGASINIER,CHIEF_ENGINEER,ENGINEER' %}
+                <li class="nav-item">
+                    <a class="nav-link {% if on == 'pending_approvals' %}active{% endif %}" href="{% url 'pending_approvals' %}" role="button">
+                        <div class="d-flex align-items-center">
+                            <span class="nav-link-icon"><span class="fas fa-inbox fs-1"></span></span>
+                            <span class="nav-link-text ps-1">{% trans "Approbations" %}</span>
+                        </div>
+                    </a>
+                </li>
+                {% endif %}
+
                 <li class="nav-divider">{% trans "Modules" %}</li>
 
                 <!-- Projects -->

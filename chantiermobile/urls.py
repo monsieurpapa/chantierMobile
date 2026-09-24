@@ -3,12 +3,13 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
-from core.views import HomeView
+from core.views import HomeView, PendingApprovalsView
 from django.views.i18n import set_language
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', HomeView.as_view(), name='home'),
+    path('approbations/', PendingApprovalsView.as_view(), name='pending_approvals'),
     path('finance/', include('finance.urls'), name='finance'),
     path('projects/', include('projects.urls'), name='projects'),
     path('personnel/', include('personnel.urls'), name='personnel'),
