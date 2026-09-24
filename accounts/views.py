@@ -19,7 +19,7 @@ from materials.models import MaterialRequest
 from finance.models import Expense
 from revenue.models import Invoice
 from core.mixins import PageHeaderMixin
-from chantiermobile.constants import UserRoles, ApprovalStatus
+from chantiermobile.constants import UserRoles, ApprovalStatus, DIRECTOR_ROLES
 
 User = get_user_model()
 
@@ -148,7 +148,7 @@ class UserProfileUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView)
         # Add user roles for template conditionals
         user_roles = cabinet_roles.values_list('role', flat=True)
         context['user_roles'] = list(user_roles)
-        context['is_director'] = 'DIRECTOR' in user_roles
+        context['is_director'] = any(role in DIRECTOR_ROLES for role in user_roles)
         context['is_engineer'] = 'ENGINEER' in user_roles or 'CHIEF_ENGINEER' in user_roles
         context['is_accountant'] = 'ACCOUNTANT' in user_roles
         context['is_cashier'] = 'CASHIER' in user_roles

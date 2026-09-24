@@ -29,6 +29,19 @@ class UserRoles(models.TextChoices):
 # created a dedicated DT/DG role keep working.
 FINAL_AUTHORIZATION_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL']
 
+# All three "director tier" roles, for everywhere else in the app that
+# needs to recognize a director — budgets, sites, contracts, invoices,
+# caisse, payroll, the dashboard's financial widgets, superadmin-style
+# "create" header actions, and the director-payment email notification.
+# DIRECTOR ('Directeur de Cabinet') stays the only director role a
+# single-cabinet setup ever needs to create; a larger cabinet that splits
+# the title into DIRECTEUR_TECHNIQUE / DIRECTEUR_GENERAL gets the same
+# practical access either way — before this constant existed, those two
+# roles were wired into FINAL_AUTHORIZATION_ROLES only, so a user actually
+# assigned one of them could approve an avenant and nothing else: no
+# budgets, sites, contracts, invoices, caisse, or payroll access anywhere.
+DIRECTOR_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL']
+
 
 class ApprovalStatus(models.TextChoices):
     """Common approval status choices used across multiple models"""

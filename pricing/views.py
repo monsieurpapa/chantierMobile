@@ -29,7 +29,7 @@ class PriceLibraryItemListView(LoginRequiredMixin, CabinetAccessMixin, PageHeade
     def get_header_actions(self):
         from accounts.models import UserCabinetRole
         if self.request.user.is_superuser or UserCabinetRole.objects.filter(
-            user=self.request.user, role__in=[UserRoles.DIRECTOR, UserRoles.CHIEF_ENGINEER]
+            user=self.request.user, role__in=[UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.CHIEF_ENGINEER]
         ).exists():
             return [{
                 'label': _("Ajouter un article"),
@@ -45,7 +45,7 @@ class PriceLibraryItemCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetA
     form_class = PriceLibraryItemForm
     template_name = 'pricing/price_item_form.html'
     success_url = reverse_lazy('pricing:price_item_list')
-    allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER']
+    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER']
     header_title = _("Ajouter un article au catalogue de prix")
     header_subtitle = _("Définir un nouveau prix unitaire réutilisable")
     back_url = reverse_lazy('pricing:price_item_list')
@@ -84,7 +84,7 @@ class PriceLibraryItemUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetA
     form_class = PriceLibraryItemForm
     template_name = 'pricing/price_item_form.html'
     success_url = reverse_lazy('pricing:price_item_list')
-    allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER']
+    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER']
 
     def get_header_title(self):
         return _("Modifier : %(name)s") % {'name': self.object.designation}
@@ -153,7 +153,7 @@ class DQEListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListV
     def get_header_actions(self):
         from accounts.models import UserCabinetRole
         if self.request.user.is_superuser or UserCabinetRole.objects.filter(
-            user=self.request.user, role__in=[UserRoles.DIRECTOR, UserRoles.CHIEF_ENGINEER]
+            user=self.request.user, role__in=[UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.CHIEF_ENGINEER]
         ).exists():
             return [{
                 'label': _("Nouveau DQE"),
@@ -168,7 +168,7 @@ class DQECreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, P
     model = DQE
     form_class = DQEForm
     template_name = 'pricing/dqe_form.html'
-    allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER']
+    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER']
     header_title = _("Nouveau DQE")
     header_subtitle = _("Créer un détail quantitatif estimatif à partir de la bibliothèque de prix")
     back_url = reverse_lazy('pricing:dqe_list')
@@ -224,7 +224,7 @@ class DQEUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, P
     model = DQE
     form_class = DQEForm
     template_name = 'pricing/dqe_form.html'
-    allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER']
+    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER']
 
     def get_success_url(self):
         return reverse_lazy('pricing:dqe_detail', kwargs={'pk': self.object.pk})

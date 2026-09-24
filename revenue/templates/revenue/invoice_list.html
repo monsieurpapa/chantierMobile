@@ -1,7 +1,7 @@
 {% extends 'falcon_base.html' %}
-{% load static i18n %}
+{% load static i18n rbac_tags %}
 
-{% block title %}Invoices - ChantierMobile{% endblock %}
+{% block title %}{% trans "Invoices" %} - ChantierMobile{% endblock %}
 
 {% block content %}
 <div class="container" data-layout="container-fluid">
@@ -52,10 +52,21 @@
                                     </td>
                                     <td>{{ invoice.due_date }}</td>
                                     <td class="text-end">
+                                        {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,ACCOUNTANT' or request.user.is_superuser %}
+                                        {% if invoice.status == 'DRAFT' %}
+                                        <a class="btn btn-falcon-info btn-sm" href="{% url 'revenue:invoice_detail' pk=invoice.pk %}">
+                                            <span class="fas fa-paper-plane me-1"></span>{% trans "Envoyer" %}
+                                        </a>
+                                        {% endif %}
+                                        {% endif %}
+                                        {% if invoice.status == 'SENT' or invoice.status == 'OVERDUE' %}
+                                        {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,ACCOUNTANT,CASHIER' or request.user.is_superuser %}
                                         <a class="btn btn-falcon-default btn-sm"
                                             href="{% url 'revenue:payment_create' invoice_id=invoice.id %}">
                                             <span class="fas fa-plus me-1"></span>{% trans "Payment" %}
                                         </a>
+                                        {% endif %}
+                                        {% endif %}
                                     </td>
                                 </tr>
                                 {% empty %}

@@ -172,7 +172,7 @@
                 <!-- Sidebar -->
                 <div class="col-lg-4 ps-lg-2">
                     <!-- Actions -->
-                    {% if req.status == 'PENDING' and request.user|has_role:'DIRECTOR,MAGASINIER' %}
+                    {% if req.status == 'PENDING' and request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,MAGASINIER' %}
                     <div class="card mb-3 border-0 shadow-sm">
                         <div class="card-header bg-white border-bottom p-3">
                             <h5 class="mb-0"><i class="fas fa-clipboard-check me-2 text-primary"></i>{% trans "Validation magasinier" %}</h5>

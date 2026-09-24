@@ -33,7 +33,7 @@
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="2" class="text-center py-4 text-600">{% trans "No skills defined yet." %}{% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER' %} {% trans "Add the first one using the form." %}{% endif %}</td>
+                                <td colspan="2" class="text-center py-4 text-600">{% trans "No skills defined yet." %}{% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,CHIEF_ENGINEER' %} {% trans "Add the first one using the form." %}{% endif %}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -43,7 +43,7 @@
         </div>
     </div>
 
-    {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER' %}
+    {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,CHIEF_ENGINEER' %}
     <div class="col-lg-6">
         <div class="card">
             <div class="card-header bg-light">

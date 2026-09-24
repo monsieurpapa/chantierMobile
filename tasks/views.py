@@ -14,7 +14,7 @@ from projects.models import Site, ProjectPhase
 from personnel.models import Personnel
 from chantiermobile.constants import UserRoles, TaskStatus
 
-MANAGE_ROLES = ['DIRECTOR', 'CHIEF_ENGINEER', 'ENGINEER']
+MANAGE_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER', 'ENGINEER']
 
 
 def _can_manage_task(user, task):

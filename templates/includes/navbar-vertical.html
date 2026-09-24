@@ -106,7 +106,7 @@
                                 </div>
                             </a>
                         </li>
-                        {% if request.user|has_role:'DIRECTOR,ACCOUNTANT,CASHIER' or request.user.is_superuser %}
+                        {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,ACCOUNTANT,CASHIER' or request.user.is_superuser %}
                         <li class="nav-item">
                             <a class="nav-link {% if on == 'expense_report' %}active{% endif %}"
                                 href="{% url 'finance:expense_report' %}">
@@ -116,7 +116,7 @@
                             </a>
                         </li>
                         {% endif %}
-                        {% if request.user|has_role:'DIRECTOR,ACCOUNTANT,CASHIER,FINANCIER' or request.user.is_superuser %}
+                        {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,ACCOUNTANT,CASHIER,FINANCIER' or request.user.is_superuser %}
                         <li class="nav-item">
                             <a class="nav-link {% if on == 'caisse_list' %}active{% endif %}"
                                 href="{% url 'finance:caisse_list' %}">
@@ -208,7 +208,7 @@
                                 </div>
                             </a>
                         </li>
-                        {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER,ACCOUNTANT,CASHIER' or request.user.is_superuser %}
+                        {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,CHIEF_ENGINEER,ACCOUNTANT,CASHIER' or request.user.is_superuser %}
                         <li class="nav-item">
                             <a class="nav-link {% if on == 'achats_report' %}active{% endif %}"
                                 href="{% url 'procurement:achats_report' %}">
@@ -218,7 +218,7 @@
                             </a>
                         </li>
                         {% endif %}
-                        {% if request.user|has_role:'DIRECTOR,ACCOUNTANT,CASHIER,FINANCIER' or request.user.is_superuser %}
+                        {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,ACCOUNTANT,CASHIER,FINANCIER' or request.user.is_superuser %}
                         <li class="nav-item">
                             <a class="nav-link {% if on == 'supplier_credit_list' %}active{% endif %}"
                                 href="{% url 'procurement:supplier_credit_list' %}">
@@ -228,7 +228,7 @@
                             </a>
                         </li>
                         {% endif %}
-                        {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER,ENGINEER,MAGASINIER' or request.user.is_superuser %}
+                        {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,CHIEF_ENGINEER,ENGINEER,MAGASINIER' or request.user.is_superuser %}
                         <li class="nav-item">
                             <a class="nav-link {% if on == 'stock_report' %}active{% endif %}"
                                 href="{% url 'procurement:stock_report' %}">

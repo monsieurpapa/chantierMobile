@@ -46,12 +46,12 @@
                                 </div>
                                 <div class="col-md-4">
                                     <div class="text-md-end">
-                                        {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER' %}
+                                        {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,CHIEF_ENGINEER' %}
                                         <a class="btn btn-sm btn-outline-primary me-2" href="{% url 'projects:site_update' unique_id=site.unique_id %}">
                                             <i class="fas fa-edit me-1"></i>{% trans "Modifier" %}
                                         </a>
                                         {% endif %}
-                                        {% if request.user|has_role:'DIRECTOR' %}
+                                        {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL' %}
                                         <a class="btn btn-sm btn-outline-danger" href="{% url 'projects:site_delete' unique_id=site.unique_id %}">
                                             <i class="fas fa-trash me-1"></i>{% trans "Supprimer" %}
                                         </a>
@@ -131,7 +131,7 @@
                                     <div class="mb-4">
                                         <div class="d-flex justify-content-between align-items-center mb-3">
                                             <h5 class="mb-0"><i class="fas fa-tasks text-primary me-2"></i>{% trans "Project Phases & Progress" %}</h5>
-                                            {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER' %}
+                                            {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,CHIEF_ENGINEER' %}
                                             <a class="btn btn-primary btn-sm"
                                                 href="{% url 'projects:phase_create' site_id=site.unique_id %}">
                                                 <span class="fas fa-plus me-1"></span>{% trans "Add Phase" %}
@@ -161,13 +161,13 @@
                                                             {% endif %}
                                                         </p>
                                                     </div>
-                                                    {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER,ENGINEER' %}
+                                                    {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,CHIEF_ENGINEER,ENGINEER' %}
                                                     <div class="dropdown">
                                                         <button class="btn btn-link btn-sm text-600" type="button" data-bs-toggle="dropdown">
                                                             <i class="fas fa-ellipsis-v"></i>
                                                         </button>
                                                         <div class="dropdown-menu dropdown-menu-end">
-                                                            {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER' %}
+                                                            {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,CHIEF_ENGINEER' %}
                                                             <a class="dropdown-item" href="{% url 'projects:phase_update' unique_id=phase.unique_id %}">
                                                                 <i class="fas fa-edit me-2"></i>{% trans "Edit" %}
                                                             </a>
@@ -203,7 +203,7 @@
                                                     </div>
                                                     <div class="d-flex justify-content-between mt-2">
                                                         <small class="text-500">{% trans "Updated:" %} {{ last_progress.report_date|default:"—" }}</small>
-                                                        {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER,ENGINEER' %}
+                                                        {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,CHIEF_ENGINEER,ENGINEER' %}
                                                         <a class="btn btn-link btn-sm p-0" href="{% url 'projects:progress_create' phase_id=phase.unique_id %}">
                                                             <span class="fas fa-plus me-1"></span>{% trans "Log Update" %}
                                                         </a>
@@ -225,7 +225,7 @@
                                     <div class="mb-4">
                                         <div class="d-flex justify-content-between align-items-center mb-3">
                                             <h5 class="mb-0"><i class="fas fa-clipboard-list text-primary me-2"></i>{% trans "Planification" %}</h5>
-                                            {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER' %}
+                                            {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,CHIEF_ENGINEER' %}
                                             <a class="btn btn-primary btn-sm" href="{% url 'projects:planning_submission_create' site_id=site.unique_id %}">
                                                 <span class="fas fa-plus me-1"></span>{% trans "Soumettre une planification" %}
                                             </a>
@@ -259,7 +259,7 @@
                                                             </span>
                                                         </td>
                                                         <td class="text-end">
-                                                            {% if submission.status == 'SOUMISE' and request.user|has_role:'DIRECTOR,CHIEF_ENGINEER,ENGINEER' %}
+                                                            {% if submission.status == 'SOUMISE' and request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,CHIEF_ENGINEER,ENGINEER' %}
                                                             <form method="post" action="{% url 'projects:planning_submission_approve' pk=submission.pk %}" class="d-inline">
                                                                 {% csrf_token %}
                                                                 <button type="submit" class="btn btn-falcon-success btn-sm">{% trans "Approuver" %}</button>
@@ -289,7 +289,7 @@
                                     aria-labelledby="personnel-tab">
                                     <div class="d-flex justify-content-between align-items-center mb-4">
                                         <h5 class="mb-0"><i class="fas fa-users text-info me-2"></i>{% trans "Assigned Personnel" %}</h5>
-                                        {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER' %}
+                                        {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,CHIEF_ENGINEER' %}
                                         <a class="btn btn-info btn-sm"
                                             href="{% url 'personnel:assignment_create' %}?site={{ site.pk }}">
                                             <span class="fas fa-user-plus me-1"></span>{% trans "Assign Staff" %}
@@ -304,7 +304,7 @@
                                                 <tr>
                                                     <th class="white-space-nowrap fs--1">{% trans "Name & Role" %}</th>
                                                     <th class="fs--1">{% trans "Assignment Period" %}</th>
-                                                    {% if request.user|has_role:'DIRECTOR,ACCOUNTANT' %}
+                                                    {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,ACCOUNTANT' %}
                                                     <th class="text-end fs--1">{% trans "Daily Rate" %}</th>
                                                     {% endif %}
                                                 </tr>
@@ -335,7 +335,7 @@
                                                             <span class="badge bg-success">{% trans "Active" %}</span>
                                                         {% endif %}
                                                     </td>
-                                                    {% if request.user|has_role:'DIRECTOR,ACCOUNTANT' %}
+                                                    {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,ACCOUNTANT' %}
                                                     <td class="text-end fw-semibold">{{ CURRENCY_SYMBOL }}{{ assignment.daily_rate|floatformat:2 }}
                                                     </td>
                                                     {% endif %}
@@ -430,7 +430,7 @@
                                         <div class="d-flex justify-content-between align-items-center mb-3">
                                             <h6 class="mb-0 text-700">{% trans "Invoices" %}</h6>
                                             {% if not contract %}
-                                                {% if request.user|has_role:'DIRECTOR,ACCOUNTANT' %}
+                                                {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,ACCOUNTANT' %}
                                                 <a class="btn btn-sm btn-outline-success"
                                                     href="{% url 'revenue:contract_create_from_site' site_id=site.unique_id %}">
                                                     <span class="fas fa-plus me-1"></span>{% trans "Create Contract" %}

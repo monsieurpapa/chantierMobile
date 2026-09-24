@@ -166,7 +166,7 @@
                         </div>
                     </div>
 
-                    {% if request.user|has_role:'DIRECTOR,ACCOUNTANT' %}
+                    {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,ACCOUNTANT' %}
                     <div class="card mb-3">
                         <div class="card-body">
                             <a href="{% url 'finance:budget_update' pk=budget.pk %}" class="btn btn-falcon-default btn-sm w-100">

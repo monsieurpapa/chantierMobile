@@ -15,17 +15,18 @@ logger = logging.getLogger(__name__)
 
 
 def notify_directors_of_payment(payment, recorded_by=None):
-    """Email every DIRECTOR of the payment's cabinet that a client payment
-    was recorded. Best-effort: a mail failure is logged, not raised, so it
+    """Email every director-tier user (DIRECTOR, DIRECTEUR_TECHNIQUE,
+    DIRECTEUR_GENERAL) of the payment's cabinet that a client payment was
+    recorded. Best-effort: a mail failure is logged, not raised, so it
     never blocks the payment itself from being saved."""
     from accounts.models import UserCabinetRole
-    from chantiermobile.constants import UserRoles, ApprovalStatus
+    from chantiermobile.constants import ApprovalStatus, DIRECTOR_ROLES
 
     invoice = payment.invoice
     cabinet = invoice.contract.site.cabinet
     director_emails = list(
         UserCabinetRole.objects.filter(
-            cabinet=cabinet, role=UserRoles.DIRECTOR, status=ApprovalStatus.APPROVED,
+            cabinet=cabinet, role__in=DIRECTOR_ROLES, status=ApprovalStatus.APPROVED,
         ).exclude(user__email='').values_list('user__email', flat=True)
     )
     if not director_emails:

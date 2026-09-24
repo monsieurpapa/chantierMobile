@@ -33,17 +33,17 @@ from chantiermobile.constants import (
 # Roles that may view the expenses report / export it to PDF — mirrors
 # core.dashboard.FINANCIAL_ROLES (the same audience that sees the
 # dashboard's money widgets).
-EXPENSE_REPORT_ROLES = ['DIRECTOR', 'ACCOUNTANT', 'CASHIER']
+EXPENSE_REPORT_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'ACCOUNTANT', 'CASHIER']
 
 # Roles that may manage caisses and record ledger movements.
-CAISSE_MANAGE_ROLES = ['DIRECTOR', 'ACCOUNTANT', 'CASHIER', 'FINANCIER']
+CAISSE_MANAGE_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'ACCOUNTANT', 'CASHIER', 'FINANCIER']
 
 # "L'archi" — whoever prepares/submits a payroll list from worker payment requests.
-PAYROLL_PREPARE_ROLES = ['DIRECTOR', 'CHIEF_ENGINEER', 'ENGINEER']
+PAYROLL_PREPARE_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER', 'ENGINEER']
 # Whoever disburses a submitted payroll list from a caisse.
-PAYROLL_DISBURSE_ROLES = ['DIRECTOR', 'ACCOUNTANT', 'CASHIER', 'FINANCIER']
+PAYROLL_DISBURSE_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'ACCOUNTANT', 'CASHIER', 'FINANCIER']
 # Whoever may request an avenant (change order).
-AVENANT_REQUEST_ROLES = ['DIRECTOR', 'CHIEF_ENGINEER', 'ACCOUNTANT']
+AVENANT_REQUEST_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER', 'ACCOUNTANT']
 # Anyone who may view payroll lists at all (preparers + disbursers) — payroll
 # amounts are sensitive, so this isn't LoginRequiredMixin-only like some
 # other list views.
@@ -149,7 +149,7 @@ class ExpenseDetailView(LoginRequiredMixin, PageHeaderMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         if self.object.status == ExpenseStatus.APPROVED and can_act_for_cabinet(
-            self.request, self.object.site.cabinet, [UserRoles.DIRECTOR, UserRoles.CASHIER]
+            self.request, self.object.site.cabinet, [UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.CASHIER]
         ):
             pay_form = ExpensePayForm()
             pay_form.fields['caisse'].queryset = Caisse.objects.filter(cabinet=self.object.site.cabinet)
@@ -164,7 +164,7 @@ def approve_expense(request, pk):
         if active_cabinet and expense.site.cabinet != active_cabinet:
             messages.error(request, _("Cette dépense appartient à un autre cabinet que votre session active."))
             return redirect('finance:expense_list')
-        if request.user.is_superuser or request.user.cabinet_roles.filter(cabinet=expense.site.cabinet, role__in=[UserRoles.DIRECTOR, UserRoles.ACCOUNTANT]).exists():
+        if request.user.is_superuser or request.user.cabinet_roles.filter(cabinet=expense.site.cabinet, role__in=[UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.ACCOUNTANT]).exists():
             try:
                 expense.approve(request.user, comments=request.POST.get('comments', ''))
                 messages.success(request, _("Dépense approuvée."))
@@ -183,7 +183,7 @@ def reject_expense(request, pk):
         if active_cabinet and expense.site.cabinet != active_cabinet:
             messages.error(request, _("Cette dépense appartient à un autre cabinet que votre session active."))
             return redirect('finance:expense_list')
-        if request.user.is_superuser or request.user.cabinet_roles.filter(cabinet=expense.site.cabinet, role__in=[UserRoles.DIRECTOR, UserRoles.ACCOUNTANT]).exists():
+        if request.user.is_superuser or request.user.cabinet_roles.filter(cabinet=expense.site.cabinet, role__in=[UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.ACCOUNTANT]).exists():
             if expense.status != ExpenseStatus.PENDING:
                 messages.error(request, _("Seule une dépense en attente peut être rejetée."))
             else:
@@ -205,7 +205,7 @@ def mark_expense_paid(request, pk):
         if active_cabinet and expense.site.cabinet != active_cabinet:
             messages.error(request, _("Cette dépense appartient à un autre cabinet que votre session active."))
             return redirect('finance:expense_list')
-        if request.user.is_superuser or request.user.cabinet_roles.filter(cabinet=expense.site.cabinet, role__in=[UserRoles.DIRECTOR, UserRoles.CASHIER]).exists():
+        if request.user.is_superuser or request.user.cabinet_roles.filter(cabinet=expense.site.cabinet, role__in=[UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.CASHIER]).exists():
             # Validate expense can be paid
             if not expense.can_be_paid():
                 messages.error(request, _("Seules les dépenses approuvées peuvent être payées. Statut actuel : %(status)s.") % {'status': expense.get_status_display()})
@@ -230,7 +230,7 @@ class BudgetListView(LoginRequiredMixin, CabinetAccessMixin, RoleRequiredMixin, 
     model = Budget
     template_name = 'finance/budget_list.html'
     context_object_name = 'budgets'
-    allowed_roles = ['DIRECTOR', 'ACCOUNTANT', 'CHIEF_ENGINEER']
+    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'ACCOUNTANT', 'CHIEF_ENGINEER']
     cabinet_lookup_field = 'site__cabinet'
     header_title = _("Budgets des projets")
     header_subtitle = _("Surveillez et gérez les budgets de construction")
@@ -238,7 +238,7 @@ class BudgetListView(LoginRequiredMixin, CabinetAccessMixin, RoleRequiredMixin, 
     def get_header_actions(self):
         from accounts.models import UserCabinetRole
         if self.request.user.is_superuser or UserCabinetRole.objects.filter(
-            user=self.request.user, role__in=[UserRoles.DIRECTOR, UserRoles.ACCOUNTANT]
+            user=self.request.user, role__in=[UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.ACCOUNTANT]
         ).exists():
             return [{
                 'label': _("Créer un budget"),
@@ -253,7 +253,7 @@ class BudgetCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, C
     form_class = BudgetForm
     template_name = 'finance/budget_form.html'
     success_url = reverse_lazy('finance:budget_list')
-    allowed_roles = ['DIRECTOR', 'ACCOUNTANT']
+    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'ACCOUNTANT']
     header_title = _("Créer un budget")
     header_subtitle = _("Définissez le plan financier pour un chantier")
     back_url = reverse_lazy('finance:budget_list')
@@ -285,7 +285,7 @@ class BudgetDetailView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin
     model = Budget
     template_name = 'finance/budget_detail.html'
     context_object_name = 'budget'
-    allowed_roles = ['DIRECTOR', 'ACCOUNTANT', 'CHIEF_ENGINEER']
+    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'ACCOUNTANT', 'CHIEF_ENGINEER']
     cabinet_lookup_field = 'site__cabinet'
 
     def get_header_title(self):
@@ -355,7 +355,7 @@ class BudgetUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin
     form_class = BudgetForm
     template_name = 'finance/budget_form.html'
     success_url = reverse_lazy('finance:budget_list')
-    allowed_roles = ['DIRECTOR', 'ACCOUNTANT']
+    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'ACCOUNTANT']
     cabinet_lookup_field = 'site__cabinet'
 
     def get_header_title(self):
@@ -667,7 +667,7 @@ class CaisseCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin
     model = Caisse
     form_class = CaisseForm
     template_name = 'finance/caisse_form.html'
-    allowed_roles = ['DIRECTOR', 'ACCOUNTANT']
+    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'ACCOUNTANT']
     success_url = reverse_lazy('finance:caisse_list')
     header_title = _("Nouvelle caisse")
     back_url = reverse_lazy('finance:caisse_list')
@@ -695,7 +695,7 @@ class CaisseUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin
     model = Caisse
     form_class = CaisseForm
     template_name = 'finance/caisse_form.html'
-    allowed_roles = ['DIRECTOR', 'ACCOUNTANT']
+    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'ACCOUNTANT']
     header_title = _("Modifier la caisse")
 
     def get_back_url(self):

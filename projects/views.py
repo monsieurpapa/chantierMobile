@@ -13,13 +13,13 @@ from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, 
 from chantiermobile.constants import UserRoles
 
 LEAD_ENGINEER_ROLES = ['ENGINEER', 'CHIEF_ENGINEER']
-PHASE_CLOSE_ROLES = ['DIRECTOR', 'CHIEF_ENGINEER', 'ENGINEER']
-PLANNING_REVIEW_ROLES = ['DIRECTOR', 'CHIEF_ENGINEER', 'ENGINEER']
-PLANNING_SUBMIT_ROLES = ['DIRECTOR', 'CHIEF_ENGINEER']
+PHASE_CLOSE_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER', 'ENGINEER']
+PLANNING_REVIEW_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER', 'ENGINEER']
+PLANNING_SUBMIT_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER']
 # Who can file a progress report or add photos to one afterward — the
 # field/engineering side. Commenting is deliberately looser (see
 # progress_comment_add): anyone with cabinet access, not just these roles.
-PROGRESS_PHOTO_ROLES = ['DIRECTOR', 'CHIEF_ENGINEER', 'ENGINEER']
+PROGRESS_PHOTO_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER', 'ENGINEER']
 
 
 def _scope_lead_engineer_queryset(form, cabinet):
@@ -45,7 +45,7 @@ class SiteListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, List
         from accounts.models import UserCabinetRole
         if self.request.user.is_superuser or UserCabinetRole.objects.filter(
             user=self.request.user,
-            role__in=[UserRoles.DIRECTOR, UserRoles.CHIEF_ENGINEER]
+            role__in=[UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.CHIEF_ENGINEER]
         ).exists():
             return [{
                 'label': _("Créer un chantier"),
@@ -60,7 +60,7 @@ class SiteCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, 
     form_class = SiteForm
     template_name = 'projects/site_form.html'
     success_url = reverse_lazy('projects:site_list')
-    allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER']
+    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER']
     header_title = _("Nouveau chantier")
     header_subtitle = _("Saisissez les informations du chantier pour commencer le suivi")
     back_url = reverse_lazy('projects:site_list')
@@ -91,7 +91,7 @@ class SiteUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, 
     template_name = 'projects/site_form.html'
     slug_field = 'unique_id'
     slug_url_kwarg = 'unique_id'
-    allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER']
+    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER']
 
     def get_header_title(self):
         return _("Modifier : %(name)s") % {'name': self.object.name}
@@ -146,7 +146,7 @@ class SiteDeleteView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, 
     slug_field = 'unique_id'
     slug_url_kwarg = 'unique_id'
     success_url = reverse_lazy('projects:site_list')
-    allowed_roles = ['DIRECTOR']
+    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL']
 
     def get_header_title(self):
         return _("Supprimer : %(name)s") % {'name': self.object.name}
@@ -263,7 +263,7 @@ class ProjectPhaseCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMi
     model = ProjectPhase
     form_class = ProjectPhaseForm
     template_name = 'projects/phase_form.html'
-    allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER']
+    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER']
 
     @staticmethod
     def _site_queryset(request):
@@ -329,7 +329,7 @@ class ProjectPhaseUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAcces
     template_name = 'projects/phase_form.html'
     slug_field = 'unique_id'
     slug_url_kwarg = 'unique_id'
-    allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER']
+    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER']
     cabinet_lookup_field = 'site__cabinet'
 
     def get_header_title(self):
@@ -359,7 +359,7 @@ class ProjectPhaseDeleteView(LoginRequiredMixin, RoleRequiredMixin, CabinetAcces
     template_name = 'projects/confirm_delete.html'
     slug_field = 'unique_id'
     slug_url_kwarg = 'unique_id'
-    allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER']
+    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER']
     cabinet_lookup_field = 'site__cabinet'
 
     def get_header_title(self):
@@ -389,7 +389,7 @@ class SiteProgressCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMi
     model = SiteProgress
     form_class = SiteProgressForm
     template_name = 'projects/progress_form.html'
-    allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER', 'ENGINEER']
+    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER', 'ENGINEER']
 
     def dispatch(self, request, *args, **kwargs):
         self.phase = get_object_or_404(ProjectPhase, unique_id=self.kwargs.get('phase_id'))

@@ -65,7 +65,7 @@
                     <div class="card mb-3">
                         <div class="card-header bg-light d-flex justify-content-between align-items-center">
                             <h5 class="mb-0">{% trans "Assignments" %}</h5>
-                            {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER' %}
+                            {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,CHIEF_ENGINEER' %}
                             <a class="btn btn-falcon-primary btn-sm"
                                 href="{% url 'personnel:assignment_create' %}?personnel={{ personnel.unique_id }}">
                                 <span class="fas fa-plus me-1"></span>{% trans "Assign to Site" %}
@@ -92,7 +92,7 @@
                                             <td>{{ assignment.role }}</td>
                                             <td>{{ assignment.start_date }} - {{ assignment.end_date|default:"Present" }}</td>
                                             <td class="text-end">
-                                                {% if request.user|has_role:'DIRECTOR,ACCOUNTANT' %}
+                                                {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,ACCOUNTANT' %}
                                                 {{ CURRENCY_SYMBOL }}{{ assignment.daily_rate }}
                                                 {% else %}
                                                 ***
@@ -128,7 +128,7 @@
                             <div class="mb-3">
                                 <label class="text-600 fs--1">{% trans "Default Daily Rate" %}</label>
                                 <p class="fs-1 fw-bold text-primary">
-                                    {% if request.user|has_role:'DIRECTOR,ACCOUNTANT' %}
+                                    {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,ACCOUNTANT' %}
                                     {{ CURRENCY_SYMBOL }}{{ personnel.default_daily_rate }}
                                     {% else %}
                                     {% trans "Restricted" %}
@@ -143,7 +143,7 @@
                             <div class="mb-0">
                                 <label class="text-600 fs--1">{% trans "Salaire mensuel" %}</label>
                                 <p class="fs-1 fw-bold text-success mb-0">
-                                    {% if request.user|has_role:'DIRECTOR,ACCOUNTANT' %}
+                                    {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,ACCOUNTANT' %}
                                     {{ CURRENCY_SYMBOL }}{{ personnel.monthly_salary }}
                                     {% else %}
                                     {% trans "Restricted" %}
@@ -157,7 +157,7 @@
                     <div class="card mb-3">
                         <div class="card-header bg-light d-flex justify-content-between align-items-center">
                             <h5 class="mb-0">{% trans "Dossier" %}</h5>
-                            {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER' %}
+                            {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,CHIEF_ENGINEER' %}
                             <a class="btn btn-falcon-primary btn-sm" href="{% url 'personnel:document_create' unique_id=personnel.unique_id %}">
                                 <span class="fas fa-plus me-1"></span>{% trans "Ajouter" %}
                             </a>
@@ -171,7 +171,7 @@
                                     <a href="{{ doc.file.url }}" target="_blank" rel="noopener">
                                         <span class="fas fa-file me-1"></span>{{ doc.label }}
                                     </a>
-                                    {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER' %}
+                                    {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,CHIEF_ENGINEER' %}
                                     <form method="post" action="{% url 'personnel:document_delete' pk=doc.pk %}" class="d-inline">
                                         {% csrf_token %}
                                         <button type="submit" class="btn btn-link text-danger btn-sm p-0" aria-label="{% trans 'Supprimer ce document' %}" title="{% trans 'Supprimer ce document' %}"><span class="fas fa-trash"></span></button>

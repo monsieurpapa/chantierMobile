@@ -12,10 +12,10 @@ from .models import Personnel, Skill, SiteAssignment, PersonnelDocument, Leave, 
 from .forms import PersonnelForm, SiteAssignmentForm, SkillForm, PersonnelDocumentForm, LeaveForm, HolidayForm
 from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet, can_act_for_cabinet
 from core.quickcreate import QuickCreateView
-from chantiermobile.constants import UserRoles, PersonnelPayrollType
+from chantiermobile.constants import UserRoles, PersonnelPayrollType, DIRECTOR_ROLES
 from projects.models import Site
 
-HR_ADMIN_ROLES = ['DIRECTOR', 'CHIEF_ENGINEER']
+HR_ADMIN_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER']
 
 class PersonnelListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
     model = Personnel
@@ -53,7 +53,7 @@ class PersonnelListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin,
         from accounts.models import UserCabinetRole
         if self.request.user.is_superuser or UserCabinetRole.objects.filter(
             user=self.request.user,
-            role__in=[UserRoles.DIRECTOR, UserRoles.CHIEF_ENGINEER]
+            role__in=[UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.CHIEF_ENGINEER]
         ).exists():
             return [{
                 'label': _("Enregistrer un personnel"),
@@ -67,7 +67,7 @@ class PersonnelCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMi
     model = Personnel
     form_class = PersonnelForm
     template_name = 'personnel/personnel_form.html'
-    allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER']
+    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER']
     success_url = reverse_lazy('personnel:personnel_list')
     header_title = _("Enregistrer un nouveau personnel")
     header_subtitle = _("Ajoutez un nouveau membre du personnel au système")
@@ -117,11 +117,11 @@ class PersonnelDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixi
         actions = []
 
         is_admin = user.is_superuser or UserCabinetRole.objects.filter(
-            user=user, role__in=[UserRoles.DIRECTOR, UserRoles.CHIEF_ENGINEER]
+            user=user, role__in=[UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.CHIEF_ENGINEER]
         ).exists()
 
         is_director = user.is_superuser or UserCabinetRole.objects.filter(
-            user=user, role='DIRECTOR'
+            user=user, role__in=DIRECTOR_ROLES
         ).exists()
 
         if is_admin:
@@ -140,7 +140,7 @@ class PersonnelUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMi
     template_name = 'personnel/personnel_form.html'
     slug_field = 'unique_id'
     slug_url_kwarg = 'unique_id'
-    allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER']
+    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER']
     
     def get_header_title(self):
         return _("Modifier le profil : %(name)s") % {'name': self.object.get_full_name()}
@@ -165,7 +165,7 @@ class PersonnelDeleteView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMi
     slug_field = 'unique_id'
     slug_url_kwarg = 'unique_id'
     success_url = reverse_lazy('personnel:personnel_list')
-    allowed_roles = ['DIRECTOR']
+    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL']
 
     def get_header_title(self):
         return _("Supprimer le personnel : %(name)s") % {'name': self.object.get_full_name()}
@@ -193,7 +193,7 @@ class SkillListView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, List
     model = Skill
     template_name = 'personnel/skill_list.html'
     context_object_name = 'skill_list'
-    allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER']
+    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER']
     header_title = _("Catalogue des compétences")
     header_subtitle = _("Gérez les compétences et aptitudes des travailleurs")
     back_url = reverse_lazy('personnel:personnel_list')
@@ -224,7 +224,7 @@ class SiteAssignmentCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAcc
     model = SiteAssignment
     form_class = SiteAssignmentForm
     template_name = 'personnel/assignment_form.html'
-    allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER']
+    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER']
     cabinet_lookup_field = 'site__cabinet'
     header_title = _("Affecter un personnel à un chantier")
     header_subtitle = _("Associez un travailleur à un chantier de construction")

@@ -24,13 +24,13 @@ from chantiermobile.constants import PurchaseOrderStatus, UserRoles, CaisseType,
 # the has_role gate on the corresponding detail templates. MAGASINIER can
 # record stock entries/exits (their core job) but not create/edit the
 # StockItem catalog entry itself, nor create purchase orders.
-STOCK_ACTION_ROLES = ['DIRECTOR', 'CHIEF_ENGINEER', 'MAGASINIER']
-PURCHASE_ORDER_ACTION_ROLES = ['DIRECTOR', 'CHIEF_ENGINEER', 'ACCOUNTANT']
+STOCK_ACTION_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER', 'MAGASINIER']
+PURCHASE_ORDER_ACTION_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER', 'ACCOUNTANT']
 # La caissière saisit la preuve de virement envoyée par le financier.
-TRANSFER_ENTRY_ROLES = ['DIRECTOR', 'CASHIER']
+TRANSFER_ENTRY_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CASHIER']
 # Le financier (ou un directeur) valide.
-TRANSFER_VALIDATE_ROLES = ['DIRECTOR', 'FINANCIER']
-CREDIT_MANAGE_ROLES = ['DIRECTOR', 'ACCOUNTANT', 'CASHIER', 'FINANCIER']
+TRANSFER_VALIDATE_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'FINANCIER']
+CREDIT_MANAGE_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'ACCOUNTANT', 'CASHIER', 'FINANCIER']
 
 
 # --- Supplier views ---
@@ -46,7 +46,7 @@ class SupplierListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, 
     def get_header_actions(self):
         from accounts.models import UserCabinetRole
         if self.request.user.is_superuser or UserCabinetRole.objects.filter(
-            user=self.request.user, role__in=[UserRoles.DIRECTOR, UserRoles.CHIEF_ENGINEER]
+            user=self.request.user, role__in=[UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.CHIEF_ENGINEER]
         ).exists():
             return [{
                 'label': _("Ajouter un fournisseur"),
@@ -72,7 +72,7 @@ class SupplierCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMix
     form_class = SupplierForm
     template_name = 'procurement/supplier_form.html'
     success_url = reverse_lazy('procurement:supplier_list')
-    allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER']
+    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER']
     header_title = _("Ajouter un fournisseur")
     header_subtitle = _("Enregistrez un nouveau fournisseur pour les commandes d'achats")
     back_url = reverse_lazy('procurement:supplier_list')
@@ -98,7 +98,7 @@ class SupplierUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMix
     form_class = SupplierForm
     template_name = 'procurement/supplier_form.html'
     success_url = reverse_lazy('procurement:supplier_list')
-    allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER']
+    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER']
     cabinet_lookup_field = 'cabinet'
 
     def get_header_title(self):
@@ -151,7 +151,7 @@ class StockItemCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMi
     model = StockItem
     form_class = StockItemForm
     template_name = 'procurement/stock_item_form.html'
-    allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER']
+    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER']
     header_title = _("Ajouter un article de stock")
     header_subtitle = _("Suivez un nouvel article pour un chantier")
     back_url = reverse_lazy('procurement:stock_item_list')
@@ -184,7 +184,7 @@ class StockItemUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMi
     model = StockItem
     form_class = StockItemForm
     template_name = 'procurement/stock_item_form.html'
-    allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER']
+    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER']
     cabinet_lookup_field = 'site__cabinet'
 
     def get_header_title(self):
@@ -353,7 +353,7 @@ class PurchaseOrderCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAcce
     model = PurchaseOrder
     form_class = PurchaseOrderForm
     template_name = 'procurement/purchase_order_form.html'
-    allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER', 'ACCOUNTANT']
+    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER', 'ACCOUNTANT']
     header_title = _("Créer un bon de commande")
     header_subtitle = _("Commandez des matériaux ou équipements auprès d'un fournisseur")
     back_url = reverse_lazy('procurement:purchase_order_list')
@@ -424,7 +424,7 @@ class PurchaseOrderUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAcce
     model = PurchaseOrder
     form_class = PurchaseOrderForm
     template_name = 'procurement/purchase_order_form.html'
-    allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER', 'ACCOUNTANT']
+    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER', 'ACCOUNTANT']
     cabinet_lookup_field = 'site__cabinet'
 
     def get_header_title(self):
@@ -582,7 +582,7 @@ def purchase_order_cancel(request, pk):
 
 
 # Roles that may view the Achats/Caisse report and export it to PDF.
-ACHATS_REPORT_ROLES = ['DIRECTOR', 'CHIEF_ENGINEER', 'ACCOUNTANT', 'CASHIER']
+ACHATS_REPORT_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER', 'ACCOUNTANT', 'CASHIER']
 
 
 def _achats_report_queryset(request):
@@ -716,7 +716,7 @@ def achats_report_pdf(request):
 # projet/étape" et "un rapport global de stock" du cahier des charges.
 # ---------------------------------------------------------------------
 
-STOCK_REPORT_ROLES = ['DIRECTOR', 'CHIEF_ENGINEER', 'ENGINEER', 'MAGASINIER']
+STOCK_REPORT_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER', 'ENGINEER', 'MAGASINIER']
 
 
 def _stock_report_queryset(request):

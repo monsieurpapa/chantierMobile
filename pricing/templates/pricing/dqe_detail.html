@@ -82,7 +82,7 @@
 
                 <!-- Sidebar -->
                 <div class="col-lg-4 ps-lg-2">
-                    {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER' %}
+                    {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,CHIEF_ENGINEER' %}
                     <div class="card mb-3 border-0 shadow-sm">
                         <div class="card-body p-3">
                             <a href="{% url 'pricing:dqe_update' dqe.pk %}" class="btn btn-outline-primary w-100">

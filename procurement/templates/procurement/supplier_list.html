@@ -41,7 +41,7 @@
                                     <td>{{ supplier.email|default:"-" }}</td>
                                     <td class="text-end">{{ supplier.total_orders }}</td>
                                     <td class="text-end">
-                                        {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER' %}
+                                        {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,CHIEF_ENGINEER' %}
                                         <a class="btn btn-link text-600 btn-sm"
                                             href="{% url 'procurement:supplier_update' pk=supplier.pk %}">
                                             <span class="fas fa-edit"></span>

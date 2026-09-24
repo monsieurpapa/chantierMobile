@@ -34,7 +34,7 @@ from chantiermobile.constants import (
 # stock, personnel — without financial figures. Superusers always pass
 # (see can_view_financials below), matching has_role's convention
 # elsewhere in the app (accounts/templatetags/rbac_tags.py).
-FINANCIAL_ROLES = [UserRoles.DIRECTOR, UserRoles.ACCOUNTANT, UserRoles.CASHIER]
+FINANCIAL_ROLES = [UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.ACCOUNTANT, UserRoles.CASHIER]
 
 
 def can_view_financials(request):

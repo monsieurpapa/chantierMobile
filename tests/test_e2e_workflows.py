@@ -326,20 +326,26 @@ class TestRevenueManagementWorkflow:
             'amount': '25000.00',
             'issued_date': date.today(),
             'due_date': date.today() + timedelta(days=30),
-            'status': InvoiceStatus.SENT
         }
-        
+
         response = accountant_client.post(
             reverse('revenue:invoice_create_from_contract', kwargs={'contract_id': contract.pk}),
             invoice_data,
             follow=True
         )
         assert response.status_code == 200
-        
-        # Verify invoice was created
+
+        # Verify invoice was created — 'status' isn't a field on the create
+        # form (see InvoiceForm), so a new invoice always starts DRAFT; it
+        # has to be sent explicitly via invoice_send before it's payable.
         from revenue.models import Invoice
         invoice = Invoice.objects.get(invoice_number='INV-2024-001')
         assert invoice.amount == Decimal('25000.00')
+        assert invoice.status == InvoiceStatus.DRAFT
+
+        response = accountant_client.post(reverse('revenue:invoice_send', kwargs={'pk': invoice.pk}), follow=True)
+        assert response.status_code == 200
+        invoice.refresh_from_db()
         assert invoice.status == InvoiceStatus.SENT
         
         # Record payment

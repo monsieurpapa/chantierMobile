@@ -20,9 +20,15 @@ class ContractForm(forms.ModelForm):
         }
 
 class InvoiceForm(forms.ModelForm):
+    # 'status' is deliberately NOT an editable field here — every other
+    # status-driven workflow in this app (Devis, SituationTravaux,
+    # MaterialRequest, Expense...) changes status only through a dedicated
+    # action endpoint (see invoice_send/invoice_cancel below), never via a
+    # raw dropdown on the create/edit form. An invoice always starts DRAFT
+    # (the model's own default) and moves on from there via those actions.
     class Meta:
         model = Invoice
-        fields = ['contract', 'invoice_number', 'amount', 'issued_date', 'due_date', 'status']
+        fields = ['contract', 'invoice_number', 'amount', 'issued_date', 'due_date']
         widgets = {
             'contract': forms.Select(attrs={'class': 'form-select'}),
             'invoice_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.INVOICE_NUMBER}),
@@ -37,7 +43,6 @@ class InvoiceForm(forms.ModelForm):
                 'placeholder': DatePickerConfig.DATE_FORMAT,
                 'data-options': DatePickerConfig.OPTIONS
             }),
-            'status': forms.Select(attrs={'class': 'form-select'}),
         }
 
 class PaymentForm(forms.ModelForm):

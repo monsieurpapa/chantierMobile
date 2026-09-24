@@ -18,7 +18,7 @@ from chantiermobile.constants import UserRoles, FINAL_AUTHORIZATION_ROLES
 # then a Directeur Technique/Général (or Directeur de Cabinet, kept for
 # single-cabinet setups without a dedicated DT/DG role) gives the final
 # authorization.
-MAGASINIER_VALIDATE_ROLES = ['MAGASINIER', 'DIRECTOR']
+MAGASINIER_VALIDATE_ROLES = ['MAGASINIER', 'DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL']
 
 # Material Catalog Views
 class MaterialListView(LoginRequiredMixin, PageHeaderMixin, ListView):
@@ -35,7 +35,7 @@ class MaterialListView(LoginRequiredMixin, PageHeaderMixin, ListView):
     def get_header_actions(self):
         from accounts.models import UserCabinetRole
         if self.request.user.is_superuser or UserCabinetRole.objects.filter(
-            user=self.request.user, role__in=[UserRoles.DIRECTOR, UserRoles.CHIEF_ENGINEER]
+            user=self.request.user, role__in=[UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.CHIEF_ENGINEER]
         ).exists():
             return [{
                 'label': _("Ajouter un matériau"),
@@ -50,7 +50,7 @@ class MaterialCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin,
     form_class = MaterialForm
     template_name = 'materials/material_form.html'
     success_url = reverse_lazy('materials:material_list')
-    allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER']
+    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER']
     header_title = _("Ajouter un nouveau matériau")
     header_subtitle = _("Définir un nouvel article dans le catalogue des matériaux")
     back_url = reverse_lazy('materials:material_list')
@@ -71,7 +71,7 @@ class MaterialUpdateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin,
     form_class = MaterialForm
     template_name = 'materials/material_form.html'
     success_url = reverse_lazy('materials:material_list')
-    allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER']
+    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER']
     
     def form_valid(self, form):
         from django.contrib import messages

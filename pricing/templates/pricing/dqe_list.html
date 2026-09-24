@@ -57,7 +57,7 @@
                                         {% endif %}
                                     </td>
                                     <td class="align-middle white-space-nowrap text-end">
-                                        {% if request.user|has_role:'DIRECTOR,CHIEF_ENGINEER' %}
+                                        {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,CHIEF_ENGINEER' %}
                                         <a class="btn btn-link text-600 btn-sm" href="{% url 'pricing:dqe_update' dqe.pk %}">
                                             <span class="fas fa-edit"></span>
                                         </a>

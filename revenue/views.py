@@ -20,7 +20,11 @@ from projects.models import Site
 # Roles allowed to send/accept/reject a Devis or validate/invoice a
 # Situation de travaux — mirrors DevisCreateView/SituationTravauxCreateView's
 # allowed_roles and the has_role gate on the corresponding detail templates.
-DEVIS_ACTION_ROLES = ['DIRECTOR', 'CHIEF_ENGINEER', 'ACCOUNTANT']
+DEVIS_ACTION_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER', 'ACCOUNTANT']
+# Mirrors InvoiceCreateView/PaymentListView's allowed_roles — sending or
+# cancelling an invoice is the same "who can touch billing" circle as
+# creating one in the first place.
+INVOICE_ACTION_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'ACCOUNTANT']
 
 class ContractListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
     model = Contract
@@ -33,7 +37,7 @@ class ContractListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, 
     def get_header_actions(self):
         from accounts.models import UserCabinetRole
         if self.request.user.is_superuser or UserCabinetRole.objects.filter(
-            user=self.request.user, role__in=[UserRoles.DIRECTOR, UserRoles.ACCOUNTANT]
+            user=self.request.user, role__in=[UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.ACCOUNTANT]
         ).exists():
             return [{
                 'label': _("Nouveau contrat"),
@@ -56,7 +60,7 @@ class ContractCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMix
     model = Contract
     form_class = ContractForm
     template_name = 'revenue/contract_form.html'
-    allowed_roles = ['DIRECTOR', 'ACCOUNTANT']
+    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'ACCOUNTANT']
     header_title = _("Définir un nouveau contrat")
     header_subtitle = _("Enregistrez un nouveau contrat client pour un projet")
     back_url = reverse_lazy('revenue:contract_list')
@@ -95,7 +99,7 @@ class ContractUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMix
     model = Contract
     form_class = ContractForm
     template_name = 'revenue/contract_form.html'
-    allowed_roles = ['DIRECTOR', 'ACCOUNTANT']
+    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'ACCOUNTANT']
     cabinet_lookup_field = 'site__cabinet'
 
     def get_header_title(self):
@@ -156,7 +160,7 @@ class InvoiceCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixi
     model = Invoice
     form_class = InvoiceForm
     template_name = 'revenue/invoice_form.html'
-    allowed_roles = ['DIRECTOR', 'ACCOUNTANT']
+    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'ACCOUNTANT']
     header_title = _("Générer une nouvelle facture")
     header_subtitle = _("Créez un relevé de facturation pour un contrat")
     back_url = reverse_lazy('revenue:invoice_list')
@@ -212,23 +216,22 @@ class InvoiceDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin,
             {'title': self.object.invoice_number, 'url': None},
         ]
 
-    def get_header_actions(self):
-        actions = []
-        if self.object.status != InvoiceStatus.PAID:
-            actions.append({
-                'label': _("Enregistrer un paiement"),
-                'url': str(reverse_lazy('revenue:payment_create', kwargs={'invoice_id': self.object.id})),
-                'icon': 'credit-card',
-                'class': 'btn-falcon-success'
-            })
-        return actions
+    # No get_header_actions() override here on purpose: every status-driven
+    # action (envoyer/annuler/enregistrer un paiement) lives in a single,
+    # properly role-gated "Actions" card in invoice_detail.html instead —
+    # having both a header-level action AND a body-level one showed
+    # "Enregistrer un paiement" twice on the same page, and the header
+    # version wasn't role-gated (showed to any viewer, including one who'd
+    # get redirected on click) nor status-gated correctly (it showed for
+    # DRAFT/CANCELLED invoices too, which PaymentCreateView's own queryset
+    # never actually accepts).
 
 class PaymentListView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
     model = Payment
     template_name = 'revenue/payment_list.html'
     context_object_name = 'payments'
     paginate_by = 50
-    allowed_roles = ['DIRECTOR', 'ACCOUNTANT']
+    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'ACCOUNTANT']
     header_title = _("Historique des paiements")
     header_subtitle = _("Suivez tous les paiements reçus des factures")
 
@@ -261,7 +264,7 @@ class PaymentCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixi
     model = Payment
     form_class = PaymentForm
     template_name = 'revenue/payment_form.html'
-    allowed_roles = ['DIRECTOR', 'ACCOUNTANT', 'CASHIER']
+    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'ACCOUNTANT', 'CASHIER']
     header_title = _("Enregistrer un paiement")
     header_subtitle = _("Enregistrez un paiement reçu contre une facture")
     back_url = reverse_lazy('revenue:invoice_list')
@@ -305,6 +308,69 @@ class PaymentCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixi
         return reverse_lazy('revenue:invoice_detail', kwargs={'pk': self.object.invoice.pk})
 
 
+@login_required
+def invoice_send(request, pk):
+    """DRAFT → SENT. Without this action (and invoice_cancel below), an
+    invoice created as DRAFT — the model's own default, and the only status
+    the create form offers since 'status' isn't a user-editable field — had
+    no way to ever become payable: PaymentCreateView's own queryset only
+    ever offers SENT/OVERDUE invoices, and there was no InvoiceUpdateView
+    anywhere to fix a stuck DRAFT. Mirrors devis_send/situation_validate."""
+    invoice = get_object_or_404(Invoice, pk=pk)
+    if request.method == 'POST':
+        if not can_act_for_cabinet(request, invoice.contract.site.cabinet, INVOICE_ACTION_ROLES):
+            messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+            return redirect('revenue:invoice_detail', pk=pk)
+        if invoice.status == InvoiceStatus.DRAFT:
+            from core.models import StatusChangeLog
+            old_status = invoice.status
+            invoice.status = InvoiceStatus.SENT
+            try:
+                invoice.full_clean()
+                invoice.save()
+                StatusChangeLog.log(
+                    invoice, changed_by=request.user,
+                    old_status=old_status, new_status=InvoiceStatus.SENT,
+                    note=_('Facture envoyée au client.'),
+                )
+                messages.success(request, _("Facture envoyée au client."))
+            except ValidationError as e:
+                messages.error(request, str(e))
+        else:
+            messages.error(request, _("Seule une facture en brouillon peut être envoyée."))
+    return redirect('revenue:invoice_detail', pk=pk)
+
+
+@login_required
+def invoice_cancel(request, pk):
+    """DRAFT → CANCELLED — lets a director/accountant kill a mistakenly
+    created draft invoice instead of it sitting there forever with no way
+    to remove or correct it."""
+    invoice = get_object_or_404(Invoice, pk=pk)
+    if request.method == 'POST':
+        if not can_act_for_cabinet(request, invoice.contract.site.cabinet, INVOICE_ACTION_ROLES):
+            messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+            return redirect('revenue:invoice_detail', pk=pk)
+        if invoice.status == InvoiceStatus.DRAFT:
+            from core.models import StatusChangeLog
+            old_status = invoice.status
+            invoice.status = InvoiceStatus.CANCELLED
+            try:
+                invoice.full_clean()
+                invoice.save()
+                StatusChangeLog.log(
+                    invoice, changed_by=request.user,
+                    old_status=old_status, new_status=InvoiceStatus.CANCELLED,
+                    note=_('Facture annulée.'),
+                )
+                messages.success(request, _("Facture annulée."))
+            except ValidationError as e:
+                messages.error(request, str(e))
+        else:
+            messages.error(request, _("Seule une facture en brouillon peut être annulée."))
+    return redirect('revenue:invoice_detail', pk=pk)
+
+
 # --- Devis views ---
 
 class DevisListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
@@ -343,7 +409,7 @@ class DevisCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin,
     model = Devis
     form_class = DevisForm
     template_name = 'revenue/devis_form.html'
-    allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER', 'ACCOUNTANT']
+    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER', 'ACCOUNTANT']
     header_title = _("Créer un devis")
     header_subtitle = _("Préparez un devis détaillé pour un client")
     back_url = reverse_lazy('revenue:devis_list')
@@ -412,7 +478,7 @@ class DevisUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin,
     model = Devis
     form_class = DevisForm
     template_name = 'revenue/devis_form.html'
-    allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER', 'ACCOUNTANT']
+    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER', 'ACCOUNTANT']
     cabinet_lookup_field = 'site__cabinet'
 
     def get_header_title(self):
@@ -602,7 +668,7 @@ class SituationTravauxCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetA
     model = SituationTravaux
     form_class = SituationTravauxForm
     template_name = 'revenue/situation_form.html'
-    allowed_roles = ['DIRECTOR', 'CHIEF_ENGINEER', 'ACCOUNTANT']
+    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER', 'ACCOUNTANT']
     header_title = _("Nouvelle situation de travaux")
     header_subtitle = _("Déclarez l'avancement cumulé d'un contrat pour une période")
     back_url = reverse_lazy('revenue:situation_list')
