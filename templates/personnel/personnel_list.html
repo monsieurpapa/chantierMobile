@@ -92,7 +92,7 @@
                                     </td>
                                     <td class="rate py-2 align-middle text-end">
                                         {% if request.user|has_role:'DIRECTOR,ACCOUNTANT' %}
-                                        ${{ person.default_daily_rate }}
+                                        {{ CURRENCY_SYMBOL }}{{ person.default_daily_rate }}
                                         {% else %}
                                         <span class="text-400">{% trans "Restricted" %}</span>
                                         {% endif %}

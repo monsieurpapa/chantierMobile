@@ -97,7 +97,7 @@
         {% if request.user.is_authenticated %}
         {{ request.user.email }}
         {% else %}
-        <a href="{% url 'account_login' %}">Login</a>
+        <a href="{% url 'account_login' %}">{% trans "Connexion" %}</a>
         {% endif %}
       </span>
     </li>
@@ -109,10 +109,10 @@
         <input class="form-check-input ms-0 theme-control-toggle-input" id="themeControlToggle" type="checkbox"
           data-theme-control="theme" value="dark" />
         <label class="mb-0 theme-control-toggle-label theme-control-toggle-light" for="themeControlToggle"
-          data-bs-toggle="tooltip" data-bs-placement="left" title="Switch to light theme"><span
+          data-bs-toggle="tooltip" data-bs-placement="left" title="{% trans 'Passer au thème clair' %}"><span
             class="fas fa-sun fs-0"></span></label>
         <label class="mb-0 theme-control-toggle-label theme-control-toggle-dark" for="themeControlToggle"
-          data-bs-toggle="tooltip" data-bs-placement="left" title="Switch to dark theme"><span
+          data-bs-toggle="tooltip" data-bs-placement="left" title="{% trans 'Passer au thème sombre' %}"><span
             class="fas fa-moon fs-0"></span></label>
       </div>
     </li>
@@ -123,7 +123,7 @@
       <a class="nav-link pe-0 ps-2" id="navbarDropdownUser" role="button" data-bs-toggle="dropdown" aria-haspopup="true"
         aria-expanded="false">
         <div class="avatar avatar-xl">
-          <img class="rounded-circle" src="{% static 'assets/img/team/avatar.png' %}" alt="user" />
+          <img class="rounded-circle" src="{% static 'assets/img/team/avatar.png' %}" alt="{% trans 'utilisateur' %}" />
         </div>
       </a>
       <div class="dropdown-menu dropdown-menu-end py-0" aria-labelledby="navbarDropdownUser">

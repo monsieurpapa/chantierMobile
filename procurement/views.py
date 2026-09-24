@@ -999,3 +999,29 @@ class SupplierQuickCreateView(QuickCreateView):
 
     def build_instance(self, name, request, cabinet, payload):
         return Supplier(cabinet=cabinet, name=name)
+
+
+class StockItemQuickCreateView(QuickCreateView):
+    """Backs the "select or add a stock item" picker on purchase-order
+    lines (PurchaseOrderLineForm.stock_item) — without this, a site with
+    an empty stock catalog was a dead end when creating its first order.
+    A StockItem always belongs to one Site (unique_together with name),
+    so the picker sends the order's already-selected Site as a fixed
+    'site' param via depends_on (see PurchaseOrderForm.Meta.widgets).
+    Quantity, reorder threshold, and linking to a Material catalog entry
+    are left for the item's own edit screen."""
+    model = StockItem
+
+    def build_instance(self, name, request, cabinet, payload):
+        site_id = payload.get('site')
+        if not site_id:
+            raise ValidationError(_("Sélectionnez d'abord un chantier."))
+        try:
+            site = Site.objects.get(pk=site_id, cabinet=cabinet)
+        except (Site.DoesNotExist, ValueError, TypeError):
+            raise ValidationError(_("Chantier invalide."))
+        unit = (payload.get('unit') or '').strip() or _('unité')
+        return StockItem(site=site, name=name, unit=unit)
+
+    def display_text(self, instance):
+        return f"{instance.name} ({instance.unit})"

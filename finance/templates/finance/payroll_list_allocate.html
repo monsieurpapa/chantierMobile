@@ -41,10 +41,10 @@
                                     <tr>
                                         <td>{{ row.personnel.get_full_name }}</td>
                                         <td>{{ row.assignment.role }}</td>
-                                        <td class="text-end">${{ row.assignment.paid_amount|floatformat:2|intcomma }}</td>
+                                        <td class="text-end">{{ CURRENCY_SYMBOL }}{{ row.assignment.paid_amount|floatformat:2|intcomma }}</td>
                                         <td class="text-end">
                                             {% if row.is_capped %}
-                                                ${{ row.remaining|floatformat:2|intcomma }}
+                                                {{ CURRENCY_SYMBOL }}{{ row.remaining|floatformat:2|intcomma }}
                                             {% else %}
                                                 <span class="text-500">{% trans "Non plafonné" %}</span>
                                             {% endif %}

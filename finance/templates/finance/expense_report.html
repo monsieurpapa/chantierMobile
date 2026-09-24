@@ -92,7 +92,7 @@
                                 {% for row in expenses_by_site %}
                                 <tr>
                                     <td><a href="{% url 'projects:site_detail' unique_id=row.site.unique_id %}">{{ row.site.name }}</a></td>
-                                    <td class="text-end fw-semibold">${{ row.total|floatformat:2|intcomma }}</td>
+                                    <td class="text-end fw-semibold">{{ CURRENCY_SYMBOL }}{{ row.total|floatformat:2|intcomma }}</td>
                                     <td class="text-end">
                                         <a href="{% querystring site=row.site.pk %}" class="btn btn-falcon-default btn-sm">
                                             {% trans "Voir l'historique" %}
@@ -110,7 +110,7 @@
             <div class="card mb-3">
                 <div class="card-header bg-light d-flex justify-content-between align-items-center">
                     <h6 class="mb-0">{% trans "Dépenses" %} ({{ expenses|length }})</h6>
-                    <span class="fw-bold text-primary">{% trans "Total" %}: ${{ total_amount|floatformat:2|intcomma }}</span>
+                    <span class="fw-bold text-primary">{% trans "Total" %}: {{ CURRENCY_SYMBOL }}{{ total_amount|floatformat:2|intcomma }}</span>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
@@ -141,7 +141,7 @@
                                     <td>
                                         <a href="{% url 'finance:expense_detail' pk=expense.pk %}">{{ expense.description|truncatechars:60 }}</a>
                                     </td>
-                                    <td class="text-end fw-semibold">${{ expense.amount|floatformat:2|intcomma }}</td>
+                                    <td class="text-end fw-semibold">{{ CURRENCY_SYMBOL }}{{ expense.amount|floatformat:2|intcomma }}</td>
                                     <td>
                                         <span class="badge {% if expense.status == 'PAID' %}bg-info{% elif expense.status == 'APPROVED' %}bg-success{% elif expense.status == 'REJECTED' %}bg-danger{% else %}bg-warning{% endif %}">
                                             {{ expense.get_status_display }}

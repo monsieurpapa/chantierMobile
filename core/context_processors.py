@@ -39,6 +39,19 @@ def site_info_context(request):
     }
 
 
+def currency_context(request):
+    """
+    Make the app's currency symbol available to every template as
+    {{ CURRENCY_SYMBOL }}, so it comes from one place (CurrencyConfig in
+    chantiermobile/constants.py) instead of being hardcoded as a literal
+    '$' at ~35 separate template call sites.
+    """
+    from chantiermobile.constants import CurrencyConfig
+    return {
+        'CURRENCY_SYMBOL': CurrencyConfig.CURRENCY_SYMBOL,
+    }
+
+
 def active_cabinet_context(request):
     """
     Inject active_cabinet and all_cabinets for superadmin cabinet switcher.

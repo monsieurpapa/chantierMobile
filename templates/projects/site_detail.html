@@ -83,7 +83,7 @@
                                 <div class="col-6 col-md-3">
                                     <div class="p-3 bg-light rounded-3">
                                         <p class="fs--2 text-500 text-uppercase fw-bold mb-1">{% trans "Net Profit" %}</p>
-                                        <h5 class="mb-0 {% if site.net_profit < 0 %}text-danger{% else %}text-success{% endif %}">${{ site.net_profit|floatformat:0 }}</h5>
+                                        <h5 class="mb-0 {% if site.net_profit < 0 %}text-danger{% else %}text-success{% endif %}">{{ CURRENCY_SYMBOL }}{{ site.net_profit|floatformat:0 }}</h5>
                                     </div>
                                 </div>
                             </div>
@@ -336,7 +336,7 @@
                                                         {% endif %}
                                                     </td>
                                                     {% if request.user|has_role:'DIRECTOR,ACCOUNTANT' %}
-                                                    <td class="text-end fw-semibold">${{ assignment.daily_rate|floatformat:2 }}
+                                                    <td class="text-end fw-semibold">{{ CURRENCY_SYMBOL }}{{ assignment.daily_rate|floatformat:2 }}
                                                     </td>
                                                     {% endif %}
                                                 </tr>
@@ -463,7 +463,7 @@
                                                                 <span class="fw-semibold">{{ invoice.invoice_number }}</span>
                                                             </a>
                                                         </td>
-                                                        <td class="fw-bold text-success">${{ invoice.amount|floatformat:2 }}</td>
+                                                        <td class="fw-bold text-success">{{ CURRENCY_SYMBOL }}{{ invoice.amount|floatformat:2 }}</td>
                                                         <td class="text-center">
                                                             <span class="badge rounded-pill 
                                                             {% if invoice.status == 'PAID' %}bg-success
@@ -527,7 +527,7 @@
                                                                 </div>
                                                             </a>
                                                         </td>
-                                                        <td class="fw-bold text-primary">${{ expense.amount|floatformat:2 }}</td>
+                                                        <td class="fw-bold text-primary">{{ CURRENCY_SYMBOL }}{{ expense.amount|floatformat:2 }}</td>
                                                         <td class="text-center">
                                                             <span class="badge rounded-pill 
                                                             {% if expense.status == 'PAID' %}bg-info
@@ -628,12 +628,12 @@
                                 <div class="row g-2 mt-3">
                                     <div class="col-6 p-2 bg-light rounded-2">
                                         <p class="fs--2 mb-1 text-500 text-uppercase fw-bold">{% trans "Budgeted" %}</p>
-                                        <h5 class="mb-0 text-primary">${{ site.budget.total_amount|floatformat:0 }}</h5>
+                                        <h5 class="mb-0 text-primary">{{ CURRENCY_SYMBOL }}{{ site.budget.total_amount|floatformat:0 }}</h5>
                                     </div>
                                     <div class="col-6 p-2 bg-light rounded-2">
                                         <p class="fs--2 mb-1 text-500 text-uppercase fw-bold">{% trans "Spent" %}</p>
                                         <h5 class="mb-0 {% if site.budget_usage_percentage > 80 %}text-danger{% elif site.budget_usage_percentage > 60 %}text-warning{% else %}text-success{% endif %}">
-                                            ${{ site.total_spent|floatformat:0 }}
+                                            {{ CURRENCY_SYMBOL }}{{ site.total_spent|floatformat:0 }}
                                         </h5>
                                     </div>
                                 </div>
@@ -653,14 +653,14 @@
                                     <div class="col-6">
                                         <div class="p-3 bg-success-subtle rounded-3 text-center border border-success border-opacity-25">
                                             <p class="fs--2 mb-1 text-600 text-uppercase fw-bold">{% trans "Income" %}</p>
-                                            <h5 class="mb-0 text-success fw-bold">${{ site.total_revenue|floatformat:0 }}</h5>
+                                            <h5 class="mb-0 text-success fw-bold">{{ CURRENCY_SYMBOL }}{{ site.total_revenue|floatformat:0 }}</h5>
                                         </div>
                                     </div>
                                     <div class="col-6">
                                         <div class="p-3 {% if site.net_profit >= 0 %}bg-primary-subtle{% else %}bg-danger-subtle{% endif %} rounded-3 text-center border {% if site.net_profit >= 0 %}border-primary{% else %}border-danger{% endif %} border-opacity-25">
                                             <p class="fs--2 mb-1 text-uppercase fw-bold {% if site.net_profit >= 0 %}text-primary{% else %}text-danger{% endif %}">{% trans "Net Profit" %}</p>
                                             <h5 class="mb-0 fw-bold {% if site.net_profit < 0 %}text-danger{% else %}text-primary{% endif %}">
-                                                ${{ site.net_profit|floatformat:0 }}
+                                                {{ CURRENCY_SYMBOL }}{{ site.net_profit|floatformat:0 }}
                                             </h5>
                                         </div>
                                     </div>

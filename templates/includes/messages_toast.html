@@ -1,3 +1,4 @@
+{% load i18n %}
 {% if messages %}
 <div class="toast-container">
   {% for message in messages %}
@@ -16,13 +17,13 @@
     <div class="toast-content">
       <div class="toast-title">
         {% if message.tags == 'success' %}
-        Success!
+        {% trans "Succès !" %}
         {% elif message.tags == 'danger' or message.tags == 'error' %}
-        Error!
+        {% trans "Erreur !" %}
         {% elif message.tags == 'warning' %}
-        Warning!
+        {% trans "Avertissement !" %}
         {% else %}
-        Information
+        {% trans "Information" %}
         {% endif %}
       </div>
       <p class="toast-message">{{ message }}</p>

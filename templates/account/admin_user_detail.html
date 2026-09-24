@@ -1,7 +1,7 @@
 {% extends 'falcon_base.html' %}
 {% load static i18n %}
 
-{% block title %}{% trans "User Details" %} - {{ object.username }} - ChantiérMobile{% endblock %}
+{% block title %}{% trans "User Details" %} - {{ object.username }} - ChantierMobile{% endblock %}
 
 {% block content %}
 <div class="container" data-layout="container-fluid">
@@ -15,16 +15,7 @@
 <div class="row">
     <div class="col-12">
 
-        <!-- Messages -->
-        {% if messages %}
-        {% for message in messages %}
-        <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-        {% endfor %}
-        {% endif %}
-
+        <!-- messages are already rendered once as a toast by falcon_base.html (includes/messages_toast.html) -->
         <div class="row g-3">
             <!-- Left Column: Account Details -->
             <div class="col-lg-8">

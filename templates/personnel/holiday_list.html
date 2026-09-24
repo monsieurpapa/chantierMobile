@@ -46,7 +46,7 @@
                                     <td class="text-end">
                                         <form method="post" action="{% url 'personnel:holiday_delete' pk=holiday.pk %}" class="d-inline">
                                             {% csrf_token %}
-                                            <button type="submit" class="btn btn-link text-danger btn-sm p-0"><span class="fas fa-trash"></span></button>
+                                            <button type="submit" class="btn btn-link text-danger btn-sm p-0" aria-label="{% trans 'Supprimer ce jour férié' %}" title="{% trans 'Supprimer ce jour férié' %}"><span class="fas fa-trash"></span></button>
                                         </form>
                                     </td>
                                     {% endif %}

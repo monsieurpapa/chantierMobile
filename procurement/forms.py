@@ -78,12 +78,25 @@ class PurchaseOrderLineForm(forms.ModelForm):
         model = PurchaseOrderLine
         fields = ['stock_item', 'quantity', 'unit_price']
         widgets = {
-            'stock_item': forms.Select(attrs={'class': 'form-select'}),
+            # stock_item is scoped to the order's own site, chosen once on
+            # PurchaseOrderForm (id_site) — same "depends on a field
+            # elsewhere on the page" pattern as ExpenseForm.personnel. Without
+            # quick-create here, a site with an empty stock catalog was a
+            # dead end: no way to add its very first order line.
+            'stock_item': DynamicSelectWidget(
+                create_url_name='procurement:stock_item_quick_create',
+                placeholder=_('Sélectionner ou ajouter un article de stock...'),
+                depends_on='id_site', depends_param='site',
+            ),
             'quantity': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': '0.00'}),
             'unit_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': FormPlaceholders.AMOUNT}),
         }
 
 
+# No `widgets={...}` kwarg here — see the matching note on
+# MaterialRequestItemFormSet in materials/forms.py: passing one would
+# silently replace PurchaseOrderLineForm.Meta.widgets wholesale, including
+# the DynamicSelectWidget above, for every formset row.
 PurchaseOrderLineFormSet = inlineformset_factory(
     PurchaseOrder,
     PurchaseOrderLine,

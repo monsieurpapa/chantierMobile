@@ -19,7 +19,7 @@
                     <div class="card text-center h-100">
                         <div class="card-body">
                             <h6 class="text-600 mb-1">{% trans "Total Budget" %}</h6>
-                            <h3 class="text-primary mb-0">${{ budget.total_amount }}</h3>
+                            <h3 class="text-primary mb-0">{{ CURRENCY_SYMBOL }}{{ budget.total_amount }}</h3>
                         </div>
                     </div>
                 </div>
@@ -28,7 +28,7 @@
                         <div class="card-body">
                             <h6 class="text-600 mb-1">{% trans "Spent" %}</h6>
                             <h3 class="{% if usage_pct > 90 %}text-danger{% elif usage_pct > 70 %}text-warning{% else %}text-success{% endif %} mb-0">
-                                ${{ spent }}
+                                {{ CURRENCY_SYMBOL }}{{ spent }}
                             </h3>
                             <small class="text-500">{{ usage_pct }}%</small>
                         </div>
@@ -39,7 +39,7 @@
                         <div class="card-body">
                             <h6 class="text-600 mb-1">{% trans "Remaining" %}</h6>
                             <h3 class="{% if remaining < 0 %}text-danger{% else %}text-success{% endif %} mb-0">
-                                ${{ remaining }}
+                                {{ CURRENCY_SYMBOL }}{{ remaining }}
                             </h3>
                             <small class="text-500">{{ remaining_days }} {% trans "days left" %}</small>
                         </div>
@@ -50,7 +50,7 @@
                         <div class="card-body">
                             <h6 class="text-600 mb-1">{% trans "Forecast at End" %}</h6>
                             <h3 class="{% if forecast_overrun %}text-danger{% else %}text-success{% endif %} mb-0">
-                                ${{ forecast_total }}
+                                {{ CURRENCY_SYMBOL }}{{ forecast_total }}
                             </h3>
                             <small class="text-500">
                                 {% if forecast_overrun %}
@@ -113,7 +113,7 @@
                                         <tr>
                                             <td>{{ row.category__name }}</td>
                                             <td class="text-end">{{ row.count }}</td>
-                                            <td class="text-end fw-semi-bold">${{ row.total }}</td>
+                                            <td class="text-end fw-semi-bold">{{ CURRENCY_SYMBOL }}{{ row.total }}</td>
                                             <td class="text-end">
                                                 {% if budget.total_amount %}
                                                 {{ row.total|floatformat:0 }}
@@ -145,7 +145,7 @@
                         <div class="card-body fs--1">
                             <div class="row mb-2">
                                 <div class="col-7 text-600">{% trans "Daily burn rate" %}</div>
-                                <div class="col-5 fw-semi-bold text-end">${{ daily_burn }}/{% trans "day" %}</div>
+                                <div class="col-5 fw-semi-bold text-end">{{ CURRENCY_SYMBOL }}{{ daily_burn }}/{% trans "day" %}</div>
                             </div>
                             <div class="row mb-2">
                                 <div class="col-7 text-600">{% trans "Days remaining" %}</div>
@@ -154,7 +154,7 @@
                             <div class="row mb-2">
                                 <div class="col-7 text-600">{% trans "Projected spend at end" %}</div>
                                 <div class="col-5 fw-semi-bold text-end {% if forecast_overrun %}text-danger{% else %}text-success{% endif %}">
-                                    ${{ forecast_total }}
+                                    {{ CURRENCY_SYMBOL }}{{ forecast_total }}
                                 </div>
                             </div>
                             {% if forecast_overrun %}
@@ -206,7 +206,7 @@
                                     <td>{{ expense.category.name }}</td>
                                     <td>{{ expense.description|truncatechars:40 }}</td>
                                     <td>{{ expense.requester }}</td>
-                                    <td class="text-end fw-semi-bold">${{ expense.amount }}</td>
+                                    <td class="text-end fw-semi-bold">{{ CURRENCY_SYMBOL }}{{ expense.amount }}</td>
                                     <td>
                                         <span class="badge rounded-pill
                                             {% if expense.status == 'APPROVED' %}badge-subtle-success

@@ -40,7 +40,7 @@
                                     <td><a href="{% url 'procurement:purchase_order_detail' pk=po.pk %}"><strong>{{ po.order_number }}</strong></a></td>
                                     <td><a href="{% url 'projects:site_detail' unique_id=po.site.unique_id %}">{{ po.site.name }}</a></td>
                                     <td>{{ po.supplier.name }}</td>
-                                    <td class="text-end fw-semi-bold">${{ po.total_ht|floatformat:2 }}</td>
+                                    <td class="text-end fw-semi-bold">{{ CURRENCY_SYMBOL }}{{ po.total_ht|floatformat:2 }}</td>
                                     <td>{{ po.order_date }}</td>
                                     <td><span class="badge bg-secondary">{{ po.get_caisse_display }}</span></td>
                                     <td class="text-center">

@@ -40,7 +40,7 @@
                                         <p class="mb-0 fw-semi-bold">{{ invoice.contract.site.name }}</p>
                                         <p class="mb-0 fs--2 text-700">{{ invoice.contract.client_name }}</p>
                                     </td>
-                                    <td class="fw-semi-bold text-primary">${{ invoice.amount|floatformat:2 }}</td>
+                                    <td class="fw-semi-bold text-primary">{{ CURRENCY_SYMBOL }}{{ invoice.amount|floatformat:2 }}</td>
                                     <td class="text-center">
                                         <span class="badge rounded-pill 
                                             {% if invoice.status == 'PAID' %}badge-subtle-success

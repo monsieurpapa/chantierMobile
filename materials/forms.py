@@ -61,7 +61,17 @@ class MaterialRequestItemForm(forms.ModelForm):
         self.fields['material'].required = False
         self.fields['material_name'].required = False
 
-# Formset for handling multiple materials per request
+# Formset for handling multiple materials per request.
+#
+# IMPORTANT: no `widgets={...}` kwarg here. inlineformset_factory() builds a
+# brand-new Meta class for each row form via modelform_factory(); when a
+# `widgets` dict is passed, Django sets it as `Meta.widgets` outright rather
+# than merging it with the base form's Meta.widgets, so it silently replaces
+# EVERY widget declared on MaterialRequestItemForm.Meta.widgets above, including
+# the 'material' field's DynamicSelectWidget (quick-create picker), downgrading
+# every formset row back to a dead-end plain <select>. MaterialRequestItemForm
+# already declares the right widget for all four fields, so nothing needs to
+# be repeated here.
 MaterialRequestItemFormSet = inlineformset_factory(
     MaterialRequest,
     MaterialRequestItem,
@@ -70,10 +80,4 @@ MaterialRequestItemFormSet = inlineformset_factory(
     min_num=1,  # Require at least 1 material
     validate_min=True,
     can_delete=True,
-    widgets={
-        'material': forms.Select(attrs={'class': 'form-select'}),
-        'material_name': forms.TextInput(attrs={'class': 'form-control'}),
-        'quantity': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-        'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
-    }
 )

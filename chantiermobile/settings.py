@@ -110,6 +110,7 @@ TEMPLATES = [
                 'core.context_processors.language_context',
                 'core.context_processors.site_info_context',
                 'core.context_processors.active_cabinet_context',
+                'core.context_processors.currency_context',
             ],
         },
     },

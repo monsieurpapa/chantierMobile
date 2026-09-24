@@ -59,7 +59,7 @@
                                 </h6>
                                 <p class="mb-0">
                                     <a href="{% url 'finance:expense_detail' pk=req.expense_id %}">EX-{{ req.expense_id }}</a>
-                                    — ${{ req.expense.amount|floatformat:2 }} —
+                                    — {{ CURRENCY_SYMBOL }}{{ req.expense.amount|floatformat:2 }} —
                                     <span class="badge rounded-pill
                                         {% if req.expense.status == 'PAID' %}badge-subtle-info
                                         {% elif req.expense.status == 'APPROVED' %}badge-subtle-success
@@ -126,14 +126,14 @@
                                             <td class="text-center fw-semibold">
                                                 <span class="badge bg-light text-dark">{{ item.quantity }}{% if item.material %} {{ item.material.unit }}{% endif %}</span>
                                             </td>
-                                            <td class="text-end fw-semibold text-primary">${{ item.estimated_cost|floatformat:2 }}</td>
+                                            <td class="text-end fw-semibold text-primary">{{ CURRENCY_SYMBOL }}{{ item.estimated_cost|floatformat:2 }}</td>
                                         </tr>
                                         {% endfor %}
                                     </tbody>
                                     <tfoot class="border-top bg-light">
                                         <tr>
                                             <td colspan="2" class="text-end fw-semibold">{% trans "Total Estimated Cost:" %}</td>
-                                            <td class="text-end fw-bold text-success">${{ req.total_estimated_cost|floatformat:2 }}</td>
+                                            <td class="text-end fw-bold text-success">{{ CURRENCY_SYMBOL }}{{ req.total_estimated_cost|floatformat:2 }}</td>
                                         </tr>
                                     </tfoot>
                                 </table>
@@ -240,7 +240,7 @@
                                 </div>
                                 <div class="col-6 text-end">
                                     <p class="fs--1 text-600 mb-1">{% trans "Est. Total" %}</p>
-                                    <h5 class="mb-0 text-success">${{ req.total_estimated_cost|floatformat:0 }}</h5>
+                                    <h5 class="mb-0 text-success">{{ CURRENCY_SYMBOL }}{{ req.total_estimated_cost|floatformat:0 }}</h5>
                                 </div>
                             </div>
                             <div>

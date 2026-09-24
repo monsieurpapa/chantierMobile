@@ -36,11 +36,11 @@
                             <div class="row">
                                 <div class="col-md-4 mb-3">
                                     <label class="form-label text-600 text-uppercase fs--2 fw-bold">{% trans "Cumul HT" %}</label>
-                                    <h3 class="text-primary fw-bold">${{ situation.total_ht_cumulative|floatformat:2 }}</h3>
+                                    <h3 class="text-primary fw-bold">{{ CURRENCY_SYMBOL }}{{ situation.total_ht_cumulative|floatformat:2 }}</h3>
                                 </div>
                                 <div class="col-md-4 mb-3">
                                     <label class="form-label text-600 text-uppercase fs--2 fw-bold">{% trans "Montant à facturer" %}</label>
-                                    <h3 class="text-success fw-bold">${{ situation.total_ht_period|floatformat:2 }}</h3>
+                                    <h3 class="text-success fw-bold">{{ CURRENCY_SYMBOL }}{{ situation.total_ht_period|floatformat:2 }}</h3>
                                 </div>
                                 <div class="col-md-4 mb-3">
                                     <label class="form-label text-600 text-uppercase fs--2 fw-bold">{% trans "Arrêtée au" %}</label>
@@ -79,7 +79,7 @@
                                             <td class="text-center">{{ line.previous_cumulative_percentage }}%</td>
                                             <td class="text-center fw-semi-bold">{{ line.cumulative_percentage }}%</td>
                                             <td class="text-center">{{ line.period_percentage }}%</td>
-                                            <td class="text-end fw-semi-bold">${{ line.period_amount_ht|floatformat:2 }}</td>
+                                            <td class="text-end fw-semi-bold">{{ CURRENCY_SYMBOL }}{{ line.period_amount_ht|floatformat:2 }}</td>
                                         </tr>
                                         {% empty %}
                                         <tr><td colspan="5" class="text-center py-3 text-500">{% trans "Aucune ligne." %}</td></tr>
@@ -88,7 +88,7 @@
                                     <tfoot class="border-top bg-light">
                                         <tr>
                                             <td colspan="4" class="text-end fw-semibold">{% trans "Montant à facturer" %}</td>
-                                            <td class="text-end fw-bold text-success">${{ situation.total_ht_period|floatformat:2 }}</td>
+                                            <td class="text-end fw-bold text-success">{{ CURRENCY_SYMBOL }}{{ situation.total_ht_period|floatformat:2 }}</td>
                                         </tr>
                                     </tfoot>
                                 </table>
@@ -145,7 +145,7 @@
                         <div class="card-body fs--1">
                             <div class="d-flex justify-content-between mb-2">
                                 <span class="text-600">{% trans "Total Contrat" %}:</span>
-                                <span class="fw-semi-bold">${{ situation.contract.total_value|floatformat:2 }}</span>
+                                <span class="fw-semi-bold">{{ CURRENCY_SYMBOL }}{{ situation.contract.total_value|floatformat:2 }}</span>
                             </div>
                             <div class="d-flex justify-content-between">
                                 <span class="text-600">{% trans "Chantier" %}:</span>

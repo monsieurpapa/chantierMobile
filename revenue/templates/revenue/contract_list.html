@@ -37,8 +37,8 @@
                                 <tr class="align-middle">
                                     <td><a href="{% url 'projects:site_detail' unique_id=contract.site.unique_id %}"><strong>{{ contract.site.name }}</strong></a></td>
                                     <td>{{ contract.client_name }}</td>
-                                    <td class="fw-semi-bold">${{ contract.total_value|floatformat:2 }}</td>
-                                    <td class="fw-semi-bold {% if contract.client_balance > 0 %}text-danger{% else %}text-success{% endif %}">${{ contract.client_balance|floatformat:2 }}</td>
+                                    <td class="fw-semi-bold">{{ CURRENCY_SYMBOL }}{{ contract.total_value|floatformat:2 }}</td>
+                                    <td class="fw-semi-bold {% if contract.client_balance > 0 %}text-danger{% else %}text-success{% endif %}">{{ CURRENCY_SYMBOL }}{{ contract.client_balance|floatformat:2 }}</td>
                                     <td>{{ contract.signed_date }}</td>
                                     <td class="text-end">
                                         <a class="btn btn-falcon-default btn-sm"

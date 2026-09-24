@@ -39,8 +39,8 @@
                                     <td><a href="{% url 'revenue:situation_detail' pk=situation.pk %}"><strong>N°{{ situation.numero }}</strong></a></td>
                                     <td><a href="{% url 'projects:site_detail' unique_id=situation.contract.site.unique_id %}">{{ situation.contract.site.name }}</a></td>
                                     <td>{{ situation.period_end_date }}</td>
-                                    <td class="text-end">${{ situation.total_ht_cumulative|floatformat:2 }}</td>
-                                    <td class="text-end fw-semi-bold">${{ situation.total_ht_period|floatformat:2 }}</td>
+                                    <td class="text-end">{{ CURRENCY_SYMBOL }}{{ situation.total_ht_cumulative|floatformat:2 }}</td>
+                                    <td class="text-end fw-semi-bold">{{ CURRENCY_SYMBOL }}{{ situation.total_ht_period|floatformat:2 }}</td>
                                     <td class="text-center">
                                         <span class="badge rounded-pill
                                         {% if situation.status == 'FACTUREE' %}bg-success

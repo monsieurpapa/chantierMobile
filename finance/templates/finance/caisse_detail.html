@@ -18,7 +18,7 @@
                     <div class="card h-100">
                         <div class="card-body">
                             <label class="text-600 fs--1">{% trans "Solde d'ouverture" %}</label>
-                            <p class="fs-1 fw-bold mb-0">${{ opening_balance|floatformat:2|intcomma }}</p>
+                            <p class="fs-1 fw-bold mb-0">{{ CURRENCY_SYMBOL }}{{ opening_balance|floatformat:2|intcomma }}</p>
                         </div>
                     </div>
                 </div>
@@ -26,7 +26,7 @@
                     <div class="card h-100">
                         <div class="card-body">
                             <label class="text-600 fs--1">{% trans "Solde actuel" %}</label>
-                            <p class="fs-1 fw-bold {% if closing_balance < 0 %}text-danger{% else %}text-success{% endif %} mb-0">${{ closing_balance|floatformat:2|intcomma }}</p>
+                            <p class="fs-1 fw-bold {% if closing_balance < 0 %}text-danger{% else %}text-success{% endif %} mb-0">{{ CURRENCY_SYMBOL }}{{ closing_balance|floatformat:2|intcomma }}</p>
                         </div>
                     </div>
                 </div>
@@ -154,8 +154,8 @@
                                     <td>{{ row.tx.recipient|default:"-" }}</td>
                                     <td>{{ row.tx.category.name|default:"-" }}</td>
                                     <td>{{ row.tx.description|default:"-" }}</td>
-                                    <td class="text-end fw-semibold">${{ row.tx.amount|floatformat:2|intcomma }}</td>
-                                    <td class="text-end">${{ row.running_balance|floatformat:2|intcomma }}</td>
+                                    <td class="text-end fw-semibold">{{ CURRENCY_SYMBOL }}{{ row.tx.amount|floatformat:2|intcomma }}</td>
+                                    <td class="text-end">{{ CURRENCY_SYMBOL }}{{ row.running_balance|floatformat:2|intcomma }}</td>
                                     <td>
                                         {% if row.tx.proof %}
                                         <a href="{{ row.tx.proof.url }}" target="_blank" rel="noopener"><span class="fas fa-paperclip"></span></a>
@@ -165,7 +165,7 @@
                                     <td>
                                         <form method="post" action="{% url 'finance:caisse_transaction_delete' pk=row.tx.pk %}" class="d-inline" onsubmit="return confirm('{% trans "Supprimer ce mouvement ?" %}');">
                                             {% csrf_token %}
-                                            <button type="submit" class="btn btn-link text-danger btn-sm p-0"><span class="fas fa-trash"></span></button>
+                                            <button type="submit" class="btn btn-link text-danger btn-sm p-0" aria-label="{% trans 'Supprimer ce mouvement' %}" title="{% trans 'Supprimer ce mouvement' %}"><span class="fas fa-trash"></span></button>
                                         </form>
                                     </td>
                                     {% endif %}

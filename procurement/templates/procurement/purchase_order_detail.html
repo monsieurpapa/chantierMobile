@@ -36,7 +36,7 @@
                             <div class="row">
                                 <div class="col-md-4 mb-3">
                                     <label class="form-label text-600 text-uppercase fs--2 fw-bold">{% trans "Total" %}</label>
-                                    <h3 class="text-primary fw-bold">${{ purchase_order.total_ht|floatformat:2 }}</h3>
+                                    <h3 class="text-primary fw-bold">{{ CURRENCY_SYMBOL }}{{ purchase_order.total_ht|floatformat:2 }}</h3>
                                 </div>
                                 <div class="col-md-4 mb-3">
                                     <label class="form-label text-600 text-uppercase fs--2 fw-bold">{% trans "Commandé le" %}</label>
@@ -82,8 +82,8 @@
                                                     {{ line.quantity_received }} {{ line.stock_item.unit }}
                                                 </span>
                                             </td>
-                                            <td class="text-end">${{ line.unit_price|floatformat:2 }}</td>
-                                            <td class="text-end fw-semi-bold">${{ line.line_total|floatformat:2 }}</td>
+                                            <td class="text-end">{{ CURRENCY_SYMBOL }}{{ line.unit_price|floatformat:2 }}</td>
+                                            <td class="text-end fw-semi-bold">{{ CURRENCY_SYMBOL }}{{ line.line_total|floatformat:2 }}</td>
                                         </tr>
                                         {% empty %}
                                         <tr><td colspan="5" class="text-center py-3 text-500">{% trans "Aucune ligne." %}</td></tr>
@@ -92,7 +92,7 @@
                                     <tfoot class="border-top bg-light">
                                         <tr>
                                             <td colspan="4" class="text-end fw-semibold">{% trans "Total" %}</td>
-                                            <td class="text-end fw-bold text-success">${{ purchase_order.total_ht|floatformat:2 }}</td>
+                                            <td class="text-end fw-bold text-success">{{ CURRENCY_SYMBOL }}{{ purchase_order.total_ht|floatformat:2 }}</td>
                                         </tr>
                                     </tfoot>
                                 </table>

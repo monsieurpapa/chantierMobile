@@ -32,7 +32,7 @@
                                 <tr>
                                     <td>{{ avenant.site.name }}</td>
                                     <td>{{ avenant.requested_by.get_full_name|default:avenant.requested_by }}</td>
-                                    <td class="text-end fw-semibold">${{ avenant.amount|floatformat:2|intcomma }}</td>
+                                    <td class="text-end fw-semibold">{{ CURRENCY_SYMBOL }}{{ avenant.amount|floatformat:2|intcomma }}</td>
                                     <td>{{ avenant.justification|truncatechars:60 }}</td>
                                     <td>
                                         <span class="badge {% if avenant.status == 'APPROVED' %}bg-success{% elif avenant.status == 'REJECTED' %}bg-danger{% else %}bg-warning{% endif %}">

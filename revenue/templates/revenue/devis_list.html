@@ -49,7 +49,7 @@
                                     <td><a href="{% url 'revenue:devis_detail' pk=devis.pk %}"><strong>{{ devis.devis_number }}</strong></a></td>
                                     <td><a href="{% url 'projects:site_detail' unique_id=devis.site.unique_id %}">{{ devis.site.name }}</a></td>
                                     <td>{{ devis.client_name }}</td>
-                                    <td class="text-end fw-semi-bold">${{ devis.total_ht|floatformat:2 }}</td>
+                                    <td class="text-end fw-semi-bold">{{ CURRENCY_SYMBOL }}{{ devis.total_ht|floatformat:2 }}</td>
                                     <td>{{ devis.issue_date }}</td>
                                     <td class="text-center">
                                         <span class="badge rounded-pill

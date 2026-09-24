@@ -57,7 +57,7 @@
                                         <span class="badge bg-info">{{ req.total_items }}</span>
                                     </td>
                                     <td class="align-middle text-center fw-semibold text-success">
-                                        ${{ req.total_estimated_cost|floatformat:0 }}
+                                        {{ CURRENCY_SYMBOL }}{{ req.total_estimated_cost|floatformat:0 }}
                                     </td>
                                     <td class="align-middle text-center">
                                         <span class="badge rounded-pill 

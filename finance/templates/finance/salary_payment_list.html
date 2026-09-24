@@ -30,7 +30,7 @@
                                 {% for spl in salary_payment_lists %}
                                 <tr>
                                     <td><a href="{% url 'finance:salary_payment_detail' pk=spl.pk %}">{{ spl.prepared_by.get_full_name|default:spl.prepared_by }}</a></td>
-                                    <td class="text-end fw-semibold">${{ spl.total_amount|floatformat:2|intcomma }}</td>
+                                    <td class="text-end fw-semibold">{{ CURRENCY_SYMBOL }}{{ spl.total_amount|floatformat:2|intcomma }}</td>
                                     <td>
                                         <span class="badge {% if spl.status == 'PAYEE' %}bg-success{% elif spl.status == 'SOUMISE' %}bg-info{% else %}bg-warning{% endif %}">
                                             {{ spl.get_status_display }}

@@ -43,9 +43,9 @@
                                         {% endif %}
                                     </td>
                                     <td>{{ credit.due_date|default:"-" }}</td>
-                                    <td class="text-end">${{ credit.amount|floatformat:2|intcomma }}</td>
-                                    <td class="text-end">${{ credit.paid_amount|floatformat:2|intcomma }}</td>
-                                    <td class="text-end fw-semibold">${{ credit.outstanding_balance|floatformat:2|intcomma }}</td>
+                                    <td class="text-end">{{ CURRENCY_SYMBOL }}{{ credit.amount|floatformat:2|intcomma }}</td>
+                                    <td class="text-end">{{ CURRENCY_SYMBOL }}{{ credit.paid_amount|floatformat:2|intcomma }}</td>
+                                    <td class="text-end fw-semibold">{{ CURRENCY_SYMBOL }}{{ credit.outstanding_balance|floatformat:2|intcomma }}</td>
                                     <td>
                                         {% if credit.is_fully_paid %}
                                         <span class="badge bg-success">{% trans "Payé" %}</span>

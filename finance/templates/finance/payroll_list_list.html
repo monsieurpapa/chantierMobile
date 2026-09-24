@@ -32,7 +32,7 @@
                                 <tr>
                                     <td><a href="{% url 'finance:payroll_detail' pk=pl.pk %}">{{ pl.site.name }}</a></td>
                                     <td>{{ pl.prepared_by.get_full_name|default:pl.prepared_by }}</td>
-                                    <td class="text-end fw-semibold">${{ pl.total_amount|floatformat:2|intcomma }}</td>
+                                    <td class="text-end fw-semibold">{{ CURRENCY_SYMBOL }}{{ pl.total_amount|floatformat:2|intcomma }}</td>
                                     <td>
                                         <span class="badge {% if pl.status == 'PAYEE' %}bg-success{% elif pl.status == 'SOUMISE' %}bg-info{% else %}bg-warning{% endif %}">
                                             {{ pl.get_status_display }}

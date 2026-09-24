@@ -72,7 +72,7 @@
             <div class="card mb-3">
                 <div class="card-header bg-light d-flex justify-content-between align-items-center">
                     <h6 class="mb-0">{% trans "Commandes" %} ({{ purchase_orders|length }})</h6>
-                    <span class="fw-bold text-primary">{% trans "Total" %}: ${{ total_amount|floatformat:2|intcomma }}</span>
+                    <span class="fw-bold text-primary">{% trans "Total" %}: {{ CURRENCY_SYMBOL }}{{ total_amount|floatformat:2|intcomma }}</span>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
@@ -96,7 +96,7 @@
                                     <td><a href="{% url 'projects:site_detail' unique_id=po.site.unique_id %}">{{ po.site.name }}</a></td>
                                     <td>{{ po.supplier.name }}</td>
                                     <td><span class="badge bg-secondary">{{ po.get_caisse_display }}</span></td>
-                                    <td class="text-end fw-semibold">${{ po.total_ht|floatformat:2|intcomma }}</td>
+                                    <td class="text-end fw-semibold">{{ CURRENCY_SYMBOL }}{{ po.total_ht|floatformat:2|intcomma }}</td>
                                     <td>
                                         <span class="badge rounded-pill
                                         {% if po.status == 'RECUE' %}bg-success
