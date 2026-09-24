@@ -300,7 +300,17 @@ class SalaryPaymentItemForm(forms.ModelForm):
         model = SalaryPaymentItem
         fields = ['personnel', 'period', 'amount', 'notes']
         widgets = {
-            'personnel': forms.Select(attrs={'class': 'form-select', 'id': 'id_salary_personnel'}),
+            'personnel': DynamicSelectWidget(
+                create_url_name='personnel:personnel_quick_create',
+                placeholder=_('Sélectionner ou ajouter un ingénieur / membre du staff...'),
+                # Fixed extra param sent on every quick-create from this
+                # picker: without it, PersonnelQuickCreateView would fall
+                # back to its default (Ouvrier) — see build_instance() —
+                # which would immediately fail SalaryPaymentItem.clean()'s
+                # Ingénieur-only guard for a name typed here.
+                create_extra={'payroll_type': PersonnelPayrollType.INGENIEUR},
+                attrs={'id': 'id_salary_personnel'},
+            ),
             'period': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'AAAA-MM'}),
             'amount': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.AMOUNT}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),

@@ -14,6 +14,7 @@ from django.urls import reverse
 from personnel.models import Personnel, Skill, SiteAssignment
 from materials.models import Material
 from procurement.models import Supplier
+from chantiermobile.constants import PersonnelPayrollType
 
 
 def post_json(client, url, payload):
@@ -72,6 +73,35 @@ class TestPersonnelQuickCreate:
         response = post_json(director_client, url, {'name': 'Chantal Ilunga'})
         person = Personnel.objects.get(pk=response.json()['id'])
         assert person.cabinet_id == cabinet.id
+
+    def test_default_payroll_type_is_ouvrier(self, director_client):
+        """No payroll_type param — the plain worker pickers (Leave,
+        SiteAssignment, Expense/Payroll main-d'œuvre, ...) never send one,
+        so the model's own default must still apply."""
+        url = reverse('personnel:personnel_quick_create')
+        response = post_json(director_client, url, {'name': 'Default Worker'})
+        person = Personnel.objects.get(pk=response.json()['id'])
+        assert person.payroll_type == PersonnelPayrollType.OUVRIER
+
+    def test_payroll_type_ingenieur_honored(self, director_client):
+        """SalaryPaymentItemForm's picker (Ingénieurs & Staff tab) sends
+        payroll_type=INGENIEUR as a fixed create_extra param — the new
+        agent must come out as INGENIEUR, not the default Ouvrier, or it
+        would immediately fail SalaryPaymentItem.clean()."""
+        url = reverse('personnel:personnel_quick_create')
+        response = post_json(director_client, url, {'name': 'Nouvel Ingénieur', 'payroll_type': 'INGENIEUR'})
+        assert response.status_code == 200
+        person = Personnel.objects.get(pk=response.json()['id'])
+        assert person.payroll_type == PersonnelPayrollType.INGENIEUR
+
+    def test_invalid_payroll_type_ignored(self, director_client):
+        """An unrecognized value doesn't crash or get stored — falls back
+        to the model default, same as if the param were absent."""
+        url = reverse('personnel:personnel_quick_create')
+        response = post_json(director_client, url, {'name': 'Weird Value', 'payroll_type': 'NOT_A_REAL_TYPE'})
+        assert response.status_code == 200
+        person = Personnel.objects.get(pk=response.json()['id'])
+        assert person.payroll_type == PersonnelPayrollType.OUVRIER
 
 
 @pytest.mark.django_db

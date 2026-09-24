@@ -12,7 +12,7 @@ from .models import Personnel, Skill, SiteAssignment, PersonnelDocument, Leave, 
 from .forms import PersonnelForm, SiteAssignmentForm, SkillForm, PersonnelDocumentForm, LeaveForm, HolidayForm
 from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet, can_act_for_cabinet
 from core.quickcreate import QuickCreateView
-from chantiermobile.constants import UserRoles
+from chantiermobile.constants import UserRoles, PersonnelPayrollType
 from projects.models import Site
 
 HR_ADMIN_ROLES = ['DIRECTOR', 'CHIEF_ENGINEER']
@@ -484,19 +484,31 @@ class HolidayDeleteView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixi
 
 class PersonnelQuickCreateView(QuickCreateView):
     """Backs the "select or add a worker" pickers (Leave, SiteAssignment,
-    Task assignment, Expense/Payroll main-d'œuvre, ...). Only a name is
-    typed at this point — the rest of the profile (type, rate, category,
-    ...) gets filled in later from the worker's own edit screen."""
+    Task assignment, Expense/Payroll main-d'œuvre, Paie du personnel
+    Ingénieurs & Staff, ...). Only a name is typed at this point — the
+    rest of the profile (type, rate, category, monthly salary, ...) gets
+    filled in later from the worker's own edit screen."""
     model = Personnel
 
     def build_instance(self, name, request, cabinet, payload):
         parts = name.split(None, 1)
         first_name, last_name = parts[0], (parts[1] if len(parts) > 1 else '')
+        # SalaryPaymentItemForm's picker (Ingénieurs & Staff tab) sends a
+        # fixed 'payroll_type': 'INGENIEUR' extra param — without honoring
+        # it here, a name typed there would quick-create as the default
+        # Ouvrier and immediately fail SalaryPaymentItem.clean()'s
+        # Ingénieur-only guard. Any other/missing value keeps the model's
+        # own default (Ouvrier), unchanged for every other picker.
+        kwargs = {}
+        payroll_type = payload.get('payroll_type')
+        if payroll_type in PersonnelPayrollType.values:
+            kwargs['payroll_type'] = payroll_type
         return Personnel(
             cabinet=cabinet,
             first_name=first_name,
             last_name=last_name,
             default_daily_rate=Decimal('0.00'),
+            **kwargs,
         )
 
     def display_text(self, instance):

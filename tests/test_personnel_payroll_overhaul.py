@@ -22,6 +22,7 @@ paie", both ultimately booked to a caisse under their own category:
    allocate a Montant per SiteAssignment in one page — Ouvrier rows only —
    capped by the convention's remaining balance.
 """
+import json
 import pytest
 from decimal import Decimal
 from datetime import date
@@ -353,6 +354,48 @@ class TestSalaryPaymentTabRevived:
         qs = response.context['item_form'].fields['personnel'].queryset
         assert ingenieur in qs
         assert ouvrier not in qs
+
+    def test_item_form_offers_quick_create_when_no_ingenieur_exists(self, director_client):
+        """When the cabinet has no Ingénieur/Staff personnel yet, the
+        picker must still offer the same "type a name, click Ajouter"
+        quick-create trick as the other master-data pickers in the app
+        (Expense's personnel field, PayrollListItemForm's Ouvrier picker,
+        ...) — not a dead-end empty dropdown."""
+        director_client.post(reverse('finance:salary_payment_create'), {'notes': ''})
+        spl = SalaryPaymentList.objects.get()
+        response = director_client.get(reverse('finance:salary_payment_detail', kwargs={'pk': spl.pk}))
+        assert response.status_code == 200
+        personnel_field = response.context['item_form'].fields['personnel']
+        assert not personnel_field.queryset.exists()
+        widget_attrs = personnel_field.widget.attrs
+        assert widget_attrs.get('data-create-url') == reverse('personnel:personnel_quick_create')
+        assert '"payroll_type": "INGENIEUR"' in widget_attrs.get('data-create-extra', '')
+
+    def test_quick_created_agent_can_immediately_be_added_to_the_list(self, director_client):
+        """End-to-end: typing a new name through the picker's quick-create
+        endpoint (as the JS does) creates an Ingénieur in the right
+        cabinet, and it can then be added to the draft list right away —
+        full profile details (monthly salary, etc.) get filled in later
+        from the agent's own edit screen."""
+        from personnel.models import Personnel
+        director_client.post(reverse('finance:salary_payment_create'), {'notes': ''})
+        spl = SalaryPaymentList.objects.get()
+
+        create_response = director_client.post(
+            reverse('personnel:personnel_quick_create'),
+            data=json.dumps({'name': 'Nouvel Ingenieur', 'payroll_type': 'INGENIEUR'}),
+            content_type='application/json',
+        )
+        assert create_response.status_code == 200
+        new_id = create_response.json()['id']
+        agent = Personnel.objects.get(pk=new_id)
+        assert agent.payroll_type == PersonnelPayrollType.INGENIEUR
+
+        item_response = director_client.post(reverse('finance:salary_payment_item_create', kwargs={'pk': spl.pk}), {
+            'personnel': agent.pk, 'period': '2026-09', 'amount': '500.00', 'notes': '',
+        })
+        assert item_response.status_code == 302
+        assert SalaryPaymentItem.objects.filter(salary_payment_list=spl, personnel=agent).exists()
 
     def test_ouvrier_rejected_by_item_view(self, director_client, personnel_factory):
         """An Ouvrier's pk posted directly (bypassing the dropdown) is still
