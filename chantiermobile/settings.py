@@ -71,6 +71,12 @@ MIDDLEWARE = [
     # Allauth
     "allauth.account.middleware.AccountMiddleware",
 
+    # Log an idle user out after SESSION_IDLE_TIMEOUT_SECONDS (15 minutes)
+    # with an explicit message — before ForcePasswordChangeMiddleware, so
+    # an expired session is sent to login rather than to the password-
+    # change page first.
+    'core.middleware.SessionIdleTimeoutMiddleware',
+
     # Force a password change for accounts flagged with must_change_password
     'core.middleware.ForcePasswordChangeMiddleware',
 ]
@@ -163,6 +169,32 @@ LANGUAGE_COOKIE_AGE = 31536000  # 1 year
 LANGUAGE_COOKIE_SECURE = not DEBUG  # True in production (HTTPS), False locally
 LANGUAGE_COOKIE_HTTPONLY = False  # False so JavaScript can read it if needed
 LANGUAGE_COOKIE_DOMAIN = None  # None for all domains
+
+# Session idle timeout: 15 minutes of inactivity logs a user out, rather
+# than leaving a construction director's or accountant's session (with
+# access to financial data) open indefinitely on a shared or unattended
+# device. Enforced by core.middleware.SessionIdleTimeoutMiddleware, which
+# stamps a `last_activity` timestamp into the session and ends it with an
+# explicit message once that stamp is older than SESSION_IDLE_TIMEOUT_SECONDS
+# — rather than relying only on Django's own cookie/session-store expiry,
+# which would just silently turn the next request into a fresh anonymous
+# session with no explanation. SESSION_COOKIE_AGE is set to match as a
+# backstop (bounds how long the cookie can ever be valid regardless of the
+# middleware), but SESSION_SAVE_EVERY_REQUEST is deliberately left off:
+# the middleware already marks the session modified (and so re-saved, and
+# the cookie's Max-Age refreshed) on every request where it updates the
+# stamp, and it only updates the stamp once per SESSION_IDLE_TOUCH_INTERVAL_SECONDS
+# rather than on every single request — a request in between just reads
+# the existing stamp to check the elapsed gap. Without that throttle, a
+# user clicking around normally would write to the session table on every
+# request (needless DB load in production, and it roughly tripled this
+# suite's runtime in testing — most tests fire several requests from the
+# same client within the same second). The throttle only costs precision:
+# the recorded idle time can be up to SESSION_IDLE_TOUCH_INTERVAL_SECONDS
+# stale, so the effective timeout is 15–16 minutes rather than exactly 15.
+SESSION_COOKIE_AGE = 60 * 15  # 15 minutes
+SESSION_IDLE_TIMEOUT_SECONDS = 60 * 15  # 15 minutes — used by SessionIdleTimeoutMiddleware
+SESSION_IDLE_TOUCH_INTERVAL_SECONDS = 60  # how often the activity stamp is actually rewritten
 
 # Production security
 if not DEBUG:

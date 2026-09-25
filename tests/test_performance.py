@@ -40,7 +40,14 @@ class TestDatabasePerformance:
             response = director_client.get(reverse('projects:site_list'))
 
         assert response.status_code == 200
-        assert len(ctx.captured_queries) < 20  # No N+1 as row count grows
+        # +3 (BEGIN/UPDATE/COMMIT) the first time an authenticated client's
+        # session is written to — core.middleware.SessionIdleTimeoutMiddleware
+        # stamps `last_activity` into the session on a client's first request
+        # (session idle timeout, 15 minutes of inactivity; see the comment on
+        # SESSION_IDLE_TIMEOUT_SECONDS in settings.py). Django's session
+        # save() always wraps its write in transaction.atomic() regardless of
+        # backend, hence 3 queries rather than 1 for this one write.
+        assert len(ctx.captured_queries) < 22  # No N+1 as row count grows
         assert len(response.context['sites']) == 100
     
     def test_expense_list_with_optimization(self, accountant_client):
@@ -73,8 +80,12 @@ class TestDatabasePerformance:
         # (core.context_processors.notifications_context — a single indexed
         # COUNT of the user's unread Notification rows, run on every page
         # for every authenticated user, item 13 of the Directors/Engineers
-        # audit).
-        assert len(ctx.captured_queries) < 17
+        # audit), plus 3 more (BEGIN/UPDATE/COMMIT) for this client's first
+        # request writing `last_activity` into its session
+        # (core.middleware.SessionIdleTimeoutMiddleware — session idle
+        # timeout, see SESSION_IDLE_TIMEOUT_SECONDS in settings.py; Django's
+        # session save() always wraps its write in transaction.atomic()).
+        assert len(ctx.captured_queries) < 20
     
     def test_dashboard_query_performance(self, director_client, user):
         """Test dashboard query performance."""
