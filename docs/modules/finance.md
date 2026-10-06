@@ -82,6 +82,11 @@ A cash register whose `balance` is a **live aggregate** over its
 
 ### CaisseTransactionCategory
 Filterable tag for a ledger movement (separate from `ExpenseCategory`).
+Seeded names (`finance.0013`) include `"Achat matériaux"` — referenced by
+the `MATERIALS_PURCHASE_CATEGORY_NAME` constant (`finance/models.py`),
+which drives the material line-item section below (matched by name, not
+by a dedicated flag on this model — an admin renaming that row would need
+the constant updated too).
 
 ### CaisseTransaction
 One ledger row (`ENTREE`/`SORTIE`). `clean()` only requires a positive
@@ -99,6 +104,38 @@ by `pay()`/`disburse()`/`transfer_to()`/`CaisseLoan`.
   covers editing only, a conservative scope decision made since deleting
   a transaction already existed as a feature and narrowing it further
   wasn't explicitly requested.
+
+### CaisseTransactionMaterialLine (added 2026-10-06)
+One "description du matériel / quantité / P.U. / prix total" row on a
+`CaisseTransaction` — lets a cash outflow (typically filed under the
+`"Achat matériaux"` category, see above) itemize what was actually
+bought. `transaction` FK (`related_name='material_lines'`),
+`material`/`material_name` catalog-or-free-text XOR (same shape as
+`materials.MaterialRequestItem` — see `clean()`), `quantity`,
+`unit_price`, and a `line_total` property (`quantity * unit_price`,
+mirroring `pricing.DQELine.line_total`).
+- Built via `CaisseTransactionMaterialLineFormSet` (`finance/forms.py`,
+  `inlineformset_factory`, prefix `'material'`, no `min_num` — the
+  section is entirely optional), shown/hidden client-side in
+  `caisse_transaction_form.html` by matching the selected `category`
+  option's text against `MATERIALS_PURCHASE_CATEGORY_NAME` — nothing
+  server-side actually requires that specific category, a line can be
+  saved under any category.
+- `MaterialLineFormSetMixin` (`finance/views.py`), shared by
+  `CaisseTransactionCreateView`/`UpdateView`, mirrors `personnel`'s
+  `ConventionFormSetMixin` (`personnel/views.py`) including its "formset
+  not submitted" guard: a POST missing the section's management-form
+  fields (an older client, a direct API call) saves the transaction with
+  no material-line changes rather than raising.
+- **Financial record only** (confirmed scope) — saving these lines does
+  **not** touch `procurement.StockItem`/`StockMovement`. The chantier's
+  actual stock-on-hand continues to be tracked entirely by the
+  magasinier through the existing stock-movement flow (`procurement`
+  app); see `docs/modules/projects.md`'s "Matériaux" tab section and
+  `docs/modules/procurement.md` for where the technical team already has
+  a daily/weekly/monthly historical view of that separate ledger
+  (`procurement.StockReportView`, unmodified by this feature beyond a new
+  link into it).
 
 ### CaisseLoan
 A cash advance from one `Caisse` to another that must be repaid.

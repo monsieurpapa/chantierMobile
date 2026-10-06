@@ -11,6 +11,12 @@ dated heading cut when a deliberate release point is agreed on.
 ## [Unreleased]
 
 ### Fixed
+- Site detail's "Matériaux" tab read `req.material`/`req.quantity`
+  directly off a `MaterialRequest` — fields that only exist on its
+  related `items`, so every row silently rendered a blank material name
+  and quantity. Now iterates each request's own `items`. Found while
+  wiring in the "Achat matériaux" purchase-lines display below.
+
 - `/user/profile/update/` 500'd for any logged-in user with at least one
   Site visible in their cabinet(s) — reported directly from production.
   The "Projects (Authorized Cabinets)" section's
@@ -77,6 +83,35 @@ dated heading cut when a deliberate release point is agreed on.
 
   See `docs/modules/personnel.md`'s "Chantiers & conventions" section and
   `docs/modules/finance.md` for the full detail.
+
+- Mouvement caisse: itemized "Achat matériaux" purchases.
+  - The caisse mouvement form now has a dynamic line-item section —
+    description du matériel (catalog pick or free text, like
+    `MaterialRequestItem`), quantité, P.U., prix total — shown/hidden by
+    matching the selected catégorie against `"Achat matériaux"`. New
+    model `CaisseTransactionMaterialLine` + `CaisseTransactionMaterialLineFormSet`
+    (`inlineformset_factory`, mirrors `pricing.DQELineFormSet`'s
+    qty/unit_price/line_total shape and `materials.MaterialRequestItemFormSet`'s
+    catalog-or-free-text dynamic-row JS).
+  - These lines now show up on the chantier's "Matériaux" tab
+    (`site_detail.html`), scoped to the mouvement's `site` — alongside a
+    fix for that same tab's pre-existing blank Material/Quantity columns
+    (see Fixed, above).
+  - **Financial record only** (confirmed scope): this does not create or
+    touch `procurement.StockItem`/`StockMovement` — the chantier's actual
+    stock-on-hand keeps being tracked entirely by the magasinier through
+    the existing stock-movement flow. The technical team's
+    daily/weekly/monthly historical view of *that* ledger
+    (`procurement.StockReportView`) already existed and already included
+    ENGINEER/CHIEF_ENGINEER — not changed here beyond adding a "Historique
+    des mouvements de stock" link into it from the Matériaux tab.
+  - Like the Personnel/convention formset above, the new section is
+    additive: a POST missing its management-form fields saves the
+    mouvement with no material-line changes rather than erroring.
+
+  See `docs/modules/finance.md`'s `CaisseTransactionMaterialLine` section
+  and `docs/modules/projects.md`'s "Matériaux" tab note for the full
+  detail.
 
 ## [2026-10-06] — Security fixes from the documentation pass
 

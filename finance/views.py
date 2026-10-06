@@ -34,11 +34,13 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from decimal import Decimal, InvalidOperation
 from .models import (
-    Expense, ExpenseApproval, Budget, Caisse, CaisseTransaction, CaisseTransactionCategory, CaisseLoan,
+    Expense, ExpenseApproval, Budget, Caisse, CaisseTransaction, CaisseTransactionCategory,
+    CaisseTransactionMaterialLine, CaisseLoan, MATERIALS_PURCHASE_CATEGORY_NAME,
     PayrollList, PayrollListItem, SalaryPaymentList, SalaryPaymentItem, Avenant,
 )
 from .forms import (
     ExpenseForm, ExpensePayForm, BudgetForm, CaisseForm, CaisseTransactionForm, CaisseTransferForm,
+    CaisseTransactionMaterialLineFormSet,
     CaisseLoanForm, CaisseLoanRepayForm, PayrollListForm, PayrollListItemForm,
     PayrollDisburseForm, SalaryPaymentListForm, SalaryPaymentItemForm, AvenantForm, AvenantDecisionForm,
 )
@@ -944,7 +946,67 @@ class CaisseDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, 
         return context
 
 
-class CaisseTransactionCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, CreateView):
+class MaterialLineFormSetMixin:
+    """Shared by CaisseTransactionCreateView/UpdateView: builds, validates
+    and saves the "Achat matériaux" line-item inline formset
+    (CaisseTransactionMaterialLineFormSet) alongside the main
+    CaisseTransactionForm. The section is shown client-side only once the
+    selected `category` matches MATERIALS_PURCHASE_CATEGORY_NAME — see
+    caisse_transaction_form.html's extra_js — but nothing here enforces
+    that category server-side: a line can in principle be saved under any
+    category, since the point is to itemize a purchase whatever it's
+    filed under, not to hard-gate the feature to one exact category name.
+
+    Financial record only (confirmed scope, 2026-10-06): saving these
+    lines does not touch procurement.StockItem/StockMovement — the
+    chantier's actual stock-on-hand keeps being tracked by the magasinier
+    through the existing stock-movement flow.
+
+    Same "formset not submitted" guard as personnel's
+    ConventionFormSetMixin (personnel/views.py's docstring explains why
+    this is needed: formset.is_valid()/`.forms` raises a hard
+    ValidationError, not a normal form error, the moment its management
+    form is missing — so a POST that doesn't render this section at all
+    is treated as "no material lines submitted" rather than 500ing)."""
+
+    def _formset_submitted(self):
+        return 'material-TOTAL_FORMS' in self.request.POST
+
+    def _build_formset(self, instance, bind=False):
+        kwargs = {'instance': instance, 'prefix': 'material'}
+        if bind and self._formset_submitted():
+            return CaisseTransactionMaterialLineFormSet(self.request.POST, self.request.FILES, **kwargs)
+        return CaisseTransactionMaterialLineFormSet(**kwargs)
+
+    def get_context_data(self, **kwargs):
+        from materials.models import Material
+        context = super().get_context_data(**kwargs)
+        if 'material_formset' not in context:
+            instance = getattr(self, 'object', None)
+            context['material_formset'] = self._build_formset(instance, bind=(self.request.method == 'POST'))
+        context['materials_purchase_category_name'] = MATERIALS_PURCHASE_CATEGORY_NAME
+        # Catalog options for a brand-new row's "Matériel" <select>, built
+        # client-side the same way request_form.html's materials dropdown
+        # does — the server-rendered formset rows already carry theirs via
+        # CaisseTransactionMaterialLineForm's DynamicSelectWidget.
+        context['materials_catalog'] = Material.objects.all().order_by('name')
+        return context
+
+    def form_valid(self, form):
+        formset_submitted = self._formset_submitted()
+        formset = self._build_formset(getattr(self, 'object', None), bind=True)
+        if formset_submitted and not formset.is_valid():
+            return self.render_to_response(self.get_context_data(form=form, material_formset=formset))
+
+        response = super().form_valid(form)
+
+        if formset_submitted:
+            formset.instance = self.object
+            formset.save()
+        return response
+
+
+class CaisseTransactionCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, MaterialLineFormSetMixin, CreateView):
     """Manual ledger entry (entrée/sortie) on one caisse, scoped via
     get_role_cabinet() to that caisse's own cabinet. allowed_roles =
     CAISSE_MANAGE_ROLES."""
@@ -984,7 +1046,7 @@ class CaisseTransactionCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHea
         return reverse_lazy('finance:caisse_detail', kwargs={'pk': self.caisse.pk})
 
 
-class CaisseTransactionUpdateView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, UpdateView):
+class CaisseTransactionUpdateView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, MaterialLineFormSetMixin, UpdateView):
     """Edits an existing ledger entry. Added 2026-10-06, permission table
     update — there was no edit path for a CaisseTransaction before this.
     CabinetAccessMixin.get_queryset() scopes get_object() to the user's own

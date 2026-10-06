@@ -8,9 +8,11 @@ tighter than the bare model allows.
 import json
 
 from django import forms
+from django.forms import inlineformset_factory
 from django.utils.translation import gettext_lazy as _
 from .models import (
-    Expense, Budget, ExpenseCategory, Caisse, CaisseTransaction, CaisseTransactionCategory, CaisseLoan,
+    Expense, Budget, ExpenseCategory, Caisse, CaisseTransaction, CaisseTransactionCategory,
+    CaisseTransactionMaterialLine, CaisseLoan,
     PayrollList, PayrollListItem, SalaryPaymentList, SalaryPaymentItem, Avenant,
 )
 from chantiermobile.constants import (
@@ -226,6 +228,52 @@ class CaisseTransactionForm(forms.ModelForm):
                 self.fields['phase'].queryset = ProjectPhase.objects.filter(site=site).order_by('start_date')
             else:
                 self.fields['phase'].queryset = ProjectPhase.objects.none()
+
+
+class CaisseTransactionMaterialLineForm(forms.ModelForm):
+    """One "Description du matériel / Quantité / P.U. / Prix total" row —
+    shown on caisse_transaction_form.html only once the mouvement's
+    category is "Achat matériaux" (see that template's extra_js, which
+    matches on MATERIALS_PURCHASE_CATEGORY_NAME). Catalog-or-free-text
+    XOR enforced by CaisseTransactionMaterialLine.clean(), same pattern
+    as materials.MaterialRequestItemForm."""
+    class Meta:
+        model = CaisseTransactionMaterialLine
+        fields = ['material', 'material_name', 'quantity', 'unit_price']
+        widgets = {
+            'material': DynamicSelectWidget(
+                create_url_name='materials:material_quick_create',
+                placeholder=_('Sélectionner ou ajouter un matériel...'),
+            ),
+            'material_name': forms.TextInput(attrs={
+                'class': 'form-control', 'placeholder': _("Ou écrire le nom du matériel..."),
+            }),
+            'quantity': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0.00', 'step': '0.01'}),
+            'unit_price': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0.00', 'step': '0.01'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['material'].required = False
+        self.fields['material_name'].required = False
+
+
+# IMPORTANT: no widgets={...} kwarg here — see MaterialRequestItemFormSet's
+# comment in materials/forms.py for why: inlineformset_factory() would
+# silently replace every widget declared on
+# CaisseTransactionMaterialLineForm.Meta.widgets above with a bare
+# <select>/<input>, including the 'material' field's DynamicSelectWidget
+# quick-create picker. No min_num/validate_min — the section is entirely
+# optional (a mouvement can use the "Achat matériaux" category without
+# itemizing, same as before this feature existed).
+CaisseTransactionMaterialLineFormSet = inlineformset_factory(
+    CaisseTransaction,
+    CaisseTransactionMaterialLine,
+    form=CaisseTransactionMaterialLineForm,
+    fk_name='transaction',
+    extra=1,
+    can_delete=True,
+)
 
 
 class CaisseTransferForm(forms.Form):

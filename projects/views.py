@@ -277,6 +277,20 @@ class SiteDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, De
                 'color': 'warning'
             })
 
+        # Matériaux tab: each request's own line items (fixes a pre-existing
+        # template bug — MaterialRequest has no `material`/`quantity` field
+        # of its own, only via its `items` — see site_detail.html) plus the
+        # "Achat matériaux" caisse purchase lines recorded against this site
+        # (added 2026-10-06; financial record only, see
+        # finance.CaisseTransactionMaterialLine's docstring — this does not
+        # reflect/replace actual stock-on-hand, which stays tracked by the
+        # magasinier through the procurement app).
+        context['material_requests'] = site.material_requests.all().select_related('requested_by').prefetch_related('items__material').order_by('-created_at')
+        from finance.models import CaisseTransactionMaterialLine
+        context['material_purchase_lines'] = CaisseTransactionMaterialLine.objects.filter(
+            transaction__site=site,
+        ).select_related('transaction', 'material').order_by('-transaction__date', '-created_at')
+
         # 3. Material Requests
         for req in site.material_requests.all().select_related('requested_by').prefetch_related('items__material'):
             timeline.append({

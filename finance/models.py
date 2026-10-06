@@ -27,6 +27,15 @@ from chantiermobile.constants import (
 PAYROLL_OUVRIER_CATEGORY_NAME = "Main d'œuvre Ouvriers"
 PAYROLL_INGENIEUR_CATEGORY_NAME = "Salaire Ingénieurs"
 
+# Seeded by finance.0013 — the category whose selection on the "mouvement
+# caisse" form reveals the "Description du matériel / Quantité / P.U. /
+# Prix total" line-item section (CaisseTransactionMaterialLine) added
+# 2026-10-06. Referenced by name (not a dedicated boolean field on
+# CaisseTransactionCategory) to match the PAYROLL_*_CATEGORY_NAME pattern
+# above — an admin renaming this row would need to update this constant
+# too, same caveat as those.
+MATERIALS_PURCHASE_CATEGORY_NAME = 'Achat matériaux'
+
 class Budget(BaseModel):
     """A site's spending envelope for a fixed period. One Budget per Site
     (OneToOneField) — Expense.clean() and .approve() check against it when
@@ -485,6 +494,65 @@ class CaisseTransaction(BaseModel):
         if self.recorded_by_id == user.pk:
             return True
         return self.caisse.responsible_cashier_id == user.pk
+
+
+class CaisseTransactionMaterialLine(BaseModel):
+    """One "description du matériel / quantité / P.U. / prix total" row on
+    an 'Achat matériaux' CaisseTransaction — added 2026-10-06 so a cash
+    outflow for buying materials can itemize what was actually bought,
+    surfaced read-only on the chantier's "Matériaux" tab
+    (`site_detail.html`) via `transaction.site`.
+
+    This is a financial record only (confirmed scope): it does not touch
+    `procurement.StockItem`/`StockMovement` — the chantier's actual
+    stock-on-hand continues to be tracked entirely by the magasinier
+    through the existing stock-movement flow (`procurement` app), whose
+    daily/weekly/monthly historical report (`StockReportView`) already
+    includes the technical team (ENGINEER/CHIEF_ENGINEER) — seeing a
+    purchase recorded here does not by itself add anything to that
+    ledger.
+
+    `material`/`material_name` is the same catalog-or-free-text XOR as
+    `materials.MaterialRequestItem` (see its clean())."""
+    transaction = models.ForeignKey(
+        CaisseTransaction, on_delete=models.CASCADE, related_name='material_lines',
+    )
+    material = models.ForeignKey(
+        'materials.Material', on_delete=models.PROTECT, null=True, blank=True,
+        related_name='caisse_purchase_lines',
+        verbose_name=_('Matériel (catalogue)'),
+    )
+    material_name = models.CharField(
+        max_length=255, blank=True, verbose_name=_('Description du matériel'),
+        help_text=_("À utiliser si le matériel n'est pas dans le catalogue"),
+    )
+    quantity = models.DecimalField(max_digits=10, decimal_places=2, verbose_name=_('Quantité'))
+    unit_price = models.DecimalField(max_digits=14, decimal_places=2, verbose_name=_('P.U.'))
+
+    class Meta:
+        ordering = ['pk']
+
+    def __str__(self):
+        return f"{self.quantity} x {self.display_name} ({self.line_total})"
+
+    @property
+    def display_name(self):
+        return self.material.name if self.material_id else self.material_name
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if not self.material_id and not self.material_name:
+            raise ValidationError(_("Sélectionnez un matériel du catalogue ou indiquez son nom."))
+        if self.material_id and self.material_name:
+            raise ValidationError(_("Choisissez soit un matériel du catalogue, soit un nom libre — pas les deux."))
+        if self.quantity is not None and self.quantity <= 0:
+            raise ValidationError({'quantity': _('La quantité doit être positive.')})
+        if self.unit_price is not None and self.unit_price < 0:
+            raise ValidationError({'unit_price': _('Le prix unitaire ne peut pas être négatif.')})
+
+    @property
+    def line_total(self):
+        return (self.quantity or 0) * (self.unit_price or 0)
 
 
 class CaisseLoan(BaseModel):

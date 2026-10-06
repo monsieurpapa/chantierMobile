@@ -81,6 +81,70 @@
                             {{ form.description }}
                             {% if form.description.errors %}<div class="text-danger fs--2">{{ form.description.errors }}</div>{% endif %}
                         </div>
+
+                        <!-- "Achat matériaux" detail: shown only when the category above is "Achat matériaux" (see extra_js) -->
+                        <div class="mb-3" id="material-lines-section" style="display: none;">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0">{% trans "Détail des matériaux achetés" %}</h6>
+                                <span class="badge bg-info" id="material-line-count">{{ material_formset|length }}</span>
+                            </div>
+
+                            <div id="material-lines-container">
+                                {% for lform in material_formset %}
+                                <div class="material-line p-3 border rounded-3 border-200 mb-2" data-form-index="{{ forloop.counter0 }}">
+                                    {% if lform.instance.pk %}{{ lform.id }}{% endif %}
+                                    <div class="row g-2 align-items-end">
+                                        <div class="col-md-4">
+                                            <label class="form-label fs--1 fw-semibold">{% trans "Matériel" %}</label>
+                                            {{ lform.material }}
+                                            <div class="fs--2 text-500 my-1 text-center">{% trans "ou" %}</div>
+                                            {{ lform.material_name }}
+                                            {% if lform.material.errors %}<div class="text-danger fs--2 mt-1">{{ lform.material.errors }}</div>{% endif %}
+                                            {% if lform.material_name.errors %}<div class="text-danger fs--2 mt-1">{{ lform.material_name.errors }}</div>{% endif %}
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label fs--1 fw-semibold">{% trans "Quantité" %}</label>
+                                            {{ lform.quantity }}
+                                            {% if lform.quantity.errors %}<div class="text-danger fs--2 mt-1">{{ lform.quantity.errors }}</div>{% endif %}
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label fs--1 fw-semibold">{% trans "P.U." %}</label>
+                                            {{ lform.unit_price }}
+                                            {% if lform.unit_price.errors %}<div class="text-danger fs--2 mt-1">{{ lform.unit_price.errors }}</div>{% endif %}
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label fs--1 fw-semibold">{% trans "Prix total" %}</label>
+                                            <div class="form-control-plaintext fw-semibold" id="material-line-total-{{ forloop.counter0 }}">0.00</div>
+                                        </div>
+                                        <div class="col-md-1 d-flex align-items-end">
+                                            {% if not forloop.first %}
+                                            <button type="button" class="btn btn-sm btn-outline-danger remove-material-line" title="{% trans 'Supprimer cette ligne' %}">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {{ lform.DELETE }}
+                                </div>
+                                {% endfor %}
+
+                                {{ material_formset.management_form }}
+
+                                {% if material_formset.non_form_errors %}
+                                <div class="alert alert-danger">{{ material_formset.non_form_errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <button type="button" id="add-material-line-btn" class="btn btn-sm btn-outline-primary mt-2">
+                                <i class="fas fa-plus me-1"></i>{% trans "Ajouter un matériel" %}
+                            </button>
+
+                            <div class="p-3 bg-light rounded-3 mt-3 d-flex justify-content-between align-items-center">
+                                <small class="text-600">{% trans "Total matériaux :" %}</small>
+                                <strong class="text-primary" id="material-total-amount">0.00</strong>
+                            </div>
+                        </div>
+
                         <div class="col-12 d-flex justify-content-end gap-2">
                             <a class="btn btn-falcon-default" href="{{ back_url }}">{% trans "Cancel" %}</a>
                             <button class="btn btn-primary" type="submit">{% trans "Enregistrer" %}</button>
@@ -100,5 +164,179 @@
         if (!el.classList.contains('form-range')) el.classList.add('form-control');
         if (el.tagName === 'SELECT') { el.classList.remove('form-control'); el.classList.add('form-select'); }
     });
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const MATERIALS_CATEGORY_NAME = "{{ materials_purchase_category_name|escapejs }}";
+    const categorySelect = document.getElementById('{{ form.category.id_for_label }}');
+    const section = document.getElementById('material-lines-section');
+    const container = document.getElementById('material-lines-container');
+    const addBtn = document.getElementById('add-material-line-btn');
+    const countBadge = document.getElementById('material-line-count');
+    const totalAmountEl = document.getElementById('material-total-amount');
+
+    let materialSelectOptionsHtml = '<option value="">---------</option>';
+    {% for material in materials_catalog %}
+    materialSelectOptionsHtml += '<option value="{{ material.pk }}">{{ material.name }} ({{ material.unit }})</option>';
+    {% endfor %}
+
+    let materialData = {};
+
+    function fetchMaterialData() {
+        fetch('{% url "materials:materials_data" %}', {
+            method: 'GET', headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        })
+        .then(function (response) { return response.json(); })
+        .then(function (data) {
+            materialData = data;
+            updateAllLineTotals();
+        })
+        .catch(function (err) { console.error('Error fetching material data:', err); });
+    }
+
+    function selectedCategoryName() {
+        if (!categorySelect || categorySelect.selectedIndex < 0) return '';
+        var opt = categorySelect.options[categorySelect.selectedIndex];
+        return opt ? opt.textContent.trim() : '';
+    }
+
+    function toggleMaterialSection() {
+        if (!section) return;
+        section.style.display = (selectedCategoryName() === MATERIALS_CATEGORY_NAME) ? '' : 'none';
+    }
+
+    function calculateLineTotal(line) {
+        var idx = line.dataset.formIndex;
+        var qtyInput = line.querySelector('input[name$="-quantity"]');
+        var priceInput = line.querySelector('input[name$="-unit_price"]');
+        var totalEl = document.getElementById('material-line-total-' + idx);
+        var qty = parseFloat(qtyInput ? qtyInput.value : 0) || 0;
+        var price = parseFloat(priceInput ? priceInput.value : 0) || 0;
+        if (totalEl) totalEl.textContent = (qty * price).toFixed(2);
+    }
+
+    function updateTotalAmount() {
+        var total = 0;
+        container.querySelectorAll('.material-line').forEach(function (line) {
+            var deleteCheckbox = line.querySelector('input[name$="-DELETE"]');
+            if (deleteCheckbox && deleteCheckbox.checked) return;
+            var totalEl = line.querySelector('[id^="material-line-total-"]');
+            total += parseFloat(totalEl ? totalEl.textContent : 0) || 0;
+        });
+        if (totalAmountEl) totalAmountEl.textContent = total.toFixed(2);
+    }
+
+    function updateAllLineTotals() {
+        container.querySelectorAll('.material-line').forEach(function (line) {
+            var select = line.querySelector('select[name$="-material"]');
+            var priceInput = line.querySelector('input[name$="-unit_price"]');
+            if (select && select.value && materialData[select.value] && priceInput && !priceInput.value) {
+                priceInput.value = materialData[select.value].cost_per_unit;
+            }
+            calculateLineTotal(line);
+        });
+        updateTotalAmount();
+    }
+
+    function updateCount() {
+        var active = Array.prototype.filter.call(container.querySelectorAll('.material-line'), function (line) {
+            var cb = line.querySelector('input[name$="-DELETE"]');
+            return !(cb && cb.checked);
+        }).length;
+        if (countBadge) countBadge.textContent = active;
+    }
+
+    function setupLine(line) {
+        var select = line.querySelector('select[name$="-material"]');
+        var qtyInput = line.querySelector('input[name$="-quantity"]');
+        var priceInput = line.querySelector('input[name$="-unit_price"]');
+        var removeBtn = line.querySelector('.remove-material-line');
+
+        if (select) {
+            select.addEventListener('change', function () {
+                if (materialData[select.value] && priceInput && !priceInput.dataset.manuallyEdited) {
+                    priceInput.value = materialData[select.value].cost_per_unit;
+                }
+                calculateLineTotal(line);
+                updateTotalAmount();
+            });
+        }
+        if (qtyInput) qtyInput.addEventListener('input', function () { calculateLineTotal(line); updateTotalAmount(); });
+        if (priceInput) priceInput.addEventListener('input', function () {
+            priceInput.dataset.manuallyEdited = 'true';
+            calculateLineTotal(line);
+            updateTotalAmount();
+        });
+        if (removeBtn) removeBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            var deleteCheckbox = line.querySelector('input[name$="-DELETE"]');
+            if (deleteCheckbox) {
+                deleteCheckbox.checked = true;
+                line.style.display = 'none';
+                updateCount();
+                updateTotalAmount();
+            }
+        });
+        calculateLineTotal(line);
+    }
+
+    if (addBtn) {
+        addBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            var totalFormsInput = document.querySelector('#material-lines-container input[name$="-TOTAL_FORMS"]');
+            var currentCount = parseInt(totalFormsInput.value, 10);
+            var newIndex = currentCount;
+
+            var newLine = document.createElement('div');
+            newLine.className = 'material-line p-3 border rounded-3 border-200 mb-2';
+            newLine.dataset.formIndex = newIndex;
+            newLine.innerHTML = `
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label fs--1 fw-semibold">{% trans "Matériel" %}</label>
+                        <select name="material-${newIndex}-material" id="id_material-${newIndex}-material" class="form-select"
+                            data-control="select2" data-create-url="{% url 'materials:material_quick_create' %}"
+                            data-placeholder="{% trans 'Sélectionner ou ajouter un matériel...' %}">${materialSelectOptionsHtml}</select>
+                        <div class="fs--2 text-500 my-1 text-center">{% trans "ou" %}</div>
+                        <input type="text" name="material-${newIndex}-material_name" class="form-control" placeholder="{% trans 'Ou écrire le nom du matériel...' %}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fs--1 fw-semibold">{% trans "Quantité" %}</label>
+                        <input type="number" step="0.01" name="material-${newIndex}-quantity" class="form-control" placeholder="0.00">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fs--1 fw-semibold">{% trans "P.U." %}</label>
+                        <input type="number" step="0.01" name="material-${newIndex}-unit_price" class="form-control" placeholder="0.00">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fs--1 fw-semibold">{% trans "Prix total" %}</label>
+                        <div class="form-control-plaintext fw-semibold" id="material-line-total-${newIndex}">0.00</div>
+                    </div>
+                    <div class="col-md-1 d-flex align-items-end">
+                        <button type="button" class="btn btn-sm btn-outline-danger remove-material-line" title="{% trans 'Supprimer cette ligne' %}">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                </div>
+                <input type="hidden" name="material-${newIndex}-id" id="id_material-${newIndex}-id">
+                <input type="hidden" name="material-${newIndex}-DELETE" id="id_material-${newIndex}-DELETE">
+            `;
+
+            container.appendChild(newLine);
+            totalFormsInput.value = currentCount + 1;
+            setupLine(newLine);
+            updateCount();
+            if (window.initDynamicSelects) { window.initDynamicSelects(newLine); }
+        });
+    }
+
+    if (categorySelect) {
+        categorySelect.addEventListener('change', toggleMaterialSection);
+        toggleMaterialSection();
+    }
+    container.querySelectorAll('.material-line').forEach(function (line) { setupLine(line); });
+    fetchMaterialData();
+});
 </script>
 {% endblock %}

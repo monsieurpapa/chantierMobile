@@ -118,6 +118,22 @@ cabinet member (`CabinetAccessMixin`); `SiteCreateView`/`SiteUpdateView`
 gated to DIRECTOR/DIRECTEUR_TECHNIQUE/DIRECTEUR_GENERAL/CHIEF_ENGINEER;
 `SiteDeleteView` narrowed to director-tier only (no CHIEF_ENGINEER).
 
+`SiteDetailView`'s "Matériaux" tab (`site_detail.html`) shows two
+separate things, both scoped to this site: each `MaterialRequest`'s own
+line items (`req.items.all` — fixed 2026-10-06; it previously read
+`req.material`/`req.quantity` directly, fields that don't exist on
+`MaterialRequest` itself, only on its related `items`, so every row
+silently rendered blank), and, since 2026-10-06, the
+`finance.CaisseTransactionMaterialLine` rows recorded against an "Achat
+matériaux" mouvement on this site (`context['material_purchase_lines']`,
+built in `SiteDetailView.get_context_data()`) — see
+`docs/modules/finance.md`'s `CaisseTransactionMaterialLine` section. This
+second list is a financial record only; it is **not** the site's actual
+stock-on-hand. A "Historique des mouvements de stock" link next to the
+tab's header (gated the same as `procurement.STOCK_REPORT_ROLES`) sends
+the technical team to the existing `procurement:stock_report`, pre-filtered
+to this site, for that.
+
 **Phases** — `ProjectPhaseCreateView`/`UpdateView`/`DeleteView` gated to
 DIRECTOR/DIRECTEUR_TECHNIQUE/DIRECTEUR_GENERAL/CHIEF_ENGINEER, scoped to the
 phase's own site's cabinet via `get_role_cabinet()`. `phase_close` (function

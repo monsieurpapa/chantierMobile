@@ -1,5 +1,5 @@
 {% extends 'falcon_base.html' %}
-{% load static i18n rbac_tags %}
+{% load static i18n rbac_tags humanize %}
 
 {% block title %}{{ site.name }} - {% trans "Site Details" %} - ChantierMobile{% endblock %}
 
@@ -366,13 +366,21 @@
                                     aria-labelledby="materials-tab">
                                     <div class="d-flex justify-content-between align-items-center mb-4">
                                         <h5 class="mb-0"><i class="fas fa-boxes text-warning me-2"></i>{% trans "Material Logistics" %}</h5>
-                                        <a class="btn btn-warning btn-sm"
-                                            href="{% url 'materials:request_create' %}?site={{ site.id }}">
-                                            <span class="fas fa-plus me-1"></span>{% trans "New Request" %}
-                                        </a>
+                                        <div class="d-flex gap-2">
+                                            {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,CHIEF_ENGINEER,ENGINEER,MAGASINIER' %}
+                                            <a class="btn btn-outline-secondary btn-sm"
+                                                href="{% url 'procurement:stock_report' %}?site={{ site.id }}">
+                                                <span class="fas fa-clock-rotate-left me-1"></span>{% trans "Historique des mouvements de stock" %}
+                                            </a>
+                                            {% endif %}
+                                            <a class="btn btn-warning btn-sm"
+                                                href="{% url 'materials:request_create' %}?site={{ site.id }}">
+                                                <span class="fas fa-plus me-1"></span>{% trans "New Request" %}
+                                            </a>
+                                        </div>
                                     </div>
                                     
-                                    {% if site.material_requests.all %}
+                                    {% if material_requests %}
                                     <div class="table-responsive scrollbar">
                                         <table class="table table-hover table-sm mb-0">
                                             <thead class="bg-light">
@@ -384,24 +392,22 @@
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {% for req in site.material_requests.all %}
+                                                {% for req in material_requests %}
+                                                {% for item in req.items.all %}
                                                 <tr class="align-middle">
                                                     <td>
                                                         <a href="{% url 'materials:request_detail' pk=req.pk %}" class="text-decoration-none">
                                                             <div class="d-flex align-items-center gap-2">
                                                                 <i class="fas fa-box text-secondary"></i>
-                                                                <div>
-                                                                    <h6 class="mb-0 fw-semibold">{{ req.material.name }}</h6>
-                                                                    <p class="fs--2 mb-0 text-600">{{ req.material.category }}</p>
-                                                                </div>
+                                                                <h6 class="mb-0 fw-semibold">{{ item.display_name }}</h6>
                                                             </div>
                                                         </a>
                                                     </td>
                                                     <td class="text-center fw-semibold">
-                                                        <span class="badge bg-light text-dark">{{ req.quantity }} {{ req.material.unit }}</span>
+                                                        <span class="badge bg-light text-dark">{{ item.quantity }}{% if item.material %} {{ item.material.unit }}{% endif %}</span>
                                                     </td>
                                                     <td class="text-center">
-                                                        <span class="badge rounded-pill 
+                                                        <span class="badge rounded-pill
                                                         {% if req.status == 'APPROVED' %}bg-success
                                                         {% elif req.status == 'DELIVERED' %}bg-info
                                                         {% elif req.status == 'REJECTED' %}bg-danger
@@ -412,6 +418,7 @@
                                                     <td class="text-end text-600 fs--1">{{ req.created_at|date:"M d, Y" }}</td>
                                                 </tr>
                                                 {% endfor %}
+                                                {% endfor %}
                                             </tbody>
                                         </table>
                                     </div>
@@ -421,6 +428,45 @@
                                         <div>
                                             <strong>{% trans "No material requests" %}</strong>
                                             <p class="fs--1 mb-0 text-600">{% trans "Create your first material request to track supplies" %}</p>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+
+                                    <!-- Achats de matériaux (mouvements de caisse "Achat matériaux") -->
+                                    <div class="d-flex justify-content-between align-items-center mt-4 mb-3">
+                                        <h5 class="mb-0"><i class="fas fa-cash-register text-success me-2"></i>{% trans "Achats de matériaux (caisse)" %}</h5>
+                                    </div>
+                                    {% if material_purchase_lines %}
+                                    <div class="table-responsive scrollbar">
+                                        <table class="table table-hover table-sm mb-0">
+                                            <thead class="bg-light">
+                                                <tr>
+                                                    <th class="fs--1">{% trans "Description" %}</th>
+                                                    <th class="text-center fs--1">{% trans "Quantité" %}</th>
+                                                    <th class="text-end fs--1">{% trans "P.U." %}</th>
+                                                    <th class="text-end fs--1">{% trans "Prix total" %}</th>
+                                                    <th class="text-end fs--1">{% trans "Date" %}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for line in material_purchase_lines %}
+                                                <tr class="align-middle">
+                                                    <td>{{ line.display_name }}</td>
+                                                    <td class="text-center">{{ line.quantity }}</td>
+                                                    <td class="text-end">{{ CURRENCY_SYMBOL }}{{ line.unit_price|floatformat:2|intcomma }}</td>
+                                                    <td class="text-end fw-semibold">{{ CURRENCY_SYMBOL }}{{ line.line_total|floatformat:2|intcomma }}</td>
+                                                    <td class="text-end text-600 fs--1">{{ line.transaction.date|date:"M d, Y" }}</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    {% else %}
+                                    <div class="alert alert-light d-flex align-items-center p-3 mb-0" role="alert">
+                                        <i class="fas fa-cash-register text-muted me-2" style="font-size: 1.5rem;"></i>
+                                        <div>
+                                            <strong>{% trans "Aucun achat de matériaux enregistré en caisse" %}</strong>
+                                            <p class="fs--1 mb-0 text-600">{% trans "Les lignes détaillées d'un mouvement « Achat matériaux » sur ce chantier apparaîtront ici." %}</p>
                                         </div>
                                     </div>
                                     {% endif %}
