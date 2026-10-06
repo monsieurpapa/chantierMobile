@@ -207,6 +207,40 @@ class TestMaterialRequestTwoStageApproval:
         with_item.refresh_from_db()
         assert with_item.status == MaterialRequestStatus.REJECTED
 
+    def test_cannot_validate_own_material_request(self, with_item):
+        """Regression test for the self-administration guard: with_item's
+        requester is `user` (the material_request fixture) — `user`
+        cannot be the one who validates it, mirroring Avenant.approve()
+        and Expense.approve() (see docs/security.md)."""
+        with pytest.raises(ValidationError):
+            with_item.magasinier_validate(with_item.requested_by)
+        with_item.refresh_from_db()
+        assert with_item.status == MaterialRequestStatus.PENDING
+
+    def test_cannot_authorize_own_material_request(self, with_item, magasinier_user):
+        with_item.magasinier_validate(magasinier_user)
+        with pytest.raises(ValidationError):
+            with_item.authorize(with_item.requested_by)
+        with_item.refresh_from_db()
+        assert with_item.status == MaterialRequestStatus.VALIDATED
+
+    def test_cannot_reject_own_material_request(self, with_item):
+        with pytest.raises(ValidationError):
+            with_item.reject(with_item.requested_by)
+        with_item.refresh_from_db()
+        assert with_item.status == MaterialRequestStatus.PENDING
+
+    def test_superuser_can_authorize_own_material_request(self, site, superuser):
+        """The self-administration guard is explicitly bypassable by a
+        superuser, same as Avenant.approve()/Expense.approve()."""
+        material = Material.objects.create(name='Gravier', unit='m3')
+        req = MaterialRequest.objects.create(site=site, requested_by=superuser, status=MaterialRequestStatus.PENDING)
+        MaterialRequestItem.objects.create(request=req, material=material, quantity=Decimal('1.00'))
+        req.magasinier_validate(superuser)
+        req.authorize(superuser)
+        req.refresh_from_db()
+        assert req.status == MaterialRequestStatus.APPROVED
+
     def test_magasinier_can_validate_via_view(self, magasinier_client, with_item):
         response = magasinier_client.post(reverse('materials:request_validate', kwargs={'pk': with_item.pk}), {
             'action': 'validate',
@@ -239,17 +273,53 @@ class TestMaterialRequestTwoStageApproval:
         with_item.refresh_from_db()
         assert with_item.status == MaterialRequestStatus.VALIDATED
 
-    def test_director_can_do_both_stages(self, director_client, with_item):
+    def test_director_can_do_both_stages(self, director_client, site, django_user_model):
+        """director_client is logged in as `user`, who must NOT be the
+        request's own requester here — otherwise this would trip the
+        self-administration guard (see materials/models.py) instead of
+        exercising the role-overlap behavior this test is actually
+        about, i.e. one director-tier person validating *and then*
+        authorizing someone *else's* request."""
+        requester = django_user_model.objects.create_user(username='two_stage_requester', password='testpass123')
+        req = MaterialRequest.objects.create(site=site, requested_by=requester, status=MaterialRequestStatus.PENDING)
+        material = Material.objects.create(name='Sable', unit='m3')
+        MaterialRequestItem.objects.create(request=req, material=material, quantity=Decimal('5.00'))
+
+        response = director_client.post(reverse('materials:request_validate', kwargs={'pk': req.pk}), {
+            'action': 'validate',
+        })
+        assert response.status_code == 302
+        req.refresh_from_db()
+        assert req.status == MaterialRequestStatus.VALIDATED
+
+        response = director_client.post(reverse('materials:request_approve', kwargs={'pk': req.pk}), {
+            'action': 'approve',
+        })
+        assert response.status_code == 302
+        req.refresh_from_db()
+        assert req.status == MaterialRequestStatus.APPROVED
+
+    def test_requester_cannot_validate_or_authorize_own_request(self, director_client, with_item, magasinier_user):
+        """Regression test for the self-administration guard: with_item's
+        requester is `user` (the material_request fixture), the same
+        person director_client is logged in as — so director_client
+        must not be able to validate its own request through the view.
+        Once a different person (magasinier_user) validates it, the
+        same requester must still be blocked from giving the final
+        authorization either."""
         response = director_client.post(reverse('materials:request_validate', kwargs={'pk': with_item.pk}), {
             'action': 'validate',
         })
         assert response.status_code == 302
+        with_item.refresh_from_db()
+        assert with_item.status == MaterialRequestStatus.PENDING
+
+        with_item.magasinier_validate(magasinier_user)
         with_item.refresh_from_db()
         assert with_item.status == MaterialRequestStatus.VALIDATED
 
         response = director_client.post(reverse('materials:request_approve', kwargs={'pk': with_item.pk}), {
             'action': 'approve',
         })
-        assert response.status_code == 302
         with_item.refresh_from_db()
-        assert with_item.status == MaterialRequestStatus.APPROVED
+        assert with_item.status == MaterialRequestStatus.VALIDATED

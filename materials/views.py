@@ -26,18 +26,15 @@ from chantiermobile.constants import UserRoles, FINAL_AUTHORIZATION_ROLES, Mater
 # single-cabinet setups without a dedicated DT/DG role) gives the final
 # authorization.
 #
-# NOTE: unlike Expense.approve() (which explicitly blocks requester ==
-# approver), neither magasinier_validate() nor authorize() on
-# MaterialRequest checks the actor against mat_request.requested_by, and
-# MaterialRequestCreateView lets *any* logged-in user (not just a
-# WORKER-tier one) raise a request. DIRECTOR/DIRECTEUR_TECHNIQUE/
-# DIRECTEUR_GENERAL sit in both MAGASINIER_VALIDATE_ROLES and
-# FINAL_AUTHORIZATION_ROLES, so a single user holding one of those roles
-# (very plausible in a small single-cabinet setup, where DIRECTOR is
-# meant to cover exactly this) can request, validate, AND give final
-# authorization on their own request — which also auto-creates an
-# already-APPROVED Expense (see MaterialRequest.authorize()) with no
-# second person ever having reviewed it.
+# FIXED 2026-10-06: magasinier_validate()/authorize()/reject() on
+# MaterialRequest now block the actor from acting on their own request
+# (requested_by == user), mirroring Expense.approve() — see
+# materials/models.py's module docstring and docs/security.md.
+# MaterialRequestCreateView still lets *any* logged-in user (not just a
+# WORKER-tier one) raise a request, and DIRECTOR/DIRECTEUR_TECHNIQUE/
+# DIRECTEUR_GENERAL still sit in both MAGASINIER_VALIDATE_ROLES and
+# FINAL_AUTHORIZATION_ROLES — so one director-tier user can still both
+# validate *and* authorize a request, as long as it isn't their own.
 MAGASINIER_VALIDATE_ROLES = ['MAGASINIER', 'DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL']
 
 # Who besides the original requester may edit a still-pending request.

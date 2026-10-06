@@ -10,6 +10,16 @@ the magasinier validates it first (PENDING -> VALIDATED), then a
 director-tier role (FINAL_AUTHORIZATION_ROLES) gives the final
 authorization (VALIDATED -> APPROVED), which is also the point where the
 matching finance.Expense gets created and linked back via `expense`.
+
+FIXED 2026-10-06: magasinier_validate()/authorize()/reject() now block
+the original requester from being the one who validates, authorizes, or
+rejects their own request (every role except a superuser), mirroring
+Expense.approve()'s self-approval guard — see docs/security.md. This
+does not remove the role overlap in materials/views.py
+(MAGASINIER_VALIDATE_ROLES and FINAL_AUTHORIZATION_ROLES both include
+DIRECTOR/DIRECTEUR_TECHNIQUE/DIRECTEUR_GENERAL, so one director-tier
+user can still validate *and then* authorize someone else's request) —
+only a request's own requester is blocked from deciding on it.
 """
 from django.db import models
 from django.utils.translation import gettext_lazy as _
@@ -64,9 +74,17 @@ class MaterialRequest(BaseModel):
     def magasinier_validate(self, user, notes=''):
         """First stage of the two-step approval (état de besoin): the
         magasinier checks the request against what's actually needed/
-        available before it goes up for final authorization."""
+        available before it goes up for final authorization. Blocks the
+        original requester from validating their own request (every role
+        except a superuser) — mirrors Expense.approve()/Avenant.approve();
+        see the module docstring and docs/security.md's "self-approval"
+        note. This alone does not fully separate the two stages when the
+        same user also holds FINAL_AUTHORIZATION_ROLES: see authorize()
+        below, which carries its own guard for that step."""
         from django.core.exceptions import ValidationError
         from core.models import StatusChangeLog
+        if not user.is_superuser and self.requested_by_id == user.pk:
+            raise ValidationError(_("Vous ne pouvez pas valider votre propre demande de matériaux."))
         if self.status != MaterialRequestStatus.PENDING:
             raise ValidationError(_('Seule une demande en attente peut être validée par le magasinier.'))
         old_status = self.status
@@ -85,10 +103,23 @@ class MaterialRequest(BaseModel):
         two-stage état de besoin approval IS the approval — it only remains
         for the cashier to pay it) and links it back via `self.expense`, so
         the promised amount is no longer a number that only lives on this
-        request."""
+        request.
+
+        Also blocks the original requester from giving this final
+        authorization themselves (every role except a superuser) — same
+        guard shape as magasinier_validate() above. Note this blocks the
+        *requester* specifically, not "the same person who validated it":
+        a MAGASINIER who validates and a DIRECTOR who then authorizes are
+        still two different people even if neither is the requester, and
+        that's unaffected by this guard — the gap it closes is a
+        requester approving their own request at either stage, not
+        requiring the two stages to be done by different non-requester
+        people."""
         from django.db import transaction
         from django.core.exceptions import ValidationError
         from core.models import StatusChangeLog
+        if not user.is_superuser and self.requested_by_id == user.pk:
+            raise ValidationError(_("Vous ne pouvez pas autoriser votre propre demande de matériaux."))
         if self.status != MaterialRequestStatus.VALIDATED:
             raise ValidationError(_("Seule une demande validée par le magasinier peut être autorisée."))
         with transaction.atomic():
@@ -138,9 +169,15 @@ class MaterialRequest(BaseModel):
         self.save(update_fields=['expense', 'updated_at'])
 
     def reject(self, user, notes=''):
-        """Either stage may reject the request."""
+        """Either stage may reject the request. Blocks the requester from
+        rejecting their own request too, for symmetry with
+        magasinier_validate()/authorize() — rejecting your own request
+        has no financial consequence, but it's still a review step that
+        should involve a second person."""
         from django.core.exceptions import ValidationError
         from core.models import StatusChangeLog
+        if not user.is_superuser and self.requested_by_id == user.pk:
+            raise ValidationError(_("Vous ne pouvez pas rejeter votre propre demande de matériaux."))
         if self.status not in (MaterialRequestStatus.PENDING, MaterialRequestStatus.VALIDATED):
             raise ValidationError(_('Cette demande ne peut plus être rejetée.'))
         old_status = self.status
