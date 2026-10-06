@@ -430,29 +430,55 @@ class ProjectPhaseDeleteView(LoginRequiredMixin, RoleRequiredMixin, CabinetAcces
 
 class SiteProgressCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, CreateView):
     """Files a progress report (%, description, optional photos) against
-    a phase. Director-tier, CHIEF_ENGINEER or ENGINEER (allowed_roles).
+    a phase. Director-tier, CHIEF_ENGINEER or ENGINEER (allowed_roles),
+    scoped to the phase's own cabinet via get_role_cabinet() and the
+    cabinet-filtered `self.phase` lookup below.
 
-    GOTCHA: unlike ProjectPhaseCreateView/PlanningSubmissionCreateView,
-    this view does not override get_role_cabinet() and is not mixed with
-    CabinetAccessMixin — RoleRequiredMixin's check here is "does this
-    user hold one of allowed_roles in *any* cabinet", not "...in this
-    phase's own cabinet". Combined with `self.phase` being looked up
-    with a bare get_object_or_404(ProjectPhase, ...) (no cabinet filter),
-    a user who holds e.g. ENGINEER in their own Cabinet A can file a
-    progress report — with attached photos — against a phase belonging
-    to an unrelated Cabinet B, provided they know/guess that phase's
-    unique_id (a UUID in the URL). This looks like a tenant-isolation
-    gap rather than an intentional cross-cabinet allowance; compare with
-    the scoped siblings above before changing it.
-    """
+    FIXED 2026-10-06: previously `self.phase` was looked up with a bare
+    get_object_or_404(ProjectPhase, ...) (no cabinet filter) and
+    get_role_cabinet() was not overridden, so RoleRequiredMixin's check
+    was "does this user hold one of allowed_roles in *any* cabinet" —
+    letting a user who holds e.g. ENGINEER in their own Cabinet A file a
+    progress report, with attached photos, against a phase belonging to
+    an unrelated Cabinet B, provided they knew/guessed that phase's
+    unique_id (a UUID in the URL). Now mirrors the already-scoped
+    ProjectPhaseCreateView/PlanningSubmissionCreateView siblings above:
+    the phase lookup is cabinet-scoped (superuser sees their session-
+    active cabinet or all; a regular user sees only their own
+    cabinet(s)) and get_role_cabinet() ties the role check to that same
+    phase's cabinet. See docs/security.md."""
     model = SiteProgress
     form_class = SiteProgressForm
     template_name = 'projects/progress_form.html'
     allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER', 'ENGINEER']
 
+    @staticmethod
+    def _phase_queryset(request):
+        """Cabinet-scoped ProjectPhase lookup, mirroring
+        ProjectPhaseCreateView._site_queryset above — phase_id is a raw
+        URL kwarg, not a form field Django can validate against a
+        scoped queryset. Unauthenticated requests fall through unscoped
+        so LoginRequiredMixin's redirect (triggered by super().dispatch()
+        right after) still fires instead of a 404."""
+        user = request.user
+        if not user.is_authenticated:
+            return ProjectPhase.objects.all()
+        if user.is_superuser:
+            active_cabinet = get_session_cabinet(request)
+            return ProjectPhase.objects.filter(site__cabinet=active_cabinet) if active_cabinet else ProjectPhase.objects.all()
+        cabinets = user.cabinet_roles.values_list('cabinet', flat=True)
+        return ProjectPhase.objects.filter(site__cabinet__in=cabinets)
+
     def dispatch(self, request, *args, **kwargs):
-        self.phase = get_object_or_404(ProjectPhase, unique_id=self.kwargs.get('phase_id'))
+        self.phase = get_object_or_404(self._phase_queryset(request), unique_id=self.kwargs.get('phase_id'))
         return super().dispatch(request, *args, **kwargs)
+
+    def get_role_cabinet(self):
+        # Scopes the DIRECTOR/CHIEF_ENGINEER/ENGINEER check to the
+        # phase's own cabinet, not just "has this role somewhere" — an
+        # Engineer in Cabinet A has no authority to report progress on
+        # Cabinet B's phases.
+        return self.phase.site.cabinet
 
     def get_header_title(self):
         return _("Rapport d'avancement : %(name)s") % {'name': self.phase.name}

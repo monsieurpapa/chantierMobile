@@ -107,6 +107,32 @@ class TestSiteProgressCreateWithPhotos:
         report = SiteProgress.objects.get(phase=phase)
         assert response.url == reverse('projects:progress_detail', kwargs={'unique_id': report.unique_id})
 
+    def test_engineer_cannot_report_progress_on_another_cabinets_phase(self, phase, django_user_model):
+        """Regression test for the cabinet-scoping fix on
+        SiteProgressCreateView: `phase` belongs to the default
+        `cabinet` fixture. `outsider` holds ENGINEER only in an
+        unrelated cabinet — before the fix, RoleRequiredMixin's check
+        was "has ENGINEER *somewhere*", so this POST would have
+        succeeded; now the cabinet-scoped phase lookup 404s first."""
+        from accounts.models import Cabinet, UserCabinetRole
+        from chantiermobile.constants import UserRoles, ApprovalStatus
+        from django.test import Client
+
+        other_cabinet = Cabinet.objects.create(name='Autre Cabinet')
+        outsider = django_user_model.objects.create_user(username='outsider_eng', password='testpass123')
+        UserCabinetRole.objects.create(user=outsider, cabinet=other_cabinet, role=UserRoles.ENGINEER, status=ApprovalStatus.APPROVED)
+
+        client = Client()
+        client.login(username='outsider_eng', password='testpass123')
+        url = reverse('projects:progress_create', kwargs={'phase_id': phase.unique_id})
+        response = client.post(url, {
+            'report_date': date.today().isoformat(),
+            'percentage_complete': '50',
+            'description': 'Tentative inter-cabinet.',
+        })
+        assert response.status_code == 404
+        assert not SiteProgress.objects.filter(phase=phase).exists()
+
 
 @pytest.mark.django_db
 class TestProgressDetailView:
