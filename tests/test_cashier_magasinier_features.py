@@ -14,7 +14,7 @@ from django.urls import reverse
 
 from chantiermobile.constants import (
     UserRoles, ApprovalStatus, ExpenseNature, ExpenseStatus, CaisseType, StockMovementType,
-    PurchaseOrderStatus, InvoiceStatus, DevisStatus, PaymentMethod,
+    PurchaseOrderStatus, InvoiceStatus, DevisStatus, PaymentMethod, CaisseTransactionType,
 )
 
 
@@ -550,12 +550,13 @@ class TestCashierPermissionTableUpdate:
     """Regression tests for the 2026-10-06 permission-table update: a
     CASHIER can now decaisser a liste de paie (already worked before this
     change — PAYROLL_DISBURSE_ROLES already included CASHIER), does not
-    see the "Tâches" nav item, and can register/modify Personnel. The
-    caisse-transaction self-administration restriction ("only them to
-    modify a mouvement in the caisse they manage or created") is tracked
-    separately pending a product decision on what "manage" means, since
-    there is no per-caisse manager/responsible-cashier field in the data
-    model yet — see docs/security.md."""
+    see the "Tâches" nav item, can register/modify Personnel, and can
+    only modify a CaisseTransaction in a caisse they are the designated
+    responsible_cashier for, or one they personally recorded (see
+    TestCaisseTransactionSelfAdministration below for that last part —
+    Caisse.responsible_cashier and CaisseTransaction.can_be_modified_by()
+    in finance/models.py, CaisseTransactionUpdateView in
+    finance/views.py)."""
 
     # Checked against personnel_list rather than home: home.html also
     # renders a "Tâches en retard" dashboard stat card (a separate widget,
@@ -629,3 +630,119 @@ class TestCashierPermissionTableUpdate:
         assert response.status_code == 302
         pl.refresh_from_db()
         assert pl.status == PayrollListStatus.PAYEE
+
+
+@pytest.mark.django_db
+class TestCaisseTransactionSelfAdministration:
+    """Regression tests for item 4 of the 2026-10-06 permission-table
+    update: only a caisse's designated Caisse.responsible_cashier, or
+    whoever recorded a given CaisseTransaction (recorded_by), may edit it
+    through CaisseTransactionUpdateView — bypassable only by is_superuser,
+    the same operator-trust boundary used by every other self-
+    administration guard in the app. The user clarified that an
+    ACCOUNTANT can also be set as a caisse's responsible_cashier, since a
+    limited-staff cabinet often has the accountant act as cashier too —
+    see CAISSE_RESPONSIBLE_CASHIER_ROLES in finance/views.py."""
+
+    @pytest.fixture
+    def caisse_with_responsible(self, db, cabinet, cashier_user):
+        from finance.models import Caisse
+        return Caisse.objects.create(cabinet=cabinet, name='Caisse Chantier A', responsible_cashier=cashier_user)
+
+    @staticmethod
+    def _post_data(**overrides):
+        data = {
+            'transaction_type': CaisseTransactionType.SORTIE,
+            'amount': '50.00',
+            'date': date.today().isoformat(),
+            'description': 'Updated',
+        }
+        data.update(overrides)
+        return data
+
+    def test_responsible_cashier_can_modify_transaction_recorded_by_someone_else(
+        self, cashier_client, caisse_with_responsible, django_user_model, cabinet,
+    ):
+        from accounts.models import UserCabinetRole
+        other = django_user_model.objects.create_user(username='other_director', password='testpass123')
+        UserCabinetRole.objects.create(user=other, cabinet=cabinet, role=UserRoles.DIRECTOR, status=ApprovalStatus.APPROVED)
+        tx = caisse_with_responsible.record(CaisseTransactionType.ENTREE, Decimal('1000.00'), other)
+
+        response = cashier_client.post(
+            reverse('finance:caisse_transaction_update', kwargs={'pk': tx.pk}),
+            self._post_data(description='Modifié par le caissier responsable'),
+        )
+        assert response.status_code == 302, response.context['form'].errors if response.status_code == 200 else None
+        tx.refresh_from_db()
+        assert tx.description == 'Modifié par le caissier responsable'
+
+    def test_creator_can_modify_own_transaction_even_without_being_responsible(
+        self, client, django_user_model, cabinet,
+    ):
+        from finance.models import Caisse
+        from accounts.models import UserCabinetRole
+        caisse = Caisse.objects.create(cabinet=cabinet, name='Caisse B')  # no responsible_cashier set
+        creator = django_user_model.objects.create_user(username='creator_cashier', password='testpass123')
+        UserCabinetRole.objects.create(user=creator, cabinet=cabinet, role=UserRoles.CASHIER, status=ApprovalStatus.APPROVED)
+        tx = caisse.record(CaisseTransactionType.ENTREE, Decimal('200.00'), creator)
+
+        client.login(username='creator_cashier', password='testpass123')
+        response = client.post(
+            reverse('finance:caisse_transaction_update', kwargs={'pk': tx.pk}),
+            self._post_data(description='Modifié par son auteur'),
+        )
+        assert response.status_code == 302, response.context['form'].errors if response.status_code == 200 else None
+        tx.refresh_from_db()
+        assert tx.description == 'Modifié par son auteur'
+
+    def test_unrelated_cashier_cannot_modify_transaction(self, client, django_user_model, cabinet, caisse_with_responsible):
+        from accounts.models import UserCabinetRole
+        third_party = django_user_model.objects.create_user(username='third_party_director', password='testpass123')
+        UserCabinetRole.objects.create(user=third_party, cabinet=cabinet, role=UserRoles.DIRECTOR, status=ApprovalStatus.APPROVED)
+        tx = caisse_with_responsible.record(CaisseTransactionType.ENTREE, Decimal('300.00'), third_party)
+
+        other_cashier = django_user_model.objects.create_user(username='other_cashier', password='testpass123')
+        UserCabinetRole.objects.create(user=other_cashier, cabinet=cabinet, role=UserRoles.CASHIER, status=ApprovalStatus.APPROVED)
+        client.login(username='other_cashier', password='testpass123')
+
+        response = client.post(
+            reverse('finance:caisse_transaction_update', kwargs={'pk': tx.pk}),
+            self._post_data(description='Tentative non autorisée'),
+        )
+        assert response.status_code == 302  # bounced back with an error message, not a hard 403
+        tx.refresh_from_db()
+        assert tx.description != 'Tentative non autorisée'
+
+    def test_accountant_can_be_responsible_cashier_and_modify_transaction(self, client, django_user_model, cabinet):
+        from finance.models import Caisse
+        from accounts.models import UserCabinetRole
+        accountant = django_user_model.objects.create_user(username='accountant_cashier', password='testpass123')
+        UserCabinetRole.objects.create(user=accountant, cabinet=cabinet, role=UserRoles.ACCOUNTANT, status=ApprovalStatus.APPROVED)
+        caisse = Caisse.objects.create(cabinet=cabinet, name='Caisse C', responsible_cashier=accountant)
+
+        other = django_user_model.objects.create_user(username='other_recorder', password='testpass123')
+        UserCabinetRole.objects.create(user=other, cabinet=cabinet, role=UserRoles.DIRECTOR, status=ApprovalStatus.APPROVED)
+        tx = caisse.record(CaisseTransactionType.ENTREE, Decimal('400.00'), other)
+
+        client.login(username='accountant_cashier', password='testpass123')
+        response = client.post(
+            reverse('finance:caisse_transaction_update', kwargs={'pk': tx.pk}),
+            self._post_data(description='Modifié par le comptable-caissier'),
+        )
+        assert response.status_code == 302, response.context['form'].errors if response.status_code == 200 else None
+        tx.refresh_from_db()
+        assert tx.description == 'Modifié par le comptable-caissier'
+
+    def test_superuser_can_modify_any_transaction(self, client, django_user_model, caisse_with_responsible):
+        third_party = django_user_model.objects.create_user(username='someone_else', password='testpass123')
+        tx = caisse_with_responsible.record(CaisseTransactionType.ENTREE, Decimal('500.00'), third_party)
+        django_user_model.objects.create_superuser(username='su_finance', email='su_finance@example.com', password='testpass123')
+
+        client.login(username='su_finance', password='testpass123')
+        response = client.post(
+            reverse('finance:caisse_transaction_update', kwargs={'pk': tx.pk}),
+            self._post_data(description='Modifié par le superutilisateur'),
+        )
+        assert response.status_code == 302, response.context['form'].errors if response.status_code == 200 else None
+        tx.refresh_from_db()
+        assert tx.description == 'Modifié par le superutilisateur'

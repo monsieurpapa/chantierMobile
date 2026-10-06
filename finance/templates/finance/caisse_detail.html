@@ -163,6 +163,9 @@
                                     </td>
                                     {% if can_manage %}
                                     <td>
+                                        {% if row.can_modify %}
+                                        <a href="{% url 'finance:caisse_transaction_update' pk=row.tx.pk %}" class="btn btn-link btn-sm p-0 me-2" aria-label="{% trans 'Modifier ce mouvement' %}" title="{% trans 'Modifier ce mouvement' %}"><span class="fas fa-pen"></span></a>
+                                        {% endif %}
                                         <form method="post" action="{% url 'finance:caisse_transaction_delete' pk=row.tx.pk %}" class="d-inline" onsubmit="return confirm('{% trans "Supprimer ce mouvement ?" %}');">
                                             {% csrf_token %}
                                             <button type="submit" class="btn btn-link text-danger btn-sm p-0" aria-label="{% trans 'Supprimer ce mouvement' %}" title="{% trans 'Supprimer ce mouvement' %}"><span class="fas fa-trash"></span></button>

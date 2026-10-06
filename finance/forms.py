@@ -150,21 +150,29 @@ class BudgetForm(forms.ModelForm):
 
 class CaisseForm(forms.ModelForm):
     """Caisse create/edit form. `site` is optional (a caisse need not be
-    tied to a single chantier)."""
+    tied to a single chantier). `responsible_cashier` (added 2026-10-06,
+    permission table update) is optional too — a caisse with none set
+    simply has no per-caisse modification restriction beyond
+    CAISSE_MANAGE_ROLES/recorded_by; its queryset is narrowed to CASHIER/
+    ACCOUNTANT holders of the owning cabinet by the view (CaisseCreateView/
+    CaisseUpdateView.get_form()), since the form itself isn't handed the
+    cabinet at construction time."""
     class Meta:
         model = Caisse
-        fields = ['name', 'caisse_type', 'site', 'is_administrative', 'manual_site_entry']
+        fields = ['name', 'caisse_type', 'site', 'is_administrative', 'manual_site_entry', 'responsible_cashier']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('Ex: Caisse principale')}),
             'caisse_type': forms.Select(attrs={'class': 'form-select'}),
             'site': forms.Select(attrs={'class': 'form-select'}),
             'is_administrative': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'manual_site_entry': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'responsible_cashier': forms.Select(attrs={'class': 'form-select'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['site'].required = False
+        self.fields['responsible_cashier'].required = False
 
 
 class CaisseTransactionForm(forms.ModelForm):

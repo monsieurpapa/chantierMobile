@@ -29,6 +29,7 @@ urlpatterns = [
     path('caisses/<int:pk>/', views.CaisseDetailView.as_view(), name='caisse_detail'),
     path('caisses/<int:pk>/edit/', views.CaisseUpdateView.as_view(), name='caisse_update'),
     path('caisses/<int:pk>/transactions/add/', views.CaisseTransactionCreateView.as_view(), name='caisse_transaction_create'),
+    path('caisses/transactions/<int:pk>/edit/', views.CaisseTransactionUpdateView.as_view(), name='caisse_transaction_update'),
     path('caisses/transactions/<int:pk>/delete/', views.CaisseTransactionDeleteView.as_view(), name='caisse_transaction_delete'),
     path('caisses/<int:pk>/transfer/', views.caisse_transfer, name='caisse_transfer'),
     path('caisses/report/', views.CaisseReportView.as_view(), name='caisse_report'),

@@ -62,6 +62,17 @@ A cash register whose `balance` is a **live aggregate** over its
   (the caisse other caisses remit to daily), `manual_site_entry` (serves
   external clients — e.g. a bétonnière rental caisse — via a free-text
   chantier/client label instead of an internal `Site` link).
+- `responsible_cashier` (added 2026-10-06, permission table update) —
+  optional FK to the `User` designated as this caisse's own cashier,
+  settable from `CaisseCreateView`/`CaisseUpdateView` (`CaisseForm`),
+  narrowed in those views to users holding an APPROVED `CASHIER` or
+  `ACCOUNTANT` role in the caisse's cabinet
+  (`CAISSE_RESPONSIBLE_CASHIER_ROLES`/`_responsible_cashier_candidates()`
+  in `finance/views.py`) — `ACCOUNTANT` is included because a
+  limited-staff cabinet often has its accountant act as cashier too. A
+  caisse left without one simply has no per-caisse modification
+  restriction beyond `CAISSE_MANAGE_ROLES`/`recorded_by` — see
+  `CaisseTransaction.can_be_modified_by()` below and docs/security.md.
 - `record(transaction_type, amount, user, ...)` — the low-level entry
   point used by every other money-moving method below. Uses
   `.objects.create()` directly and does **not** call `full_clean()` — see
@@ -77,6 +88,17 @@ One ledger row (`ENTREE`/`SORTIE`). `clean()` only requires a positive
 `amount` — and only actually runs on the manual-entry path (a
 `CaisseTransactionForm`/admin save), not on the `Caisse.record()` path used
 by `pay()`/`disburse()`/`transfer_to()`/`CaisseLoan`.
+- `can_be_modified_by(user)` (added 2026-10-06, permission table update) —
+  `True` for `is_superuser`, for the caisse's `responsible_cashier`, or
+  for whoever recorded this specific row (`recorded_by`); `False`
+  otherwise. Backs `CaisseTransactionUpdateView`'s object-level check
+  (narrower than the `CAISSE_MANAGE_ROLES` role gate it also sits behind —
+  see Views & permissions). Deliberately **not** wired into
+  `CaisseTransactionDeleteView`, which keeps its original cabinet-wide
+  `CAISSE_MANAGE_ROLES` gating unchanged — this restriction currently
+  covers editing only, a conservative scope decision made since deleting
+  a transaction already existed as a feature and narrowing it further
+  wasn't explicitly requested.
 
 ### CaisseLoan
 A cash advance from one `Caisse` to another that must be repaid.
@@ -199,10 +221,28 @@ CHIEF_ENGINEER) see every budget in the cabinet; a plain `ENGINEER`
 ACCOUNTANT (ENGINEER/CHIEF_ENGINEER can view, not edit).
 
 **Caisses** — `CaisseListView`/`CaisseDetailView` open to any authenticated
-user in the cabinet; create/update/manual-transaction-entry/delete/
-transfer/loan-create/loan-repay all gated to `CAISSE_MANAGE_ROLES`
-(DIRECTOR tier + ACCOUNTANT + CASHIER + FINANCIER). `CaisseReportView` +
-`caisse_report_pdf` same role set.
+user in the cabinet; manual-transaction-entry/delete/transfer/
+loan-create/loan-repay all gated to `CAISSE_MANAGE_ROLES` (DIRECTOR tier +
+ACCOUNTANT + CASHIER + FINANCIER); `CaisseCreateView`/`CaisseUpdateView`
+themselves use a narrower inline list (DIRECTOR tier + ACCOUNTANT only —
+not the full `CAISSE_MANAGE_ROLES`). `CaisseReportView` + `caisse_report_pdf`
+use the `CAISSE_MANAGE_ROLES` set.
+- **`CaisseTransactionUpdateView`** (added 2026-10-06, permission table
+  update — there was no edit path for a mouvement before this) sits
+  behind two layers: `CAISSE_MANAGE_ROLES` scoped to the transaction's own
+  caisse's cabinet (tighter than `CaisseTransactionDeleteView`'s
+  cabinet-unscoped role check), **and** `CaisseTransaction.can_be_modified_by()`
+  — only the caisse's `responsible_cashier`, or whoever recorded that
+  specific transaction, may actually save a change (superuser bypasses
+  both). A denied attempt is bounced back to `caisse_detail` with an
+  error message, mirroring `MaterialRequestUpdateView`'s
+  `dispatch()`-based self-administration guard (`materials/views.py`) —
+  not a hard 403. The "Modifier" action only appears per-row in
+  `caisse_detail.html` when `can_be_modified_by()` is true for the
+  viewer; "Supprimer" is unaffected and still shows for any
+  `CAISSE_MANAGE_ROLES` holder, since the delete view's own gating was
+  deliberately left unchanged (see the CaisseTransaction model note
+  above).
 
 **Payroll (both tracks)** — list/detail views gated to `PAYROLL_VIEW_ROLES`
 (union of prepare+disburse roles — payroll amounts are sensitive, unlike

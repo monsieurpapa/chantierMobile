@@ -61,6 +61,28 @@ EXPENSE_REPORT_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 
 # Roles that may manage caisses and record ledger movements.
 CAISSE_MANAGE_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'ACCOUNTANT', 'CASHIER', 'FINANCIER']
 
+# Roles eligible to be set as a Caisse's responsible_cashier (added
+# 2026-10-06, permission table update). ACCOUNTANT is included alongside
+# CASHIER because in a limited-staff cabinet the accountant often acts as
+# the cashier too — see Caisse.responsible_cashier and
+# CaisseTransaction.can_be_modified_by().
+CAISSE_RESPONSIBLE_CASHIER_ROLES = ['CASHIER', 'ACCOUNTANT']
+
+
+def _responsible_cashier_candidates(cabinet):
+    """Users eligible to be picked as a Caisse's responsible_cashier: an
+    APPROVED CASHIER or ACCOUNTANT in the given cabinet. Returns an empty
+    queryset (not an error) when cabinet is falsy, matching the "fail
+    closed" pattern used elsewhere for cabinet-scoped querysets."""
+    from accounts.models import UserCabinetRole
+    from django.contrib.auth import get_user_model
+    if not cabinet:
+        return get_user_model().objects.none()
+    user_ids = UserCabinetRole.objects.filter(
+        cabinet=cabinet, status=ApprovalStatus.APPROVED, role__in=CAISSE_RESPONSIBLE_CASHIER_ROLES,
+    ).values_list('user_id', flat=True)
+    return get_user_model().objects.filter(pk__in=user_ids)
+
 # "L'archi" — whoever prepares/submits a payroll list from worker payment requests.
 PAYROLL_PREPARE_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER', 'ENGINEER']
 # Whoever disburses a submitted payroll list from a caisse.
@@ -800,6 +822,7 @@ class CaisseCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin
         form = super().get_form(form_class)
         cabinet = self.get_user_cabinet()
         form.fields['site'].queryset = Site.objects.filter(cabinet=cabinet) if cabinet else Site.objects.none()
+        form.fields['responsible_cashier'].queryset = _responsible_cashier_candidates(cabinet)
         return form
 
     def form_valid(self, form):
@@ -828,6 +851,7 @@ class CaisseUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
         form.fields['site'].queryset = Site.objects.filter(cabinet=self.object.cabinet)
+        form.fields['responsible_cashier'].queryset = _responsible_cashier_candidates(self.object.cabinet)
         return form
 
     def form_valid(self, form):
@@ -892,7 +916,17 @@ class CaisseDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, 
                 continue
             if selected_category and str(tx.category_id) != selected_category:
                 continue
-            rows.append({'tx': tx, 'running_balance': running})
+            rows.append({
+                'tx': tx,
+                'running_balance': running,
+                # Added 2026-10-06, permission table update: per-row,
+                # narrower than the `can_manage` column-level gate below —
+                # a CAISSE_MANAGE_ROLES holder can still see the column,
+                # but editing/deleting this specific row is further
+                # restricted to the caisse's responsible_cashier or
+                # whoever recorded it (or a superuser).
+                'can_modify': tx.can_be_modified_by(self.request.user),
+            })
 
         context['ledger_rows'] = rows
         context['opening_balance'] = (opening['entrees'] or 0) - (opening['sorties'] or 0)
@@ -944,6 +978,62 @@ class CaisseTransactionCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHea
         form.instance.caisse = self.caisse
         form.instance.recorded_by = self.request.user
         messages.success(self.request, _("Mouvement enregistré."))
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse_lazy('finance:caisse_detail', kwargs={'pk': self.caisse.pk})
+
+
+class CaisseTransactionUpdateView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, UpdateView):
+    """Edits an existing ledger entry. Added 2026-10-06, permission table
+    update — there was no edit path for a CaisseTransaction before this.
+    CabinetAccessMixin.get_queryset() scopes get_object() to the user's own
+    cabinet(s) (tenant isolation), but editing a mouvement within that
+    cabinet additionally requires both of:
+    - holding a CAISSE_MANAGE_ROLES role *in the caisse's own cabinet*
+      specifically (mirrors CaisseTransactionCreateView's scoping, tighter
+      than CaisseTransactionDeleteView's cabinet-unscoped role check); and
+    - CaisseTransaction.can_be_modified_by(user): being this caisse's
+      Caisse.responsible_cashier, or the user who originally recorded this
+      specific transaction (recorded_by) — bypassable only by is_superuser.
+    This mirrors the dispatch()-based self-administration guard used by
+    MaterialRequestUpdateView (materials/views.py)."""
+    model = CaisseTransaction
+    form_class = CaisseTransactionForm
+    template_name = 'finance/caisse_transaction_form.html'
+    cabinet_lookup_field = 'caisse__cabinet'
+    header_title = _("Modifier le mouvement")
+
+    def dispatch(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        self.caisse = self.object.caisse
+        if not can_act_for_cabinet(request, self.caisse.cabinet, CAISSE_MANAGE_ROLES):
+            messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+            return redirect('finance:caisse_detail', pk=self.caisse.pk)
+        if not self.object.can_be_modified_by(request.user):
+            messages.error(
+                request,
+                _("Seul le caissier responsable de cette caisse, ou la personne qui a enregistré "
+                  "ce mouvement, peut le modifier."),
+            )
+            return redirect('finance:caisse_detail', pk=self.caisse.pk)
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_back_url(self):
+        return str(reverse_lazy('finance:caisse_detail', kwargs={'pk': self.caisse.pk}))
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['caisse'] = self.caisse
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['caisse'] = self.caisse
+        return context
+
+    def form_valid(self, form):
+        messages.success(self.request, _("Mouvement mis à jour."))
         return super().form_valid(form)
 
     def get_success_url(self):

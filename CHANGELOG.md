@@ -10,7 +10,30 @@ dated heading cut when a deliberate release point is agreed on.
 
 ## [Unreleased]
 
-Nothing pending.
+### Added
+- CASHIER permission-table update, requested for the role's day-to-day
+  cabinet work:
+  - Hid the "Tâches" sidebar nav item from CASHIER (superusers still see
+    it regardless of role).
+  - CASHIER can now register and edit Personnel profiles
+    (`personnel/views.py`'s `PersonnelCreateView`/`UpdateView`), without
+    extending to the rest of `HR_ADMIN_ROLES` territory (Leave/Holiday
+    decisions, Skills).
+  - Added `Caisse.responsible_cashier` (new field + migration) and
+    `CaisseTransactionUpdateView` (no edit path existed before this): only
+    a caisse's designated `responsible_cashier`, or whoever recorded a
+    given mouvement, may now edit it — bypassable only by `is_superuser`,
+    matching the app's existing self-administration pattern. An
+    `ACCOUNTANT` can be set as `responsible_cashier` too, for a
+    limited-staff cabinet where the accountant also acts as cashier.
+    `CaisseTransactionDeleteView`'s existing cabinet-wide
+    `CAISSE_MANAGE_ROLES` gating was deliberately left unchanged (not
+    requested) — see `docs/modules/finance.md`.
+  - Already true before this change, no code needed: CASHIER could already
+    disburse a "liste de paie" (`PAYROLL_DISBURSE_ROLES`).
+
+  See `docs/security.md`'s permission matrix and `docs/modules/personnel.md`/
+  `docs/modules/finance.md` for the full detail.
 
 ## [2026-10-06] — Security fixes from the documentation pass
 

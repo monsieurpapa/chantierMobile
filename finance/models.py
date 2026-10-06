@@ -336,6 +336,16 @@ class Caisse(BaseModel):
             "au lieu d'imposer un chantier interne."
         ),
     )
+    responsible_cashier = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='managed_caisses', verbose_name=_('Caissier responsable'),
+        help_text=_(
+            "Le caissier (ou le comptable faisant office de caissier, dans un cabinet à effectif "
+            "réduit) responsable de cette caisse — added 2026-10-06, permission table update. "
+            "Avec recorded_by sur CaisseTransaction, détermine qui peut modifier un mouvement "
+            "existant : la personne responsable de la caisse, ou celle qui l'a enregistré."
+        ),
+    )
 
     class Meta:
         ordering = ['-is_administrative', 'name']
@@ -457,6 +467,24 @@ class CaisseTransaction(BaseModel):
         from django.core.exceptions import ValidationError
         if self.amount is not None and self.amount <= 0:
             raise ValidationError({'amount': _('Le montant doit être positif.')})
+
+    def can_be_modified_by(self, user):
+        """Added 2026-10-06, permission table update: editing or deleting
+        an existing mouvement is restricted to the caisse's own
+        responsible_cashier (Caisse.responsible_cashier — a CASHIER, or an
+        ACCOUNTANT standing in as cashier in a limited-staff cabinet) or
+        whoever recorded this specific transaction (recorded_by) —
+        bypassable only by is_superuser, the same operator-trust boundary
+        used by every other self-administration guard in the app (see
+        docs/security.md's Tenant isolation section). This is narrower
+        than CAISSE_MANAGE_ROLES, which still gates *creating* a mouvement
+        and viewing the caisse cabinet-wide; this method only governs
+        changing one that already exists."""
+        if user.is_superuser:
+            return True
+        if self.recorded_by_id == user.pk:
+            return True
+        return self.caisse.responsible_cashier_id == user.pk
 
 
 class CaisseLoan(BaseModel):

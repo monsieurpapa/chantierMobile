@@ -73,6 +73,7 @@ see each app's `docs/modules/<app>.md` for the complete, current list per view).
 | Pricing library / DQE | `DIRECTOR`, `DIRECTEUR_TECHNIQUE`, `DIRECTEUR_GENERAL`, `CHIEF_ENGINEER` |
 | Register/edit a Personnel profile | `DIRECTOR`, `DIRECTEUR_TECHNIQUE`, `DIRECTEUR_GENERAL`, `CHIEF_ENGINEER`, `CASHIER` (added 2026-10-06, permission table update) |
 | Other Personnel / HR administration | `DIRECTOR`, `DIRECTEUR_TECHNIQUE`, `DIRECTEUR_GENERAL`, `CHIEF_ENGINEER` (some narrowed to director-tier only) |
+| Edit an existing caisse mouvement | `CAISSE_MANAGE_ROLES` in the caisse's own cabinet, **and** only the caisse's `responsible_cashier` or whoever recorded that specific transaction (`CaisseTransaction.can_be_modified_by()`, bypassable only by `is_superuser`) — added 2026-10-06, permission table update; see `docs/modules/finance.md` |
 
 Two enforcement layers exist, and a new view needs the one matching how it's built:
 
@@ -112,6 +113,19 @@ requester, bypassable only by `is_superuser` (accepted as an operator-trust
 boundary, not a gap — see `SECURITY.md`'s known limitations):
 `Expense.approve()`, `Avenant.approve()`/`reject()`, and `MaterialRequest`'s
 two-stage `magasinier_validate()`/`authorize()`/`reject()`.
+
+`CaisseTransaction.can_be_modified_by()` (added 2026-10-06, permission table
+update) follows the same operator-trust shape but a different boundary: instead
+of "not the requester," it's "the caisse's own `responsible_cashier`, or
+whoever recorded this specific transaction" — narrower than cabinet-wide
+`CAISSE_MANAGE_ROLES`, so even a DIRECTOR or FINANCIER who passes that role
+check can be turned away from editing one specific caisse's mouvements if
+they're neither its `responsible_cashier` nor its recorder. Only
+bypassable by `is_superuser`, same as the others. Enforced at the view layer
+(`CaisseTransactionUpdateView.get_object()`/`dispatch()` in `finance/views.py`,
+mirroring `MaterialRequestUpdateView`'s pattern) rather than in a model
+`clean()`, since this governs *which* edits are allowed at all, not whether a
+given edit's data is valid.
 
 ## State integrity
 
