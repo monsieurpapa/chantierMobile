@@ -10,6 +10,23 @@ dated heading cut when a deliberate release point is agreed on.
 
 ## [Unreleased]
 
+### Fixed
+- `/user/profile/update/` 500'd for any logged-in user with at least one
+  Site visible in their cabinet(s) — reported directly from production.
+  The "Projects (Authorized Cabinets)" section's
+  `{% url 'projects:site_detail' pk=site.id %}` link passed `pk`, but
+  that URL pattern takes a `unique_id` (UUID) kwarg, so it raised
+  `NoReverseMatch` on every render once the `sites` queryset was
+  non-empty — invisible in the one existing smoke test, which used a
+  bare user with no cabinet data at all, so that section's `{% for %}`
+  loop never actually ran. Fixed in `templates/account/user_profile_update.html`
+  to pass `unique_id=site.unique_id`, matching every other template's
+  `projects:site_detail` link. New regression test
+  (`test_profile_update_renders_with_a_visible_site` in
+  `tests/test_auth_templates_render.py`) attaches a real cabinet role and
+  Site before loading the page, confirmed to reproduce the exact
+  `NoReverseMatch` on the pre-fix template and pass after.
+
 ### Added
 - CASHIER permission-table update, requested for the role's day-to-day
   cabinet work:

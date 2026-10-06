@@ -221,7 +221,7 @@
                                     {% for site in sites %}
                                     <tr>
                                         <td class="align-middle white-space-nowrap">
-                                            <a href="{% url 'projects:site_detail' pk=site.id %}" class="fw-semi-bold">
+                                            <a href="{% url 'projects:site_detail' unique_id=site.unique_id %}" class="fw-semi-bold">
                                                 {{ site.name }}
                                             </a>
                                         </td>

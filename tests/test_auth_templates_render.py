@@ -86,3 +86,28 @@ class TestAuthPagesRender:
         client.force_login(user)
         r = client.get(reverse('accounts:profile_update'))
         assert r.status_code == 200
+
+    def test_profile_update_renders_with_a_visible_site(
+        self, client, django_user_model, cabinet, site,
+    ):
+        # Regression test: the bare `user` fixture above has no cabinet
+        # role and no related Site/MaterialRequest/Expense/Invoice, so it
+        # never actually renders the "Projects (Authorized Cabinets)"
+        # section of this template -- which is exactly what was broken.
+        # UserProfileUpdateView.get_context_data()'s `sites` queryset
+        # feeds a {% url 'projects:site_detail' pk=site.id %} link, but
+        # that URL pattern takes a `unique_id` (UUID) kwarg, not `pk` --
+        # a NoReverseMatch that crashed this page with a 500 for any real
+        # user who has at least one project in their cabinet. Fixed by
+        # passing unique_id=site.unique_id instead, matching every other
+        # template's projects:site_detail link.
+        from accounts.models import UserCabinetRole
+        from chantiermobile.constants import UserRoles, ApprovalStatus
+
+        u = django_user_model.objects.create_user(username='profile_with_site', password='testpass123')
+        UserCabinetRole.objects.create(user=u, cabinet=cabinet, role=UserRoles.DIRECTOR, status=ApprovalStatus.APPROVED)
+
+        client.force_login(u)
+        r = client.get(reverse('accounts:profile_update'))
+        assert r.status_code == 200
+        assert reverse('projects:site_detail', kwargs={'unique_id': site.unique_id}).encode() in r.content
