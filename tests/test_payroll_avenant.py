@@ -119,14 +119,15 @@ class TestPayrollListViews:
 
 @pytest.mark.django_db
 class TestAvenant:
-    def test_approve_extends_budget_and_client_debt(self, site, user):
+    def test_approve_extends_budget_and_client_debt(self, site, user, django_user_model):
         from finance.models import Budget
         from revenue.models import Contract
+        decider = django_user_model.objects.create_user(username='avenant_decider1', password='testpass123')
         budget = Budget.objects.create(site=site, total_amount=Decimal('10000'), start_date=date.today(), end_date=date(date.today().year + 1, 1, 1))
         contract = Contract.objects.create(site=site, client_name='Client X', total_value=Decimal('20000'), signed_date=date.today())
 
         avenant = Avenant.objects.create(site=site, amount=Decimal('2000'), justification='Travaux additionnels', requested_by=user)
-        avenant.approve(user, notes='OK')
+        avenant.approve(decider, notes='OK')
 
         budget.refresh_from_db()
         contract.refresh_from_db()
@@ -134,20 +135,47 @@ class TestAvenant:
         assert contract.avenant_debt == Decimal('2000')
         assert contract.client_balance == Decimal('22000')  # 20000 + 2000 avenant - 0 paid
 
-    def test_reject_leaves_budget_untouched(self, site, user):
+    def test_reject_leaves_budget_untouched(self, site, user, django_user_model):
         from finance.models import Budget
+        decider = django_user_model.objects.create_user(username='avenant_decider2', password='testpass123')
         budget = Budget.objects.create(site=site, total_amount=Decimal('10000'), start_date=date.today(), end_date=date(date.today().year + 1, 1, 1))
         avenant = Avenant.objects.create(site=site, amount=Decimal('2000'), justification='x', requested_by=user)
-        avenant.reject(user, notes='Non justifié')
+        avenant.reject(decider, notes='Non justifié')
         budget.refresh_from_db()
         assert budget.total_amount == Decimal('10000')
         assert avenant.status == AvenantStatus.REJECTED
 
-    def test_cannot_decide_twice(self, site, user):
+    def test_cannot_decide_twice(self, site, user, django_user_model):
+        decider = django_user_model.objects.create_user(username='avenant_decider3', password='testpass123')
         avenant = Avenant.objects.create(site=site, amount=Decimal('500'), justification='x', requested_by=user)
-        avenant.approve(user)
+        avenant.approve(decider)
+        with pytest.raises(ValidationError):
+            avenant.approve(decider)
+
+    def test_cannot_approve_own_avenant(self, site, user):
+        """Regression test for the self-approval fix: the requester
+        cannot be the one who decides their own avenant, mirroring
+        Expense.approve()'s guard (see docs/security.md)."""
+        avenant = Avenant.objects.create(site=site, amount=Decimal('500'), justification='x', requested_by=user)
         with pytest.raises(ValidationError):
             avenant.approve(user)
+        avenant.refresh_from_db()
+        assert avenant.status == AvenantStatus.PENDING
+
+    def test_cannot_reject_own_avenant(self, site, user):
+        avenant = Avenant.objects.create(site=site, amount=Decimal('500'), justification='x', requested_by=user)
+        with pytest.raises(ValidationError):
+            avenant.reject(user)
+        avenant.refresh_from_db()
+        assert avenant.status == AvenantStatus.PENDING
+
+    def test_superuser_can_approve_own_avenant(self, site, superuser):
+        """The self-approval guard is explicitly bypassable by a
+        superuser, same as Expense.approve()."""
+        avenant = Avenant.objects.create(site=site, amount=Decimal('500'), justification='x', requested_by=superuser)
+        avenant.approve(superuser)
+        avenant.refresh_from_db()
+        assert avenant.status == AvenantStatus.APPROVED
 
     def test_expense_beyond_original_budget_allowed_after_avenant(self, site, expense_category, user, django_user_model):
         """The whole point of an avenant: once approved, a bigger expense
@@ -157,7 +185,7 @@ class TestAvenant:
         approver = django_user_model.objects.create_user(username='approver1', password='testpass123')
         budget = Budget.objects.create(site=site, total_amount=Decimal('1000'), start_date=date.today(), end_date=date(date.today().year + 1, 1, 1))
         avenant = Avenant.objects.create(site=site, amount=Decimal('500'), justification='x', requested_by=user)
-        avenant.approve(user)
+        avenant.approve(approver)
 
         expense = Expense.objects.create(
             site=site, requester=user, category=expense_category,
@@ -169,12 +197,24 @@ class TestAvenant:
 
 @pytest.mark.django_db
 class TestAvenantViews:
-    def test_director_can_approve_avenant(self, director_client, site, user):
-        avenant = Avenant.objects.create(site=site, amount=Decimal('300'), justification='x', requested_by=user)
+    def test_director_can_approve_avenant(self, director_client, site, user, django_user_model):
+        requester = django_user_model.objects.create_user(username='avenant_requester1', password='testpass123')
+        avenant = Avenant.objects.create(site=site, amount=Decimal('300'), justification='x', requested_by=requester)
         response = director_client.post(reverse('finance:avenant_approve', kwargs={'pk': avenant.pk}), {'notes': 'ok'})
         avenant.refresh_from_db()
         assert response.status_code == 302
         assert avenant.status == AvenantStatus.APPROVED
+
+    def test_director_cannot_approve_their_own_avenant_via_view(self, director_client, site, user):
+        """View-level regression test: director_client is logged in as
+        `user`, so an avenant it itself requested must not be approvable
+        through the same view — Avenant.approve()'s guard should surface
+        as an error message, not a silent/successful approval."""
+        avenant = Avenant.objects.create(site=site, amount=Decimal('300'), justification='x', requested_by=user)
+        response = director_client.post(reverse('finance:avenant_approve', kwargs={'pk': avenant.pk}), {'notes': 'ok'})
+        avenant.refresh_from_db()
+        assert response.status_code == 302
+        assert avenant.status == AvenantStatus.PENDING
 
     def test_engineer_cannot_approve_avenant(self, engineer_client, site, user):
         avenant = Avenant.objects.create(site=site, amount=Decimal('300'), justification='x', requested_by=user)

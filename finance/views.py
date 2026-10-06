@@ -1805,9 +1805,12 @@ class AvenantCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, 
     """Submits a new PENDING Avenant. allowed_roles = AVENANT_REQUEST_ROLES
     (DIRECTOR, DIRECTEUR_TECHNIQUE, DIRECTEUR_GENERAL, CHIEF_ENGINEER,
     ACCOUNTANT) — note the three director-tier roles here are the same
-    roles that can later decide the request via _avenant_decide() below, so
-    a director can both request and approve/reject their own avenant (see
-    Avenant's class docstring in finance/models.py)."""
+    roles that can later decide the request via _avenant_decide() below.
+    A director can still request an avenant that another director-tier
+    user (or any other FINAL_AUTHORIZATION_ROLES holder) later decides —
+    Avenant.approve()/reject() just block that *same* user from deciding
+    their *own* request (see Avenant's class docstring in
+    finance/models.py)."""
     model = Avenant
     form_class = AvenantForm
     template_name = 'finance/avenant_form.html'
@@ -1845,11 +1848,11 @@ class AvenantCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, 
 
 def _avenant_decide(request, pk, approve):
     """Shared implementation of avenant_approve/avenant_reject: PENDING ->
-    APPROVED or PENDING -> REJECTED (Avenant.approve()/reject()).
-    Role-gated to FINAL_AUTHORIZATION_ROLES in the avenant's site's
-    cabinet via can_act_for_cabinet() — which, unlike approve_expense
-    above, does not exclude the avenant's own requester (see the gotcha on
-    Avenant in finance/models.py)."""
+    APPROVED or PENDING -> REJECTED (Avenant.approve()/reject(), which
+    themselves now block the requester from deciding their own avenant —
+    see Avenant's class docstring in finance/models.py). Role-gated to
+    FINAL_AUTHORIZATION_ROLES in the avenant's site's cabinet via
+    can_act_for_cabinet()."""
     avenant = get_object_or_404(Avenant, pk=pk)
     if request.method != 'POST':
         return redirect('finance:avenant_list')
@@ -1881,17 +1884,19 @@ def _avenant_decide(request, pk, approve):
     return redirect('finance:avenant_list')
 
 
+@login_required
 def avenant_approve(request, pk):
-    """Thin wrapper around _avenant_decide(approve=True). Note: unlike
-    almost every other action view in this module, this one has no
-    @login_required decorator — it still fails closed for an anonymous
-    request because can_act_for_cabinet() returns False for an
-    unauthenticated user, but it's an inconsistency worth fixing rather
-    than relying on, since it's easy to lose for a future refactor."""
+    """Thin wrapper around _avenant_decide(approve=True). FIXED
+    2026-10-06: added the @login_required decorator every other action
+    view in this module already had — it previously still failed closed
+    for an anonymous request (can_act_for_cabinet() returns False for an
+    unauthenticated user), but relying on that instead of declaring it
+    explicitly was an inconsistency waiting to bite a future refactor."""
     return _avenant_decide(request, pk, approve=True)
 
 
+@login_required
 def avenant_reject(request, pk):
-    """Thin wrapper around _avenant_decide(approve=False). Same missing
-    @login_required note as avenant_approve above."""
+    """Thin wrapper around _avenant_decide(approve=False). Same
+    @login_required fix as avenant_approve above."""
     return _avenant_decide(request, pk, approve=False)

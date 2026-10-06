@@ -884,15 +884,19 @@ class Avenant(BaseModel):
     Contract.avenant_debt) or PENDING -> REJECTED (no side effects). Both
     are terminal — see approve()/reject().
 
-    Business rule / gotcha: unlike Expense.approve() (which explicitly
-    blocks a requester from approving their own expense), approve() and
-    reject() here have NO self-decision guard at all, and
-    AVENANT_REQUEST_ROLES (finance/views.py) — who may create an avenant —
-    overlaps with FINAL_AUTHORIZATION_ROLES — who may decide one — on all
-    three director-tier roles (DIRECTOR, DIRECTEUR_TECHNIQUE,
-    DIRECTEUR_GENERAL). A DIRECTOR can request an avenant and then approve
-    or reject that same request themselves, growing their own site's
-    budget and the client's debt with no second person in the loop."""
+    FIXED 2026-10-06: approve()/reject() now block self-decision the same
+    way Expense.approve() does (see docs/security.md's "self-approval"
+    note) — a requester can't decide their own avenant, bypassable only
+    by a superuser. This does not remove the role overlap: a single
+    director-tier role (DIRECTOR, DIRECTEUR_TECHNIQUE, DIRECTEUR_GENERAL)
+    can still both request avenants (AVENANT_REQUEST_ROLES,
+    finance/views.py) and decide them (FINAL_AUTHORIZATION_ROLES) — that
+    overlap is unchanged and, in a single-director cabinet, intentional
+    (mirrors the same accepted trade-off already made for Expense). What
+    changed is that the *same person* can no longer be both the requester
+    and the decider of one specific avenant; a second director-tier user,
+    or CHIEF_ENGINEER/ACCOUNTANT requesting with a director deciding,
+    still works exactly as before."""
     site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name='avenants')
     amount = models.DecimalField(max_digits=14, decimal_places=2, verbose_name=_('Montant additionnel'))
     justification = models.TextField(verbose_name=_('Justification'))
@@ -913,10 +917,14 @@ class Avenant(BaseModel):
         """PENDING -> APPROVED: grows the site's Budget.total_amount by
         this avenant's amount and, if the site has a signed Contract, adds
         the same amount to Contract.avenant_debt (the client's extra debt
-        for work authorized beyond the original contract price). No
-        self-approval guard — see the class docstring."""
+        for work authorized beyond the original contract price). Blocks
+        self-approval (requester deciding their own avenant) for every
+        role except a superuser — mirrors Expense.approve(); see the
+        class docstring."""
         from django.core.exceptions import ValidationError
         from django.utils import timezone as _tz
+        if not user.is_superuser and self.requested_by_id == user.pk:
+            raise ValidationError(_("Vous ne pouvez pas décider de votre propre avenant."))
         if self.status != AvenantStatus.PENDING:
             raise ValidationError(_("Cet avenant a déjà été décidé."))
         if hasattr(self.site, 'budget'):
@@ -937,10 +945,15 @@ class Avenant(BaseModel):
             contract.save(update_fields=['avenant_debt', 'updated_at'])
 
     def reject(self, user, notes=''):
-        """PENDING -> REJECTED. No budget/contract side effects, and no
-        self-decision guard — see the class docstring."""
+        """PENDING -> REJECTED. No budget/contract side effects. Blocks
+        self-rejection the same way approve() blocks self-approval — see
+        the class docstring; kept symmetric even though rejecting your
+        own request has no money-movement consequence, since it's still
+        a review step that should involve a second person."""
         from django.core.exceptions import ValidationError
         from django.utils import timezone as _tz
+        if not user.is_superuser and self.requested_by_id == user.pk:
+            raise ValidationError(_("Vous ne pouvez pas décider de votre propre avenant."))
         if self.status != AvenantStatus.PENDING:
             raise ValidationError(_("Cet avenant a déjà été décidé."))
         self.status = AvenantStatus.REJECTED
