@@ -224,18 +224,16 @@ authenticated, but it's an inconsistency, not a deliberate design choice.
 
 ## Business rules & gotchas
 
-- **Avenant has no self-approval guard (the headline finding of this
-  pass).** `Expense.approve()` explicitly blocks `self.requester_id ==
-  user.pk` (see `docs/security.md`'s "self-approval" note), but
-  `Avenant.approve()`/`reject()` have no equivalent check at all. Worse,
+- **Avenant now has a self-approval guard (fixed 2026-10-06).**
+  `Avenant.approve()`/`reject()` block `self.requested_by_id == user.pk`
+  the same way `Expense.approve()` does (see `docs/security.md`'s
+  "self-approval" note) — bypassable only by a superuser.
   `AVENANT_REQUEST_ROLES` (who may file an avenant) and
-  `FINAL_AUTHORIZATION_ROLES` (who may decide one) **overlap on all three
-  director-tier roles** (DIRECTOR, DIRECTEUR_TECHNIQUE,
-  DIRECTEUR_GENERAL). A DIRECTOR can request an avenant and then approve
-  (or reject) that exact request themselves — growing their own site's
-  budget and the client's `avenant_debt` with no second person ever
-  reviewing it. This is the single most significant thing a future
-  developer should know about this app.
+  `FINAL_AUTHORIZATION_ROLES` (who may decide one) still **overlap on all
+  three director-tier roles** (DIRECTOR, DIRECTEUR_TECHNIQUE,
+  DIRECTEUR_GENERAL) — this is unchanged and intentional: a DIRECTOR can
+  still request an avenant and *then* approve (or reject) a *different*
+  director's/engineer's request, just never their own.
 - **`Caisse.record()` does not validate the amount.** It's the common
   entry point for every programmatic money movement (`Expense.pay()`,
   both payroll `disburse()`s, `transfer_to()`, `CaisseLoan.disburse()`/

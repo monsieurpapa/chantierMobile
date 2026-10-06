@@ -31,7 +31,7 @@ from .forms import (
 from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet, can_act_for_cabinet
 from core.quickcreate import QuickCreateView
 from projects.models import Site, ProjectPhase
-from chantiermobile.constants import PurchaseOrderStatus, UserRoles, CaisseType, StockMovementType, StockReportPeriod
+from chantiermobile.constants import PurchaseOrderStatus, UserRoles, CaisseType, StockMovementType, StockReportPeriod, ApprovalStatus
 
 # Mirrors StockItemCreateView/PurchaseOrderCreateView's allowed_roles and
 # the has_role gate on the corresponding detail templates. MAGASINIER can
@@ -68,9 +68,12 @@ class SupplierListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, 
     header_subtitle = _("Gérez le répertoire des fournisseurs et sous-traitants de matériaux")
 
     def get_header_actions(self):
+        # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now —
+        # see core/mixins.py and docs/security.md.
         from accounts.models import UserCabinetRole
         if self.request.user.is_superuser or UserCabinetRole.objects.filter(
-            user=self.request.user, role__in=[UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.CHIEF_ENGINEER]
+            user=self.request.user, role__in=[UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.CHIEF_ENGINEER],
+            status=ApprovalStatus.APPROVED,
         ).exists():
             return [{
                 'label': _("Ajouter un fournisseur"),
@@ -87,7 +90,8 @@ class SupplierListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, 
             if active_cabinet:
                 return qs.filter(cabinet=active_cabinet)
             return qs
-        user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+        # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now — see core/mixins.py and docs/security.md.
+        user_cabinet_ids = self.request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
         return qs.filter(cabinet__id__in=user_cabinet_ids)
 
 
@@ -174,7 +178,8 @@ class StockItemListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin,
             if active_cabinet:
                 return qs.filter(site__cabinet=active_cabinet)
             return qs
-        user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+        # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now — see core/mixins.py and docs/security.md.
+        user_cabinet_ids = self.request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
         return qs.filter(site__cabinet__id__in=user_cabinet_ids)
 
 
@@ -203,7 +208,8 @@ class StockItemCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMi
             active_cabinet = get_session_cabinet(self.request)
             form.fields['site'].queryset = Site.objects.filter(cabinet=active_cabinet) if active_cabinet else Site.objects.all()
         else:
-            user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+            # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now — see core/mixins.py and docs/security.md.
+            user_cabinet_ids = self.request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
             form.fields['site'].queryset = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
         return form
 
@@ -245,7 +251,8 @@ class StockItemUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMi
             active_cabinet = get_session_cabinet(self.request)
             form.fields['site'].queryset = Site.objects.filter(cabinet=active_cabinet) if active_cabinet else Site.objects.all()
         else:
-            user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+            # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now — see core/mixins.py and docs/security.md.
+            user_cabinet_ids = self.request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
             form.fields['site'].queryset = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
         return form
 
@@ -390,7 +397,8 @@ class PurchaseOrderListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMi
             if active_cabinet:
                 return qs.filter(site__cabinet=active_cabinet)
             return qs
-        user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+        # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now — see core/mixins.py and docs/security.md.
+        user_cabinet_ids = self.request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
         return qs.filter(site__cabinet__id__in=user_cabinet_ids)
 
 
@@ -426,7 +434,8 @@ class PurchaseOrderCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAcce
             site_qs = Site.objects.filter(cabinet=active_cabinet) if active_cabinet else Site.objects.all()
             supplier_qs = Supplier.objects.filter(cabinet=active_cabinet) if active_cabinet else Supplier.objects.all()
         else:
-            user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+            # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now — see core/mixins.py and docs/security.md.
+            user_cabinet_ids = self.request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
             site_qs = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
             supplier_qs = Supplier.objects.filter(cabinet__id__in=user_cabinet_ids)
         form.fields['site'].queryset = site_qs
@@ -446,7 +455,8 @@ class PurchaseOrderCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAcce
         # Restrict the stock_item choices on each line form to the same cabinet
         stock_qs = StockItem.objects.all()
         if not self.request.user.is_superuser:
-            user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+            # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now — see core/mixins.py and docs/security.md.
+            user_cabinet_ids = self.request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
             stock_qs = stock_qs.filter(site__cabinet__id__in=user_cabinet_ids)
         for lform in context['lines_formset'].forms:
             lform.fields['stock_item'].queryset = stock_qs
@@ -503,7 +513,8 @@ class PurchaseOrderUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAcce
             site_qs = Site.objects.filter(cabinet=active_cabinet) if active_cabinet else Site.objects.all()
             supplier_qs = Supplier.objects.filter(cabinet=active_cabinet) if active_cabinet else Supplier.objects.all()
         else:
-            user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+            # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now — see core/mixins.py and docs/security.md.
+            user_cabinet_ids = self.request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
             site_qs = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
             supplier_qs = Supplier.objects.filter(cabinet__id__in=user_cabinet_ids)
         form.fields['site'].queryset = site_qs
@@ -522,7 +533,8 @@ class PurchaseOrderUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAcce
             context['lines_formset'] = PurchaseOrderLineFormSet(instance=self.object)
         stock_qs = StockItem.objects.all()
         if not self.request.user.is_superuser:
-            user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+            # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now — see core/mixins.py and docs/security.md.
+            user_cabinet_ids = self.request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
             stock_qs = stock_qs.filter(site__cabinet__id__in=user_cabinet_ids)
         for lform in context['lines_formset'].forms:
             lform.fields['stock_item'].queryset = stock_qs
@@ -676,7 +688,8 @@ def _achats_report_queryset(request):
         if active_cabinet:
             qs = qs.filter(site__cabinet=active_cabinet)
     else:
-        user_cabinet_ids = request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+        # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now — see core/mixins.py and docs/security.md.
+        user_cabinet_ids = request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
         qs = qs.filter(site__cabinet__id__in=user_cabinet_ids)
 
     caisse = request.GET.get('caisse')
@@ -740,7 +753,8 @@ class AchatsReportView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, L
             active_cabinet = get_session_cabinet(self.request)
             context['sites'] = Site.objects.filter(cabinet=active_cabinet) if active_cabinet else Site.objects.all()
         else:
-            user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+            # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now — see core/mixins.py and docs/security.md.
+            user_cabinet_ids = self.request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
             context['sites'] = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
         context['caisse_choices'] = CaisseType.choices
         context['selected_caisse'] = self.request.GET.get('caisse', '')
@@ -753,10 +767,13 @@ class AchatsReportView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, L
 
 @login_required
 def achats_report_pdf(request):
-    """PDF export of the same filtered achats report."""
+    """PDF export of the same filtered achats report.
+
+    FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now — see
+    core/mixins.py and docs/security.md."""
     from accounts.models import UserCabinetRole
     if not (request.user.is_superuser or UserCabinetRole.objects.filter(
-        user=request.user, role__in=ACHATS_REPORT_ROLES
+        user=request.user, role__in=ACHATS_REPORT_ROLES, status=ApprovalStatus.APPROVED,
     ).exists()):
         messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
         return redirect('procurement:achats_report')
@@ -805,7 +822,8 @@ def _stock_report_queryset(request):
         if active_cabinet:
             qs = qs.filter(stock_item__site__cabinet=active_cabinet)
     else:
-        user_cabinet_ids = request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+        # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now — see core/mixins.py and docs/security.md.
+        user_cabinet_ids = request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
         qs = qs.filter(stock_item__site__cabinet__id__in=user_cabinet_ids)
 
     site_id = request.GET.get('site')
@@ -852,7 +870,8 @@ def _stock_levels_queryset(request):
         if active_cabinet:
             qs = qs.filter(site__cabinet=active_cabinet)
     else:
-        user_cabinet_ids = request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+        # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now — see core/mixins.py and docs/security.md.
+        user_cabinet_ids = request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
         qs = qs.filter(site__cabinet__id__in=user_cabinet_ids)
 
     site_id = request.GET.get('site')
@@ -899,7 +918,8 @@ class StockReportView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, Li
             active_cabinet = get_session_cabinet(self.request)
             sites = Site.objects.filter(cabinet=active_cabinet) if active_cabinet else Site.objects.all()
         else:
-            user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+            # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now — see core/mixins.py and docs/security.md.
+            user_cabinet_ids = self.request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
             sites = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
         context['sites'] = sites
         selected_site = self.request.GET.get('site', '')
@@ -917,10 +937,13 @@ class StockReportView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, Li
 
 @login_required
 def stock_report_pdf(request):
-    """PDF export of the same filtered stock movements report."""
+    """PDF export of the same filtered stock movements report.
+
+    FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now — see
+    core/mixins.py and docs/security.md."""
     from accounts.models import UserCabinetRole
     if not (request.user.is_superuser or UserCabinetRole.objects.filter(
-        user=request.user, role__in=STOCK_REPORT_ROLES
+        user=request.user, role__in=STOCK_REPORT_ROLES, status=ApprovalStatus.APPROVED,
     ).exists()):
         messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
         return redirect('procurement:stock_report')
@@ -1025,7 +1048,8 @@ class SupplierCreditListView(LoginRequiredMixin, RoleRequiredMixin, CabinetAcces
             active_cabinet = get_session_cabinet(self.request)
             context['caisses'] = Caisse.objects.filter(cabinet=active_cabinet) if active_cabinet else Caisse.objects.none()
         else:
-            cabinets = user.cabinet_roles.values_list('cabinet', flat=True)
+            # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now — see core/mixins.py and docs/security.md.
+            cabinets = user.approved_cabinet_roles.values_list('cabinet', flat=True)
             context['caisses'] = Caisse.objects.filter(cabinet__in=cabinets)
         return context
 
@@ -1058,7 +1082,8 @@ class SupplierCreditCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeader
             active_cabinet = get_session_cabinet(self.request)
             supplier_qs = Supplier.objects.filter(cabinet=active_cabinet) if active_cabinet else Supplier.objects.all()
         else:
-            cabinets = user.cabinet_roles.values_list('cabinet', flat=True)
+            # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now — see core/mixins.py and docs/security.md.
+            cabinets = user.approved_cabinet_roles.values_list('cabinet', flat=True)
             supplier_qs = Supplier.objects.filter(cabinet__in=cabinets)
         form.fields['supplier'].queryset = supplier_qs
         form.fields['purchase_order'].queryset = PurchaseOrder.objects.filter(supplier__in=supplier_qs)

@@ -11,6 +11,14 @@ top of this module (EXPENSE_REPORT_ROLES, CAISSE_MANAGE_ROLES,
 PAYROLL_PREPARE_ROLES, etc.) are the single source of truth each view
 below references; core/approvals.py keeps its own duplicated copies for the
 pending-approvals inbox and must be updated by hand if these change.
+
+FIXED 2026-10-06: every ad-hoc `UserCabinetRole.objects.filter(user=...)`
+check below now also filters on `status=ApprovalStatus.APPROVED`, and every
+bare reverse-accessor `cabinet_roles` access used for an access-control
+decision (as opposed to a purely informational listing) now goes through
+`User.approved_cabinet_roles` instead — a PENDING role grant (awaiting a
+superadmin's approval) must not already grant access. See core/mixins.py
+and docs/security.md.
 """
 from django.views.generic import ListView, CreateView, DetailView, UpdateView, DeleteView, TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -41,7 +49,8 @@ from core.mixins import (
     add_ambiguous_cabinet_field,
 )
 from chantiermobile.constants import (
-    ExpenseStatus, UserRoles, CaisseTransactionType, FINAL_AUTHORIZATION_ROLES, PayrollListStatus, PersonnelPayrollType,
+    ApprovalStatus, ExpenseStatus, UserRoles, CaisseTransactionType, FINAL_AUTHORIZATION_ROLES, PayrollListStatus,
+    PersonnelPayrollType,
 )
 
 # Roles that may view the expenses report / export it to PDF — mirrors
@@ -93,7 +102,7 @@ class ExpenseListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, L
         }]
         from accounts.models import UserCabinetRole
         if self.request.user.is_superuser or UserCabinetRole.objects.filter(
-            user=self.request.user, role__in=EXPENSE_REPORT_ROLES
+            user=self.request.user, status=ApprovalStatus.APPROVED, role__in=EXPENSE_REPORT_ROLES
         ).exists():
             actions.append({
                 'label': _("Rapport"),
@@ -130,7 +139,7 @@ class ExpenseCreateView(LoginRequiredMixin, PageHeaderMixin, CreateView):
             else:
                 form.fields['site'].queryset = Site.objects.all()
         else:
-            user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+            user_cabinet_ids = self.request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
             form.fields['site'].queryset = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
         return form
 
@@ -177,7 +186,7 @@ class ExpenseDetailView(LoginRequiredMixin, PageHeaderMixin, DetailView):
     def get_queryset(self):
         qs = super().get_queryset()
         if not self.request.user.is_superuser:
-            user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+            user_cabinet_ids = self.request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
             qs = qs.filter(site__cabinet__id__in=user_cabinet_ids)
         return qs
 
@@ -197,14 +206,17 @@ def approve_expense(request, pk):
     DIRECTEUR_GENERAL/ACCOUNTANT in the expense's own cabinet, or a
     superuser), and additionally restricted to the session's active cabinet
     when a superuser has one selected. Self-approval is blocked in
-    Expense.approve() itself."""
+    Expense.approve() itself.
+
+    FIXED 2026-10-06: the inline role check now uses approved_cabinet_roles
+    (same fix as approve_expense/reject_expense/mark_expense_paid below)."""
     if request.method == 'POST':
         expense = get_object_or_404(Expense, pk=pk)
         active_cabinet = get_session_cabinet(request)
         if active_cabinet and expense.site.cabinet != active_cabinet:
             messages.error(request, _("Cette dépense appartient à un autre cabinet que votre session active."))
             return redirect('finance:expense_list')
-        if request.user.is_superuser or request.user.cabinet_roles.filter(cabinet=expense.site.cabinet, role__in=[UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.ACCOUNTANT]).exists():
+        if request.user.is_superuser or request.user.approved_cabinet_roles.filter(cabinet=expense.site.cabinet, role__in=[UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.ACCOUNTANT]).exists():
             try:
                 expense.approve(request.user, comments=request.POST.get('comments', ''))
                 from core.notifications import notify_user
@@ -231,7 +243,7 @@ def reject_expense(request, pk):
         if active_cabinet and expense.site.cabinet != active_cabinet:
             messages.error(request, _("Cette dépense appartient à un autre cabinet que votre session active."))
             return redirect('finance:expense_list')
-        if request.user.is_superuser or request.user.cabinet_roles.filter(cabinet=expense.site.cabinet, role__in=[UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.ACCOUNTANT]).exists():
+        if request.user.is_superuser or request.user.approved_cabinet_roles.filter(cabinet=expense.site.cabinet, role__in=[UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.ACCOUNTANT]).exists():
             if expense.status != ExpenseStatus.PENDING:
                 messages.error(request, _("Seule une dépense en attente peut être rejetée."))
             else:
@@ -262,7 +274,7 @@ def mark_expense_paid(request, pk):
         if active_cabinet and expense.site.cabinet != active_cabinet:
             messages.error(request, _("Cette dépense appartient à un autre cabinet que votre session active."))
             return redirect('finance:expense_list')
-        if request.user.is_superuser or request.user.cabinet_roles.filter(cabinet=expense.site.cabinet, role__in=[UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.CASHIER]).exists():
+        if request.user.is_superuser or request.user.approved_cabinet_roles.filter(cabinet=expense.site.cabinet, role__in=[UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.CASHIER]).exists():
             # Validate expense can be paid
             if not expense.can_be_paid():
                 messages.error(request, _("Seules les dépenses approuvées peuvent être payées. Statut actuel : %(status)s.") % {'status': expense.get_status_display()})
@@ -300,10 +312,13 @@ def _scope_budgets_for_viewer(qs, user):
     restricted to budgets of sites where the user is the lead_engineer —
     engineers previously had no way at all to see their own site's
     budget, since BudgetListView/BudgetDetailView excluded ENGINEER
-    entirely."""
+    entirely.
+
+    FIXED 2026-10-06: uses approved_cabinet_roles so a PENDING role grant
+    doesn't already count as cabinet-wide budget access."""
     if user.is_superuser:
         return qs
-    admin_cabinet_ids = user.cabinet_roles.filter(role__in=BUDGET_FULL_ACCESS_ROLES).values_list('cabinet_id', flat=True)
+    admin_cabinet_ids = user.approved_cabinet_roles.filter(role__in=BUDGET_FULL_ACCESS_ROLES).values_list('cabinet_id', flat=True)
     return qs.filter(Q(site__cabinet_id__in=admin_cabinet_ids) | Q(site__lead_engineer=user))
 
 
@@ -326,7 +341,7 @@ class BudgetListView(LoginRequiredMixin, CabinetAccessMixin, RoleRequiredMixin, 
     def get_header_actions(self):
         from accounts.models import UserCabinetRole
         if self.request.user.is_superuser or UserCabinetRole.objects.filter(
-            user=self.request.user, role__in=[UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.ACCOUNTANT]
+            user=self.request.user, status=ApprovalStatus.APPROVED, role__in=[UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.ACCOUNTANT]
         ).exists():
             return [{
                 'label': _("Créer un budget"),
@@ -364,7 +379,7 @@ class BudgetCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, C
             else:
                 form.fields['site'].queryset = Site.objects.all()
         else:
-            user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+            user_cabinet_ids = self.request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
             form.fields['site'].queryset = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
         return form
 
@@ -484,7 +499,7 @@ class BudgetUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin
             else:
                 form.fields['site'].queryset = Site.objects.all()
         else:
-            user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+            user_cabinet_ids = self.request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
             form.fields['site'].queryset = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
         return form
 
@@ -505,7 +520,7 @@ def site_personnel_data(request):
 
     site_qs = Site.objects.filter(pk=site_id)
     if not request.user.is_superuser:
-        user_cabinet_ids = request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+        user_cabinet_ids = request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
         site_qs = site_qs.filter(cabinet__id__in=user_cabinet_ids)
     site = site_qs.first()
     if not site:
@@ -533,7 +548,7 @@ def site_phases_data(request):
 
     site_qs = Site.objects.filter(pk=site_id)
     if not request.user.is_superuser:
-        user_cabinet_ids = request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+        user_cabinet_ids = request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
         site_qs = site_qs.filter(cabinet__id__in=user_cabinet_ids)
     site = site_qs.first()
     if not site:
@@ -547,14 +562,16 @@ def site_phases_data(request):
 
 def _expense_report_queryset(request):
     """Shared filtering for the expense report view and its PDF export:
-    cabinet-scoped, optionally filtered by site and by expense_date range."""
+    cabinet-scoped, optionally filtered by site and by expense_date range.
+
+    FIXED 2026-10-06: cabinet scoping now uses approved_cabinet_roles."""
     qs = Expense.objects.select_related('site', 'category', 'requester', 'personnel').order_by('-expense_date', '-id')
     if request.user.is_superuser:
         active_cabinet = get_session_cabinet(request)
         if active_cabinet:
             qs = qs.filter(site__cabinet=active_cabinet)
     else:
-        user_cabinet_ids = request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+        user_cabinet_ids = request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
         qs = qs.filter(site__cabinet__id__in=user_cabinet_ids)
 
     site_id = request.GET.get('site')
@@ -601,7 +618,7 @@ def _expenses_by_site_rows(request):
         if active_cabinet:
             qs = qs.filter(site__cabinet=active_cabinet)
     else:
-        user_cabinet_ids = request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+        user_cabinet_ids = request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
         qs = qs.filter(site__cabinet__id__in=user_cabinet_ids)
 
     date_from = request.GET.get('date_from')
@@ -676,7 +693,7 @@ class ExpenseReportView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, 
             active_cabinet = get_session_cabinet(self.request)
             context['sites'] = Site.objects.filter(cabinet=active_cabinet) if active_cabinet else Site.objects.all()
         else:
-            user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+            user_cabinet_ids = self.request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
             context['sites'] = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
         context['selected_site'] = self.request.GET.get('site', '')
         context['selected_phase'] = self.request.GET.get('phase', '')
@@ -697,7 +714,7 @@ def expense_report_pdf(request):
     rather than RoleRequiredMixin, since this is a plain function view."""
     from accounts.models import UserCabinetRole
     if not (request.user.is_superuser or UserCabinetRole.objects.filter(
-        user=request.user, role__in=EXPENSE_REPORT_ROLES
+        user=request.user, status=ApprovalStatus.APPROVED, role__in=EXPENSE_REPORT_ROLES
     ).exists()):
         messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
         return redirect('finance:expense_report')
@@ -757,7 +774,7 @@ class CaisseListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, Li
     def get_header_actions(self):
         from accounts.models import UserCabinetRole
         if self.request.user.is_superuser or UserCabinetRole.objects.filter(
-            user=self.request.user, role__in=CAISSE_MANAGE_ROLES
+            user=self.request.user, status=ApprovalStatus.APPROVED, role__in=CAISSE_MANAGE_ROLES
         ).exists():
             return [{
                 'label': _("Nouvelle caisse"),
@@ -979,7 +996,9 @@ def caisse_transfer(request, pk):
 class CaisseLoanListView(LoginRequiredMixin, PageHeaderMixin, ListView):
     """Lists inter-caisse loans for the caller's cabinet(s); open to any
     authenticated user (no allowed_roles) — creating/repaying a loan is
-    separately gated to CAISSE_MANAGE_ROLES."""
+    separately gated to CAISSE_MANAGE_ROLES.
+
+    FIXED 2026-10-06: cabinet scoping now uses approved_cabinet_roles."""
     model = CaisseLoan
     template_name = 'finance/caisse_loan_list.html'
     context_object_name = 'loans'
@@ -990,7 +1009,7 @@ class CaisseLoanListView(LoginRequiredMixin, PageHeaderMixin, ListView):
         qs = CaisseLoan.objects.select_related('lender_caisse', 'borrower_caisse').order_by('-date')
         user = self.request.user
         if not user.is_superuser:
-            cabinets = user.cabinet_roles.values_list('cabinet', flat=True) if hasattr(user, 'cabinet_roles') else []
+            cabinets = user.approved_cabinet_roles.values_list('cabinet', flat=True) if hasattr(user, 'approved_cabinet_roles') else []
             qs = qs.filter(lender_caisse__cabinet__in=cabinets)
         else:
             active_cabinet = get_session_cabinet(self.request)
@@ -1017,7 +1036,7 @@ class CaisseLoanCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixi
             active_cabinet = get_session_cabinet(self.request)
             qs = Caisse.objects.filter(cabinet=active_cabinet) if active_cabinet else Caisse.objects.all()
         else:
-            cabinets = user.cabinet_roles.values_list('cabinet', flat=True)
+            cabinets = user.approved_cabinet_roles.values_list('cabinet', flat=True)
             qs = Caisse.objects.filter(cabinet__in=cabinets)
         form.fields['lender_caisse'].queryset = qs
         form.fields['borrower_caisse'].queryset = qs
@@ -1058,14 +1077,16 @@ def caisse_loan_repay(request, pk):
 def _caisse_ledger_queryset(request):
     """Shared filtering for the combined caisse (livre de caisse) report
     and its PDF export — cabinet-scoped, filterable by caisse/site/phase and
-    by date range or period (jour/semaine/mois/an)."""
+    by date range or period (jour/semaine/mois/an).
+
+    FIXED 2026-10-06: cabinet scoping now uses approved_cabinet_roles."""
     qs = CaisseTransaction.objects.select_related('caisse', 'site', 'phase', 'category').order_by('-date', '-id')
     if request.user.is_superuser:
         active_cabinet = get_session_cabinet(request)
         if active_cabinet:
             qs = qs.filter(caisse__cabinet=active_cabinet)
     else:
-        user_cabinet_ids = request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+        user_cabinet_ids = request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
         qs = qs.filter(caisse__cabinet__id__in=user_cabinet_ids)
 
     caisse_id = request.GET.get('caisse')
@@ -1137,7 +1158,7 @@ class CaisseReportView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, L
             context['caisses'] = Caisse.objects.filter(cabinet=active_cabinet) if active_cabinet else Caisse.objects.all()
             context['sites'] = Site.objects.filter(cabinet=active_cabinet) if active_cabinet else Site.objects.all()
         else:
-            user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+            user_cabinet_ids = self.request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
             context['caisses'] = Caisse.objects.filter(cabinet__id__in=user_cabinet_ids)
             context['sites'] = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
         context['selected_caisse'] = self.request.GET.get('caisse', '')
@@ -1158,7 +1179,7 @@ def caisse_report_pdf(request):
     RoleRequiredMixin since this is a plain function view."""
     from accounts.models import UserCabinetRole
     if not (request.user.is_superuser or UserCabinetRole.objects.filter(
-        user=request.user, role__in=CAISSE_MANAGE_ROLES
+        user=request.user, status=ApprovalStatus.APPROVED, role__in=CAISSE_MANAGE_ROLES
     ).exists()):
         messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
         return redirect('finance:caisse_report')
@@ -1201,7 +1222,10 @@ class PayrollListListView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin
     """Lists "Main d'œuvre" payroll lists for the caller's cabinet(s).
     allowed_roles = PAYROLL_VIEW_ROLES (union of preparers and
     disbursers) — payroll amounts are sensitive, so this is role-gated
-    unlike most other list views in this module."""
+    unlike most other list views in this module.
+
+    FIXED 2026-10-06: cabinet scoping (and the "Nouvelle liste" action
+    check) now uses approved_cabinet_roles."""
     model = PayrollList
     template_name = 'finance/payroll_list_list.html'
     context_object_name = 'payroll_lists'
@@ -1213,7 +1237,7 @@ class PayrollListListView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin
         qs = PayrollList.objects.select_related('site', 'prepared_by').order_by('-created_at')
         user = self.request.user
         if not user.is_superuser:
-            cabinets = user.cabinet_roles.values_list('cabinet', flat=True) if hasattr(user, 'cabinet_roles') else []
+            cabinets = user.approved_cabinet_roles.values_list('cabinet', flat=True) if hasattr(user, 'approved_cabinet_roles') else []
             qs = qs.filter(site__cabinet__in=cabinets)
         else:
             active_cabinet = get_session_cabinet(self.request)
@@ -1229,7 +1253,7 @@ class PayrollListListView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin
     def get_header_actions(self):
         from accounts.models import UserCabinetRole
         if self.request.user.is_superuser or UserCabinetRole.objects.filter(
-            user=self.request.user, role__in=PAYROLL_PREPARE_ROLES
+            user=self.request.user, status=ApprovalStatus.APPROVED, role__in=PAYROLL_PREPARE_ROLES
         ).exists():
             return [{
                 'label': _("Nouvelle liste de paie"),
@@ -1257,7 +1281,7 @@ class PayrollListCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMix
             active_cabinet = get_session_cabinet(self.request)
             form.fields['site'].queryset = Site.objects.filter(cabinet=active_cabinet) if active_cabinet else Site.objects.all()
         else:
-            cabinets = user.cabinet_roles.values_list('cabinet', flat=True)
+            cabinets = user.approved_cabinet_roles.values_list('cabinet', flat=True)
             form.fields['site'].queryset = Site.objects.filter(cabinet__in=cabinets)
         return form
 
@@ -1499,7 +1523,9 @@ def payroll_disburse(request, pk):
 class SalaryPaymentListListView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, ListView):
     """Lists "Ingénieurs & Staff" payment lists for the caller's cabinet(s).
     allowed_roles = PAYROLL_VIEW_ROLES, same sensitivity rationale as
-    PayrollListListView."""
+    PayrollListListView.
+
+    FIXED 2026-10-06: same approved_cabinet_roles fix as PayrollListListView."""
     model = SalaryPaymentList
     template_name = 'finance/salary_payment_list.html'
     context_object_name = 'salary_payment_lists'
@@ -1511,7 +1537,7 @@ class SalaryPaymentListListView(LoginRequiredMixin, RoleRequiredMixin, PageHeade
         qs = SalaryPaymentList.objects.select_related('cabinet', 'prepared_by').order_by('-created_at')
         user = self.request.user
         if not user.is_superuser:
-            cabinets = user.cabinet_roles.values_list('cabinet', flat=True) if hasattr(user, 'cabinet_roles') else []
+            cabinets = user.approved_cabinet_roles.values_list('cabinet', flat=True) if hasattr(user, 'approved_cabinet_roles') else []
             qs = qs.filter(cabinet__in=cabinets)
         else:
             active_cabinet = get_session_cabinet(self.request)
@@ -1527,7 +1553,7 @@ class SalaryPaymentListListView(LoginRequiredMixin, RoleRequiredMixin, PageHeade
     def get_header_actions(self):
         from accounts.models import UserCabinetRole
         if self.request.user.is_superuser or UserCabinetRole.objects.filter(
-            user=self.request.user, role__in=PAYROLL_PREPARE_ROLES
+            user=self.request.user, status=ApprovalStatus.APPROVED, role__in=PAYROLL_PREPARE_ROLES
         ).exists():
             return [{
                 'label': _("Nouvelle liste"),
@@ -1759,7 +1785,11 @@ def salary_payment_disburse(request, pk):
 class AvenantListView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, ListView):
     """Lists avenants for the caller's cabinet(s). allowed_roles =
     AVENANT_VIEW_ROLES (requesters + final authorizers); `can_decide` in
-    context gates the approve/reject buttons to FINAL_AUTHORIZATION_ROLES."""
+    context gates the approve/reject buttons to FINAL_AUTHORIZATION_ROLES.
+
+    FIXED 2026-10-06: cabinet scoping, `can_decide`, and the "Nouvel
+    avenant" action check all now use approved_cabinet_roles /
+    status=ApprovalStatus.APPROVED."""
     model = Avenant
     template_name = 'finance/avenant_list.html'
     context_object_name = 'avenants'
@@ -1771,7 +1801,7 @@ class AvenantListView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, Li
         qs = Avenant.objects.select_related('site', 'requested_by').order_by('-created_at')
         user = self.request.user
         if not user.is_superuser:
-            cabinets = user.cabinet_roles.values_list('cabinet', flat=True) if hasattr(user, 'cabinet_roles') else []
+            cabinets = user.approved_cabinet_roles.values_list('cabinet', flat=True) if hasattr(user, 'approved_cabinet_roles') else []
             qs = qs.filter(site__cabinet__in=cabinets)
         else:
             active_cabinet = get_session_cabinet(self.request)
@@ -1783,14 +1813,14 @@ class AvenantListView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, Li
         context = super().get_context_data(**kwargs)
         context['can_decide'] = (
             self.request.user.is_superuser or
-            self.request.user.cabinet_roles.filter(role__in=FINAL_AUTHORIZATION_ROLES).exists()
+            self.request.user.approved_cabinet_roles.filter(role__in=FINAL_AUTHORIZATION_ROLES).exists()
         )
         return context
 
     def get_header_actions(self):
         from accounts.models import UserCabinetRole
         if self.request.user.is_superuser or UserCabinetRole.objects.filter(
-            user=self.request.user, role__in=AVENANT_REQUEST_ROLES
+            user=self.request.user, status=ApprovalStatus.APPROVED, role__in=AVENANT_REQUEST_ROLES
         ).exists():
             return [{
                 'label': _("Nouvel avenant"),
@@ -1826,7 +1856,7 @@ class AvenantCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, 
             active_cabinet = get_session_cabinet(self.request)
             form.fields['site'].queryset = Site.objects.filter(cabinet=active_cabinet) if active_cabinet else Site.objects.all()
         else:
-            cabinets = user.cabinet_roles.values_list('cabinet', flat=True)
+            cabinets = user.approved_cabinet_roles.values_list('cabinet', flat=True)
             form.fields['site'].queryset = Site.objects.filter(cabinet__in=cabinets)
         return form
 

@@ -7,6 +7,14 @@ can_view_cabinet) cover function-based ones — every state-changing view
 in the codebase uses one of these four, because `@login_required` alone
 only proves the user is signed in, never that they hold the right role in
 the right Cabinet.
+
+FIXED 2026-10-06: every one of these four helpers now requires the
+backing UserCabinetRole to have status=ApprovalStatus.APPROVED (via
+User.approved_cabinet_roles or an explicit status filter) before it
+counts as granting access. Previously a freshly-created PENDING grant
+— meant to await a superadmin's approval — already passed every one of
+these checks, since none of them filtered on status at all. See
+docs/security.md.
 """
 from django import forms
 from django.core.exceptions import PermissionDenied
@@ -14,6 +22,7 @@ from django.shortcuts import redirect
 from django.contrib import messages
 from django.utils.translation import gettext_lazy as _
 from accounts.models import UserCabinetRole
+from chantiermobile.constants import ApprovalStatus
 
 
 def add_ambiguous_cabinet_field(view, form):
@@ -64,11 +73,11 @@ def get_session_cabinet(request):
         return None
 
     if not request.user.is_superuser and not UserCabinetRole.objects.filter(
-        user=request.user, cabinet=cabinet
+        user=request.user, cabinet=cabinet, status=ApprovalStatus.APPROVED
     ).exists():
-        # Stale/foreign selection (e.g. the role was revoked after they
-        # switched into it) — never trust it, and drop it so it isn't
-        # re-checked on every request.
+        # Stale/foreign selection (e.g. the role was revoked, or never
+        # approved, after they switched into it) — never trust it, and
+        # drop it so it isn't re-checked on every request.
         try:
             del request.session['active_cabinet_id']
         except KeyError:
@@ -95,8 +104,9 @@ def can_act_for_cabinet(request, cabinet, allowed_roles):
     A superuser passes unless they have switched their session into a
     *different* specific cabinet (so a superuser working "as" Cabinet A
     doesn't silently act on Cabinet B's data). A regular user must hold one
-    of `allowed_roles` within that exact cabinet — a DIRECTOR in Cabinet A
-    has no special rights in Cabinet B.
+    of `allowed_roles` within that exact cabinet, as an APPROVED grant — a
+    DIRECTOR in Cabinet A has no special rights in Cabinet B, and neither
+    does a role still awaiting approval (see docs/security.md).
     """
     user = request.user
     if not user.is_authenticated:
@@ -107,17 +117,17 @@ def can_act_for_cabinet(request, cabinet, allowed_roles):
             return False
         return True
     return UserCabinetRole.objects.filter(
-        user=user, cabinet=cabinet, role__in=allowed_roles
+        user=user, cabinet=cabinet, role__in=allowed_roles, status=ApprovalStatus.APPROVED
     ).exists()
 
 
 def can_view_cabinet(request, cabinet):
     """Looser sibling of can_act_for_cabinet: true for any authenticated
-    user who has *some* role in this cabinet (or a superuser), regardless
-    of which role. For actions that are shared/collaborative rather than
-    role-gated — e.g. commenting on a progress report, where anyone with
-    access to the site should be able to join the discussion, not just the
-    roles that can file the report itself.
+    user who has *some* APPROVED role in this cabinet (or a superuser),
+    regardless of which role. For actions that are shared/collaborative
+    rather than role-gated — e.g. commenting on a progress report, where
+    anyone with access to the site should be able to join the discussion,
+    not just the roles that can file the report itself.
     """
     user = request.user
     if not user.is_authenticated:
@@ -127,7 +137,7 @@ def can_view_cabinet(request, cabinet):
         if active_cabinet and cabinet != active_cabinet:
             return False
         return True
-    return UserCabinetRole.objects.filter(user=user, cabinet=cabinet).exists()
+    return UserCabinetRole.objects.filter(user=user, cabinet=cabinet, status=ApprovalStatus.APPROVED).exists()
 
 
 class CabinetAccessMixin:
@@ -159,7 +169,7 @@ class CabinetAccessMixin:
             return qs
 
         if hasattr(self.request.user, 'cabinet_roles'):
-            cabinets = self.request.user.cabinet_roles.values_list('cabinet', flat=True)
+            cabinets = self.request.user.approved_cabinet_roles.values_list('cabinet', flat=True)
             return qs.filter(**{f'{self.cabinet_lookup_field}__in': cabinets})
 
         return qs.none()
@@ -190,7 +200,7 @@ class CabinetAccessMixin:
             return Cabinet.objects.order_by('created_at').first()
 
         if hasattr(self.request.user, 'cabinet_roles'):
-            cabinet_ids = list(self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)[:2])
+            cabinet_ids = list(self.request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)[:2])
             if len(cabinet_ids) == 1:
                 from accounts.models import Cabinet
                 return Cabinet.objects.filter(pk=cabinet_ids[0]).first()
@@ -218,7 +228,9 @@ class CabinetAccessMixin:
         if self.get_user_cabinet() is not None:
             return None
         from accounts.models import Cabinet
-        cabinets = Cabinet.objects.filter(user_roles__user=self.request.user).distinct().order_by('name')
+        cabinets = Cabinet.objects.filter(
+            user_roles__user=self.request.user, user_roles__status=ApprovalStatus.APPROVED
+        ).distinct().order_by('name')
         return cabinets if cabinets.count() > 1 else None
 
 class RoleRequiredMixin:
@@ -253,6 +265,7 @@ class RoleRequiredMixin:
         qs = UserCabinetRole.objects.filter(
             user=request.user,
             role__in=self.allowed_roles,
+            status=ApprovalStatus.APPROVED,
         )
         cabinet = self.get_role_cabinet()
         if cabinet is not None:

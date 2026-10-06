@@ -140,27 +140,18 @@ self-review guard.
 
 ## Business rules & gotchas
 
-- **`SiteProgressCreateView` has no cabinet scoping at all — a likely
-  tenant-isolation gap, and the most significant finding of this pass.**
-  Every sibling create view in this app (`ProjectPhaseCreateView`,
-  `PlanningSubmissionCreateView`) overrides `RoleRequiredMixin.
-  get_role_cabinet()` to scope the role check to the target site's own
-  cabinet. `SiteProgressCreateView` does not: it has no
-  `get_role_cabinet()` override and isn't mixed with `CabinetAccessMixin`,
-  so `RoleRequiredMixin` only checks "does this user hold DIRECTOR/
-  DIRECTEUR_TECHNIQUE/DIRECTEUR_GENERAL/CHIEF_ENGINEER/ENGINEER in *any*
-  cabinet they belong to" — not in the phase's own cabinet. Worse, the
-  `phase` the report attaches to is fetched with a bare
-  `get_object_or_404(ProjectPhase, unique_id=...)`, with no cabinet filter,
-  and `form_valid()` assigns `form.instance.phase = self.phase` directly
-  (phase isn't even a form field, so there's no queryset-based guard
-  either). **Net effect: a user who holds e.g. ENGINEER in their own
-  Cabinet A can file a progress report — with attached photos — against a
-  phase belonging to an unrelated Cabinet B**, as long as they know or
-  guess that phase's `unique_id` (a UUID in the URL — not trivially
-  guessable, but also not secret: it can leak via a shared link, a log
-  line, or a notification). This looks like an oversight rather than an
-  intentional cross-cabinet allowance.
+- **`SiteProgressCreateView` is now cabinet-scoped (fixed 2026-10-06).** It
+  previously had no `get_role_cabinet()` override and looked up its `phase`
+  with a bare `get_object_or_404(ProjectPhase, unique_id=...)` — no cabinet
+  filter at all — so a user who held e.g. ENGINEER in their own Cabinet A
+  could file a progress report, with attached photos, against a phase
+  belonging to an unrelated Cabinet B if they knew/guessed its `unique_id`.
+  It now mirrors its siblings (`ProjectPhaseCreateView`,
+  `PlanningSubmissionCreateView`): the phase lookup goes through a
+  cabinet-scoped `_phase_queryset()` (same superuser/session-cabinet
+  convention as `CabinetAccessMixin`), and `get_role_cabinet()` returns
+  `self.phase.site.cabinet`. See `tests/test_progress_photos_comments.py`
+  for the regression coverage.
 - **"Own site only" for an ENGINEER is enforced inconsistently across
   this app.** `PHASE_CLOSE_ROLES`, `PLANNING_SUBMIT_ROLES` and
   `PLANNING_REVIEW_ROLES` all include `ENGINEER`, but the views that check

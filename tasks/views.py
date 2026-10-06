@@ -19,7 +19,7 @@ from .forms import TaskForm
 from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet
 from projects.models import Site, ProjectPhase
 from personnel.models import Personnel
-from chantiermobile.constants import UserRoles, TaskStatus
+from chantiermobile.constants import UserRoles, TaskStatus, ApprovalStatus
 
 MANAGE_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER', 'ENGINEER']
 
@@ -27,12 +27,16 @@ MANAGE_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_E
 def _can_manage_task(user, task):
     """DIRECTOR/CHIEF_ENGINEER/ENGINEER on the task's cabinet, or the
     Personnel the task is assigned to (self-service for tâcherons/
-    prestataires who have a linked login)."""
+    prestataires who have a linked login).
+
+    FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now — see
+    core/mixins.py and docs/security.md."""
     if user.is_superuser:
         return True
     from accounts.models import UserCabinetRole
     if UserCabinetRole.objects.filter(
-        user=user, cabinet=task.site.cabinet, role__in=MANAGE_ROLES
+        user=user, cabinet=task.site.cabinet, role__in=MANAGE_ROLES,
+        status=ApprovalStatus.APPROVED,
     ).exists():
         return True
     if task.assigned_to_id and getattr(task.assigned_to, 'user_id', None) == user.id:
@@ -44,7 +48,10 @@ class TaskListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, List
     """Lists tasks, cabinet-scoped by default. Open to any cabinet
     member; `?mine=1` switches to a self-service view of the requester's
     own assigned tasks (via their linked Personnel), bypassing the
-    cabinet-role filter entirely — see get_queryset()'s comment."""
+    cabinet-role filter entirely — see get_queryset()'s comment.
+
+    FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now — see
+    core/mixins.py and docs/security.md."""
     model = Task
     template_name = 'tasks/task_list.html'
     context_object_name = 'tasks'
@@ -76,7 +83,7 @@ class TaskListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, List
                 if active_cabinet:
                     qs = qs.filter(site__cabinet=active_cabinet)
             else:
-                user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+                user_cabinet_ids = self.request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
                 qs = qs.filter(site__cabinet__id__in=user_cabinet_ids)
 
         status = self.request.GET.get('status')
@@ -103,7 +110,10 @@ class TaskCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, 
     comes from `_scope_form_querysets` narrowing `site`/`phase`/
     `assigned_to` to the user's own cabinet(s), so a cross-cabinet site
     can't be submitted even though the role check itself isn't
-    cabinet-scoped."""
+    cabinet-scoped.
+
+    FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now — see
+    core/mixins.py and docs/security.md."""
     model = Task
     form_class = TaskForm
     template_name = 'tasks/task_form.html'
@@ -134,7 +144,7 @@ class TaskCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, 
             site_qs = Site.objects.filter(cabinet=active_cabinet) if active_cabinet else Site.objects.all()
             personnel_qs = Personnel.objects.filter(cabinet=active_cabinet) if active_cabinet else Personnel.objects.all()
         else:
-            user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+            user_cabinet_ids = self.request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
             site_qs = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
             personnel_qs = Personnel.objects.filter(cabinet__id__in=user_cabinet_ids)
         form.fields['site'].queryset = site_qs
@@ -159,7 +169,10 @@ class TaskUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, 
     Director-tier, CHIEF_ENGINEER or ENGINEER (MANAGE_ROLES); the object
     itself is cabinet-scoped via CabinetAccessMixin (cabinet_lookup_field),
     so — unlike TaskCreateView — a cross-cabinet task 404s before the
-    unscoped role check would even matter."""
+    unscoped role check would even matter.
+
+    FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now — see
+    core/mixins.py and docs/security.md."""
     model = Task
     form_class = TaskForm
     template_name = 'tasks/task_form.html'
@@ -185,7 +198,7 @@ class TaskUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, 
             site_qs = Site.objects.filter(cabinet=active_cabinet) if active_cabinet else Site.objects.all()
             personnel_qs = Personnel.objects.filter(cabinet=active_cabinet) if active_cabinet else Personnel.objects.all()
         else:
-            user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+            user_cabinet_ids = self.request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
             site_qs = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
             personnel_qs = Personnel.objects.filter(cabinet__id__in=user_cabinet_ids)
         form.fields['site'].queryset = site_qs

@@ -85,25 +85,19 @@ Who can do what, with no state-machine step in between:
 | `PriceLibraryItemCreateView` / `UpdateView` | `DIRECTOR`, `DIRECTEUR_TECHNIQUE`, `DIRECTEUR_GENERAL`, `CHIEF_ENGINEER` | `allowed_roles`; create resolves the cabinet via `get_user_cabinet()` or an explicit picker for an ambiguous multi-cabinet user |
 | `DQEListView` / `DQEDetailView` | any member of the cabinet | `CabinetAccessMixin` |
 | `DQECreateView` / `UpdateView` | same director-tier/`CHIEF_ENGINEER` set | `site` scoped to the user's own cabinet(s) via `_scope_site_queryset` |
-| `price_items_data_api` | **anyone, including anonymous requests** | see gotcha below — this is the one outlier in the app |
+| `price_items_data_api` | any authenticated member of the cabinet | fixed 2026-10-06 — see gotcha below |
 
 ## Business rules & gotchas
 
-- **`price_items_data_api` leaks every cabinet's price catalog to anyone,
-  logged in or not.** Unlike `materials.views.materials_data_api` (which it
-  otherwise mirrors), this view has **no `@login_required`** decorator, and
-  there's no project-wide login-required middleware to fall back on
-  (`chantiermobile/settings.py`'s `MIDDLEWARE` has none). It also queries
-  `PriceLibraryItem.objects.filter(is_active=True)` with **no cabinet
-  filter at all**, unlike every other view in this app (all of which go
-  through `CabinetAccessMixin` or an explicit `cabinet_roles` filter).
-  `PriceLibraryItem` is cabinet-scoped, commercially sensitive data — a
-  cabinet's own negotiated unit rates — so this single JSON endpoint exposes
-  every active item's code, designation, unit, and unit price, across every
-  cabinet in the system, to a fully anonymous request. This is both an
-  authentication gap and a tenant-isolation gap, and it's the kind of thing
-  worth fixing before this app is used by more than one cabinet in the same
-  deployment.
+- **`price_items_data_api` is now authenticated and cabinet-scoped (fixed
+  2026-10-06).** It previously had no `@login_required` decorator and no
+  cabinet filter at all, exposing every active item's code, designation,
+  unit, and unit price — across every cabinet in the system — to a fully
+  anonymous request. It now mirrors `materials.views.materials_data_api`:
+  `@login_required`, plus cabinet-scoping (a superuser sees their
+  session-active cabinet or everything; a regular user sees only their own
+  cabinet(s), via `request.user.approved_cabinet_roles`).
+  See `tests/test_pricing_security.py` for the regression coverage.
 - **A DQE's `status` has no enforced lifecycle.** Nothing stops setting it
   straight to `ARCHIVED` on creation, flipping an `ARCHIVED` DQE back to
   `DRAFT`, or editing its lines after it's `VALIDATED` — there is no

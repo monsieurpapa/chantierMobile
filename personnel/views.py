@@ -23,7 +23,7 @@ from .models import Personnel, Skill, SiteAssignment, PersonnelDocument, Leave, 
 from .forms import PersonnelForm, SiteAssignmentForm, SkillForm, PersonnelDocumentForm, LeaveForm, HolidayForm
 from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet, can_act_for_cabinet
 from core.quickcreate import QuickCreateView
-from chantiermobile.constants import UserRoles, PersonnelPayrollType, DIRECTOR_ROLES, AttendanceStatus
+from chantiermobile.constants import UserRoles, PersonnelPayrollType, DIRECTOR_ROLES, AttendanceStatus, ApprovalStatus
 from projects.models import Site
 
 HR_ADMIN_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER']
@@ -48,10 +48,13 @@ ATTENDANCE_ROLES = HR_ADMIN_ROLES + ['ENGINEER']
 def _is_hr_admin(user, cabinets=None):
     """True for a full HR_ADMIN_ROLES holder (cabinet-wide HR reach).
     False for a plain ENGINEER, who should be scoped to their own led
-    site(s) instead of the whole cabinet's personnel."""
+    site(s) instead of the whole cabinet's personnel.
+
+    FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now — see
+    core/mixins.py and docs/security.md."""
     if user.is_superuser:
         return True
-    qs = user.cabinet_roles.filter(role__in=HR_ADMIN_ROLES)
+    qs = user.approved_cabinet_roles.filter(role__in=HR_ADMIN_ROLES)
     if cabinets is not None:
         qs = qs.filter(cabinet__in=cabinets)
     return qs.exists()
@@ -93,10 +96,13 @@ class PersonnelListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin,
         return context
 
     def get_header_actions(self):
+        # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now —
+        # see core/mixins.py and docs/security.md.
         from accounts.models import UserCabinetRole
         if self.request.user.is_superuser or UserCabinetRole.objects.filter(
             user=self.request.user,
-            role__in=[UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.CHIEF_ENGINEER]
+            role__in=[UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.CHIEF_ENGINEER],
+            status=ApprovalStatus.APPROVED,
         ).exists():
             return [{
                 'label': _("Enregistrer un personnel"),
@@ -161,16 +167,19 @@ class PersonnelDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixi
         ]
 
     def get_header_actions(self):
+        # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now —
+        # see core/mixins.py and docs/security.md.
         from accounts.models import UserCabinetRole
         user = self.request.user
         actions = []
 
         is_admin = user.is_superuser or UserCabinetRole.objects.filter(
-            user=user, role__in=[UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.CHIEF_ENGINEER]
+            user=user, role__in=[UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.CHIEF_ENGINEER],
+            status=ApprovalStatus.APPROVED,
         ).exists()
 
         is_director = user.is_superuser or UserCabinetRole.objects.filter(
-            user=user, role__in=DIRECTOR_ROLES
+            user=user, role__in=DIRECTOR_ROLES, status=ApprovalStatus.APPROVED,
         ).exists()
 
         if is_admin:
@@ -302,13 +311,15 @@ class SiteAssignmentCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAcc
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
         user = self.request.user
+        # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now —
+        # see core/mixins.py and docs/security.md.
         if user.is_superuser:
             active_cabinet = get_session_cabinet(self.request)
             if active_cabinet:
                 form.fields['site'].queryset = Site.objects.filter(cabinet=active_cabinet)
                 form.fields['personnel'].queryset = Personnel.objects.filter(cabinet=active_cabinet)
-        elif hasattr(user, 'cabinet_roles'):
-            cabinets = user.cabinet_roles.values_list('cabinet', flat=True)
+        elif hasattr(user, 'approved_cabinet_roles'):
+            cabinets = user.approved_cabinet_roles.values_list('cabinet', flat=True)
             site_qs = Site.objects.filter(cabinet__in=cabinets)
             if not _is_hr_admin(user, cabinets):
                 # Plain ENGINEER: assigning personnel is a cabinet-wide HR
@@ -427,8 +438,10 @@ class LeaveListView(LoginRequiredMixin, PageHeaderMixin, ListView):
     def get_queryset(self):
         qs = Leave.objects.select_related('personnel').order_by('-start_date')
         user = self.request.user
+        # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now —
+        # see core/mixins.py and docs/security.md.
         if not user.is_superuser:
-            cabinets = user.cabinet_roles.values_list('cabinet', flat=True) if hasattr(user, 'cabinet_roles') else []
+            cabinets = user.approved_cabinet_roles.values_list('cabinet', flat=True) if hasattr(user, 'approved_cabinet_roles') else []
             qs = qs.filter(personnel__cabinet__in=cabinets)
         else:
             active_cabinet = get_session_cabinet(self.request)
@@ -449,8 +462,10 @@ class LeaveListView(LoginRequiredMixin, PageHeaderMixin, ListView):
         user = self.request.user
         is_hr_admin = _is_hr_admin(user)
         context['can_decide_leave'] = is_hr_admin
+        # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now —
+        # see core/mixins.py and docs/security.md.
         context['can_create_leave'] = is_hr_admin or (
-            user.is_authenticated and user.cabinet_roles.filter(role__in=LEAVE_CREATE_ROLES).exists()
+            user.is_authenticated and user.approved_cabinet_roles.filter(role__in=LEAVE_CREATE_ROLES).exists()
         )
         # Kept for any other template still relying on the old name.
         context['can_manage'] = context['can_decide_leave']
@@ -475,13 +490,15 @@ class LeaveCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, Cr
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
         user = self.request.user
+        # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now —
+        # see core/mixins.py and docs/security.md.
         if user.is_superuser:
             active_cabinet = get_session_cabinet(self.request)
             form.fields['personnel'].queryset = (
                 Personnel.objects.filter(cabinet=active_cabinet) if active_cabinet else Personnel.objects.all()
             )
-        elif hasattr(user, 'cabinet_roles'):
-            cabinets = user.cabinet_roles.values_list('cabinet', flat=True)
+        elif hasattr(user, 'approved_cabinet_roles'):
+            cabinets = user.approved_cabinet_roles.values_list('cabinet', flat=True)
             personnel_qs = Personnel.objects.filter(cabinet__in=cabinets)
             if not _is_hr_admin(user, cabinets):
                 # Plain ENGINEER: only personnel currently assigned to a
@@ -559,8 +576,10 @@ class HolidayListView(LoginRequiredMixin, PageHeaderMixin, ListView):
     def get_queryset(self):
         qs = Holiday.objects.order_by('date')
         user = self.request.user
+        # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now —
+        # see core/mixins.py and docs/security.md.
         if not user.is_superuser:
-            cabinets = user.cabinet_roles.values_list('cabinet', flat=True) if hasattr(user, 'cabinet_roles') else []
+            cabinets = user.approved_cabinet_roles.values_list('cabinet', flat=True) if hasattr(user, 'approved_cabinet_roles') else []
             qs = qs.filter(cabinet__in=cabinets)
         else:
             active_cabinet = get_session_cabinet(self.request)
@@ -570,9 +589,11 @@ class HolidayListView(LoginRequiredMixin, PageHeaderMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now —
+        # see core/mixins.py and docs/security.md.
         context['can_manage'] = (
             self.request.user.is_superuser or
-            self.request.user.cabinet_roles.filter(role__in=HR_ADMIN_ROLES).exists()
+            self.request.user.approved_cabinet_roles.filter(role__in=HR_ADMIN_ROLES).exists()
         )
         return context
 

@@ -135,13 +135,16 @@ themselves administer.
   is not used for business authorization anywhere — don't reach for
   `user.has_perm(...)` expecting it to reflect a Cabinet role; check `UserCabinetRole`
   (directly, or via `core.mixins`/`has_role`) instead.
-- **`UserCabinetRole.status` is not enforced by the RBAC helpers.** `can_act_for_cabinet`,
-  `can_view_cabinet`, `CabinetAccessMixin` and `RoleRequiredMixin` all query
-  `UserCabinetRole` by `(user, cabinet, role)` only — none of them filter on
-  `status=APPROVED`. In practice this means a `PENDING` assignment already grants full
-  access as if it were approved; `status` is effectively a superadmin bookkeeping/review
-  field, not a gate. If this surprises you, it's worth double-checking before relying on
-  "pending means no access yet" anywhere.
+- **`UserCabinetRole.status` is enforced by the RBAC helpers (fixed 2026-10-06).**
+  `can_act_for_cabinet`, `can_view_cabinet`, `CabinetAccessMixin`, `RoleRequiredMixin`,
+  `has_role` and `User.approved_cabinet_roles` all now require `status=APPROVED`
+  before a `UserCabinetRole` counts for anything. A `PENDING` assignment grants
+  nothing until a superadmin approves it. (Previously none of these filtered on
+  `status` at all, so a `PENDING` assignment already granted full access — see
+  `docs/security.md` and the 2026-10-06 CHANGELOG entry.) The bare `user.cabinet_roles`
+  reverse manager still returns every status and remains correct for a purely
+  informational listing (e.g. showing a user their own pending assignments) — new
+  access-control code should go through `approved_cabinet_roles` instead.
 - **A superuser's switched-in Cabinet is never role-checked.** `get_session_cabinet`
   only re-validates a *non*-superuser's session selection against `UserCabinetRole`; a
   superuser can switch into (and act fully within) any Cabinet in the system regardless

@@ -26,6 +26,10 @@ RESULTS_PER_CATEGORY = 8
 
 
 def _user_cabinet_ids(request):
+    """FIXED 2026-10-06: only counts an APPROVED UserCabinetRole (see
+    core/mixins.py and docs/security.md) — a PENDING grant no longer
+    surfaces another cabinet's records in global search before a
+    superadmin approves it."""
     user = request.user
     if user.is_superuser:
         active_cabinet = get_session_cabinet(request)
@@ -34,7 +38,7 @@ def _user_cabinet_ids(request):
         return set(Cabinet.objects.values_list('pk', flat=True))
     if not hasattr(user, 'cabinet_roles'):
         return set()
-    return set(user.cabinet_roles.values_list('cabinet_id', flat=True))
+    return set(user.approved_cabinet_roles.values_list('cabinet_id', flat=True))
 
 
 def global_search(request, query):

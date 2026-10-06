@@ -12,6 +12,34 @@ dated heading cut when a deliberate release point is agreed on.
 
 Nothing pending.
 
+## [2026-10-06] — Security fixes from the documentation pass
+
+Five authorization gaps surfaced while writing `docs/` and docstrings across the
+codebase (close code-reading tends to find these). Fixed one at a time, each with
+its own regression tests; see `docs/security.md` for the current, corrected
+behavior.
+
+### Fixed
+- `price_items_data_api` required no authentication and applied no cabinet filter,
+  leaking every cabinet's price catalog to anonymous requests — now requires login
+  and scopes results to the requester's own cabinet(s)
+- `Avenant.approve()`/`reject()` had no guard against the requester deciding their
+  own budget change order (unlike the equivalent `Expense.approve()`) — now blocks
+  self-decision the same way
+- `MaterialRequest`'s two-stage état de besoin approval
+  (`magasinier_validate`/`authorize`/`reject`) was fully self-administerable by the
+  requester for the same reason — same guard added at every stage
+- `SiteProgressCreateView` looked up its phase with no cabinet filter and never
+  scoped its role check to the phase's own cabinet, letting a user in one cabinet
+  file a progress report against another cabinet's phase — now cabinet-scoped like
+  its sibling views
+- `UserCabinetRole`'s RBAC helpers (`CabinetAccessMixin`, `RoleRequiredMixin`,
+  `can_act_for_cabinet`, `can_view_cabinet`, `has_role`, and the many ad-hoc
+  `UserCabinetRole` queries duplicated across each app's views) never filtered on
+  `status=APPROVED`, so a role grant still awaiting a superadmin's approval already
+  granted full access — every one of those checks now requires an APPROVED grant
+  (`User.approved_cabinet_roles`)
+
 ## [2026-09-24 – 2026-09-25] — Directors/Engineers feature audit
 
 A full pass through what Directors and Engineers need day-to-day, closing 16 identified

@@ -115,24 +115,17 @@ but any role (including `WORKER`) can raise a request.
 
 ## Business rules & gotchas
 
-- **Two-stage approval can be fully self-administered by one person.**
-  Neither `MaterialRequest.magasinier_validate()` nor `authorize()` checks the
-  acting user against `requested_by` (contrast
-  `finance.Expense.approve()`, which explicitly blocks `requester == approver`
-  unless superuser). Combined with the facts that (a) **any** logged-in user
-  can create a request (`MaterialRequestCreateView` has no `allowed_roles`),
-  and (b) `DIRECTOR`/`DIRECTEUR_TECHNIQUE`/`DIRECTEUR_GENERAL` sit in **both**
-  `MAGASINIER_VALIDATE_ROLES` and `FINAL_AUTHORIZATION_ROLES` — a single user
-  holding one director-tier role (the normal, intended setup for a
-  single-cabinet firm, per the `DIRECTOR` role's own docstring in
-  `chantiermobile/constants.py`) can request, validate, **and** finally
-  authorize their own material request end to end, with no second person
-  ever reviewing it. Authorization also auto-creates an already-`APPROVED`
-  `Expense` — so this single person can, in one pass, request materials and
-  book an approved expense against the site's budget with zero independent
-  review. This mirrors a pattern already flagged in `finance.Avenant`
-  (overlapping request/decide roles, no self-approval guard) and is worth the
-  same scrutiny here.
+- **Two-stage approval now blocks self-administration (fixed 2026-10-06).**
+  `MaterialRequest.magasinier_validate()`, `authorize()`, and `reject()` all
+  block `self.requested_by_id == user.pk` (bypassable only by a superuser),
+  the same guard shape as `finance.Expense.approve()` and
+  `finance.Avenant.approve()`/`reject()`. `DIRECTOR`/`DIRECTEUR_TECHNIQUE`/
+  `DIRECTEUR_GENERAL` still sit in **both** `MAGASINIER_VALIDATE_ROLES` and
+  `FINAL_AUTHORIZATION_ROLES` — that overlap is unchanged and intentional: a
+  director-tier user can still validate *and then* authorize *someone else's*
+  request end to end, just never their own. Authorization still auto-creates
+  an already-`APPROVED` `Expense`, so the guard matters just as much there as
+  at the request stage itself.
 - A `MaterialRequestItem` can reference `Material` **or** a free-text name,
   never both, never neither (`clean()`) — any code touching `items` directly
   (bulk import, a management command) must preserve that invariant since it's

@@ -42,6 +42,19 @@ Access is never a single global role — it's `(user, cabinet, role)` via
 the full role list and [ADR 0001](architecture/decisions/0001-cabinet-multi-tenancy.md)
 for why Cabinet is the tenancy boundary.
 
+**A `UserCabinetRole` only grants access once its `status` is `APPROVED`.** A
+superadmin can stage an assignment as `PENDING` before it takes effect; every RBAC
+helper (`CabinetAccessMixin`, `RoleRequiredMixin`, `can_act_for_cabinet`,
+`can_view_cabinet`, `has_role`, and `User.approved_cabinet_roles`, which all of the
+above are built on) filters on `status=APPROVED`, so a `PENDING` grant authorizes
+nothing yet. This was fixed 2026-10-06 — previously none of these helpers checked
+`status` at all, so a freshly-created `PENDING` row already granted full access.
+Any new access-control code should go through `User.approved_cabinet_roles` (or an
+explicit `status=ApprovalStatus.APPROVED` filter) rather than the bare
+`user.cabinet_roles` reverse manager, which still returns every status — that bare
+manager remains correct for a purely informational listing (e.g. a profile page
+showing a user their own pending assignments).
+
 ### Representative permission matrix
 
 Drawn directly from `allowed_roles` declarations across the codebase (not exhaustive —
@@ -92,10 +105,12 @@ current user's Cabinet(s) via `cabinet_lookup_field` (direct or chained FK path)
 regular user with no `UserCabinetRole` anywhere gets an empty queryset, not an error —
 fail closed, not open. See [ADR 0001](architecture/decisions/0001-cabinet-multi-tenancy.md).
 
-Self-approval is explicitly blocked where it matters: `Expense.approve()` raises
-`ValidationError` when the approver is also the requester (bypassable only by
-`is_superuser`, which is accepted as an operator-trust boundary, not a gap — see
-`SECURITY.md`'s known limitations).
+Self-approval/self-administration is explicitly blocked where it matters, all
+following the same shape — `ValidationError` when the acting user is also the
+requester, bypassable only by `is_superuser` (accepted as an operator-trust
+boundary, not a gap — see `SECURITY.md`'s known limitations):
+`Expense.approve()`, `Avenant.approve()`/`reject()`, and `MaterialRequest`'s
+two-stage `magasinier_validate()`/`authorize()`/`reject()`.
 
 ## State integrity
 

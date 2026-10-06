@@ -7,6 +7,7 @@ see docs/security.md.
 """
 from django import template
 from accounts.models import UserCabinetRole
+from chantiermobile.constants import ApprovalStatus
 
 register = template.Library()
 
@@ -19,6 +20,11 @@ def has_role(user, role_names):
     call this once per row in a list (e.g. per-site action buttons), and the
     result never changes within a single request, so re-querying each time
     is pure N+1.
+
+    FIXED 2026-10-06: only counts an APPROVED UserCabinetRole — a
+    PENDING grant no longer lights up an action button it shouldn't
+    (the server-side check this is paired with is fixed the same way;
+    see core/mixins.py and docs/security.md).
     """
     if not user.is_authenticated:
         return False
@@ -30,5 +36,5 @@ def has_role(user, role_names):
         cache = user._has_role_cache = {}
     if role_names not in cache:
         roles = role_names.split(',')
-        cache[role_names] = UserCabinetRole.objects.filter(user=user, role__in=roles).exists()
+        cache[role_names] = UserCabinetRole.objects.filter(user=user, role__in=roles, status=ApprovalStatus.APPROVED).exists()
     return cache[role_names]

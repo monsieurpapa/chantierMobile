@@ -19,7 +19,7 @@ from .forms import MaterialForm, MaterialRequestForm, MaterialRequestItemFormSet
 from projects.models import Site
 from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet, can_act_for_cabinet
 from core.quickcreate import QuickCreateView
-from chantiermobile.constants import UserRoles, FINAL_AUTHORIZATION_ROLES, MaterialRequestStatus
+from chantiermobile.constants import UserRoles, FINAL_AUTHORIZATION_ROLES, MaterialRequestStatus, ApprovalStatus
 
 # État de besoin — two-stage approval: the magasinier validates first,
 # then a Directeur Technique/Général (or Directeur de Cabinet, kept for
@@ -63,9 +63,12 @@ class MaterialListView(LoginRequiredMixin, PageHeaderMixin, ListView):
         return super().get_queryset().order_by('name')
 
     def get_header_actions(self):
+        # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now —
+        # see core/mixins.py and docs/security.md.
         from accounts.models import UserCabinetRole
         if self.request.user.is_superuser or UserCabinetRole.objects.filter(
-            user=self.request.user, role__in=[UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.CHIEF_ENGINEER]
+            user=self.request.user, role__in=[UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.CHIEF_ENGINEER],
+            status=ApprovalStatus.APPROVED,
         ).exists():
             return [{
                 'label': _("Ajouter un matériau"),
@@ -146,13 +149,15 @@ class MaterialRequestListView(LoginRequiredMixin, PageHeaderMixin, ListView):
         }]
 
     def get_queryset(self):
+        # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now —
+        # see core/mixins.py and docs/security.md.
         qs = super().get_queryset().prefetch_related('items__material').select_related('site', 'requested_by')
         if self.request.user.is_superuser:
             active_cabinet = get_session_cabinet(self.request)
             if active_cabinet:
                 qs = qs.filter(site__cabinet=active_cabinet)
         else:
-            user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+            user_cabinet_ids = self.request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
             qs = qs.filter(site__cabinet__id__in=user_cabinet_ids)
         return qs.order_by('-created_at')
 
@@ -187,14 +192,16 @@ class MaterialRequestCreateView(LoginRequiredMixin, PageHeaderMixin, CreateView)
         return initial
 
     def get_form(self, form_class=None):
+        # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now —
+        # see core/mixins.py and docs/security.md.
         form = super().get_form(form_class)
         if self.request.user.is_superuser:
             form.fields['site'].queryset = Site.objects.all()
         else:
-            user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+            user_cabinet_ids = self.request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
             form.fields['site'].queryset = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
         return form
-    
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         if self.request.POST:
@@ -206,7 +213,7 @@ class MaterialRequestCreateView(LoginRequiredMixin, PageHeaderMixin, CreateView)
     def form_valid(self, form):
         context = self.get_context_data()
         items_formset = context['items_formset']
-        
+
         if items_formset.is_valid():
             form.instance.requested_by = self.request.user
             self.object = form.save()
@@ -277,11 +284,13 @@ class MaterialRequestUpdateView(LoginRequiredMixin, CabinetAccessMixin, PageHead
         ]
 
     def get_form(self, form_class=None):
+        # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now —
+        # see core/mixins.py and docs/security.md.
         form = super().get_form(form_class)
         if self.request.user.is_superuser:
             form.fields['site'].queryset = Site.objects.all()
         else:
-            user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+            user_cabinet_ids = self.request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
             form.fields['site'].queryset = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
         return form
 

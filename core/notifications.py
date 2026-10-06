@@ -26,9 +26,17 @@ def notify_role_holders(cabinet, roles, message, url, exclude_user=None):
         return
     from accounts.models import UserCabinetRole
     from core.models import Notification
+    from chantiermobile.constants import ApprovalStatus
 
+    # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts — matches
+    # core/approvals.py's pending-approvals inbox and the view-level
+    # can_act_for_cabinet/RoleRequiredMixin checks this mirrors, so a
+    # still-PENDING role-holder isn't notified "something needs your
+    # decision" for an action they can't actually take yet.
     user_ids = set(
-        UserCabinetRole.objects.filter(cabinet=cabinet, role__in=roles).values_list('user_id', flat=True)
+        UserCabinetRole.objects.filter(
+            cabinet=cabinet, role__in=roles, status=ApprovalStatus.APPROVED
+        ).values_list('user_id', flat=True)
     )
     if exclude_user is not None:
         user_ids.discard(exclude_user.pk)

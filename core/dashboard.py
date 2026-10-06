@@ -43,11 +43,15 @@ def can_view_financials(request):
     Kept next to scoped_cabinet_ids as its own testable function rather
     than a template-level check, so the same rule can be asserted in
     tests without rendering HTML.
+
+    FIXED 2026-10-06: only an APPROVED UserCabinetRole counts (see
+    core/mixins.py and docs/security.md) — a PENDING financial role no
+    longer unlocks the money widgets before a superadmin approves it.
     """
     user = request.user
     if user.is_superuser:
         return True
-    return user.cabinet_roles.filter(role__in=FINANCIAL_ROLES).exists()
+    return user.approved_cabinet_roles.filter(role__in=FINANCIAL_ROLES).exists()
 
 MONEY_FIELD = DecimalField(max_digits=14, decimal_places=2)
 APPROVED_OR_PAID = [ExpenseStatus.APPROVED, ExpenseStatus.PAID]
@@ -100,14 +104,17 @@ def _badge_hex(status_map, key):
 def scoped_cabinet_ids(request):
     """None means "no restriction" (superuser viewing every cabinet).
     Otherwise a list of cabinet ids (possibly empty, for a user with no
-    cabinet role at all)."""
+    APPROVED cabinet role at all — FIXED 2026-10-06, see
+    core/mixins.py and docs/security.md: a PENDING role no longer
+    scopes the dashboard into a cabinet it doesn't yet actually grant
+    access to)."""
     user = request.user
     if user.is_superuser:
         active_cabinet = get_session_cabinet(request)
         if active_cabinet:
             return [active_cabinet.id]
         return None
-    return list(user.cabinet_roles.values_list('cabinet_id', flat=True))
+    return list(user.approved_cabinet_roles.values_list('cabinet_id', flat=True))
 
 
 def _scope(qs, path, cabinet_ids):

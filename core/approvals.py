@@ -39,7 +39,12 @@ LEAVE_DECIDE_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'C
 def _allowed_cabinet_ids(request, roles):
     """Cabinet ids the current user may act on with one of `roles` —
     same superuser/session-cabinet convention as CabinetAccessMixin and
-    can_act_for_cabinet (core/mixins.py)."""
+    can_act_for_cabinet (core/mixins.py).
+
+    FIXED 2026-10-06: only counts an APPROVED UserCabinetRole (see
+    core/mixins.py and docs/security.md) — otherwise this inbox could
+    list, and link to, items a still-PENDING role doesn't actually let
+    the viewer act on yet."""
     user = request.user
     if user.is_superuser:
         active_cabinet = get_session_cabinet(request)
@@ -48,7 +53,7 @@ def _allowed_cabinet_ids(request, roles):
         return set(Cabinet.objects.values_list('pk', flat=True))
     if not hasattr(user, 'cabinet_roles'):
         return set()
-    return set(user.cabinet_roles.filter(role__in=roles).values_list('cabinet_id', flat=True))
+    return set(user.approved_cabinet_roles.filter(role__in=roles).values_list('cabinet_id', flat=True))
 
 
 def _display_name(user):

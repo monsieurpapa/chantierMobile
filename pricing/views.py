@@ -14,7 +14,7 @@ from core.mixins import (
     CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin,
     add_ambiguous_cabinet_field, get_session_cabinet,
 )
-from chantiermobile.constants import UserRoles
+from chantiermobile.constants import UserRoles, ApprovalStatus
 
 # Kept as a module-local alias — relocated to core.mixins.add_ambiguous_cabinet_field
 # so finance/views.py (SalaryPaymentListCreateView) can reuse it too.
@@ -38,9 +38,12 @@ class PriceLibraryItemListView(LoginRequiredMixin, CabinetAccessMixin, PageHeade
         return super().get_queryset().order_by('item_type', 'code')
 
     def get_header_actions(self):
+        # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now —
+        # see core/mixins.py and docs/security.md.
         from accounts.models import UserCabinetRole
         if self.request.user.is_superuser or UserCabinetRole.objects.filter(
-            user=self.request.user, role__in=[UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.CHIEF_ENGINEER]
+            user=self.request.user, role__in=[UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.CHIEF_ENGINEER],
+            status=ApprovalStatus.APPROVED,
         ).exists():
             return [{
                 'label': _("Ajouter un article"),
@@ -153,11 +156,15 @@ class PriceLibraryItemDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHea
 
 
 def _scope_site_queryset(request, form):
-    """Restrict a DQE form's `site` field to the sites the current user can see."""
+    """Restrict a DQE form's `site` field to the sites the current user can see.
+
+    FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now — see
+    core/mixins.py and docs/security.md.
+    """
     if request.user.is_superuser:
         form.fields['site'].queryset = Site.objects.all()
     else:
-        user_cabinet_ids = request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+        user_cabinet_ids = request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
         form.fields['site'].queryset = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
     return form
 
@@ -178,9 +185,12 @@ class DQEListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListV
         return super().get_queryset().select_related('site').prefetch_related('lines').order_by('-created_at')
 
     def get_header_actions(self):
+        # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now —
+        # see core/mixins.py and docs/security.md.
         from accounts.models import UserCabinetRole
         if self.request.user.is_superuser or UserCabinetRole.objects.filter(
-            user=self.request.user, role__in=[UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.CHIEF_ENGINEER]
+            user=self.request.user, role__in=[UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.CHIEF_ENGINEER],
+            status=ApprovalStatus.APPROVED,
         ).exists():
             return [{
                 'label': _("Nouveau DQE"),
@@ -347,13 +357,15 @@ def price_items_data_api(request):
     """
     from django.http import JsonResponse
 
+    # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now — see
+    # core/mixins.py and docs/security.md.
     items = PriceLibraryItem.objects.filter(is_active=True)
     if request.user.is_superuser:
         active_cabinet = get_session_cabinet(request)
         if active_cabinet:
             items = items.filter(cabinet=active_cabinet)
     else:
-        cabinet_ids = request.user.cabinet_roles.values_list('cabinet', flat=True)
+        cabinet_ids = request.user.approved_cabinet_roles.values_list('cabinet', flat=True)
         items = items.filter(cabinet__in=cabinet_ids)
 
     items = items.values('id', 'designation', 'unit', 'unit_price')

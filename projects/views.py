@@ -18,7 +18,7 @@ from django.utils.translation import gettext_lazy as _
 from .models import Site, ProjectPhase, SiteProgress, ProgressPhoto, ProgressComment, PlanningSubmission
 from .forms import SiteForm, ProjectPhaseForm, SiteProgressForm, PlanningSubmissionForm
 from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet, can_act_for_cabinet, can_view_cabinet
-from chantiermobile.constants import UserRoles
+from chantiermobile.constants import UserRoles, ApprovalStatus
 
 LEAD_ENGINEER_ROLES = ['ENGINEER', 'CHIEF_ENGINEER']
 PHASE_CLOSE_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER', 'ENGINEER']
@@ -65,10 +65,13 @@ class SiteListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, List
 
     def get_header_actions(self):
         # We can't easily use rbac_tags here, so we use UserCabinetRole logic
+        # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now —
+        # see core/mixins.py and docs/security.md.
         from accounts.models import UserCabinetRole
         if self.request.user.is_superuser or UserCabinetRole.objects.filter(
             user=self.request.user,
-            role__in=[UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.CHIEF_ENGINEER]
+            role__in=[UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.CHIEF_ENGINEER],
+            status=ApprovalStatus.APPROVED,
         ).exists():
             return [{
                 'label': _("Créer un chantier"),
@@ -313,13 +316,15 @@ class ProjectPhaseCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMi
         fall through unscoped so LoginRequiredMixin's redirect (triggered
         by super().dispatch() right after) still fires instead of a 404.
         """
+        # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now —
+        # see core/mixins.py and docs/security.md.
         user = request.user
         if not user.is_authenticated:
             return Site.objects.all()
         if user.is_superuser:
             active_cabinet = get_session_cabinet(request)
             return Site.objects.filter(cabinet=active_cabinet) if active_cabinet else Site.objects.all()
-        cabinets = user.cabinet_roles.values_list('cabinet', flat=True)
+        cabinets = user.approved_cabinet_roles.values_list('cabinet', flat=True)
         return Site.objects.filter(cabinet__in=cabinets)
 
     def dispatch(self, request, *args, **kwargs):
@@ -460,13 +465,15 @@ class SiteProgressCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMi
         scoped queryset. Unauthenticated requests fall through unscoped
         so LoginRequiredMixin's redirect (triggered by super().dispatch()
         right after) still fires instead of a 404."""
+        # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now —
+        # see core/mixins.py and docs/security.md.
         user = request.user
         if not user.is_authenticated:
             return ProjectPhase.objects.all()
         if user.is_superuser:
             active_cabinet = get_session_cabinet(request)
             return ProjectPhase.objects.filter(site__cabinet=active_cabinet) if active_cabinet else ProjectPhase.objects.all()
-        cabinets = user.cabinet_roles.values_list('cabinet', flat=True)
+        cabinets = user.approved_cabinet_roles.values_list('cabinet', flat=True)
         return ProjectPhase.objects.filter(site__cabinet__in=cabinets)
 
     def dispatch(self, request, *args, **kwargs):

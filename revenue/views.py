@@ -18,7 +18,7 @@ from django.views.generic import ListView, CreateView, UpdateView, DetailView
 from django.urls import reverse_lazy
 from django.utils.translation import gettext_lazy as _
 from .models import Contract, Invoice, Payment, Devis, SituationTravaux
-from chantiermobile.constants import InvoiceStatus, UserRoles, DevisStatus, SituationStatus
+from chantiermobile.constants import InvoiceStatus, UserRoles, DevisStatus, SituationStatus, ApprovalStatus
 from .forms import (
     ContractForm, InvoiceForm, PaymentForm,
     DevisForm, DevisLineFormSet, SituationTravauxForm, SituationLineFormSet,
@@ -38,7 +38,10 @@ INVOICE_ACTION_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 
 class ContractListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
     """Lists contracts for the caller's cabinet(s); open to any
     authenticated user. "Nouveau contrat" is only offered to DIRECTOR/
-    DIRECTEUR_TECHNIQUE/DIRECTEUR_GENERAL/ACCOUNTANT."""
+    DIRECTEUR_TECHNIQUE/DIRECTEUR_GENERAL/ACCOUNTANT.
+
+    FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now — see
+    core/mixins.py and docs/security.md."""
     model = Contract
     template_name = 'revenue/contract_list.html'
     context_object_name = 'contracts'
@@ -47,9 +50,12 @@ class ContractListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, 
     header_subtitle = _("Gérez les contrats et accords financiers des projets")
 
     def get_header_actions(self):
+        # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now —
+        # see core/mixins.py and docs/security.md.
         from accounts.models import UserCabinetRole
         if self.request.user.is_superuser or UserCabinetRole.objects.filter(
-            user=self.request.user, role__in=[UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.ACCOUNTANT]
+            user=self.request.user, role__in=[UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.ACCOUNTANT],
+            status=ApprovalStatus.APPROVED,
         ).exists():
             return [{
                 'label': _("Nouveau contrat"),
@@ -65,13 +71,16 @@ class ContractListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, 
             if active_cabinet:
                 return super().get_queryset().filter(site__cabinet=active_cabinet)
             return super().get_queryset()
-        user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+        user_cabinet_ids = self.request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
         return super().get_queryset().filter(site__cabinet__id__in=user_cabinet_ids)
 
 class ContractCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, CreateView):
     """Creates a Contract directly (bypassing the Devis-acceptance flow).
     allowed_roles: DIRECTOR, DIRECTEUR_TECHNIQUE, DIRECTEUR_GENERAL,
-    ACCOUNTANT."""
+    ACCOUNTANT.
+
+    FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now — see
+    core/mixins.py and docs/security.md."""
     model = Contract
     form_class = ContractForm
     template_name = 'revenue/contract_form.html'
@@ -102,7 +111,7 @@ class ContractCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMix
             else:
                 form.fields['site'].queryset = Site.objects.all()
         else:
-            user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+            user_cabinet_ids = self.request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
             form.fields['site'].queryset = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
         return form
 
@@ -111,7 +120,10 @@ class ContractCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMix
         return reverse_lazy('projects:site_detail', kwargs={'unique_id': self.object.site.unique_id})
 
 class ContractUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, UpdateView):
-    """Edits a Contract. Same allowed_roles as ContractCreateView."""
+    """Edits a Contract. Same allowed_roles as ContractCreateView.
+
+    FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now — see
+    core/mixins.py and docs/security.md."""
     model = Contract
     form_class = ContractForm
     template_name = 'revenue/contract_form.html'
@@ -139,7 +151,7 @@ class ContractUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMix
             else:
                 form.fields['site'].queryset = Site.objects.all()
         else:
-            user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+            user_cabinet_ids = self.request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
             form.fields['site'].queryset = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
         return form
 
@@ -153,6 +165,8 @@ class InvoiceListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, L
     unlike most other list views' header actions, which check a role
     first — InvoiceCreateView itself still enforces allowed_roles on
     submit.)"""
+    # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now — see
+    # core/mixins.py and docs/security.md.
     model = Invoice
     template_name = 'revenue/invoice_list.html'
     context_object_name = 'invoices'
@@ -174,13 +188,16 @@ class InvoiceListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, L
             if active_cabinet:
                 return super().get_queryset().filter(contract__site__cabinet=active_cabinet)
             return super().get_queryset()
-        user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+        user_cabinet_ids = self.request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
         return super().get_queryset().filter(contract__site__cabinet__id__in=user_cabinet_ids)
 
 class InvoiceCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, CreateView):
     """Creates an Invoice (always DRAFT — see InvoiceForm's comment on why
     status isn't user-editable here). allowed_roles: DIRECTOR,
-    DIRECTEUR_TECHNIQUE, DIRECTEUR_GENERAL, ACCOUNTANT."""
+    DIRECTEUR_TECHNIQUE, DIRECTEUR_GENERAL, ACCOUNTANT.
+
+    FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now — see
+    core/mixins.py and docs/security.md."""
     model = Invoice
     form_class = InvoiceForm
     template_name = 'revenue/invoice_form.html'
@@ -211,7 +228,7 @@ class InvoiceCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixi
             else:
                 form.fields['contract'].queryset = Contract.objects.all()
         else:
-            user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+            user_cabinet_ids = self.request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
             form.fields['contract'].queryset = Contract.objects.filter(site__cabinet__id__in=user_cabinet_ids)
         return form
 
@@ -269,10 +286,13 @@ class InvoiceDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin,
 def invoice_pdf(request, pk):
     """PDF export of a single invoice — a document to hand to the client,
     not a multi-row report, so it reuses render_table_report_pdf's layout
-    as a simple two-column "field / value" table rather than a list."""
+    as a simple two-column "field / value" table rather than a list.
+
+    FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now — see
+    core/mixins.py and docs/security.md."""
     invoice = get_object_or_404(Invoice, pk=pk)
     if not request.user.is_superuser:
-        user_cabinet_ids = request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+        user_cabinet_ids = request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
         if invoice.contract.site.cabinet_id not in user_cabinet_ids:
             messages.error(request, _("Vous n'avez pas accès à cette facture."))
             return redirect('revenue:invoice_list')
@@ -305,10 +325,13 @@ def invoice_pdf(request, pk):
 @login_required
 def contract_pdf(request, pk):
     """PDF export of a single contract — same key/value document layout
-    as invoice_pdf."""
+    as invoice_pdf.
+
+    FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now — see
+    core/mixins.py and docs/security.md."""
     contract = get_object_or_404(Contract, pk=pk)
     if not request.user.is_superuser:
-        user_cabinet_ids = request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+        user_cabinet_ids = request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
         if contract.site.cabinet_id not in user_cabinet_ids:
             messages.error(request, _("Vous n'avez pas accès à ce contrat."))
             return redirect('revenue:contract_list')
@@ -339,7 +362,10 @@ class PaymentListView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin,
     DIRECTOR, DIRECTEUR_TECHNIQUE, DIRECTEUR_GENERAL, ACCOUNTANT — note
     CASHIER is not in this list even though it can record a payment (see
     PaymentCreateView), so a cashier can create a payment but not browse
-    the history list."""
+    the history list.
+
+    FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now — see
+    core/mixins.py and docs/security.md."""
     model = Payment
     template_name = 'revenue/payment_list.html'
     context_object_name = 'payments'
@@ -363,7 +389,7 @@ class PaymentListView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin,
             if active_cabinet:
                 return qs.filter(invoice__contract__site__cabinet=active_cabinet)
             return qs
-        user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+        user_cabinet_ids = self.request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
         return qs.filter(invoice__contract__site__cabinet__id__in=user_cabinet_ids)
 
     def get_context_data(self, **kwargs):
@@ -378,7 +404,10 @@ class PaymentCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixi
     SENT/OVERDUE invoices). allowed_roles: DIRECTOR, DIRECTEUR_TECHNIQUE,
     DIRECTEUR_GENERAL, ACCOUNTANT, CASHIER. Saving triggers
     Invoice.check_and_mark_paid() and emails directors
-    (notify_directors_of_payment)."""
+    (notify_directors_of_payment).
+
+    FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now — see
+    core/mixins.py and docs/security.md."""
     model = Payment
     form_class = PaymentForm
     template_name = 'revenue/payment_form.html'
@@ -407,7 +436,7 @@ class PaymentCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixi
             else:
                 form.fields['invoice'].queryset = Invoice.objects.filter(status__in=payable_statuses)
         else:
-            user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+            user_cabinet_ids = self.request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
             form.fields['invoice'].queryset = Invoice.objects.filter(
                 contract__site__cabinet__id__in=user_cabinet_ids,
                 status__in=payable_statuses,
@@ -498,7 +527,10 @@ def invoice_cancel(request, pk):
 class DevisListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
     """Lists devis for the caller's cabinet(s); open to any authenticated
     user. Creating/sending/accepting/rejecting a devis is separately
-    gated to DEVIS_ACTION_ROLES."""
+    gated to DEVIS_ACTION_ROLES.
+
+    FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now — see
+    core/mixins.py and docs/security.md."""
     model = Devis
     template_name = 'revenue/devis_list.html'
     context_object_name = 'devis_list'
@@ -521,7 +553,7 @@ class DevisListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, Lis
             if active_cabinet:
                 qs = qs.filter(site__cabinet=active_cabinet)
         else:
-            user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+            user_cabinet_ids = self.request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
             qs = qs.filter(site__cabinet__id__in=user_cabinet_ids)
 
         status = self.request.GET.get('status')
@@ -533,7 +565,10 @@ class DevisListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, Lis
 class DevisCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, CreateView):
     """Creates a Devis plus its DevisLine formset (or just a photo, with no
     typed-in lines — see the has_photo handling below). allowed_roles =
-    DEVIS_ACTION_ROLES."""
+    DEVIS_ACTION_ROLES.
+
+    FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now — see
+    core/mixins.py and docs/security.md."""
     model = Devis
     form_class = DevisForm
     template_name = 'revenue/devis_form.html'
@@ -564,7 +599,7 @@ class DevisCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin,
             else:
                 form.fields['site'].queryset = Site.objects.all()
         else:
-            user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+            user_cabinet_ids = self.request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
             form.fields['site'].queryset = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
         return form
 
@@ -606,7 +641,10 @@ class DevisUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin,
     """Edits a Devis and its lines. allowed_roles = DEVIS_ACTION_ROLES; the
     template only links here while the devis is still BROUILLON (see
     DevisDetailView.get_header_actions), though this view itself doesn't
-    re-check that status."""
+    re-check that status.
+
+    FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now — see
+    core/mixins.py and docs/security.md."""
     model = Devis
     form_class = DevisForm
     template_name = 'revenue/devis_form.html'
@@ -635,7 +673,7 @@ class DevisUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin,
             else:
                 form.fields['site'].queryset = Site.objects.all()
         else:
-            user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+            user_cabinet_ids = self.request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
             form.fields['site'].queryset = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
         return form
 
@@ -781,7 +819,10 @@ def devis_reject(request, pk):
 class SituationTravauxListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
     """Lists situations de travaux for the caller's cabinet(s); open to any
     authenticated user. Creating/validating/invoicing one is separately
-    gated to DEVIS_ACTION_ROLES."""
+    gated to DEVIS_ACTION_ROLES.
+
+    FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now — see
+    core/mixins.py and docs/security.md."""
     model = SituationTravaux
     template_name = 'revenue/situation_list.html'
     context_object_name = 'situations'
@@ -804,7 +845,7 @@ class SituationTravauxListView(LoginRequiredMixin, CabinetAccessMixin, PageHeade
             if active_cabinet:
                 return qs.filter(contract__site__cabinet=active_cabinet)
             return qs
-        user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+        user_cabinet_ids = self.request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
         return qs.filter(contract__site__cabinet__id__in=user_cabinet_ids)
 
 
@@ -812,7 +853,10 @@ class SituationTravauxCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetA
     """Creates a SituationTravaux plus its SituationLine formset, restricted
     to the contract's own source Devis lines when it has one. allowed_roles
     = DEVIS_ACTION_ROLES (reused — same "who can touch billing progress"
-    circle as devis actions)."""
+    circle as devis actions).
+
+    FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now — see
+    core/mixins.py and docs/security.md."""
     model = SituationTravaux
     form_class = SituationTravauxForm
     template_name = 'revenue/situation_form.html'
@@ -843,7 +887,7 @@ class SituationTravauxCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetA
             else:
                 form.fields['contract'].queryset = Contract.objects.all()
         else:
-            user_cabinet_ids = self.request.user.cabinet_roles.values_list('cabinet_id', flat=True)
+            user_cabinet_ids = self.request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
             form.fields['contract'].queryset = Contract.objects.filter(site__cabinet__id__in=user_cabinet_ids)
         return form
 

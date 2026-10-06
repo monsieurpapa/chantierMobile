@@ -29,6 +29,24 @@ class User(AbstractUser):
     def __str__(self):
         return self.username
 
+    @property
+    def approved_cabinet_roles(self):
+        """FIXED 2026-10-06: `self.cabinet_roles` (the plain reverse FK
+        manager) returns every UserCabinetRole row regardless of
+        `status`, including a PENDING one a superadmin hasn't approved
+        yet — and every RBAC helper that queried it directly (or ran
+        its own equivalent `UserCabinetRole.objects.filter(...)`)
+        treated a PENDING grant as fully active, contrary to the
+        model's own docstring ("only APPROVED is meant to grant access
+        in practice"). Every access-control check should go through
+        this property (or filter on status=ApprovalStatus.APPROVED
+        directly) instead of the bare `cabinet_roles` manager — see
+        docs/security.md. An *informational* listing that intentionally
+        shows a user their own pending assignments (e.g. a profile
+        page) should keep using `cabinet_roles` directly; this property
+        is only for "does this grant actually authorize anything"."""
+        return self.cabinet_roles.filter(status=ApprovalStatus.APPROVED)
+
 class Cabinet(BaseModel):
     """A tenant: one construction firm, or one branch of one. This is the
     isolation boundary for every business model in the system (sites,
