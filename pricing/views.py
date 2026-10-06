@@ -1,6 +1,7 @@
 """Views for the Bibliothèque de Prix (price library) and the DQEs built
 from it."""
 from django.views.generic import ListView, CreateView, UpdateView, DetailView
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from django.contrib import messages
@@ -9,7 +10,10 @@ from django.utils.translation import gettext_lazy as _
 from .models import PriceLibraryItem, DQE
 from .forms import PriceLibraryItemForm, DQEForm, DQELineFormSet
 from projects.models import Site
-from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, add_ambiguous_cabinet_field
+from core.mixins import (
+    CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin,
+    add_ambiguous_cabinet_field, get_session_cabinet,
+)
 from chantiermobile.constants import UserRoles
 
 # Kept as a module-local alias — relocated to core.mixins.add_ambiguous_cabinet_field
@@ -323,27 +327,36 @@ class DQEDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, Det
         ]
 
 
+@login_required
 def price_items_data_api(request):
     """API endpoint exposing active price library items (designation, unit, unit_price)
     so the DQE line formset can auto-fill those fields client-side, mirroring
     materials.views.materials_data_api.
 
-    GOTCHA: unlike materials_data_api (which at least requires
-    @login_required), this view has no authentication decorator at all —
-    there is no app-wide login-required middleware in this project (see
-    MIDDLEWARE in chantiermobile/settings.py), so this endpoint is
-    reachable by a fully anonymous request. It also queries
-    `PriceLibraryItem.objects.filter(is_active=True)` with no cabinet
-    filter whatsoever, unlike every other pricing view (which all scope
-    through CabinetAccessMixin or an explicit cabinet_roles filter).
-    PriceLibraryItem is cabinet-scoped, tenant-specific data (a cabinet's
-    own negotiated unit prices — see the model docstring), so this one
-    endpoint leaks every cabinet's active price catalog (code,
-    designation, unit, unit_price) to anyone who can reach the URL,
-    logged in or not."""
+    FIXED 2026-10-06 (previously a tenant-isolation + auth gap — see
+    docs/modules/pricing.md's history / git log for the original finding):
+    this endpoint used to have no `@login_required` at all and applied no
+    cabinet filter, so any anonymous request could read every cabinet's
+    price catalog. It now requires login and is scoped exactly like
+    `CabinetAccessMixin` would scope `PriceLibraryItemListView` — a
+    superuser sees the session-selected cabinet (or every cabinet if none
+    is selected), everyone else sees only the cabinet(s) they hold a role
+    in. Kept as a plain function (not a CBV) so it stays a drop-in
+    replacement for the existing `fetch('/pricing/api/price-items-data/')`
+    call in the DQE line formset's JS.
+    """
     from django.http import JsonResponse
 
-    items = PriceLibraryItem.objects.filter(is_active=True).values('id', 'designation', 'unit', 'unit_price')
+    items = PriceLibraryItem.objects.filter(is_active=True)
+    if request.user.is_superuser:
+        active_cabinet = get_session_cabinet(request)
+        if active_cabinet:
+            items = items.filter(cabinet=active_cabinet)
+    else:
+        cabinet_ids = request.user.cabinet_roles.values_list('cabinet', flat=True)
+        items = items.filter(cabinet__in=cabinet_ids)
+
+    items = items.values('id', 'designation', 'unit', 'unit_price')
     data = {}
     for item in items:
         data[str(item['id'])] = {
