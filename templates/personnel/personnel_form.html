@@ -83,8 +83,9 @@
 
                         <div class="row mb-3">
                             <div class="col-md-4">
-                                <label class="form-label" for="{{ form.default_daily_rate.id_for_label }}">{% trans "Default Daily Rate ($)" %}</label>
+                                <label class="form-label" for="{{ form.default_daily_rate.id_for_label }}">{% trans "Tarif journalier ($)" %}</label>
                                 {{ form.default_daily_rate }}
+                                <p class="fs--2 text-500">{% trans "Optionnel — laisser vide pour un personnel payé uniquement par convention (par étape de chantier)." %}</p>
                                 {% if form.default_daily_rate.errors %}
                                 <div class="text-danger fs--2">
                                     {{ form.default_daily_rate.errors }}
@@ -92,9 +93,9 @@
                                 {% endif %}
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label" for="{{ form.monthly_salary.id_for_label }}">{% trans "Salaire mensuel ($)" %}</label>
+                                <label class="form-label" for="{{ form.monthly_salary.id_for_label }}">{% trans "Convention ($)" %}</label>
                                 {{ form.monthly_salary }}
-                                <p class="fs--2 text-500">{% trans "Laisser vide pour un ouvrier payé au journalier." %}</p>
+                                <p class="fs--2 text-500">{% trans "Laisser vide pour un ouvrier payé au journalier ou par convention de chantier." %}</p>
                                 {% if form.monthly_salary.errors %}
                                 <div class="text-danger fs--2">
                                     {{ form.monthly_salary.errors }}
@@ -104,12 +105,70 @@
                             <div class="col-md-4">
                                 <label class="form-label" for="{{ form.user.id_for_label }}">{% trans "System User (Link for Login)" %}</label>
                                 {{ form.user }}
+                                <p class="fs--2 text-500">{% trans "Optionnel — uniquement si ce personnel doit pouvoir se connecter à l'application." %}</p>
                                 {% if form.user.errors %}
                                 <div class="text-danger fs--2">
                                     {{ form.user.errors }}
                                 </div>
                                 {% endif %}
                             </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0">{% trans "Chantiers & conventions" %}</h6>
+                                <span class="badge bg-info" id="convention-count">{{ convention_formset|length }}</span>
+                            </div>
+                            <p class="fs--2 text-500">
+                                {% trans "Affectez ce personnel à un ou plusieurs chantiers. Pour chaque chantier, nommez la convention et rattachez-la à une étape existante ou nommez-en une nouvelle — elle sera créée automatiquement." %}
+                            </p>
+
+                            <div id="convention-container">
+                                {% for cform in convention_formset %}
+                                <div class="convention-row p-3 border rounded-3 border-200 mb-2" data-form-index="{{ forloop.counter0 }}">
+                                    {% if cform.instance.pk %}{{ cform.id }}{% endif %}
+                                    <div class="row g-2 align-items-end">
+                                        <div class="col-md-3">
+                                            <label class="form-label fs--1 fw-semibold">{% trans "Chantier" %}</label>
+                                            {{ cform.site }}
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label fs--1 fw-semibold">{% trans "Étape" %}</label>
+                                            {{ cform.phase }}
+                                            <input type="text" class="form-control mt-1 new-phase-input" name="{{ cform.new_phase_name.html_name }}" id="{{ cform.new_phase_name.id_for_label }}" placeholder="{% trans 'Nom de la nouvelle étape' %}" style="display:none;" value="{{ cform.new_phase_name.value|default_if_none:'' }}">
+                                            <button type="button" class="btn btn-link btn-sm p-0 toggle-new-phase">{% trans "+ Nouvelle étape…" %}</button>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label fs--1 fw-semibold">{% trans "Nom de la convention" %}</label>
+                                            {{ cform.name }}
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label fs--1 fw-semibold">{% trans "Montant" %}</label>
+                                            {{ cform.convention_amount }}
+                                        </div>
+                                        <div class="col-md-1 d-flex align-items-end">
+                                            {% if not forloop.first %}
+                                            <button type="button" class="btn btn-sm btn-outline-danger remove-convention" title="{% trans 'Supprimer cette convention' %}">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% if cform.non_field_errors %}<div class="text-danger fs--2 mt-1">{{ cform.non_field_errors }}</div>{% endif %}
+                                    {{ cform.DELETE }}
+                                </div>
+                                {% endfor %}
+
+                                {{ convention_formset.management_form }}
+
+                                {% if convention_formset.non_form_errors %}
+                                <div class="alert alert-danger">{{ convention_formset.non_form_errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <button type="button" id="add-convention-btn" class="btn btn-sm btn-outline-primary mt-2">
+                                <i class="fas fa-plus me-1"></i>{% trans "Ajouter un chantier / une convention" %}
+                            </button>
                         </div>
 
                         <div class="col-12 d-flex justify-content-end gap-2">
@@ -133,5 +192,131 @@
         if (!el.classList.contains('form-range')) el.classList.add('form-control');
         if (el.tagName === 'SELECT') { el.classList.remove('form-control'); el.classList.add('form-select'); }
     });
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const container = document.getElementById('convention-container');
+    const addBtn = document.getElementById('add-convention-btn');
+    const countBadge = document.getElementById('convention-count');
+    const phasesBySite = {{ phases_by_site_json|default:"{}"|safe }};
+
+    // Options for a brand-new row's "Chantier" <select>, built the same
+    // way dqe_form.html builds its price_item options client-side.
+    let siteOptionsHtml = '<option value="">-- {% trans "Sélectionner un chantier" %} --</option>';
+    {% for site in convention_sites %}
+    siteOptionsHtml += '<option value="{{ site.pk }}">{{ site.name }}</option>';
+    {% endfor %}
+
+    function phaseOptionsHtml(siteId, selectedId) {
+        let html = '<option value="">-- {% trans "Sélectionner une étape" %} --</option>';
+        (phasesBySite[String(siteId)] || []).forEach(function (phase) {
+            const selected = (String(phase.id) === String(selectedId)) ? ' selected' : '';
+            html += '<option value="' + phase.id + '"' + selected + '>' + phase.name + '</option>';
+        });
+        return html;
+    }
+
+    function refreshPhaseOptions(row) {
+        const siteSelect = row.querySelector('select[name$="-site"]');
+        const phaseSelect = row.querySelector('select[name$="-phase"]');
+        if (!siteSelect || !phaseSelect) return;
+        const currentValue = phaseSelect.value;
+        phaseSelect.innerHTML = phaseOptionsHtml(siteSelect.value, currentValue);
+    }
+
+    function setupRow(row) {
+        const siteSelect = row.querySelector('select[name$="-site"]');
+        const toggleBtn = row.querySelector('.toggle-new-phase');
+        const newPhaseInput = row.querySelector('.new-phase-input');
+        const removeBtn = row.querySelector('.remove-convention');
+
+        if (siteSelect) {
+            siteSelect.classList.add('form-select');
+            siteSelect.addEventListener('change', function () { refreshPhaseOptions(row); });
+        }
+        if (toggleBtn && newPhaseInput) {
+            toggleBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                const showing = newPhaseInput.style.display !== 'none';
+                newPhaseInput.style.display = showing ? 'none' : 'block';
+                if (!showing) {
+                    const phaseSelect = row.querySelector('select[name$="-phase"]');
+                    if (phaseSelect) phaseSelect.value = '';
+                    newPhaseInput.focus();
+                } else {
+                    newPhaseInput.value = '';
+                }
+            });
+            if (newPhaseInput.value) newPhaseInput.style.display = 'block';
+        }
+        if (removeBtn) {
+            removeBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                const deleteCheckbox = row.querySelector('input[name$="-DELETE"]');
+                if (deleteCheckbox) {
+                    deleteCheckbox.checked = true;
+                    row.style.display = 'none';
+                    updateCount();
+                }
+            });
+        }
+    }
+
+    function updateCount() {
+        const active = Array.from(container.querySelectorAll('.convention-row')).filter(function (row) {
+            const cb = row.querySelector('input[name$="-DELETE"]');
+            return !(cb && cb.checked);
+        }).length;
+        countBadge.textContent = active;
+    }
+
+    addBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        const totalFormsInput = document.querySelector('#convention-container input[name$="-TOTAL_FORMS"]');
+        const currentCount = parseInt(totalFormsInput.value, 10);
+        const newIndex = currentCount;
+
+        const newRow = document.createElement('div');
+        newRow.className = 'convention-row p-3 border rounded-3 border-200 mb-2';
+        newRow.dataset.formIndex = newIndex;
+        newRow.innerHTML = `
+            <div class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label fs--1 fw-semibold">{% trans "Chantier" %}</label>
+                    <select name="convention-${newIndex}-site" class="form-select">${siteOptionsHtml}</select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fs--1 fw-semibold">{% trans "Étape" %}</label>
+                    <select name="convention-${newIndex}-phase" class="form-select"><option value="">-- {% trans "Sélectionner une étape" %} --</option></select>
+                    <input type="text" class="form-control mt-1 new-phase-input" name="convention-${newIndex}-new_phase_name" placeholder="{% trans 'Nom de la nouvelle étape' %}" style="display:none;">
+                    <button type="button" class="btn btn-link btn-sm p-0 toggle-new-phase">{% trans "+ Nouvelle étape…" %}</button>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fs--1 fw-semibold">{% trans "Nom de la convention" %}</label>
+                    <input type="text" name="convention-${newIndex}-name" class="form-control">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fs--1 fw-semibold">{% trans "Montant" %}</label>
+                    <input type="number" step="0.01" name="convention-${newIndex}-convention_amount" class="form-control">
+                </div>
+                <div class="col-md-1 d-flex align-items-end">
+                    <button type="button" class="btn btn-sm btn-outline-danger remove-convention" title="{% trans 'Supprimer cette convention' %}">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+            </div>
+            <input type="hidden" name="convention-${newIndex}-id" id="id_convention-${newIndex}-id">
+            <input type="hidden" name="convention-${newIndex}-DELETE" id="id_convention-${newIndex}-DELETE">
+        `;
+
+        container.appendChild(newRow);
+        totalFormsInput.value = currentCount + 1;
+        setupRow(newRow);
+        updateCount();
+    });
+
+    container.querySelectorAll('.convention-row').forEach(function (row) { setupRow(row); });
+});
 </script>
 {% endblock %}

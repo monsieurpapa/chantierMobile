@@ -130,6 +130,16 @@ A cash advance from one `Caisse` to another that must be repaid.
   personnel; and if the assignment has a `convention_amount` cap, this
   amount plus whatever was already paid against it must not exceed the
   cap (edits exclude the item's own prior amount from "already paid").
+- **Convention details at disbursement (2026-10-06):** `payroll_list_detail.html`
+  (`PayrollListDetailView`) now shows, next to each item, the linked
+  `assignment`'s convention `name` (falling back to `role` for an older,
+  full affectation), its `phase` (étape), and — when a `convention_amount`
+  cap is tracked — that cap and `remaining_convention`, so the cashier
+  knows what a given payment is for and how much room is left before
+  disbursing. `PayrollListDetailView.get_queryset()` prefetches
+  `items__assignment__phase`/`items__assignment__site` to avoid an N+1.
+  See `docs/modules/personnel.md`'s "Chantiers & conventions" section for
+  where these `SiteAssignment` rows get created.
 
 ### SalaryPaymentList / SalaryPaymentItem ("Ingénieurs & Staff" — cabinet-scoped)
 See [ADR 0005](../architecture/decisions/0005-separate-payroll-tracks.md)

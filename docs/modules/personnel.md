@@ -19,8 +19,12 @@ cabinet-scoped (`SkillQuickCreateView.cabinet_scoped = False`).
 - `cabinet`, optional one-to-one `user` (login self-service, e.g. a
   tâcheron viewing their own assigned `tasks.Task`s), `first_name`/
   `last_name`, `personnel_type` (`chantiermobile.constants.PersonnelType`:
-  Employé/Tâcheron/Prestataire), `skills` (M2M), `default_daily_rate`,
-  `monthly_salary`, `category` (`AgentCategory`: Terrain/Administration),
+  Employé/Tâcheron/Prestataire), `skills` (M2M), `default_daily_rate`
+  (optional since 2026-10-06 — `null=True, blank=True`; a worker paid
+  purely by chantier convention rather than at the journalier has no
+  reason to carry one), `monthly_salary` (labeled "Convention" in the
+  Personnel form since 2026-10-06 — cosmetic, the field/column itself is
+  unchanged), `category` (`AgentCategory`: Terrain/Administration),
   `trade` (`Trade`), `status` (`PersonnelStatus`: Actif/Inactif/Non
   éligible), `payroll_type` (`PersonnelPayrollType`: Ouvrier/Ingénieur —
   see ADR 0005).
@@ -40,6 +44,18 @@ crew list (`AttendanceDailyView.get_rows`).
   convention), `convention_amount` (optional cap for one specific
   task/convention — a worker can hold several concurrent assignments to
   the same site, one per convention).
+- `name` and `phase` (FK to `projects.ProjectPhase`, added 2026-10-06):
+  a convention entered from the Personnel form's "Chantiers & conventions"
+  section (see below) is named by whoever fills the form and tied to a
+  chantier étape, rather than to a full role/date-range affectation.
+- **`role`/`start_date`/`daily_rate` are optional at the model level**
+  (`null=True`/`blank=True`, since 2026-10-06) so that lighter-weight
+  convention row can be saved with only `site`/`name`/`phase`/
+  `convention_amount` set. `SiteAssignmentForm` — the standalone
+  affectation flow (`SiteAssignmentCreateView`) — re-asserts all three as
+  form-required in `__init__`, so that flow's behavior is unchanged; only
+  `ConventionForm` (`personnel/forms.py`), used by the Personnel form's
+  dynamic section, leaves them unset.
 - `clean()` — blocks assigning a non-ACTIF personnel record. **Does not**
   check for overlapping date ranges against the same personnel's other
   assignments — double-booking the same person to two sites on the same
@@ -48,6 +64,31 @@ crew list (`AttendanceDailyView.get_rows`).
 - `remaining_convention` — `convention_amount - paid_amount`; `None` when
   no cap is tracked; can go negative if items were entered before a cap
   was added.
+
+### Personnel form's "Chantiers & conventions" section (2026-10-06)
+`PersonnelCreateView`/`PersonnelUpdateView` now also render an inline
+formset (`ConventionFormSet`, `personnel/forms.py`) letting the person
+filling the Personnel form assign the worker to one or more chantiers in
+the same submission, each row naming a convention tied to one of that
+chantier's étapes (`ProjectPhase`):
+- Each row captures `site`, a convention `name`, a `phase`, and an
+  optional `convention_amount` — no `role`/dates/`daily_rate` (confirmed
+  scope: "name + étape + montant").
+- A row can either pick an existing `phase` or type a new étape name
+  (`new_phase_name`, not a model field). On save, `ConventionFormSetMixin`
+  (`personnel/views.py`) resolves `new_phase_name` via
+  `ProjectPhase.objects.get_or_create(site=site, name__iexact=..., ...)`
+  — **a duplicate name on the same site reuses the existing étape rather
+  than creating a second one** (confirmed scope).
+- The formset is entirely additive: a POST that doesn't include its
+  management-form fields at all (an older client, a direct API call, any
+  caller unaware of this section) is treated as "no conventions
+  submitted" rather than erroring — see `ConventionFormSetMixin.
+  _formset_submitted()`.
+- At payroll disbursement, `finance/templates/finance/
+  payroll_list_detail.html` now shows each item's `assignment.name`
+  (falling back to `.role`), `.phase.name`, and the convention's cap/
+  remaining — see `docs/modules/finance.md`.
 
 ### PersonnelDocument
 A file in a personnel's "dossier" (ID copy, diploma, contract, medical

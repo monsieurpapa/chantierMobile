@@ -1396,6 +1396,15 @@ class PayrollListDetailView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccess
     allowed_roles = PAYROLL_VIEW_ROLES
     cabinet_lookup_field = 'site__cabinet'
 
+    def get_queryset(self):
+        # select/prefetch_related for the convention details the
+        # template now shows next to each item — requirement: the
+        # cashier should see which convention/étape a payment is tied to
+        # at disbursement time — avoids an N+1 per row.
+        return super().get_queryset().prefetch_related(
+            'items__personnel', 'items__assignment__phase', 'items__assignment__site',
+        )
+
     def get_header_title(self):
         return str(self.object)
 

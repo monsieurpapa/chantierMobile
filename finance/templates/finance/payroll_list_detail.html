@@ -78,6 +78,7 @@
                             <thead>
                                 <tr>
                                     <th>{% trans "Ouvrier" %}</th>
+                                    <th>{% trans "Convention" %}</th>
                                     <th>{% trans "Justification" %}</th>
                                     <th class="text-end">{% trans "Montant" %}</th>
                                     <th>{% trans "Accusé de réception" %}</th>
@@ -87,6 +88,20 @@
                                 {% for item in payroll_list.items.all %}
                                 <tr>
                                     <td>{{ item.personnel.get_full_name }}</td>
+                                    <td>
+                                        {% if item.assignment %}
+                                        <div class="fw-semibold">{{ item.assignment.name|default:item.assignment.role|default:"—" }}</div>
+                                        {% if item.assignment.phase %}<div class="fs--2 text-500">{% trans "Étape" %} : {{ item.assignment.phase.name }}</div>{% endif %}
+                                        {% if item.assignment.convention_amount %}
+                                        <div class="fs--2 text-500">
+                                            {% trans "Plafond" %} : {{ CURRENCY_SYMBOL }}{{ item.assignment.convention_amount|floatformat:2|intcomma }}
+                                            — {% trans "reste" %} : {{ CURRENCY_SYMBOL }}{{ item.assignment.remaining_convention|floatformat:2|intcomma }}
+                                        </div>
+                                        {% endif %}
+                                        {% else %}
+                                        <span class="text-500">—</span>
+                                        {% endif %}
+                                    </td>
                                     <td>{{ item.progress_note|default:"-" }}</td>
                                     <td class="text-end fw-semibold">{{ CURRENCY_SYMBOL }}{{ item.amount|floatformat:2|intcomma }}</td>
                                     <td>
@@ -96,7 +111,7 @@
                                     </td>
                                 </tr>
                                 {% empty %}
-                                <tr><td colspan="4" class="text-center py-4 text-500">{% trans "Aucun ouvrier ajouté." %}</td></tr>
+                                <tr><td colspan="5" class="text-center py-4 text-500">{% trans "Aucun ouvrier ajouté." %}</td></tr>
                                 {% endfor %}
                             </tbody>
                         </table>

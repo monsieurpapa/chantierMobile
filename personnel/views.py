@@ -10,6 +10,7 @@ SiteAssignmentCreateView.get_form, LeaveCreateView.get_form and
 """
 from decimal import Decimal
 import datetime
+import json
 
 from django.db import models
 from django.shortcuts import render, get_object_or_404, redirect
@@ -20,11 +21,11 @@ from django.contrib import messages
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from .models import Personnel, Skill, SiteAssignment, PersonnelDocument, Leave, Holiday, Attendance
-from .forms import PersonnelForm, SiteAssignmentForm, SkillForm, PersonnelDocumentForm, LeaveForm, HolidayForm
+from .forms import PersonnelForm, SiteAssignmentForm, SkillForm, PersonnelDocumentForm, LeaveForm, HolidayForm, ConventionFormSet
 from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet, can_act_for_cabinet
 from core.quickcreate import QuickCreateView
 from chantiermobile.constants import UserRoles, PersonnelPayrollType, DIRECTOR_ROLES, AttendanceStatus, ApprovalStatus
-from projects.models import Site
+from projects.models import Site, ProjectPhase
 
 HR_ADMIN_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER']
 
@@ -115,7 +116,103 @@ class PersonnelListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin,
             }]
         return []
 
-class PersonnelCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, CreateView):
+class ConventionFormSetMixin:
+    """Shared by PersonnelCreateView/PersonnelUpdateView: builds,
+    validates and saves the "Chantiers & conventions" inline formset
+    (ConventionFormSet) alongside the main PersonnelForm — see
+    personnel/forms.py's ConventionForm for what each row captures.
+
+    The only thing the two views supply differently is
+    `get_formset_cabinet()`: a not-yet-saved Personnel (Create) has no
+    cabinet of its own yet, so it's resolved from the request the same
+    way PersonnelCreateView.form_valid() already does; an existing
+    Personnel (Update) already has one via `self.object.cabinet`.
+
+    Mirrors DQECreateView's inline-formset `form_valid()` pattern
+    (pricing/views.py): validate the formset against the pre-save
+    instance (None on Create) *before* saving the parent, then rebind
+    `formset.instance` to the saved parent and save."""
+
+    def get_formset_cabinet(self):
+        raise NotImplementedError
+
+    def _formset_submitted(self):
+        """True only once the "Chantiers & conventions" section's own
+        management-form fields are present in POST data. Kept as an
+        explicit check (rather than always binding to request.POST)
+        because ConventionFormSet.is_valid()/`.forms` raises a hard
+        ValidationError — not a normal form error — the moment its
+        management form is missing, which would 500 any POST that
+        doesn't render this specific section (existing direct-POST
+        tests predating this feature, a future API, a form submitted
+        with JS disabled before the hidden management inputs render).
+        Treated as "no convention rows submitted" instead, same as an
+        untouched extra row."""
+        return 'convention-TOTAL_FORMS' in self.request.POST
+
+    def _build_formset(self, instance, bind=False):
+        # Explicit prefix ("convention") rather than the inline formset's
+        # default (which would be the SiteAssignment FK's related_name,
+        # "assignments") — the template/JS below hardcode this prefix for
+        # the dynamically-added rows, so it must stay fixed and readable.
+        kwargs = {'form_kwargs': {'cabinet': self.get_formset_cabinet()}, 'instance': instance, 'prefix': 'convention'}
+        if bind and self._formset_submitted():
+            return ConventionFormSet(self.request.POST, self.request.FILES, **kwargs)
+        return ConventionFormSet(**kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if 'convention_formset' not in context:
+            instance = getattr(self, 'object', None)
+            context['convention_formset'] = self._build_formset(instance, bind=(self.request.method == 'POST'))
+
+        cabinet = self.get_formset_cabinet()
+        sites = Site.objects.filter(cabinet=cabinet).order_by('name') if cabinet else Site.objects.none()
+        context['convention_sites'] = sites
+        # Client-side filtering of the phase <select> by whichever site a
+        # convention row has selected — one JSON map, built server-side,
+        # keyed by site id. See personnel_form.html's extra_js.
+        phases_by_site = {}
+        if cabinet:
+            for phase in ProjectPhase.objects.filter(site__cabinet=cabinet).order_by('name'):
+                phases_by_site.setdefault(str(phase.site_id), []).append({'id': phase.pk, 'name': phase.name})
+        context['phases_by_site_json'] = json.dumps(phases_by_site)
+        return context
+
+    def form_valid(self, form):
+        formset_submitted = self._formset_submitted()
+        formset = self._build_formset(getattr(self, 'object', None), bind=True)
+        if formset_submitted and not formset.is_valid():
+            return self.render_to_response(self.get_context_data(form=form, convention_formset=formset))
+
+        response = super().form_valid(form)
+
+        if not formset_submitted:
+            return response
+
+        formset.instance = self.object
+        for sub_form in formset.forms:
+            if sub_form in formset.deleted_forms:
+                continue
+            cleaned = sub_form.cleaned_data or {}
+            site = cleaned.get('site')
+            if not site:
+                continue
+            new_phase_name = (cleaned.get('new_phase_name') or '').strip()
+            if new_phase_name and not cleaned.get('phase'):
+                # Reuse an existing étape with the same name (case-
+                # insensitive) on this site rather than creating a
+                # duplicate — confirmed with the user as the wanted
+                # behavior for a convention row that names a new étape.
+                phase, _created = ProjectPhase.objects.get_or_create(
+                    site=site, name__iexact=new_phase_name, defaults={'name': new_phase_name},
+                )
+                sub_form.instance.phase = phase
+        formset.save()
+        return response
+
+
+class PersonnelCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ConventionFormSetMixin, CreateView):
     """Registers a new Personnel record. Director-tier, CHIEF_ENGINEER, or
     CASHIER (allowed_roles — CASHIER added 2026-10-06, permission table
     update) — a plain ENGINEER cannot create new personnel, only assign
@@ -134,6 +231,9 @@ class PersonnelCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMi
             {'title': _("Ressources humaines"), 'url': str(reverse_lazy('personnel:personnel_list'))},
             {'title': _("Nouvel enregistrement"), 'url': None},
         ]
+
+    def get_formset_cabinet(self):
+        return self.get_user_cabinet()
 
     def form_valid(self, form):
         cabinet = self.get_user_cabinet()
@@ -199,7 +299,7 @@ class PersonnelDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixi
         
         return actions
 
-class PersonnelUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, UpdateView):
+class PersonnelUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ConventionFormSetMixin, UpdateView):
     """Edits a Personnel profile. Director-tier, CHIEF_ENGINEER, or
     CASHIER (allowed_roles — CASHIER added 2026-10-06, permission table
     update)."""
@@ -209,7 +309,10 @@ class PersonnelUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMi
     slug_field = 'unique_id'
     slug_url_kwarg = 'unique_id'
     allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER', 'CASHIER']
-    
+
+    def get_formset_cabinet(self):
+        return self.object.cabinet
+
     def get_header_title(self):
         return _("Modifier le profil : %(name)s") % {'name': self.object.get_full_name()}
 

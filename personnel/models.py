@@ -48,7 +48,15 @@ class Personnel(BaseModel):
         help_text=_("Employé permanent, tâcheron (journalier) ou prestataire (sous-traitant)"),
     )
     skills = models.ManyToManyField(Skill, blank=True)
-    default_daily_rate = models.DecimalField(max_digits=10, decimal_places=2, help_text=_("Default daily cost"), verbose_name=_('Default Daily Rate'))
+    default_daily_rate = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text=_(
+            "Tarif journalier par défaut — optionnel depuis 2026-10-06 : laisser vide pour un "
+            "personnel payé uniquement par convention (par étape de chantier) plutôt qu'au "
+            "journalier."
+        ),
+        verbose_name=_('Tarif journalier'),
+    )
     monthly_salary = models.DecimalField(
         max_digits=10, decimal_places=2, null=True, blank=True,
         help_text=_("Salaire mensuel fixe (agents administratifs / ingénieurs). Laisser vide pour un ouvrier payé au journalier."),
@@ -100,13 +108,44 @@ class SiteAssignment(BaseModel):
     and the attendance/pointage crew list (see Attendance,
     AttendanceDailyView.get_rows). `convention_amount` optionally caps
     total pay for one specific task/convention; a worker can hold several
-    concurrent assignments to the same site, one per convention."""
+    concurrent assignments to the same site, one per convention.
+
+    `name` and `phase` were added 2026-10-06 for the Personnel form's
+    dynamic "Chantiers & conventions" section: there, a convention is
+    named by the user and tied to a chantier `étape` (ProjectPhase) rather
+    than filled in as a full standalone affectation, so `role`/`start_date`/
+    `daily_rate` are no longer required at the model level — a convention
+    created that way only ever sets `site`, `name`, `phase`, and
+    `convention_amount`. The full assignment form (SiteAssignmentForm,
+    used from the site's own crew-management flow) still collects
+    role/dates/daily_rate as before; this is a widening of the model to
+    support a second, lighter-weight creation path, not a behavior change
+    for the existing one."""
     personnel = models.ForeignKey(Personnel, on_delete=models.CASCADE, related_name='assignments')
     site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name='assignments')
-    role = models.CharField(max_length=100, help_text=_("Specific role on this site, e.g. Chef d'équipe"), verbose_name=_('Role'))
-    start_date = models.DateField()
+    name = models.CharField(
+        max_length=150, blank=True, verbose_name=_('Nom de la convention'),
+        help_text=_(
+            "Nom donné à cette convention par celui qui l'enregistre (ex : « Finition dalle "
+            "bloc B »). Optionnel pour une affectation classique (role/dates/tarif journalier) ; "
+            "utilisé par la section « Chantiers & conventions » du formulaire Personnel."
+        ),
+    )
+    phase = models.ForeignKey(
+        'projects.ProjectPhase', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='conventions', verbose_name=_('Étape du chantier'),
+        help_text=_("L'étape (ProjectPhase) du chantier à laquelle cette convention se rapporte."),
+    )
+    role = models.CharField(
+        max_length=100, blank=True,
+        help_text=_("Specific role on this site, e.g. Chef d'équipe"), verbose_name=_('Role'),
+    )
+    start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
-    daily_rate = models.DecimalField(max_digits=10, decimal_places=2, help_text=_("Agreed rate for this specific assignment"), verbose_name=_('Daily Rate'))
+    daily_rate = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text=_("Agreed rate for this specific assignment"), verbose_name=_('Daily Rate'),
+    )
     agreement_document = models.FileField(
         upload_to='personnel/agreements/', null=True, blank=True,
         verbose_name=_("Convention (document)"),

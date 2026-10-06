@@ -52,6 +52,32 @@ dated heading cut when a deliberate release point is agreed on.
   See `docs/security.md`'s permission matrix and `docs/modules/personnel.md`/
   `docs/modules/finance.md` for the full detail.
 
+- Personnel form: chantier assignment + dynamic conventions.
+  - `Personnel.default_daily_rate` ("Tarif journalier") is now optional —
+    a worker paid purely by chantier convention no longer needs one.
+  - `Personnel.monthly_salary`'s label relabeled "Convention" in the
+    Personnel form (cosmetic — field/column name unchanged).
+  - The Personnel create/edit form now has a dynamic "Chantiers &
+    conventions" section (`ConventionFormSet`, `personnel/forms.py`)
+    letting the person assign the worker to one or more chantiers in the
+    same submission. Each row names a convention and ties it to a
+    chantier étape (`ProjectPhase`) — either an existing one or a new one
+    typed inline, which is created (or, if a same-named étape already
+    exists on that site, reused — case-insensitive match, confirmed
+    scope) on save. `SiteAssignment` gained `name`/`phase` fields for
+    this; `role`/`start_date`/`daily_rate` became optional at the model
+    level (the standalone affectation form, `SiteAssignmentForm`, keeps
+    requiring them via its own `__init__`).
+  - The formset is purely additive: a POST missing its management-form
+    fields (an older client, a direct API call) saves the Personnel with
+    no convention changes instead of erroring.
+  - The payroll ("liste de paie") disbursement screen now shows each
+    item's convention name/étape and cap/remaining next to the amount, so
+    the cashier knows what a payment is for.
+
+  See `docs/modules/personnel.md`'s "Chantiers & conventions" section and
+  `docs/modules/finance.md` for the full detail.
+
 ## [2026-10-06] — Security fixes from the documentation pass
 
 Five authorization gaps surfaced while writing `docs/` and docstrings across the
