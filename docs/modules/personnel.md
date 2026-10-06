@@ -112,8 +112,12 @@ query/check level, not just at the role-list level (contrast with
 `projects`'s planning/phase-close views — see that module's gotchas).
 
 **Personnel** — `PersonnelListView`/`DetailView` open to any cabinet
-member; `CreateView`/`UpdateView` gated to HR_ADMIN_ROLES; `DeleteView`
-narrowed to director-tier only (no CHIEF_ENGINEER).
+member; `CreateView`/`UpdateView` gated to HR_ADMIN_ROLES **plus CASHIER**
+(an inline role list, not the shared `HR_ADMIN_ROLES` constant — added
+2026-10-06, permission table update: a cashier can register and edit
+personnel, but this does not extend to Leave/Holiday decisions or Skills,
+which still check `HR_ADMIN_ROLES` itself); `DeleteView` narrowed to
+director-tier only (no CHIEF_ENGINEER, no CASHIER).
 
 **Skills** — `SkillListView` (list + inline create) gated to
 HR_ADMIN_ROLES; not cabinet-scoped (Skill has no cabinet FK).

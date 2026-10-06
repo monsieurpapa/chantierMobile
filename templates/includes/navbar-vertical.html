@@ -85,7 +85,13 @@
                     </a>
                 </li>
 
-                <!-- Tasks -->
+                <!-- Tasks: hidden from CASHIER (permission-table update,
+                     2026-10-06) — a cashier has no task-management role and
+                     this menu item isn't useful to them. has_role already
+                     resolves to True for a superuser, so the explicit
+                     is_superuser check keeps this visible to superusers
+                     who also happen to hold a CASHIER role somewhere. -->
+                {% if not request.user|has_role:'CASHIER' or request.user.is_superuser %}
                 <li class="nav-item">
                     <a class="nav-link {% if on == 'task_list' %}active{% endif %}"
                         href="{% url 'tasks:task_list' %}" role="button">
@@ -95,6 +101,7 @@
                         </div>
                     </a>
                 </li>
+                {% endif %}
 
                 <!-- Finance -->
                 <li class="nav-item">

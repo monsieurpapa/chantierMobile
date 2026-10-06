@@ -543,3 +543,89 @@ class TestDevisPhotoAlternative:
         assert response.status_code == 200
         devis.refresh_from_db()
         assert devis.photo
+
+
+@pytest.mark.django_db
+class TestCashierPermissionTableUpdate:
+    """Regression tests for the 2026-10-06 permission-table update: a
+    CASHIER can now decaisser a liste de paie (already worked before this
+    change — PAYROLL_DISBURSE_ROLES already included CASHIER), does not
+    see the "Tâches" nav item, and can register/modify Personnel. The
+    caisse-transaction self-administration restriction ("only them to
+    modify a mouvement in the caisse they manage or created") is tracked
+    separately pending a product decision on what "manage" means, since
+    there is no per-caisse manager/responsible-cashier field in the data
+    model yet — see docs/security.md."""
+
+    # Checked against personnel_list rather than home: home.html also
+    # renders a "Tâches en retard" dashboard stat card (a separate widget,
+    # not the sidebar menu item the user asked to hide) that links to the
+    # same tasks:task_list URL, which would make a check against the full
+    # home-page response content a false negative/positive for the navbar
+    # change specifically. personnel_list shares the same navbar include
+    # but has no such widget of its own, isolating the assertion to the
+    # sidebar "Tâches" nav item only.
+    def test_cashier_does_not_see_tasks_menu_item(self, cashier_client):
+        response = cashier_client.get(reverse('personnel:personnel_list'))
+        assert response.status_code == 200
+        assert reverse('tasks:task_list').encode() not in response.content
+
+    def test_engineer_still_sees_tasks_menu_item(self, engineer_client):
+        response = engineer_client.get(reverse('personnel:personnel_list'))
+        assert response.status_code == 200
+        assert reverse('tasks:task_list').encode() in response.content
+
+    def test_superuser_cashier_still_sees_tasks_menu_item(self, client, django_user_model, cabinet):
+        from accounts.models import UserCabinetRole
+        su = django_user_model.objects.create_superuser(username='su_cashier', email='su_cashier@example.com', password='testpass123')
+        UserCabinetRole.objects.create(user=su, cabinet=cabinet, role=UserRoles.CASHIER, status=ApprovalStatus.APPROVED)
+        client.login(username='su_cashier', password='testpass123')
+        response = client.get(reverse('personnel:personnel_list'))
+        assert response.status_code == 200
+        assert reverse('tasks:task_list').encode() in response.content
+
+    def test_cashier_can_create_personnel(self, cashier_client, cabinet):
+        response = cashier_client.post(reverse('personnel:personnel_create'), {
+            'first_name': 'Nouveau', 'last_name': 'Agent', 'personnel_type': 'EMPLOYE',
+            'category': 'TERRAIN', 'status': 'ACTIF', 'payroll_type': 'OUVRIER',
+            'default_daily_rate': '100.00',
+        })
+        assert response.status_code == 302, response.context['form'].errors if response.status_code == 200 else None
+        from personnel.models import Personnel
+        assert Personnel.objects.filter(first_name='Nouveau', last_name='Agent', cabinet=cabinet).exists()
+
+    def test_cashier_can_update_personnel(self, cashier_client, personnel_factory):
+        personnel = personnel_factory(first_name='Avant')
+        response = cashier_client.post(
+            reverse('personnel:personnel_update', kwargs={'unique_id': personnel.unique_id}),
+            {
+                'first_name': 'Après', 'last_name': personnel.last_name,
+                'personnel_type': personnel.personnel_type, 'category': personnel.category,
+                'status': personnel.status, 'payroll_type': personnel.payroll_type,
+                'default_daily_rate': personnel.default_daily_rate,
+            },
+        )
+        assert response.status_code == 302, response.context['form'].errors if response.status_code == 200 else None
+        personnel.refresh_from_db()
+        assert personnel.first_name == 'Après'
+
+    def test_cashier_sees_register_personnel_header_action(self, cashier_client):
+        response = cashier_client.get(reverse('personnel:personnel_list'))
+        assert response.status_code == 200
+        assert reverse('personnel:personnel_create').encode() in response.content
+
+    def test_cashier_can_disburse_payroll_list(self, cashier_client, site, personnel_factory, cabinet):
+        from finance.models import Caisse, CaisseTransactionType, PayrollList, PayrollListItem
+        from chantiermobile.constants import PayrollListStatus
+        caisse = Caisse.objects.create(cabinet=cabinet, name='Caisse Test')
+        from django.contrib.auth import get_user_model
+        cashier = get_user_model().objects.get(username='cashier')
+        caisse.record(CaisseTransactionType.ENTREE, Decimal('1000.00'), cashier)
+        p = personnel_factory()
+        pl = PayrollList.objects.create(site=site, prepared_by=cashier)
+        PayrollListItem.objects.create(payroll_list=pl, personnel=p, amount=Decimal('100.00'))
+        pl.submit(cashier)
+        response = cashier_client.post(reverse('finance:payroll_disburse', kwargs={'pk': pl.pk}), {'caisse': caisse.pk})
+        assert response.status_code == 302
+        pl.refresh_from_db()
+        assert pl.status == PayrollListStatus.PAYEE

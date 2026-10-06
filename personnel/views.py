@@ -62,8 +62,9 @@ def _is_hr_admin(user, cabinets=None):
 class PersonnelListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
     """Lists the current user's Cabinet-scoped personnel roster, filterable
     by type/status/category/trade. Open to any cabinet member; only the
-    "Enregistrer un personnel" header action is role-gated (director-tier
-    or CHIEF_ENGINEER)."""
+    "Enregistrer un personnel" header action is role-gated (director-tier,
+    CHIEF_ENGINEER, or CASHIER — CASHIER added 2026-10-06, permission
+    table update)."""
     model = Personnel
     template_name = 'personnel/personnel_list.html'
     context_object_name = 'personnel_list'
@@ -98,10 +99,12 @@ class PersonnelListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin,
     def get_header_actions(self):
         # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now —
         # see core/mixins.py and docs/security.md.
+        # Permission table update 2026-10-06: CASHIER added — a cashier can
+        # now register new personnel too (see PersonnelCreateView).
         from accounts.models import UserCabinetRole
         if self.request.user.is_superuser or UserCabinetRole.objects.filter(
             user=self.request.user,
-            role__in=[UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.CHIEF_ENGINEER],
+            role__in=[UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.CHIEF_ENGINEER, UserRoles.CASHIER],
             status=ApprovalStatus.APPROVED,
         ).exists():
             return [{
@@ -113,13 +116,14 @@ class PersonnelListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin,
         return []
 
 class PersonnelCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, CreateView):
-    """Registers a new Personnel record. Director-tier or CHIEF_ENGINEER
-    only (allowed_roles) — a plain ENGINEER cannot create new personnel,
-    only assign existing ones to their own site (SiteAssignmentCreateView)."""
+    """Registers a new Personnel record. Director-tier, CHIEF_ENGINEER, or
+    CASHIER (allowed_roles — CASHIER added 2026-10-06, permission table
+    update) — a plain ENGINEER cannot create new personnel, only assign
+    existing ones to their own site (SiteAssignmentCreateView)."""
     model = Personnel
     form_class = PersonnelForm
     template_name = 'personnel/personnel_form.html'
-    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER']
+    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER', 'CASHIER']
     success_url = reverse_lazy('personnel:personnel_list')
     header_title = _("Enregistrer un nouveau personnel")
     header_subtitle = _("Ajoutez un nouveau membre du personnel au système")
@@ -169,12 +173,15 @@ class PersonnelDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixi
     def get_header_actions(self):
         # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now —
         # see core/mixins.py and docs/security.md.
+        # Permission table update 2026-10-06: CASHIER added to is_admin —
+        # a cashier can now modify a Personnel profile too (see
+        # PersonnelUpdateView).
         from accounts.models import UserCabinetRole
         user = self.request.user
         actions = []
 
         is_admin = user.is_superuser or UserCabinetRole.objects.filter(
-            user=user, role__in=[UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.CHIEF_ENGINEER],
+            user=user, role__in=[UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.CHIEF_ENGINEER, UserRoles.CASHIER],
             status=ApprovalStatus.APPROVED,
         ).exists()
 
@@ -193,14 +200,15 @@ class PersonnelDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixi
         return actions
 
 class PersonnelUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, UpdateView):
-    """Edits a Personnel profile. Director-tier or CHIEF_ENGINEER only
-    (allowed_roles)."""
+    """Edits a Personnel profile. Director-tier, CHIEF_ENGINEER, or
+    CASHIER (allowed_roles — CASHIER added 2026-10-06, permission table
+    update)."""
     model = Personnel
     form_class = PersonnelForm
     template_name = 'personnel/personnel_form.html'
     slug_field = 'unique_id'
     slug_url_kwarg = 'unique_id'
-    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER']
+    allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER', 'CASHIER']
     
     def get_header_title(self):
         return _("Modifier le profil : %(name)s") % {'name': self.object.get_full_name()}
