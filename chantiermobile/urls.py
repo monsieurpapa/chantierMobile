@@ -1,3 +1,9 @@
+"""
+Root URL configuration: Django admin, the core app's cross-cutting pages
+(dashboard, pending approvals, global search, notifications) at the site
+root, each business app's URLs under its own namespaced prefix, and
+allauth/i18n routes. See each app's urls.py for its own routes.
+"""
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings

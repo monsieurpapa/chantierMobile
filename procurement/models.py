@@ -1,3 +1,16 @@
+"""
+Procurement: suppliers, purchase orders raised against them, the stock
+they replenish, and credit financing for purchases made on account.
+
+A PurchaseOrder moves BROUILLON -> ENVOYEE -> (RECUE_PARTIELLE ->) RECUE,
+or to ANNULEE from either of the first two states; receiving a line
+creates a StockMovement (IN) against its StockItem, which is the only
+way quantity_on_hand ever changes outside a manual movement or transfer.
+A purchase paid by virement goes through a second, informational
+caissière-enters/financier-valide step (submit_transfer_proof /
+validate_transfer) that records who sent and who confirmed the wire
+transfer — see the module's views for whether/how that gates anything.
+"""
 from django.db import models, transaction
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
@@ -61,6 +74,10 @@ class SupplierCredit(BaseModel):
         return f"{self.supplier.name}: {self.amount} ({self.date})"
 
     def clean(self):
+        """`amount` must be strictly positive — `paid_amount` is left
+        unvalidated here since it starts at 0 and is only ever advanced
+        through record_payment(), which already enforces the running
+        total can't exceed `amount`."""
         from django.core.exceptions import ValidationError
         if self.amount is not None and self.amount <= 0:
             raise ValidationError({'amount': _('Le montant doit être positif.')})
@@ -74,6 +91,11 @@ class SupplierCredit(BaseModel):
         return self.paid_amount >= self.amount
 
     def record_payment(self, amount, user, caisse=None, date=None):
+        """Record an installment payment against this credit: creates the
+        SupplierCreditPayment row, optionally books a matching SORTIE on
+        `caisse` if the installment was paid from cash on hand, and bumps
+        `paid_amount` — all atomically. Rejects a payment that would push
+        `paid_amount` past `amount`."""
         from django.core.exceptions import ValidationError
         from django.utils import timezone as _tz
         if amount <= 0:
@@ -95,6 +117,9 @@ class SupplierCredit(BaseModel):
 
 
 class SupplierCreditPayment(BaseModel):
+    """One installment payment against a SupplierCredit — always created
+    through SupplierCredit.record_payment(), never directly, so
+    `paid_amount` on the parent credit stays in sync."""
     credit = models.ForeignKey(SupplierCredit, on_delete=models.CASCADE, related_name='payments')
     amount = models.DecimalField(max_digits=14, decimal_places=2)
     date = models.DateField()
@@ -136,6 +161,10 @@ class StockItem(BaseModel):
         return f"{self.name} @ {self.site.name} ({self.quantity_on_hand} {self.unit})"
 
     def clean(self):
+        """Only `reorder_threshold` is validated here — `quantity_on_hand`
+        is deliberately left alone since it's StockMovement.save() (not
+        this clean()) that enforces it can never go negative, on every
+        movement, not just ones that happen to call full_clean()."""
         from django.core.exceptions import ValidationError
         if self.reorder_threshold is not None and self.reorder_threshold < 0:
             raise ValidationError({'reorder_threshold': _('Le seuil de réapprovisionnement ne peut pas être négatif.')})
@@ -221,6 +250,10 @@ class PurchaseOrder(BaseModel):
         return f"{self.order_number} - {self.supplier.name} ({self.get_status_display()})"
 
     def clean(self):
+        """Validates the delivery-date ordering plus the status state
+        machine (`valid_transitions`) — note this only runs on an
+        existing row (`if self.pk`) since there's nothing to transition
+        *from* on first creation (BROUILLON is simply the default)."""
         from django.core.exceptions import ValidationError
 
         if self.expected_delivery_date and self.order_date and self.expected_delivery_date < self.order_date:
@@ -322,7 +355,18 @@ class PurchaseOrder(BaseModel):
 
     def submit_transfer_proof(self, user, proof_file):
         """La caissière saisit les informations (preuve de virement) envoyées
-        par le financier — en attente de validation par ce dernier."""
+        par le financier — en attente de validation par ce dernier.
+
+        NOTE: this resets any prior `validated_by_financier`/`validated_at`
+        (re-submitting a proof un-validates it), but neither this method
+        nor validate_transfer() checks the two actors are different
+        people, and the two role lists overlap on DIRECTOR/DIRECTEUR_
+        TECHNIQUE/DIRECTEUR_GENERAL — see TRANSFER_ENTRY_ROLES/
+        TRANSFER_VALIDATE_ROLES in procurement/views.py. Also note that
+        neither the view layer nor PurchaseOrder.receive()/clean() require
+        `is_transfer_validated` before a VIREMENT-funded order can be sent
+        and received — the financier's validation is bookkeeping only, not
+        a gate on the order's own status progression."""
         from django.core.exceptions import ValidationError
         from django.utils import timezone
         if self.payment_method != PurchasePaymentMethod.VIREMENT:
@@ -367,6 +411,12 @@ class PurchaseOrderLine(BaseModel):
         return f"{self.quantity} {self.stock_item.unit} of {self.stock_item.name}"
 
     def clean(self):
+        """Quantity/price sanity checks, plus two invariants that matter
+        for the receiving flow: `quantity_received` can never exceed
+        `quantity` (PurchaseOrder.receive() clamps to the remaining
+        amount, but this is the backstop for any other write path), and
+        the line's stock_item must belong to the same Site as its order —
+        there is no FK path enforcing that at the DB level."""
         from django.core.exceptions import ValidationError
 
         if self.quantity is not None and self.quantity <= 0:
@@ -435,6 +485,14 @@ class StockMovement(BaseModel):
         return f"{self.get_movement_type_display()} {self.quantity} {self.stock_item.unit} - {self.stock_item.name}"
 
     def clean(self):
+        """Phase/site consistency, a non-zero/positive quantity depending
+        on movement_type, and a negative-stock guard. The negative-stock
+        check here is a second line of defense: it only runs when
+        full_clean() is actually called (e.g. from stock_movement_create's
+        form-backed path), whereas save() below enforces the same rule
+        unconditionally on every new row, including ones created directly
+        via `.objects.create()` (transfer_to(), PurchaseOrder.receive())
+        that never call full_clean()."""
         from django.core.exceptions import ValidationError
 
         if self.phase_id and self.stock_item_id and self.phase.site_id != self.stock_item.site_id:
@@ -453,6 +511,10 @@ class StockMovement(BaseModel):
                 raise ValidationError({'quantity': _('Cette opération rendrait le stock négatif.')})
 
     def _signed_delta(self):
+        """The signed change this movement applies to quantity_on_hand:
+        negative for OUT and for the source leg of a TRANSFER, positive
+        otherwise (IN, ADJUSTMENT, and the destination leg of a
+        TRANSFER)."""
         if self.movement_type == StockMovementType.OUT:
             return -self.quantity
         if self.movement_type == StockMovementType.TRANSFER:
@@ -460,6 +522,19 @@ class StockMovement(BaseModel):
         return self.quantity
 
     def save(self, *args, **kwargs):
+        """On creation: re-checks the negative-stock guard against a
+        freshly refreshed quantity_on_hand (the one check that always
+        runs here, independent of whether the caller went through
+        full_clean() — see clean() above), then applies this movement's
+        signed delta to StockItem.quantity_on_hand via an F()-expression
+        UPDATE so the arithmetic itself can't be lost to a lost-update
+        race. NOTE: the guard check and the F()-update are two separate
+        statements, not one atomic operation — under genuinely concurrent
+        writes to the same StockItem without an explicit
+        select_for_update(), two movements can each read the same
+        pre-movement quantity, both pass the "would this go negative?"
+        check, and both then apply their delta, landing the stock below
+        zero despite the guard."""
         is_new = self._state.adding
         delta = self._signed_delta() if is_new else None
         if is_new:

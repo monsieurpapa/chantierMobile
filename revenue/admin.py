@@ -1,3 +1,6 @@
+"""Django admin registrations for the revenue app: contracts (with their
+invoices inline), invoices, payments, devis (with its lines inline), and
+situations de travaux (with their lines inline)."""
 from django.contrib import admin
 from .models import Contract, Invoice, Payment, Devis, DevisLine, SituationTravaux, SituationLine
 

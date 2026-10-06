@@ -1,3 +1,16 @@
+"""Client-facing revenue models for a Cabinet's sites: quoting (Devis),
+the signed Contract it produces, progress billing against that contract
+(SituationTravaux), ad-hoc Invoice/Payment, and the client's running debt
+(including Avenant-driven overage — see finance.models.Avenant).
+
+A Site's commercial lifecycle generally runs: Devis (BROUILLON -> ENVOYE ->
+ACCEPTE) -> Contract (created automatically on acceptance) -> either
+one-off Invoices or SituationTravaux (progress statements that themselves
+generate an Invoice) -> Payment against each Invoice, which auto-marks it
+PAID once fully covered. Every status field here is validated in the
+model's own clean(), per the project-wide rule (see
+docs/architecture/overview.md#status-state-machines).
+"""
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from core.models import BaseModel
@@ -5,6 +18,10 @@ from projects.models import Site
 from chantiermobile.constants import InvoiceStatus, PaymentMethod, DevisStatus, SituationStatus
 
 class Contract(BaseModel):
+    """The signed agreement for a Site (OneToOneField — one contract per
+    site), normally created by Devis.accept_and_create_contract() rather
+    than directly. Tracks the client's running balance via `client_balance`
+    (contract value + avenant debt - payments received)."""
     site = models.OneToOneField(Site, on_delete=models.CASCADE, related_name='contract')
     client_name = models.CharField(max_length=255)
     total_value = models.DecimalField(max_digits=14, decimal_places=2, help_text=_("Total contract value"))
@@ -41,6 +58,13 @@ class Contract(BaseModel):
         return self.total_value + Decimal(self.avenant_debt) - Decimal(self.total_paid)
 
 class Invoice(BaseModel):
+    """A billing statement against a Contract: DRAFT -> SENT -> PAID (or
+    SENT -> OVERDUE -> PAID), or DRAFT -> CANCELLED. Note that the valid
+    transition table in clean() only allows CANCELLED from DRAFT — a SENT
+    or OVERDUE invoice can never be cancelled through this model (matching
+    invoice_cancel's own DRAFT-only guard in revenue/views.py), which is
+    narrower than docs/architecture/overview.md's summary diagram
+    ("CANCELLED, terminal, from any non-terminal") suggests."""
     contract = models.ForeignKey(Contract, on_delete=models.CASCADE, related_name='invoices')
     invoice_number = models.CharField(max_length=50, unique=True)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
@@ -49,7 +73,9 @@ class Invoice(BaseModel):
     status = models.CharField(max_length=20, choices=InvoiceStatus.choices, default=InvoiceStatus.DRAFT)
     
     def clean(self):
-        """Validate invoice data and status transitions."""
+        """Validates: due_date not before issued_date, a positive amount,
+        and the DRAFT/SENT/PAID/OVERDUE/CANCELLED transition table (see
+        the class docstring for the CANCELLED-from-DRAFT-only caveat)."""
         from django.core.exceptions import ValidationError
         from django.utils import timezone
         
@@ -110,6 +136,10 @@ class Invoice(BaseModel):
         return f"Invoice {self.invoice_number} ({self.status})"
 
 class Payment(BaseModel):
+    """A single payment received against an Invoice. save() triggers
+    Invoice.check_and_mark_paid() on creation only (not on edits/deletes),
+    so editing or soft-deleting a Payment after the fact does not
+    re-evaluate or revert the invoice's PAID status."""
     invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name='payments')
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     payment_date = models.DateField()
@@ -122,6 +152,9 @@ class Payment(BaseModel):
     )
 
     def save(self, *args, **kwargs):
+        """After a new Payment is saved, re-check whether its invoice is
+        now fully covered (see Invoice.check_and_mark_paid()). Guarded by
+        `is_new` so re-saving an existing Payment doesn't re-trigger it."""
         is_new = self._state.adding
         super().save(*args, **kwargs)
         if is_new:
@@ -136,7 +169,20 @@ class Devis(BaseModel):
 
     A Site can have several Devis (revisions, or competing drafts) but only
     one may ever be accepted — accepting one creates the Site's Contract
-    (which is a OneToOneField), so a second acceptance is blocked in clean().
+    (which is a OneToOneField).
+
+    Gotcha: the "only one Devis per site may be accepted" guarantee is
+    enforced in accept_and_create_contract() (it checks
+    Contract.objects.filter(site_id=...).exists() before creating a second
+    one), NOT in clean() — despite this being the one status field in the
+    whole codebase that the project-wide rule says should be
+    self-protecting at the model level (see
+    docs/architecture/overview.md#status-state-machines). clean()'s own
+    transition table happily allows ENVOYE -> ACCEPTE with no such check,
+    so a Devis saved via any path other than accept_and_create_contract()
+    (e.g. admin, shell, a future view) could set a second Devis on the same
+    site to ACCEPTE without creating or blocking anything — leaving an
+    ACCEPTE devis with no matching Contract.
     """
     site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name='devis_set')
     devis_number = models.CharField(max_length=50, unique=True, verbose_name=_('Numéro de devis'))
@@ -160,6 +206,10 @@ class Devis(BaseModel):
         return f"{self.devis_number} - {self.client_name} ({self.get_status_display()})"
 
     def clean(self):
+        """Validates validity_date >= issue_date and the
+        BROUILLON/ENVOYE/ACCEPTE/REFUSE/EXPIRE transition table. Does NOT
+        check for an existing Contract on this site — see the class
+        docstring's gotcha about where that check actually lives."""
         from django.core.exceptions import ValidationError
 
         if self.validity_date and self.issue_date and self.validity_date < self.issue_date:
@@ -254,6 +304,8 @@ class DevisLine(BaseModel):
         return f"{self.designation} ({self.quantity} {self.unit})"
 
     def clean(self):
+        """Quantity must be strictly positive; unit price may be zero
+        (a free/included line item) but not negative."""
         from django.core.exceptions import ValidationError
         if self.quantity is not None and self.quantity <= 0:
             raise ValidationError({'quantity': _('La quantité doit être positive.')})
@@ -262,6 +314,8 @@ class DevisLine(BaseModel):
 
     @property
     def total_ht(self):
+        """quantity × unit_price_ht, or 0 if either is unset (e.g. an
+        in-progress formset row)."""
         if self.quantity is None or self.unit_price_ht is None:
             return 0
         return self.quantity * self.unit_price_ht
@@ -288,6 +342,8 @@ class SituationTravaux(BaseModel):
         return f"Situation n°{self.numero} - {self.contract.site.name}"
 
     def clean(self):
+        """Validates the BROUILLON -> VALIDEE -> FACTUREE transition table
+        (each step terminal-forward only, no going back)."""
         from django.core.exceptions import ValidationError
 
         if self.pk:
@@ -310,10 +366,16 @@ class SituationTravaux(BaseModel):
 
     @property
     def total_ht_cumulative(self):
+        """Sum of every line's cumulative advancement amount (HT) as of
+        this situation — the project's total billed-to-date, not just this
+        period."""
         return sum((line.cumulative_amount_ht for line in self.lines.all()), 0)
 
     @property
     def total_ht_period(self):
+        """Sum of every line's amount due for just this period (cumulative
+        minus the previous situation's cumulative) — this is what
+        generate_invoice() actually bills."""
         return sum((line.period_amount_ht for line in self.lines.all()), 0)
 
     def generate_invoice(self, changed_by=None, due_in_days=30):
@@ -374,6 +436,9 @@ class SituationLine(BaseModel):
         return f"{self.devis_line.designation} - {self.cumulative_percentage}%"
 
     def clean(self):
+        """Percentage must be within [0, 100] and never lower than the
+        same DevisLine's cumulative percentage on an earlier situation of
+        the same contract — progress billing only ever moves forward."""
         from django.core.exceptions import ValidationError
         if self.cumulative_percentage is None:
             return
@@ -404,12 +469,18 @@ class SituationLine(BaseModel):
 
     @property
     def period_percentage(self):
+        """Advancement % billed in just this period (this situation's
+        cumulative minus the previous one's)."""
         return self.cumulative_percentage - self.previous_cumulative_percentage
 
     @property
     def cumulative_amount_ht(self):
+        """This line's DevisLine total × cumulative_percentage — total
+        billed-to-date (HT) for this line."""
         return self.devis_line.total_ht * (self.cumulative_percentage / 100)
 
     @property
     def period_amount_ht(self):
+        """This line's DevisLine total × period_percentage — what this
+        period's invoice should bill for this line."""
         return self.devis_line.total_ht * (self.period_percentage / 100)

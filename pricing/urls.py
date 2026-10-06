@@ -1,3 +1,4 @@
+"""URL routes for the price library (Bibliothèque de Prix) and DQE."""
 from django.urls import path
 from . import views
 

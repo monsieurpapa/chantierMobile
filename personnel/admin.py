@@ -1,3 +1,6 @@
+"""Django admin registrations for the `personnel` app — operator-facing
+only; everyday CRUD goes through personnel/views.py's role/cabinet-gated
+views instead."""
 from django.contrib import admin
 from .models import Skill, Personnel, SiteAssignment
 

@@ -1,3 +1,12 @@
+"""Views for the revenue app: contracts, invoices + payments, devis
+(quoting) and situations de travaux (progress billing).
+
+As in finance/views.py, every state-changing endpoint is gated either by a
+class-based view's `allowed_roles` (RoleRequiredMixin) or an explicit
+`can_act_for_cabinet(request, cabinet, allowed_roles)` call in a
+function-based view. DEVIS_ACTION_ROLES and INVOICE_ACTION_ROLES below are
+the role-list constants most of those function views share.
+"""
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -27,6 +36,9 @@ DEVIS_ACTION_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'C
 INVOICE_ACTION_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'ACCOUNTANT']
 
 class ContractListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
+    """Lists contracts for the caller's cabinet(s); open to any
+    authenticated user. "Nouveau contrat" is only offered to DIRECTOR/
+    DIRECTEUR_TECHNIQUE/DIRECTEUR_GENERAL/ACCOUNTANT."""
     model = Contract
     template_name = 'revenue/contract_list.html'
     context_object_name = 'contracts'
@@ -57,6 +69,9 @@ class ContractListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, 
         return super().get_queryset().filter(site__cabinet__id__in=user_cabinet_ids)
 
 class ContractCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, CreateView):
+    """Creates a Contract directly (bypassing the Devis-acceptance flow).
+    allowed_roles: DIRECTOR, DIRECTEUR_TECHNIQUE, DIRECTEUR_GENERAL,
+    ACCOUNTANT."""
     model = Contract
     form_class = ContractForm
     template_name = 'revenue/contract_form.html'
@@ -96,6 +111,7 @@ class ContractCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMix
         return reverse_lazy('projects:site_detail', kwargs={'unique_id': self.object.site.unique_id})
 
 class ContractUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, UpdateView):
+    """Edits a Contract. Same allowed_roles as ContractCreateView."""
     model = Contract
     form_class = ContractForm
     template_name = 'revenue/contract_form.html'
@@ -132,6 +148,11 @@ class ContractUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMix
         return reverse_lazy('projects:site_detail', kwargs={'unique_id': self.object.site.unique_id})
 
 class InvoiceListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
+    """Lists invoices for the caller's cabinet(s); open to any
+    authenticated user. (Note "Nouvelle facture" is always shown here,
+    unlike most other list views' header actions, which check a role
+    first — InvoiceCreateView itself still enforces allowed_roles on
+    submit.)"""
     model = Invoice
     template_name = 'revenue/invoice_list.html'
     context_object_name = 'invoices'
@@ -157,6 +178,9 @@ class InvoiceListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, L
         return super().get_queryset().filter(contract__site__cabinet__id__in=user_cabinet_ids)
 
 class InvoiceCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, CreateView):
+    """Creates an Invoice (always DRAFT — see InvoiceForm's comment on why
+    status isn't user-editable here). allowed_roles: DIRECTOR,
+    DIRECTEUR_TECHNIQUE, DIRECTEUR_GENERAL, ACCOUNTANT."""
     model = Invoice
     form_class = InvoiceForm
     template_name = 'revenue/invoice_form.html'
@@ -196,6 +220,11 @@ class InvoiceCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixi
         return reverse_lazy('revenue:invoice_detail', kwargs={'pk': self.object.pk})
 
 class InvoiceDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, DetailView):
+    """Invoice detail; open to any authenticated user in the invoice's
+    cabinet (CabinetAccessMixin, no allowed_roles). The send/cancel/record-
+    payment actions live in a single role-gated "Actions" card in the
+    template rather than as header actions — see the comment on
+    get_header_actions() below for why."""
     model = Invoice
     cabinet_lookup_field = 'contract__site__cabinet'
     template_name = 'revenue/invoice_detail.html'
@@ -306,6 +335,11 @@ def contract_pdf(request, pk):
 
 
 class PaymentListView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
+    """Payment history for the caller's cabinet(s). allowed_roles:
+    DIRECTOR, DIRECTEUR_TECHNIQUE, DIRECTEUR_GENERAL, ACCOUNTANT — note
+    CASHIER is not in this list even though it can record a payment (see
+    PaymentCreateView), so a cashier can create a payment but not browse
+    the history list."""
     model = Payment
     template_name = 'revenue/payment_list.html'
     context_object_name = 'payments'
@@ -340,6 +374,11 @@ class PaymentListView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin,
         return context
 
 class PaymentCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, CreateView):
+    """Records a Payment against an invoice (queryset restricted to
+    SENT/OVERDUE invoices). allowed_roles: DIRECTOR, DIRECTEUR_TECHNIQUE,
+    DIRECTEUR_GENERAL, ACCOUNTANT, CASHIER. Saving triggers
+    Invoice.check_and_mark_paid() and emails directors
+    (notify_directors_of_payment)."""
     model = Payment
     form_class = PaymentForm
     template_name = 'revenue/payment_form.html'
@@ -394,7 +433,8 @@ def invoice_send(request, pk):
     the create form offers since 'status' isn't a user-editable field — had
     no way to ever become payable: PaymentCreateView's own queryset only
     ever offers SENT/OVERDUE invoices, and there was no InvoiceUpdateView
-    anywhere to fix a stuck DRAFT. Mirrors devis_send/situation_validate."""
+    anywhere to fix a stuck DRAFT. Mirrors devis_send/situation_validate.
+    Role-gated to INVOICE_ACTION_ROLES in the invoice's cabinet."""
     invoice = get_object_or_404(Invoice, pk=pk)
     if request.method == 'POST':
         if not can_act_for_cabinet(request, invoice.contract.site.cabinet, INVOICE_ACTION_ROLES):
@@ -424,7 +464,10 @@ def invoice_send(request, pk):
 def invoice_cancel(request, pk):
     """DRAFT → CANCELLED — lets a director/accountant kill a mistakenly
     created draft invoice instead of it sitting there forever with no way
-    to remove or correct it."""
+    to remove or correct it. Role-gated to INVOICE_ACTION_ROLES; only
+    reachable from DRAFT (matching Invoice.clean()'s transition table —
+    see the gotcha on Invoice in revenue/models.py about SENT/OVERDUE
+    invoices never being cancellable)."""
     invoice = get_object_or_404(Invoice, pk=pk)
     if request.method == 'POST':
         if not can_act_for_cabinet(request, invoice.contract.site.cabinet, INVOICE_ACTION_ROLES):
@@ -453,6 +496,9 @@ def invoice_cancel(request, pk):
 # --- Devis views ---
 
 class DevisListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
+    """Lists devis for the caller's cabinet(s); open to any authenticated
+    user. Creating/sending/accepting/rejecting a devis is separately
+    gated to DEVIS_ACTION_ROLES."""
     model = Devis
     template_name = 'revenue/devis_list.html'
     context_object_name = 'devis_list'
@@ -485,6 +531,9 @@ class DevisListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, Lis
 
 
 class DevisCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, CreateView):
+    """Creates a Devis plus its DevisLine formset (or just a photo, with no
+    typed-in lines — see the has_photo handling below). allowed_roles =
+    DEVIS_ACTION_ROLES."""
     model = Devis
     form_class = DevisForm
     template_name = 'revenue/devis_form.html'
@@ -554,6 +603,10 @@ class DevisCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin,
 
 
 class DevisUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, UpdateView):
+    """Edits a Devis and its lines. allowed_roles = DEVIS_ACTION_ROLES; the
+    template only links here while the devis is still BROUILLON (see
+    DevisDetailView.get_header_actions), though this view itself doesn't
+    re-check that status."""
     model = Devis
     form_class = DevisForm
     template_name = 'revenue/devis_form.html'
@@ -619,6 +672,8 @@ class DevisUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin,
 
 
 class DevisDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, DetailView):
+    """Devis detail; open to any authenticated user in the devis's cabinet.
+    "Modifier" only shown while BROUILLON."""
     model = Devis
     cabinet_lookup_field = 'site__cabinet'
     template_name = 'revenue/devis_detail.html'
@@ -660,6 +715,8 @@ class DevisDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, D
 
 @login_required
 def devis_send(request, pk):
+    """BROUILLON -> ENVOYE. Role-gated to DEVIS_ACTION_ROLES in the devis's
+    site's cabinet."""
     devis = get_object_or_404(Devis, pk=pk)
     if request.method == 'POST':
         if not can_act_for_cabinet(request, devis.site.cabinet, DEVIS_ACTION_ROLES):
@@ -680,6 +737,9 @@ def devis_send(request, pk):
 
 @login_required
 def devis_accept(request, pk):
+    """ENVOYE -> ACCEPTE, creating the site's Contract
+    (Devis.accept_and_create_contract()). Role-gated to DEVIS_ACTION_ROLES
+    in the devis's site's cabinet."""
     devis = get_object_or_404(Devis, pk=pk)
     if request.method == 'POST':
         if not can_act_for_cabinet(request, devis.site.cabinet, DEVIS_ACTION_ROLES):
@@ -696,6 +756,8 @@ def devis_accept(request, pk):
 
 @login_required
 def devis_reject(request, pk):
+    """BROUILLON or ENVOYE -> REFUSE. Role-gated to DEVIS_ACTION_ROLES in
+    the devis's site's cabinet."""
     devis = get_object_or_404(Devis, pk=pk)
     if request.method == 'POST':
         if not can_act_for_cabinet(request, devis.site.cabinet, DEVIS_ACTION_ROLES):
@@ -717,6 +779,9 @@ def devis_reject(request, pk):
 # --- Situation de travaux views ---
 
 class SituationTravauxListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
+    """Lists situations de travaux for the caller's cabinet(s); open to any
+    authenticated user. Creating/validating/invoicing one is separately
+    gated to DEVIS_ACTION_ROLES."""
     model = SituationTravaux
     template_name = 'revenue/situation_list.html'
     context_object_name = 'situations'
@@ -744,6 +809,10 @@ class SituationTravauxListView(LoginRequiredMixin, CabinetAccessMixin, PageHeade
 
 
 class SituationTravauxCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, CreateView):
+    """Creates a SituationTravaux plus its SituationLine formset, restricted
+    to the contract's own source Devis lines when it has one. allowed_roles
+    = DEVIS_ACTION_ROLES (reused — same "who can touch billing progress"
+    circle as devis actions)."""
     model = SituationTravaux
     form_class = SituationTravauxForm
     template_name = 'revenue/situation_form.html'
@@ -816,6 +885,8 @@ class SituationTravauxCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetA
 
 
 class SituationTravauxDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, DetailView):
+    """Situation detail; open to any authenticated user in the contract's
+    cabinet. "Générer la facture" only shown once VALIDEE."""
     model = SituationTravaux
     cabinet_lookup_field = 'contract__site__cabinet'
     template_name = 'revenue/situation_detail.html'
@@ -857,6 +928,8 @@ class SituationTravauxDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHea
 
 @login_required
 def situation_validate(request, pk):
+    """BROUILLON -> VALIDEE. Role-gated to DEVIS_ACTION_ROLES in the
+    situation's contract's site's cabinet."""
     situation = get_object_or_404(SituationTravaux, pk=pk)
     if request.method == 'POST':
         if not can_act_for_cabinet(request, situation.contract.site.cabinet, DEVIS_ACTION_ROLES):
@@ -877,6 +950,9 @@ def situation_validate(request, pk):
 
 @login_required
 def situation_generate_invoice(request, pk):
+    """VALIDEE -> FACTUREE, generating the period's Invoice
+    (SituationTravaux.generate_invoice()). Role-gated to
+    DEVIS_ACTION_ROLES."""
     situation = get_object_or_404(SituationTravaux, pk=pk)
     if request.method == 'POST':
         if not can_act_for_cabinet(request, situation.contract.site.cabinet, DEVIS_ACTION_ROLES):

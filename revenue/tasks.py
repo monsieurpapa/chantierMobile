@@ -1,3 +1,6 @@
+"""Celery tasks for the revenue app — currently just the daily
+auto-overdue sweep for invoices (see docs/architecture/overview.md#async-
+tasks for the beat schedule and broker setup)."""
 from celery import shared_task
 from django.utils import timezone
 

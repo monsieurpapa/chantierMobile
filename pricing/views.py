@@ -1,3 +1,5 @@
+"""Views for the Bibliothèque de Prix (price library) and the DQEs built
+from it."""
 from django.views.generic import ListView, CreateView, UpdateView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
@@ -16,6 +18,11 @@ _add_ambiguous_cabinet_field = add_ambiguous_cabinet_field
 
 
 class PriceLibraryItemListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
+    """Browse the cabinet's price library. Cabinet-scoped via the
+    inherited default `cabinet_lookup_field = 'cabinet'` (PriceLibraryItem
+    has a direct cabinet FK, so no override is needed here). Any
+    logged-in member of the cabinet can view; "Ajouter" is only shown to
+    director-tier/CHIEF_ENGINEER roles."""
     model = PriceLibraryItem
     template_name = 'pricing/price_item_list.html'
     context_object_name = 'price_items'
@@ -41,6 +48,11 @@ class PriceLibraryItemListView(LoginRequiredMixin, CabinetAccessMixin, PageHeade
 
 
 class PriceLibraryItemCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, CreateView):
+    """Add a price library item. Director-tier or CHIEF_ENGINEER only
+    (allowed_roles below); tagged to the creator's own cabinet in
+    form_valid(), with an explicit cabinet picker added for a
+    multi-cabinet user who hasn't switched into one (see
+    _add_ambiguous_cabinet_field)."""
     model = PriceLibraryItem
     form_class = PriceLibraryItemForm
     template_name = 'pricing/price_item_form.html'
@@ -80,6 +92,10 @@ class PriceLibraryItemCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetA
 
 
 class PriceLibraryItemUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, UpdateView):
+    """Edit a price library item. Same director-tier/CHIEF_ENGINEER gate
+    as PriceLibraryItemCreateView. Note editing `unit_price` here
+    re-prices the catalog going forward only — it does not touch
+    `unit_price` already copied onto existing DQELine rows."""
     model = PriceLibraryItem
     form_class = PriceLibraryItemForm
     template_name = 'pricing/price_item_form.html'
@@ -105,6 +121,9 @@ class PriceLibraryItemUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetA
 
 
 class PriceLibraryItemDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, DetailView):
+    """View a single price library item. Cabinet-scoped (default
+    `cabinet_lookup_field = 'cabinet'`); any logged-in member of the
+    cabinet can view."""
     model = PriceLibraryItem
     template_name = 'pricing/price_item_detail.html'
     context_object_name = 'price_item'
@@ -140,6 +159,10 @@ def _scope_site_queryset(request, form):
 
 
 class DQEListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
+    """List the cabinet's DQEs. Cabinet-scoped (default
+    `cabinet_lookup_field = 'cabinet'` — DQE has a direct cabinet FK);
+    any logged-in member of the cabinet can view. "Nouveau DQE" is only
+    shown to director-tier/CHIEF_ENGINEER roles."""
     model = DQE
     template_name = 'pricing/dqe_list.html'
     context_object_name = 'dqes'
@@ -165,6 +188,10 @@ class DQEListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListV
 
 
 class DQECreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, CreateView):
+    """Create a DQE with its lines. Director-tier or CHIEF_ENGINEER only
+    (allowed_roles below); `site` is scoped to the user's own cabinet(s)
+    (_scope_site_queryset), and `cabinet` is resolved/picked the same way
+    as PriceLibraryItemCreateView."""
     model = DQE
     form_class = DQEForm
     template_name = 'pricing/dqe_form.html'
@@ -221,6 +248,11 @@ class DQECreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, P
 
 
 class DQEUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, UpdateView):
+    """Edit a DQE and its lines. Same director-tier/CHIEF_ENGINEER gate
+    as DQECreateView; no status-based restriction — a VALIDATED or
+    ARCHIVED DQE can still be edited through this view (the status field
+    is just another form field on DQEForm, not state-machine-checked
+    anywhere in pricing/models.py)."""
     model = DQE
     form_class = DQEForm
     template_name = 'pricing/dqe_form.html'
@@ -266,6 +298,8 @@ class DQEUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, P
 
 
 class DQEDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, DetailView):
+    """View a single DQE and its lines. Cabinet-scoped; any logged-in
+    member of the cabinet can view."""
     model = DQE
     template_name = 'pricing/dqe_detail.html'
     context_object_name = 'dqe'
@@ -292,7 +326,21 @@ class DQEDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, Det
 def price_items_data_api(request):
     """API endpoint exposing active price library items (designation, unit, unit_price)
     so the DQE line formset can auto-fill those fields client-side, mirroring
-    materials.views.materials_data_api."""
+    materials.views.materials_data_api.
+
+    GOTCHA: unlike materials_data_api (which at least requires
+    @login_required), this view has no authentication decorator at all —
+    there is no app-wide login-required middleware in this project (see
+    MIDDLEWARE in chantiermobile/settings.py), so this endpoint is
+    reachable by a fully anonymous request. It also queries
+    `PriceLibraryItem.objects.filter(is_active=True)` with no cabinet
+    filter whatsoever, unlike every other pricing view (which all scope
+    through CabinetAccessMixin or an explicit cabinet_roles filter).
+    PriceLibraryItem is cabinet-scoped, tenant-specific data (a cabinet's
+    own negotiated unit prices — see the model docstring), so this one
+    endpoint leaks every cabinet's active price catalog (code,
+    designation, unit, unit_price) to anyone who can reach the URL,
+    logged in or not."""
     from django.http import JsonResponse
 
     items = PriceLibraryItem.objects.filter(is_active=True).values('id', 'designation', 'unit', 'unit_price')

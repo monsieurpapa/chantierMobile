@@ -1,3 +1,11 @@
+"""
+Request middleware for the two account-safety behaviors described in
+docs/security.md: forcing a password change on a freshly-created account,
+and logging an idle session out explicitly rather than letting it decay
+into a confusing anonymous state. Both are plain old-style middleware
+(callable classes) rather than per-view decorators, because they need to
+run on every authenticated request regardless of which view handles it.
+"""
 import time
 
 from django.conf import settings

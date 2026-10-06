@@ -1,3 +1,5 @@
+"""URL routes for the `tasks` app: Task CRUD and its
+start/complete/block/reopen transition actions."""
 from django.urls import path
 from . import views
 

@@ -1,3 +1,4 @@
+"""URL routes for suppliers, purchase orders, stock, and supplier credit."""
 from django.urls import path
 from . import views
 

@@ -1,3 +1,13 @@
+"""
+The RBAC toolkit every other app builds its views on: see
+docs/architecture/overview.md#multi-tenancy-cabinet and docs/security.md
+for the full picture. Two mixins (CabinetAccessMixin, RoleRequiredMixin)
+cover class-based views, and two plain functions (can_act_for_cabinet,
+can_view_cabinet) cover function-based ones — every state-changing view
+in the codebase uses one of these four, because `@login_required` alone
+only proves the user is signed in, never that they hold the right role in
+the right Cabinet.
+"""
 from django import forms
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect
@@ -132,6 +142,12 @@ class CabinetAccessMixin:
     cabinet_lookup_field = 'cabinet'
 
     def get_queryset(self):
+        """Scopes the view's base queryset to the current user's
+        Cabinet(s): a superuser gets the session-switched Cabinet (or
+        everything, if none is active), a regular user gets only the rows
+        under the Cabinet(s) they hold a UserCabinetRole in, and anyone
+        else (no role, unauthenticated) gets an empty queryset — fail
+        closed, never open."""
         qs = super().get_queryset()
         if not self.request.user.is_authenticated:
             return qs.none()
@@ -222,6 +238,12 @@ class RoleRequiredMixin:
         return None
 
     def dispatch(self, request, *args, **kwargs):
+        """Blocks the view entirely unless the user holds one of
+        `allowed_roles` (scoped to get_role_cabinet() if set). A superuser
+        always passes. On failure, bounces back to the referring page with
+        an error message rather than raising, since this guards whole
+        pages (not a single POST action) and a hard 403 would be a worse
+        experience for a misdirected link."""
         if not request.user.is_authenticated:
             return redirect('account_login')
 

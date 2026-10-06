@@ -1,3 +1,11 @@
+"""
+Views for the `projects` app: Site CRUD, its phase structure, the
+engineer-facing planning-review workflow, and the progress-reporting
+loop (reports, photos, comments). Every state-changing view here must
+go through RoleRequiredMixin/get_role_cabinet() or can_act_for_cabinet()
+(see core/mixins.py and docs/security.md) — @login_required alone never
+proves the actor holds the right role in the right Cabinet.
+"""
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.views.generic import ListView, CreateView, UpdateView, DetailView, DeleteView
@@ -32,6 +40,9 @@ PROGRESS_PHOTO_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 
 
 
 def _scope_lead_engineer_queryset(form, cabinet):
+    """Restricts the Site form's `lead_engineer` choices to users who
+    actually hold an ENGINEER/CHIEF_ENGINEER role in this site's cabinet
+    — otherwise the select would list every user in the system."""
     from django.contrib.auth import get_user_model
     User = get_user_model()
     if cabinet:
@@ -42,6 +53,9 @@ def _scope_lead_engineer_queryset(form, cabinet):
     return form
 
 class SiteListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
+    """Lists the current user's Cabinet-scoped sites. Open to any
+    authenticated member of a cabinet; only the "Créer un chantier"
+    header action is role-gated (director-tier or CHIEF_ENGINEER)."""
     model = Site
     template_name = 'projects/site_list.html'
     context_object_name = 'sites'
@@ -65,6 +79,8 @@ class SiteListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, List
         return []
 
 class SiteCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, CreateView):
+    """Creates a new Site. Director-tier or CHIEF_ENGINEER only
+    (allowed_roles), tagged to the creator's own cabinet."""
     model = Site
     form_class = SiteForm
     template_name = 'projects/site_form.html'
@@ -95,6 +111,9 @@ class SiteCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, 
         return super().form_valid(form)
 
 class SiteUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, UpdateView):
+    """Edits a Site, including status transitions (validated by
+    Site.clean()). Director-tier or CHIEF_ENGINEER only (allowed_roles),
+    scoped to the object's own cabinet via CabinetAccessMixin."""
     model = Site
     form_class = SiteForm
     template_name = 'projects/site_form.html'
@@ -150,6 +169,9 @@ class SiteUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, 
         return reverse_lazy('projects:site_detail', kwargs={'unique_id': self.object.unique_id})
 
 class SiteDeleteView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, DeleteView):
+    """Soft-deletes a Site (see Site.delete()'s cascade). Director-tier
+    only (allowed_roles) — notably narrower than SiteCreateView/
+    SiteUpdateView, which also allow CHIEF_ENGINEER."""
     model = Site
     template_name = 'projects/confirm_delete.html'
     slug_field = 'unique_id'
@@ -178,6 +200,10 @@ class SiteDeleteView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, 
         return super().delete(request, *args, **kwargs)
 
 class SiteDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, DetailView):
+    """A Site's full picture: financials, phases, and a merged activity
+    timeline (progress reports, expenses, material requests). Open to
+    any authenticated member of the site's cabinet (CabinetAccessMixin);
+    not role-gated beyond that."""
     model = Site
     template_name = 'projects/site_detail.html'
     context_object_name = 'site'
@@ -269,6 +295,9 @@ class SiteDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, De
 # --- PHASES ---
 
 class ProjectPhaseCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, CreateView):
+    """Adds a phase to a site. Director-tier or CHIEF_ENGINEER only
+    (allowed_roles), scoped to the site's own cabinet via
+    get_role_cabinet() below."""
     model = ProjectPhase
     form_class = ProjectPhaseForm
     template_name = 'projects/phase_form.html'
@@ -333,6 +362,9 @@ class ProjectPhaseCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMi
         return reverse_lazy('projects:site_detail', kwargs={'unique_id': self.site.unique_id})
 
 class ProjectPhaseUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, UpdateView):
+    """Edits a phase's name/dates. Director-tier or CHIEF_ENGINEER only
+    (allowed_roles) — closing a phase is a separate action, see
+    `phase_close` below, which also allows ENGINEER."""
     model = ProjectPhase
     form_class = ProjectPhaseForm
     template_name = 'projects/phase_form.html'
@@ -364,6 +396,8 @@ class ProjectPhaseUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAcces
         return reverse_lazy('projects:site_detail', kwargs={'unique_id': self.object.site.unique_id})
 
 class ProjectPhaseDeleteView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, DeleteView):
+    """Soft-deletes a phase. Director-tier or CHIEF_ENGINEER only
+    (allowed_roles)."""
     model = ProjectPhase
     template_name = 'projects/confirm_delete.html'
     slug_field = 'unique_id'
@@ -395,6 +429,22 @@ class ProjectPhaseDeleteView(LoginRequiredMixin, RoleRequiredMixin, CabinetAcces
 # --- PROGRESS ---
 
 class SiteProgressCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, CreateView):
+    """Files a progress report (%, description, optional photos) against
+    a phase. Director-tier, CHIEF_ENGINEER or ENGINEER (allowed_roles).
+
+    GOTCHA: unlike ProjectPhaseCreateView/PlanningSubmissionCreateView,
+    this view does not override get_role_cabinet() and is not mixed with
+    CabinetAccessMixin — RoleRequiredMixin's check here is "does this
+    user hold one of allowed_roles in *any* cabinet", not "...in this
+    phase's own cabinet". Combined with `self.phase` being looked up
+    with a bare get_object_or_404(ProjectPhase, ...) (no cabinet filter),
+    a user who holds e.g. ENGINEER in their own Cabinet A can file a
+    progress report — with attached photos — against a phase belonging
+    to an unrelated Cabinet B, provided they know/guess that phase's
+    unique_id (a UUID in the URL). This looks like a tenant-isolation
+    gap rather than an intentional cross-cabinet allowance; compare with
+    the scoped siblings above before changing it.
+    """
     model = SiteProgress
     form_class = SiteProgressForm
     template_name = 'projects/progress_form.html'
@@ -533,7 +583,17 @@ def progress_comment_add(request, unique_id):
 def phase_close(request, unique_id):
     """L'ingénieur principal du chantier (ou un directeur/chef des
     ingénieurs) clôture une étape du projet une fois ses travaux
-    terminés."""
+    terminés.
+
+    GOTCHA: PHASE_CLOSE_ROLES is only checked via can_act_for_cabinet
+    against `phase.site.cabinet` — any ENGINEER holding that role
+    anywhere in the same cabinet can close this phase, not only the
+    site's own `lead_engineer`. There is no additional check here (or in
+    ProjectPhase.close()) that the acting user actually leads *this*
+    site. Contrast with personnel/views.py's _attendance_can_act and
+    SiteAssignmentCreateView, which explicitly check
+    `site.lead_engineer_id == user.pk` for the equivalent "own site
+    only" restriction."""
     phase = get_object_or_404(ProjectPhase, unique_id=unique_id)
     if request.method != 'POST':
         return redirect('projects:site_detail', unique_id=phase.site.unique_id)
@@ -552,6 +612,13 @@ def phase_close(request, unique_id):
 # --- PLANNING SUBMISSIONS ---
 
 class PlanningSubmissionCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, CreateView):
+    """Drafts and immediately submits (BROUILLON -> SOUMISE, see
+    form_valid) a planning submission for a site. Director-tier,
+    CHIEF_ENGINEER or ENGINEER (PLANNING_SUBMIT_ROLES), scoped to the
+    site's own cabinet via get_role_cabinet() below — but any ENGINEER
+    in that cabinet may submit for any of its sites, not only one they
+    lead (see the GOTCHA note on `planning_submission_approve` below for
+    why that symmetry matters)."""
     model = PlanningSubmission
     form_class = PlanningSubmissionForm
     template_name = 'projects/planning_submission_form.html'
@@ -610,6 +677,17 @@ class PlanningSubmissionCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHe
 
 @login_required
 def planning_submission_approve(request, pk):
+    """Approves a SOUMISE planning submission. Director-tier,
+    CHIEF_ENGINEER or ENGINEER (PLANNING_REVIEW_ROLES) within the site's
+    cabinet, plus PlanningSubmission._decide()'s self-review guard
+    (can't approve your own submission).
+
+    GOTCHA: that's the only "own site" guard — can_act_for_cabinet checks
+    role + cabinet only, so any other ENGINEER in the same cabinet (not
+    just the site's lead_engineer) can approve a colleague's submission
+    for a site neither of them leads. docs/security.md currently
+    describes this row as "ENGINEER (own site only)"; the code doesn't
+    actually enforce the "own site" part beyond self-review."""
     submission = get_object_or_404(PlanningSubmission, pk=pk)
     if request.method != 'POST':
         return redirect('projects:site_detail', unique_id=submission.site.unique_id)
@@ -633,6 +711,9 @@ def planning_submission_approve(request, pk):
 
 @login_required
 def planning_submission_reject(request, pk):
+    """Rejects a SOUMISE planning submission. Same role/cabinet/self-
+    review gating as `planning_submission_approve` above (see its
+    GOTCHA note)."""
     submission = get_object_or_404(PlanningSubmission, pk=pk)
     if request.method != 'POST':
         return redirect('projects:site_detail', unique_id=submission.site.unique_id)

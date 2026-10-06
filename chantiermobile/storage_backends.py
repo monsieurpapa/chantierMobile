@@ -1,3 +1,5 @@
+"""Custom storage backend(s) for production media uploads (see
+MediaStorage below and the DEFAULT_FILE_STORAGE setting)."""
 from storages.backends.s3boto3 import S3Boto3Storage
 
 

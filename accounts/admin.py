@@ -1,3 +1,6 @@
+"""Django admin registrations for identity/tenancy models. CabinetContextLog
+is registered read-only (no add/change permission) since it's an audit
+trail written only by SwitchCabinetView, never edited by hand."""
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from .models import User, Cabinet, UserCabinetRole, CabinetContextLog

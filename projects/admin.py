@@ -1,3 +1,6 @@
+"""Django admin registrations for the `projects` app — operator-facing
+only; everyday CRUD goes through projects/views.py's role/cabinet-gated
+views instead."""
 from django.contrib import admin
 from .models import Site, ProjectPhase, SiteProgress, ProgressPhoto, ProgressComment
 

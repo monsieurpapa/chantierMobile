@@ -1,12 +1,13 @@
 # ChantierMobile
 
-**Construction site ERP** — project tracking, personnel management, financial control, material logistics, and revenue handling in one platform.
+**Construction site ERP** — project tracking, personnel management, financial control, material logistics, pricing/estimation, procurement, and revenue handling in one platform.
 
 [![Django](https://img.shields.io/badge/Django-4.2+-092E20?logo=django&logoColor=white)](https://www.djangoproject.com/)
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Docker](https://img.shields.io/badge/Docker-required-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 [![Celery](https://img.shields.io/badge/Celery-Redis-37814A?logo=celery&logoColor=white)](https://docs.celeryq.dev/)
+[![License](https://img.shields.io/badge/license-Proprietary-lightgrey)](LICENSE)
 
 ---
 
@@ -18,18 +19,24 @@
 - [Quick Start](#quick-start)
 - [Configuration](#configuration)
 - [Deployment](#deployment)
-  - [Render.com (free)](#rendercom-free)
-  - [Bare Linux Server](#bare-linux-server)
 - [Development](#development)
 - [Testing](#testing)
 - [Architecture](#architecture)
+- [Security](#security)
+- [Documentation](#documentation)
 - [Contributing](#contributing)
+- [License](#license)
 
 ---
 
 ## Overview
 
-ChantierMobile is a multi-tenant ERP built for construction firms. Each firm operates under a **Cabinet** — an isolated organizational unit that owns all its sites, budgets, contracts, and personnel data. Role-based access control (Director, Chief Engineer, Engineer, Accountant, Cashier, Worker) is enforced at the view layer.
+ChantierMobile is a multi-tenant ERP built for construction firms. Each firm operates
+under a **Cabinet** — an isolated organizational unit that owns all its sites, budgets,
+contracts, and personnel data. Role-based access control (Director, Directeur
+Technique/Général, Chief Engineer, Engineer, Financier, Accountant, Cashier,
+Magasinier, Worker) is enforced at the view layer, scoped per Cabinet. See
+[`docs/architecture/overview.md`](docs/architecture/overview.md) for the full model.
 
 ---
 
@@ -37,11 +44,17 @@ ChantierMobile is a multi-tenant ERP built for construction firms. Each firm ope
 
 | Module | What it does |
 |--------|-------------|
-| **Projects** | Manage construction sites through a lifecycle (Planning → Active → Paused → Completed), broken into phases with progress tracking |
-| **Finance** | Per-site budget caps, expense submission with an approval workflow (Pending → Approved → Paid), receipt archiving |
-| **Personnel** | Worker profiles, per-site assignments with negotiated daily rates, skill cataloguing |
-| **Materials** | Material catalog, request/order workflow (Pending → Approved → Ordered → Delivered) |
-| **Revenue** | Client contracts, invoice generation with status tracking (Draft → Sent → Paid/Overdue), payment reconciliation |
+| **Projects** | Manage construction sites through a lifecycle (Planning → Active → Paused → Completed), broken into phases with progress tracking (photos, comments), lead-engineer assignment, and planning submission/review |
+| **Finance** | Per-site budget caps, expense approval workflow (Pending → Approved → Paid), a balance-tracked Caisse ledger (cashbook, inter-caisse loans), progressive worker payroll and separate fixed-salary payroll for engineers/staff, avenants (change orders), PDF reports |
+| **Personnel** | Worker/staff profiles, per-site assignments with negotiated rates, skill cataloguing, leave requests, daily attendance/pointage tracking |
+| **Materials** | Material catalog, two-stage request/approval workflow (Pending → Validated → Approved → Ordered → Delivered) |
+| **Revenue** | Devis (quotes) and Situations de travaux (progress billing), client contracts, invoice generation with status tracking (Draft → Sent → Paid/Overdue), payment reconciliation, PDF export |
+| **Pricing** | Bibliothèque de Prix (price library) and DQE (Détail Quantitatif Estimatif) for project cost estimation |
+| **Procurement** | Suppliers, purchase orders with two-stage approval, stock items and movements (in/out/transfer), supplier credit tracking |
+| **Tasks** | Lightweight task tracking per site/phase, with priority and assignment |
+| **Dashboard & search** | Real-time cabinet-scoped analytics, a unified pending-approvals inbox, and global search across sites, personnel, contracts, and invoices |
+| **Notifications** | In-app, role-targeted notifications on approval events (bell icon) |
+| **Security** | 15-minute session idle timeout, forced password change on first login, full RBAC + Cabinet isolation (see [`docs/security.md`](docs/security.md)) |
 | **Async tasks** | Celery beat job marks overdue invoices daily; Flower dashboard for task monitoring |
 | **i18n** | French (default) and English, switchable via UI; all strings use `gettext_lazy` |
 
@@ -106,270 +119,26 @@ just createsuperuser
 | Application | http://localhost:8001 |
 | Celery monitor (Flower) | http://localhost:5555 |
 
+Full walkthrough, including creating your first Cabinet and common first-run issues:
+[`docs/guides/getting-started.md`](docs/guides/getting-started.md).
+
 ---
 
 ## Configuration
 
-All configuration is driven by environment variables. The defaults in `docker-compose.yml` work for local development out of the box.
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `SECRET_KEY` | *(insecure dev key)* | Django secret key — **always override in production** |
-| `DEBUG` | `0` | Set to `1` for development |
-| `ALLOWED_HOSTS` | `` | Comma-separated list of allowed hostnames |
-| `DB_ENGINE` | `django.db.backends.sqlite3` | Switch to `django.db.backends.postgresql` for Postgres |
-| `DB_NAME` | `db.sqlite3` | Database name |
-| `DB_USER` | `` | Database user |
-| `DB_PASSWORD` | `` | Database password |
-| `DB_HOST` | `` | Database host |
-| `DB_PORT` | `` | Database port |
-| `REDIS_URL` | `redis://localhost:6379/0` | Redis connection URL (used by Celery) |
+All configuration is driven by environment variables; the defaults in
+`docker-compose.yml` work for local development out of the box. See
+[`docs/guides/deployment.md`](docs/guides/deployment.md#environment-variables-reference)
+for the full reference table and `.env.example` for the complete, current list.
 
 ---
 
 ## Deployment
 
-### Render.com (free)
-
-Render hosts the full stack for free using the included `render.yaml` blueprint. Free tier limitations: the web service sleeps after 15 minutes of inactivity (~30 s cold start), and the PostgreSQL instance expires after 90 days (migrate to Supabase before then — see note below).
-
-#### Prerequisites
-
-- A free [Render account](https://render.com)
-- A free [Upstash account](https://upstash.com) for Redis (10 K commands/day, no expiry)
-
-#### 1. Create a free Redis database on Upstash
-
-1. Log in to Upstash → **Create Database**
-2. Choose the region closest to your users
-3. Copy the **Redis URL** — it starts with `rediss://`
-
-#### 2. Deploy via Blueprint
-
-1. In the Render dashboard click **New → Blueprint**
-2. Connect your GitHub repo (`monsieurpapa/chantierMobile`)
-3. Render reads `render.yaml` and proposes three resources:
-   - `chantiermobile-web` — Django web service
-   - `chantiermobile-celery` — Celery worker + beat scheduler
-   - `chantiermobile-db` — managed PostgreSQL (free, 90 days)
-4. Before clicking **Apply**, set the `REDIS_URL` environment variable on **both services** to the Upstash URL copied above
-5. Click **Apply** — Render runs `build.sh` (install → collectstatic → migrate) and starts the services
-
-#### 3. Create a superuser
-
-Once the deploy is green, open the **Shell** tab on `chantiermobile-web` and run:
-
-```bash
-python manage.py createsuperuser
-```
-
-#### 4. Access the app
-
-Your live URL will be: `https://chantiermobile-web.onrender.com`
-
-Log in, create a Cabinet, and assign yourself a role to unlock the full interface.
-
-#### PostgreSQL expiry (90-day migration to Supabase)
-
-Render's free PostgreSQL is deleted after 90 days. Before that deadline:
-
-1. Dump from Render: in the Render shell run `pg_dump $DATABASE_URL > backup.sql`
-2. Create a free project on [Supabase](https://supabase.com) — permanent free tier, 500 MB
-3. Copy the Supabase connection string (PostgreSQL format, not Supabase JS)
-4. Restore: `psql <supabase-connection-string> < backup.sql`
-5. In the Render dashboard update `DATABASE_URL` on both services to the Supabase URL
-6. Redeploy — zero downtime
-
----
-
-### Bare Linux Server
-
-For full control on a VPS (Ubuntu 22.04 LTS recommended — available free on [Oracle Cloud Always Free](https://www.oracle.com/cloud/free/) or from ~$4/month on Hetzner/DigitalOcean).
-
-The stack uses **Gunicorn** behind **Nginx**, **Supervisor** to keep Celery running, and **Certbot** for HTTPS.
-
-#### 1. Provision the server
-
-```bash
-# On your local machine
-ssh root@YOUR_SERVER_IP
-```
-
-```bash
-# On the server — install system dependencies
-apt update && apt upgrade -y
-apt install -y python3.12 python3.12-venv python3-pip \
-               postgresql postgresql-contrib \
-               redis-server nginx supervisor certbot python3-certbot-nginx \
-               git
-```
-
-#### 2. Create a database and user
-
-```bash
-sudo -u postgres psql <<SQL
-CREATE DATABASE chantiermobile;
-CREATE USER chantiermobile WITH PASSWORD 'choose-a-strong-password';
-ALTER ROLE chantiermobile SET client_encoding TO 'utf8';
-ALTER ROLE chantiermobile SET default_transaction_isolation TO 'read committed';
-ALTER ROLE chantiermobile SET timezone TO 'Africa/Kigali';
-GRANT ALL PRIVILEGES ON DATABASE chantiermobile TO chantiermobile;
-SQL
-```
-
-#### 3. Clone the repo and install dependencies
-
-```bash
-git clone https://github.com/monsieurpapa/chantierMobile.git /srv/chantiermobile
-cd /srv/chantiermobile
-
-python3.12 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-```
-
-#### 4. Configure environment variables
-
-```bash
-cp .env /srv/chantiermobile/.env.prod
-nano /srv/chantiermobile/.env.prod
-```
-
-Minimum production `.env.prod`:
-
-```env
-SECRET_KEY=replace-with-a-long-random-string
-DEBUG=0
-ALLOWED_HOSTS=yourdomain.com,www.yourdomain.com
-DATABASE_URL=postgresql://chantiermobile:choose-a-strong-password@localhost:5432/chantiermobile
-REDIS_URL=redis://localhost:6379/0
-```
-
-#### 5. Build the app
-
-```bash
-cd /srv/chantiermobile
-source venv/bin/activate
-export $(cat .env.prod | xargs)
-
-python manage.py collectstatic --no-input
-python manage.py migrate
-python manage.py createsuperuser
-```
-
-#### 6. Configure Gunicorn via Supervisor
-
-Create `/etc/supervisor/conf.d/chantiermobile.conf`:
-
-```ini
-[program:chantiermobile-web]
-command=/srv/chantiermobile/venv/bin/gunicorn chantiermobile.wsgi:application
-        --bind unix:/run/chantiermobile.sock
-        --workers 3
-        --timeout 120
-directory=/srv/chantiermobile
-user=www-data
-environment=SECRET_KEY="%(ENV_SECRET_KEY)s",DEBUG="0",
-            DATABASE_URL="%(ENV_DATABASE_URL)s",
-            REDIS_URL="%(ENV_REDIS_URL)s",
-            ALLOWED_HOSTS="%(ENV_ALLOWED_HOSTS)s"
-autostart=true
-autorestart=true
-stderr_logfile=/var/log/chantiermobile/web.err.log
-stdout_logfile=/var/log/chantiermobile/web.out.log
-
-[program:chantiermobile-celery-worker]
-command=/srv/chantiermobile/venv/bin/celery -A chantiermobile worker --loglevel=info
-directory=/srv/chantiermobile
-user=www-data
-environment=SECRET_KEY="%(ENV_SECRET_KEY)s",DEBUG="0",
-            DATABASE_URL="%(ENV_DATABASE_URL)s",
-            REDIS_URL="%(ENV_REDIS_URL)s"
-autostart=true
-autorestart=true
-stderr_logfile=/var/log/chantiermobile/celery-worker.err.log
-stdout_logfile=/var/log/chantiermobile/celery-worker.out.log
-
-[program:chantiermobile-celery-beat]
-command=/srv/chantiermobile/venv/bin/celery -A chantiermobile beat --loglevel=info
-        --scheduler django_celery_beat.schedulers:DatabaseScheduler
-directory=/srv/chantiermobile
-user=www-data
-environment=SECRET_KEY="%(ENV_SECRET_KEY)s",DEBUG="0",
-            DATABASE_URL="%(ENV_DATABASE_URL)s",
-            REDIS_URL="%(ENV_REDIS_URL)s"
-autostart=true
-autorestart=true
-stderr_logfile=/var/log/chantiermobile/celery-beat.err.log
-stdout_logfile=/var/log/chantiermobile/celery-beat.out.log
-```
-
-```bash
-mkdir -p /var/log/chantiermobile
-chown www-data:www-data /var/log/chantiermobile
-# Load env vars for supervisor (add to /etc/supervisor/supervisord.conf or use a wrapper)
-supervisorctl reread && supervisorctl update
-supervisorctl start all
-```
-
-#### 7. Configure Nginx
-
-Create `/etc/nginx/sites-available/chantiermobile`:
-
-```nginx
-server {
-    listen 80;
-    server_name yourdomain.com www.yourdomain.com;
-
-    location /static/ {
-        alias /srv/chantiermobile/staticfiles/;
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-    }
-
-    location / {
-        proxy_pass http://unix:/run/chantiermobile.sock;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_read_timeout 120s;
-    }
-}
-```
-
-```bash
-ln -s /etc/nginx/sites-available/chantiermobile /etc/nginx/sites-enabled/
-nginx -t && systemctl reload nginx
-```
-
-#### 8. Enable HTTPS with Certbot
-
-```bash
-certbot --nginx -d yourdomain.com -d www.yourdomain.com
-# Certbot edits the Nginx config and sets up auto-renewal
-```
-
-#### 9. Deploying updates
-
-```bash
-cd /srv/chantiermobile
-git pull origin main
-source venv/bin/activate
-export $(cat .env.prod | xargs)
-pip install -r requirements.txt
-python manage.py migrate --no-input
-python manage.py collectstatic --no-input
-supervisorctl restart chantiermobile-web chantiermobile-celery-worker chantiermobile-celery-beat
-```
-
-#### Supervisor quick-reference
-
-```bash
-supervisorctl status                        # Show all process states
-supervisorctl restart chantiermobile-web    # Restart web only
-supervisorctl tail -f chantiermobile-web    # Live logs
-```
+Supported targets: **Render.com** (free tier), **Railway**, and a **bare Linux server**
+(Gunicorn + Nginx + Supervisor + Certbot). Full step-by-step instructions for each,
+including the Render free-tier 90-day PostgreSQL migration path, live in
+[`docs/guides/deployment.md`](docs/guides/deployment.md).
 
 ---
 
@@ -411,11 +180,12 @@ just db-restore <file>
 just setup   # dev-up + migrate + createsuperuser
 ```
 
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for code style conventions, the branching
+model, and the pull-request checklist.
+
 ---
 
 ## Testing
-
-Tests live in `tests/` and run inside Docker. The suite requires Docker Desktop to be running.
 
 ```bash
 just test                              # All tests (≥80% coverage enforced)
@@ -423,87 +193,63 @@ just test-file tests/test_finance.py   # Single file
 just test-app finance                  # Filter by keyword
 just test-unit                         # @pytest.mark.unit only
 just test-fast                         # Stop on first failure (-x)
-just test-debug                        # Drop into pdb on failure
 just test-coverage                     # HTML report in htmlcov/
 ```
 
-**Pytest configuration** (`setup.cfg`):
-- `--reuse-db` — test database is preserved between runs; use `--create-db` after schema changes
-- `--nomigrations` — uses direct schema creation for speed
-- `--cov-fail-under=80` — build fails below 80% coverage
-
-**Test markers**: `unit`, `integration`, `e2e`, `api`, `performance`, `finance`, `materials`, `personnel`, `projects`, `revenue`, `auth`, `i18n`
+Fixture/factory conventions, markers, and how to write a regression test:
+[`docs/guides/testing.md`](docs/guides/testing.md).
 
 ---
 
 ## Architecture
 
-### Multi-tenancy: Cabinet
+ChantierMobile centers on **Cabinet** (the multi-tenancy boundary) and **Site**
+(a construction project), with every other module hanging business data off one or the
+other. Every status field is validated in the owning model's `clean()` — not just from
+one view — so a transition can't be bypassed from a management command or the admin.
 
-Every business entity belongs to a **Cabinet**. The two key mixins in `core/mixins.py`:
+Full write-up, module map, state-machine diagrams, and the entity-relationship diagram:
+[`docs/architecture/overview.md`](docs/architecture/overview.md) and
+[`docs/architecture/data-model.md`](docs/architecture/data-model.md). The reasoning
+behind specific choices (Cabinet as tenancy boundary, soft delete, validating state in
+`clean()`, the session idle timeout, separate payroll tracks) is recorded as
+[architecture decision records](docs/architecture/decisions/).
 
-- `CabinetAccessMixin` — automatically filters querysets to the current user's cabinets
-- `RoleRequiredMixin` — gates views to specific roles (set `allowed_roles` on the view class)
+---
 
-### Data relationships
+## Security
 
-```
-Cabinet
-  └── Site (projects)
-        ├── Budget          (finance)   — OneToOne
-        ├── Expense[]       (finance)   — FK
-        ├── Assignment[]    (personnel) — FK
-        ├── MaterialRequest[] (materials) — FK
-        └── Contract        (revenue)  — OneToOne
-              ├── Invoice[] — FK
-              └── Payment[] — FK (via Invoice)
-```
+Session policy, authentication, the full RBAC permission matrix, tenant isolation, and
+audit trail are documented in [`docs/security.md`](docs/security.md). To report a
+vulnerability, see [`SECURITY.md`](SECURITY.md).
 
-`Site` exposes computed properties (`total_spent`, `total_revenue`, `net_profit`, `budget_usage_percentage`) that aggregate across modules — not stored in the DB.
+---
 
-### Status machines
+## Documentation
 
-Transitions are validated in `model.clean()` and enforced via `full_clean()` in all write paths — server-side validation cannot be bypassed.
-
-```
-Expense:  PENDING → APPROVED → PAID       (terminal)
-                  → REJECTED              (terminal)
-
-Invoice:  DRAFT → SENT → PAID             (terminal)
-                       → OVERDUE → PAID   (terminal)
-               → CANCELLED               (terminal)
-
-Site: PLANNING → ACTIVE ↔ PAUSED → COMPLETED  (terminal)
-             ↘ CANCELLED (from any non-terminal) (terminal)
-
-MaterialRequest: PENDING → APPROVED → ORDERED → DELIVERED (terminal)
-                         → REJECTED                        (terminal)
-```
-
-### Base models (`core/models.py`)
-
-All business models inherit from `BaseModel`, which provides:
-
-- **Soft delete** — `delete()` sets `is_deleted=True`; use `Model.objects` for active records, `Model.all_objects` to include deleted
-- **Audit trail** — `created_by` / `updated_by` FK to `AUTH_USER_MODEL`
-- **Timestamps** — `created_at` / `updated_at`
-- **UUID** — `unique_id` non-editable UUID field for public-safe identifiers
-
-### Shared constants
-
-`chantiermobile/constants.py` is the single source of truth for all `TextChoices` enums (`UserRoles`, `SiteStatus`, `ExpenseStatus`, `InvoiceStatus`, `PaymentMethod`, etc.). Import from there — never define inline string literals.
-
-### Async tasks
-
-`revenue/tasks.py` — `mark_overdue_invoices` runs daily at **01:00 Africa/Kigali** via Celery beat. It bulk-updates SENT invoices whose `due_date` has passed to OVERDUE.
+- [`docs/README.md`](docs/README.md) — documentation index
+- [`docs/architecture/`](docs/architecture/) — system design, data model, ADRs
+- [`docs/guides/`](docs/guides/) — getting started, deployment, testing
+- [`docs/security.md`](docs/security.md) — security model
+- [`docs/modules/`](docs/modules/) — one reference page per Django app
+- [`CHANGELOG.md`](CHANGELOG.md) — notable changes, newest first
 
 ---
 
 ## Contributing
 
-1. Fork the repo and create a branch: `git checkout -b feat/your-feature`
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full guide (branching, commit style,
+code style, testing requirements, PR checklist). Short version:
+
+1. Create a branch: `git checkout -b feat/your-feature`
 2. Run `just quality` before committing
 3. Ensure `just test` passes with coverage ≥80%
 4. Open a pull request against `main`
 
-See `TODOS.md` for known deferred work and `CLAUDE.md` for guidance on working with this codebase using Claude Code.
+This project also follows a [Code of Conduct](CODE_OF_CONDUCT.md).
+
+---
+
+## License
+
+Proprietary — all rights reserved. See [`LICENSE`](LICENSE).

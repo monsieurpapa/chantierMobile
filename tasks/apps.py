@@ -1,3 +1,5 @@
+"""App config for `tasks` — see tasks/models.py's module docstring for
+what this app owns."""
 from django.apps import AppConfig
 
 

@@ -1,3 +1,5 @@
+"""Forms backing the accounts app's profile and superadmin user/cabinet
+management screens (accounts/views.py)."""
 from django import forms
 from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _

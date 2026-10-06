@@ -117,6 +117,15 @@ def _scope(qs, path, cabinet_ids):
 
 
 def build_dashboard_context(request):
+    """Builds the full template context for the "Tableau de Bord" home
+    page: hero KPIs (cash collected, spend, margin, site portfolio),
+    secondary chips (pipeline, overdue invoices/tasks, low stock, pending
+    expenses), a 6-month cashflow trend, three donut charts (devis, tasks,
+    workforce), budget-usage and per-site-expense tables, and a merged
+    recent-activity feed — all scoped to the caller's Cabinet(s) via
+    scoped_cabinet_ids(). Financial figures are included unconditionally
+    here; it's the template's job (gated by `can_view_financials`) to hide
+    them from a role that shouldn't see money."""
     cabinet_ids = scoped_cabinet_ids(request)
     today = timezone.localdate()
     month_start = today.replace(day=1)

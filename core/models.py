@@ -1,3 +1,11 @@
+"""
+Shared base models used across every app in the system (see
+docs/architecture/overview.md#base-models-coremodelspy for the full
+picture). Every business model inherits `BaseModel` rather than
+`models.Model` directly, so soft delete, audit stamping and a public-safe
+UUID identifier come for free and behave identically everywhere instead of
+each app reinventing its own convention.
+"""
 from django.db import models
 import uuid
 from django.utils import timezone
@@ -6,13 +14,26 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 
 class SoftDeleteManager(models.Manager):
+    """Default manager for a SoftDeleteModel: excludes soft-deleted rows so
+    normal queries never need to remember to filter is_deleted=False
+    themselves."""
+
     def get_queryset(self):
         return super().get_queryset().filter(is_deleted=False)
 
     def all_with_deleted(self):
+        """Escape hatch for the rare query that does need deleted rows
+        (without switching the model's `all_objects` manager)."""
         return super().get_queryset()
 
 class SoftDeleteModel(models.Model):
+    """Replaces hard deletion with a flag: `delete()` never removes the
+    row. There is deliberately no hard-delete path through the application
+    — a business record's history (who requested/approved what, when) must
+    survive an in-app "delete" so it can still be audited later. Use
+    `Model.objects` (default manager) for the normal non-deleted view, and
+    `Model.all_objects` when an investigation needs to see deleted rows
+    too."""
     is_deleted = models.BooleanField(default=False)
     deleted_at = models.DateTimeField(null=True, blank=True)
 
@@ -23,16 +44,22 @@ class SoftDeleteModel(models.Model):
         abstract = True
 
     def delete(self, using=None, keep_parents=False):
+        """Soft-delete: flips `is_deleted` and stamps `deleted_at` instead
+        of issuing a SQL DELETE."""
         self.is_deleted = True
         self.deleted_at = timezone.now()
         self.save()
 
     def restore(self):
+        """Reverses delete(), putting the row back in the default
+        (non-deleted) manager's results."""
         self.is_deleted = False
         self.deleted_at = None
         self.save()
 
 class TimeStampedModel(models.Model):
+    """Abstract mixin adding created_at/updated_at timestamps, maintained
+    automatically by Django (`auto_now_add` / `auto_now`)."""
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -40,6 +67,10 @@ class TimeStampedModel(models.Model):
         abstract = True
 
 class AuditableModel(TimeStampedModel):
+    """Adds created_by/updated_by FKs (who, not just when) on top of
+    TimeStampedModel's timestamps — together these answer "who touched
+    this record and when" for every BaseModel subclass without each app
+    wiring it up itself."""
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,

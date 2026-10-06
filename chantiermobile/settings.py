@@ -1,4 +1,10 @@
-
+"""
+Django settings for the chantiermobile project. Mostly standard Django
+settings wired up from environment variables for deployment flexibility
+(Render, Railway, or plain docker-compose); see docs/security.md and the
+inline comments below for the reasoning behind the non-obvious ones
+(session idle timeout, Cloudflare R2 media storage, Celery beat schedule).
+"""
 import os
 import dj_database_url
 from pathlib import Path

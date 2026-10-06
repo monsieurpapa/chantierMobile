@@ -1,3 +1,17 @@
+"""Views for the finance app: expense submission/approval/payment, budgets,
+the Caisse ledger (manual movements, transfers, inter-caisse loans), the
+two payroll tracks (PayrollList for ouvriers, SalaryPaymentList for
+ingénieurs/staff), and Avenant change-order decisions.
+
+Every state-changing endpoint here is gated either by a class-based view's
+`allowed_roles` (RoleRequiredMixin) or by an explicit
+`can_act_for_cabinet(request, cabinet, allowed_roles)` call in a
+function-based view — see docs/security.md. The role-list constants at the
+top of this module (EXPENSE_REPORT_ROLES, CAISSE_MANAGE_ROLES,
+PAYROLL_PREPARE_ROLES, etc.) are the single source of truth each view
+below references; core/approvals.py keeps its own duplicated copies for the
+pending-approvals inbox and must be updated by hand if these change.
+"""
 from django.views.generic import ListView, CreateView, DetailView, UpdateView, DeleteView, TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
@@ -51,6 +65,10 @@ PAYROLL_VIEW_ROLES = list(dict.fromkeys(PAYROLL_PREPARE_ROLES + PAYROLL_DISBURSE
 AVENANT_VIEW_ROLES = list(dict.fromkeys(AVENANT_REQUEST_ROLES + FINAL_AUTHORIZATION_ROLES))
 
 class ExpenseListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
+    """Lists expenses for the caller's cabinet(s); open to any authenticated
+    user (no allowed_roles) since any role may need to check an expense's
+    status, but the "Rapport" PDF-export action is only offered to
+    EXPENSE_REPORT_ROLES."""
     model = Expense
     context_object_name = 'expenses'
     template_name = 'finance/expense_list.html'
@@ -86,6 +104,9 @@ class ExpenseListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, L
         return actions
 
 class ExpenseCreateView(LoginRequiredMixin, PageHeaderMixin, CreateView):
+    """Submits a new expense request (any authenticated user, scoped to
+    their own cabinet's sites); always created PENDING, with the requester
+    stamped from the logged-in user, then notifies EXPENSE_APPROVAL_ROLES."""
     model = Expense
     form_class = ExpenseForm
     template_name = 'finance/expense_form.html'
@@ -131,6 +152,9 @@ class ExpenseCreateView(LoginRequiredMixin, PageHeaderMixin, CreateView):
         return response
 
 class ExpenseDetailView(LoginRequiredMixin, PageHeaderMixin, DetailView):
+    """Shows one expense; the "mark as paid" form only appears when the
+    expense is APPROVED and the viewer passes can_act_for_cabinet() for
+    DIRECTOR/DIRECTEUR_TECHNIQUE/DIRECTEUR_GENERAL/CASHIER."""
     model = Expense
     context_object_name = 'expense'
     template_name = 'finance/expense_detail.html'
@@ -169,6 +193,11 @@ class ExpenseDetailView(LoginRequiredMixin, PageHeaderMixin, DetailView):
 
 @login_required
 def approve_expense(request, pk):
+    """PENDING -> APPROVED. Role-gated inline (DIRECTOR/DIRECTEUR_TECHNIQUE/
+    DIRECTEUR_GENERAL/ACCOUNTANT in the expense's own cabinet, or a
+    superuser), and additionally restricted to the session's active cabinet
+    when a superuser has one selected. Self-approval is blocked in
+    Expense.approve() itself."""
     if request.method == 'POST':
         expense = get_object_or_404(Expense, pk=pk)
         active_cabinet = get_session_cabinet(request)
@@ -194,6 +223,8 @@ def approve_expense(request, pk):
 
 @login_required
 def reject_expense(request, pk):
+    """PENDING -> REJECTED. Same role gate as approve_expense (DIRECTOR/
+    DIRECTEUR_TECHNIQUE/DIRECTEUR_GENERAL/ACCOUNTANT or superuser)."""
     if request.method == 'POST':
         expense = get_object_or_404(Expense, pk=pk)
         active_cabinet = get_session_cabinet(request)
@@ -222,6 +253,9 @@ def reject_expense(request, pk):
 
 @login_required
 def mark_expense_paid(request, pk):
+    """APPROVED -> PAID: records the matching Caisse outflow via
+    Expense.pay(). Role-gated to DIRECTOR/DIRECTEUR_TECHNIQUE/
+    DIRECTEUR_GENERAL/CASHIER in the expense's cabinet (or superuser)."""
     if request.method == 'POST':
         expense = get_object_or_404(Expense, pk=pk)
         active_cabinet = get_session_cabinet(request)
@@ -274,6 +308,10 @@ def _scope_budgets_for_viewer(qs, user):
 
 
 class BudgetListView(LoginRequiredMixin, CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, ListView):
+    """Lists budgets. allowed_roles = BUDGET_VIEW_ROLES (full-access
+    director tier + ACCOUNTANT + CHIEF_ENGINEER, plus ENGINEER); the
+    queryset is further narrowed for a plain ENGINEER to only the sites
+    they lead (see _scope_budgets_for_viewer)."""
     model = Budget
     template_name = 'finance/budget_list.html'
     context_object_name = 'budgets'
@@ -299,6 +337,9 @@ class BudgetListView(LoginRequiredMixin, CabinetAccessMixin, RoleRequiredMixin, 
         return []
 
 class BudgetCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, CreateView):
+    """Creates a Budget for a site. allowed_roles: DIRECTOR,
+    DIRECTEUR_TECHNIQUE, DIRECTEUR_GENERAL, ACCOUNTANT — deliberately not
+    CHIEF_ENGINEER or ENGINEER, who may only view budgets."""
     model = Budget
     form_class = BudgetForm
     template_name = 'finance/budget_form.html'
@@ -332,6 +373,9 @@ class BudgetCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, C
         return super().form_valid(form)
 
 class BudgetDetailView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, DetailView):
+    """Budget detail with spend breakdown/forecast. allowed_roles =
+    BUDGET_VIEW_ROLES, queryset narrowed for ENGINEER the same way as
+    BudgetListView (see _scope_budgets_for_viewer)."""
     model = Budget
     template_name = 'finance/budget_detail.html'
     context_object_name = 'budget'
@@ -404,6 +448,9 @@ class BudgetDetailView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin
 
 
 class BudgetUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, UpdateView):
+    """Edits a Budget. Same allowed_roles as BudgetCreateView (DIRECTOR/
+    DIRECTEUR_TECHNIQUE/DIRECTEUR_GENERAL/ACCOUNTANT) — ENGINEER can view
+    but not edit."""
     model = Budget
     form_class = BudgetForm
     template_name = 'finance/budget_form.html'
@@ -645,7 +692,9 @@ class ExpenseReportView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, 
 
 @login_required
 def expense_report_pdf(request):
-    """PDF export of the same filtered expense report."""
+    """PDF export of the same filtered expense report. Role-gated to
+    EXPENSE_REPORT_ROLES (or superuser) via a direct UserCabinetRole check
+    rather than RoleRequiredMixin, since this is a plain function view."""
     from accounts.models import UserCabinetRole
     if not (request.user.is_superuser or UserCabinetRole.objects.filter(
         user=request.user, role__in=EXPENSE_REPORT_ROLES
@@ -693,6 +742,9 @@ def expense_report_pdf(request):
 # ---------------------------------------------------------------------
 
 class CaisseListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
+    """Lists caisses for the caller's cabinet(s); open to any authenticated
+    user. The "Nouvelle caisse" action is only offered to
+    CAISSE_MANAGE_ROLES."""
     model = Caisse
     template_name = 'finance/caisse_list.html'
     context_object_name = 'caisses'
@@ -717,6 +769,8 @@ class CaisseListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, Li
 
 
 class CaisseCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, CreateView):
+    """Creates a Caisse for the current user's cabinet. allowed_roles:
+    DIRECTOR, DIRECTEUR_TECHNIQUE, DIRECTEUR_GENERAL, ACCOUNTANT."""
     model = Caisse
     form_class = CaisseForm
     template_name = 'finance/caisse_form.html'
@@ -840,6 +894,9 @@ class CaisseDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, 
 
 
 class CaisseTransactionCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, CreateView):
+    """Manual ledger entry (entrée/sortie) on one caisse, scoped via
+    get_role_cabinet() to that caisse's own cabinet. allowed_roles =
+    CAISSE_MANAGE_ROLES."""
     model = CaisseTransaction
     form_class = CaisseTransactionForm
     template_name = 'finance/caisse_transaction_form.html'
@@ -895,7 +952,8 @@ class CaisseTransactionDeleteView(LoginRequiredMixin, RoleRequiredMixin, Cabinet
 @login_required
 def caisse_transfer(request, pk):
     """Daily remittance from a caisse to another (e.g. to the caisse de
-    gestion administrative) — not a loan, no repayment tracked."""
+    gestion administrative) — not a loan, no repayment tracked. Role-gated
+    to CAISSE_MANAGE_ROLES in the source caisse's cabinet."""
     caisse = get_object_or_404(Caisse, pk=pk)
     if request.method != 'POST':
         return redirect('finance:caisse_detail', pk=pk)
@@ -919,6 +977,9 @@ def caisse_transfer(request, pk):
 
 
 class CaisseLoanListView(LoginRequiredMixin, PageHeaderMixin, ListView):
+    """Lists inter-caisse loans for the caller's cabinet(s); open to any
+    authenticated user (no allowed_roles) — creating/repaying a loan is
+    separately gated to CAISSE_MANAGE_ROLES."""
     model = CaisseLoan
     template_name = 'finance/caisse_loan_list.html'
     context_object_name = 'loans'
@@ -939,6 +1000,8 @@ class CaisseLoanListView(LoginRequiredMixin, PageHeaderMixin, ListView):
 
 
 class CaisseLoanCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, CreateView):
+    """Creates a CaisseLoan and immediately disburses it (see form_valid).
+    allowed_roles = CAISSE_MANAGE_ROLES."""
     model = CaisseLoan
     form_class = CaisseLoanForm
     template_name = 'finance/caisse_loan_form.html'
@@ -971,6 +1034,8 @@ class CaisseLoanCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixi
 
 @login_required
 def caisse_loan_repay(request, pk):
+    """Records a (possibly partial) repayment on a CaisseLoan. Role-gated
+    to CAISSE_MANAGE_ROLES in the lender caisse's cabinet."""
     loan = get_object_or_404(CaisseLoan, pk=pk)
     if request.method != 'POST':
         return redirect('finance:caisse_loan_list')
@@ -1088,6 +1153,9 @@ class CaisseReportView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, L
 
 @login_required
 def caisse_report_pdf(request):
+    """PDF export of the same filtered livre de caisse. Role-gated to
+    CAISSE_MANAGE_ROLES (or superuser), checked directly rather than via
+    RoleRequiredMixin since this is a plain function view."""
     from accounts.models import UserCabinetRole
     if not (request.user.is_superuser or UserCabinetRole.objects.filter(
         user=request.user, role__in=CAISSE_MANAGE_ROLES
@@ -1130,6 +1198,10 @@ def caisse_report_pdf(request):
 # ---------------------------------------------------------------------
 
 class PayrollListListView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, ListView):
+    """Lists "Main d'œuvre" payroll lists for the caller's cabinet(s).
+    allowed_roles = PAYROLL_VIEW_ROLES (union of preparers and
+    disbursers) — payroll amounts are sensitive, so this is role-gated
+    unlike most other list views in this module."""
     model = PayrollList
     template_name = 'finance/payroll_list_list.html'
     context_object_name = 'payroll_lists'
@@ -1169,6 +1241,8 @@ class PayrollListListView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin
 
 
 class PayrollListCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, CreateView):
+    """Starts a new BROUILLON PayrollList for a site. allowed_roles =
+    PAYROLL_PREPARE_ROLES ("l'archi" who analyzes progress and requests)."""
     model = PayrollList
     form_class = PayrollListForm
     template_name = 'finance/payroll_list_form.html'
@@ -1197,6 +1271,11 @@ class PayrollListCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMix
 
 
 class PayrollListDetailView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, DetailView):
+    """PayrollList detail; allowed_roles = PAYROLL_VIEW_ROLES, with the
+    item-add form shown only if can_act_for_cabinet() passes
+    PAYROLL_PREPARE_ROLES (and status is BROUILLON) and the disburse form
+    shown only if it passes PAYROLL_DISBURSE_ROLES (and status is
+    SOUMISE)."""
     model = PayrollList
     template_name = 'finance/payroll_list_detail.html'
     context_object_name = 'payroll_list'
@@ -1232,6 +1311,11 @@ class PayrollListDetailView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccess
 
 
 class PayrollListItemCreateView(LoginRequiredMixin, RoleRequiredMixin, CreateView):
+    """Adds one ouvrier/amount row to a PayrollList, one at a time (the
+    older single-item flow — see PayrollListAllocateView for the bulk
+    screen). allowed_roles = PAYROLL_PREPARE_ROLES, scoped via
+    get_role_cabinet() to the payroll list's own site/cabinet; also refuses
+    to add once the list is no longer BROUILLON."""
     model = PayrollListItem
     form_class = PayrollListItemForm
     allowed_roles = PAYROLL_PREPARE_ROLES
@@ -1362,6 +1446,8 @@ class PayrollListAllocateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderM
 
 @login_required
 def payroll_submit(request, pk):
+    """BROUILLON -> SOUMISE (PayrollList.submit()). Role-gated to
+    PAYROLL_PREPARE_ROLES in the list's site's cabinet."""
     payroll_list = get_object_or_404(PayrollList, pk=pk)
     if request.method != 'POST':
         return redirect('finance:payroll_detail', pk=pk)
@@ -1378,6 +1464,10 @@ def payroll_submit(request, pk):
 
 @login_required
 def payroll_disburse(request, pk):
+    """SOUMISE -> PAYEE (PayrollList.disburse()). Role-gated to
+    PAYROLL_DISBURSE_ROLES in the list's site's cabinet — note this role
+    set overlaps with PAYROLL_PREPARE_ROLES, so the same person can both
+    prepare and disburse a given list (no enforced separation of duties)."""
     payroll_list = get_object_or_404(PayrollList, pk=pk)
     if request.method != 'POST':
         return redirect('finance:payroll_detail', pk=pk)
@@ -1407,6 +1497,9 @@ def payroll_disburse(request, pk):
 # ---------------------------------------------------------------------
 
 class SalaryPaymentListListView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, ListView):
+    """Lists "Ingénieurs & Staff" payment lists for the caller's cabinet(s).
+    allowed_roles = PAYROLL_VIEW_ROLES, same sensitivity rationale as
+    PayrollListListView."""
     model = SalaryPaymentList
     template_name = 'finance/salary_payment_list.html'
     context_object_name = 'salary_payment_lists'
@@ -1446,6 +1539,9 @@ class SalaryPaymentListListView(LoginRequiredMixin, RoleRequiredMixin, PageHeade
 
 
 class SalaryPaymentListCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, CreateView):
+    """Starts a new BROUILLON SalaryPaymentList. allowed_roles =
+    PAYROLL_PREPARE_ROLES; cabinet resolved via get_user_cabinet() or an
+    explicit field for a multi-cabinet user (add_ambiguous_cabinet_field)."""
     model = SalaryPaymentList
     form_class = SalaryPaymentListForm
     template_name = 'finance/salary_payment_form.html'
@@ -1476,6 +1572,8 @@ class SalaryPaymentListCreateView(LoginRequiredMixin, RoleRequiredMixin, Cabinet
 
 
 class SalaryPaymentListDetailView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, DetailView):
+    """SalaryPaymentList detail; same allowed_roles / can_act_for_cabinet
+    pattern as PayrollListDetailView, scoped by cabinet instead of site."""
     model = SalaryPaymentList
     template_name = 'finance/salary_payment_detail.html'
     context_object_name = 'salary_payment_list'
@@ -1510,6 +1608,9 @@ class SalaryPaymentListDetailView(LoginRequiredMixin, RoleRequiredMixin, Cabinet
 
 
 class SalaryPaymentItemCreateView(LoginRequiredMixin, RoleRequiredMixin, CreateView):
+    """Adds one agent/period/amount row to a SalaryPaymentList.
+    allowed_roles = PAYROLL_PREPARE_ROLES, scoped via get_role_cabinet() to
+    the list's own cabinet; refuses once the list is no longer BROUILLON."""
     model = SalaryPaymentItem
     form_class = SalaryPaymentItemForm
     allowed_roles = PAYROLL_PREPARE_ROLES
@@ -1611,6 +1712,8 @@ def salary_payment_detail_pdf(request, pk):
 
 @login_required
 def salary_payment_submit(request, pk):
+    """BROUILLON -> SOUMISE (SalaryPaymentList.submit()). Role-gated to
+    PAYROLL_PREPARE_ROLES in the list's cabinet."""
     salary_payment_list = get_object_or_404(SalaryPaymentList, pk=pk)
     if request.method != 'POST':
         return redirect('finance:salary_payment_detail', pk=pk)
@@ -1627,6 +1730,9 @@ def salary_payment_submit(request, pk):
 
 @login_required
 def salary_payment_disburse(request, pk):
+    """SOUMISE -> PAYEE (SalaryPaymentList.disburse()). Role-gated to
+    PAYROLL_DISBURSE_ROLES in the list's cabinet; same prepare/disburse
+    role overlap caveat as payroll_disburse() above."""
     salary_payment_list = get_object_or_404(SalaryPaymentList, pk=pk)
     if request.method != 'POST':
         return redirect('finance:salary_payment_detail', pk=pk)
@@ -1651,6 +1757,9 @@ def salary_payment_disburse(request, pk):
 # ---------------------------------------------------------------------
 
 class AvenantListView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, ListView):
+    """Lists avenants for the caller's cabinet(s). allowed_roles =
+    AVENANT_VIEW_ROLES (requesters + final authorizers); `can_decide` in
+    context gates the approve/reject buttons to FINAL_AUTHORIZATION_ROLES."""
     model = Avenant
     template_name = 'finance/avenant_list.html'
     context_object_name = 'avenants'
@@ -1693,6 +1802,12 @@ class AvenantListView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, Li
 
 
 class AvenantCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, CreateView):
+    """Submits a new PENDING Avenant. allowed_roles = AVENANT_REQUEST_ROLES
+    (DIRECTOR, DIRECTEUR_TECHNIQUE, DIRECTEUR_GENERAL, CHIEF_ENGINEER,
+    ACCOUNTANT) — note the three director-tier roles here are the same
+    roles that can later decide the request via _avenant_decide() below, so
+    a director can both request and approve/reject their own avenant (see
+    Avenant's class docstring in finance/models.py)."""
     model = Avenant
     form_class = AvenantForm
     template_name = 'finance/avenant_form.html'
@@ -1729,6 +1844,12 @@ class AvenantCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, 
 
 
 def _avenant_decide(request, pk, approve):
+    """Shared implementation of avenant_approve/avenant_reject: PENDING ->
+    APPROVED or PENDING -> REJECTED (Avenant.approve()/reject()).
+    Role-gated to FINAL_AUTHORIZATION_ROLES in the avenant's site's
+    cabinet via can_act_for_cabinet() — which, unlike approve_expense
+    above, does not exclude the avenant's own requester (see the gotcha on
+    Avenant in finance/models.py)."""
     avenant = get_object_or_404(Avenant, pk=pk)
     if request.method != 'POST':
         return redirect('finance:avenant_list')
@@ -1761,8 +1882,16 @@ def _avenant_decide(request, pk, approve):
 
 
 def avenant_approve(request, pk):
+    """Thin wrapper around _avenant_decide(approve=True). Note: unlike
+    almost every other action view in this module, this one has no
+    @login_required decorator — it still fails closed for an anonymous
+    request because can_act_for_cabinet() returns False for an
+    unauthenticated user, but it's an inconsistency worth fixing rather
+    than relying on, since it's easy to lose for a future refactor."""
     return _avenant_decide(request, pk, approve=True)
 
 
 def avenant_reject(request, pk):
+    """Thin wrapper around _avenant_decide(approve=False). Same missing
+    @login_required note as avenant_approve above."""
     return _avenant_decide(request, pk, approve=False)

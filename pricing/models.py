@@ -1,3 +1,13 @@
+"""
+Pricing: the Bibliothèque de Prix (a cabinet's reusable unit-price
+catalog) and the DQE (Détail Quantitatif Estimatif) built from it to
+estimate a project's cost before it becomes a Devis (see revenue).
+
+A DQELine copies its price_item's unit_price at the time it's added
+(`unit_price` is stored on the line, not derived live), so a later edit
+to the catalog price never silently reprices an existing DQE — the line
+can still be adjusted by hand for that estimate.
+"""
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from core.models import BaseModel
@@ -32,6 +42,8 @@ class PriceLibraryItem(BaseModel):
         return f"{self.code} - {self.designation} ({self.unit_price}/{self.unit})"
 
     def clean(self):
+        """Unit price must not be negative — zero is allowed (e.g. a
+        "fourni par le client" line priced at 0)."""
         from django.core.exceptions import ValidationError
         if self.unit_price is not None and self.unit_price < 0:
             raise ValidationError({'unit_price': _('Le prix unitaire ne peut pas être négatif.')})
@@ -61,11 +73,15 @@ class DQE(BaseModel):
 
     @property
     def total_amount(self):
+        """Sums `line.line_total` in Python rather than a DB aggregate,
+        since line_total itself is a property (quantity × unit_price),
+        not a stored/annotatable column."""
         from decimal import Decimal
         return sum((line.line_total for line in self.lines.all()), Decimal('0'))
 
     @property
     def total_lines(self):
+        """Number of DQELine rows on this DQE."""
         return self.lines.count()
 
 
@@ -87,6 +103,9 @@ class DQELine(BaseModel):
         return f"{self.quantity} x {self.display_designation}"
 
     def clean(self):
+        """Positive quantity, non-negative unit price — note `unit_price`
+        is this line's own stored copy, not re-validated against (or kept
+        in sync with) the referenced price_item's current price."""
         from django.core.exceptions import ValidationError
         if self.quantity is not None and self.quantity <= 0:
             raise ValidationError({'quantity': _('La quantité doit être un nombre positif.')})
@@ -95,10 +114,14 @@ class DQELine(BaseModel):
 
     @property
     def display_designation(self):
+        """This line's own designation override, falling back to the
+        catalog item's."""
         return self.designation or self.price_item.designation
 
     @property
     def unit(self):
+        """Always the catalog item's unit — a DQE line has no unit
+        override of its own (unlike designation/unit_price)."""
         return self.price_item.unit
 
     @property

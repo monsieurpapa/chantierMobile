@@ -1,3 +1,14 @@
+"""
+The `personnel` app owns the HR side of a Cabinet: the people
+(`Personnel`), their skills, where they're working (`SiteAssignment`),
+their paperwork (`PersonnelDocument`), and their time (`Leave`,
+`Holiday`, `Attendance`). `Personnel.payroll_type` is the fork point
+with `finance`'s two parallel payroll tracks — see ADR 0005
+(docs/architecture/decisions/0005-separate-payroll-tracks.md) for why
+ouvriers and ingénieurs/staff are paid through entirely separate models
+rather than one generic payroll entity. See docs/modules/personnel.md
+for the full walkthrough.
+"""
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from core.models import BaseModel
@@ -9,13 +20,24 @@ from chantiermobile.constants import (
 )
 
 class Skill(BaseModel):
+    """A tag naming an aptitude or trade (e.g. Maçon, Ferrailleur), shared
+    across the whole system rather than scoped to one cabinet — see
+    personnel/views.py's SkillQuickCreateView (`cabinet_scoped = False`)."""
     name = models.CharField(max_length=100, verbose_name=_('Skill Name')) # e.g. Maçon, Ferrailleur
     description = models.TextField(blank=True, verbose_name=_('Description'))
-    
+
     def __str__(self):
         return self.name
 
 class Personnel(BaseModel):
+    """A person the Cabinet employs or engages — permanent employee,
+    tâcheron (day laborer) or prestataire (subcontractor), see
+    `personnel_type`. `payroll_type` (OUVRIER/INGENIEUR) decides which of
+    finance's two payroll tracks their pay flows through (ADR 0005), and
+    is independent of `personnel_type`/`category` — it must be set
+    explicitly, there is no inference between the three. `user` is an
+    optional link to a system login, used for self-service (e.g. a
+    tâcheron viewing their own assigned Tasks, see tasks/views.py)."""
     cabinet = models.ForeignKey(Cabinet, on_delete=models.CASCADE, related_name='personnel')
     user = models.OneToOneField(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='personnel_profile', help_text=_("Link to system user if they have login access"))
     first_name = models.CharField(max_length=100, verbose_name=_('First Name'))
@@ -68,9 +90,17 @@ class Personnel(BaseModel):
 
     @property
     def is_eligible(self):
+        """Only an ACTIF personnel record may be newly assigned to a site
+        — see SiteAssignment.clean()."""
         return self.status == PersonnelStatus.ACTIF
 
 class SiteAssignment(BaseModel):
+    """Links a Personnel to a Site for a date range, at an agreed
+    `daily_rate` — the record that drives `Site.total_daily_personnel_cost`
+    and the attendance/pointage crew list (see Attendance,
+    AttendanceDailyView.get_rows). `convention_amount` optionally caps
+    total pay for one specific task/convention; a worker can hold several
+    concurrent assignments to the same site, one per convention."""
     personnel = models.ForeignKey(Personnel, on_delete=models.CASCADE, related_name='assignments')
     site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name='assignments')
     role = models.CharField(max_length=100, help_text=_("Specific role on this site, e.g. Chef d'équipe"), verbose_name=_('Role'))
@@ -97,6 +127,12 @@ class SiteAssignment(BaseModel):
     )
 
     def clean(self):
+        """Blocks assigning a non-ACTIF (e.g. suspended/terminated)
+        personnel record to a site. Note: this only checks eligibility
+        at save time — it does not check for overlapping date ranges
+        against the same personnel's other assignments, so double-
+        booking the same person to two sites on the same dates is
+        currently possible."""
         from django.core.exceptions import ValidationError
         # Validation logic for overlapping assignments could go here
         # For MVP, we'll enforce it in the form/view or simple clean method
@@ -177,6 +213,8 @@ class Leave(BaseModel):
 
     @property
     def duration_days(self):
+        """Inclusive day count (start and end date both count), so a
+        single-day leave reads as 1, not 0."""
         return (self.end_date - self.start_date).days + 1
 
 

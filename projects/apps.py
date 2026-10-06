@@ -1,3 +1,5 @@
+"""App config for `projects` — see projects/models.py's module docstring
+for what this app owns."""
 from django.apps import AppConfig
 
 

@@ -1,3 +1,10 @@
+"""
+Views for the `tasks` app: Task CRUD and its status-transition actions
+(start/complete/block/reopen). `_can_manage_task` is the shared
+authorization check — director-tier/CHIEF_ENGINEER/ENGINEER by cabinet
+role, OR the task's own assignee acting as themselves (self-service for
+a tâcheron/prestataire with a linked login).
+"""
 from django.shortcuts import get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -34,6 +41,10 @@ def _can_manage_task(user, task):
 
 
 class TaskListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
+    """Lists tasks, cabinet-scoped by default. Open to any cabinet
+    member; `?mine=1` switches to a self-service view of the requester's
+    own assigned tasks (via their linked Personnel), bypassing the
+    cabinet-role filter entirely — see get_queryset()'s comment."""
     model = Task
     template_name = 'tasks/task_list.html'
     context_object_name = 'tasks'
@@ -86,6 +97,13 @@ class TaskListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, List
 
 
 class TaskCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, CreateView):
+    """Creates a Task. Director-tier, CHIEF_ENGINEER or ENGINEER
+    (MANAGE_ROLES). allowed_roles is checked across any cabinet the user
+    belongs to (no get_role_cabinet() override) — actual tenant scoping
+    comes from `_scope_form_querysets` narrowing `site`/`phase`/
+    `assigned_to` to the user's own cabinet(s), so a cross-cabinet site
+    can't be submitted even though the role check itself isn't
+    cabinet-scoped."""
     model = Task
     form_class = TaskForm
     template_name = 'tasks/task_form.html'
@@ -108,6 +126,9 @@ class TaskCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, 
         return initial
 
     def _scope_form_querysets(self, form):
+        """Restricts `site`/`assigned_to`/`phase` to the requester's own
+        cabinet(s) (or the superuser's active one) — this, not the role
+        check, is what actually prevents a cross-cabinet task."""
         if self.request.user.is_superuser:
             active_cabinet = get_session_cabinet(self.request)
             site_qs = Site.objects.filter(cabinet=active_cabinet) if active_cabinet else Site.objects.all()
@@ -134,6 +155,11 @@ class TaskCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, 
 
 
 class TaskUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, UpdateView):
+    """Edits a Task, including reassigning site/phase/assignee.
+    Director-tier, CHIEF_ENGINEER or ENGINEER (MANAGE_ROLES); the object
+    itself is cabinet-scoped via CabinetAccessMixin (cabinet_lookup_field),
+    so — unlike TaskCreateView — a cross-cabinet task 404s before the
+    unscoped role check would even matter."""
     model = Task
     form_class = TaskForm
     template_name = 'tasks/task_form.html'
@@ -180,6 +206,10 @@ class TaskUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, 
 
 
 class TaskDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, DetailView):
+    """A Task's detail page. Open to any cabinet member; the "Modifier"
+    action and `can_manage` flag (shown in the template for the
+    start/complete/block/reopen buttons) both come from
+    `_can_manage_task`."""
     model = Task
     template_name = 'tasks/task_detail.html'
     context_object_name = 'task'
@@ -225,6 +255,7 @@ class TaskDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, De
 
 @login_required
 def task_start(request, pk):
+    """Starts a task (see Task.start). Gated by `_can_manage_task`."""
     task = get_object_or_404(Task, pk=pk)
     if request.method == 'POST':
         if not _can_manage_task(request.user, task):
@@ -240,6 +271,8 @@ def task_start(request, pk):
 
 @login_required
 def task_complete(request, pk):
+    """Marks a task done (see Task.complete). Gated by
+    `_can_manage_task`."""
     task = get_object_or_404(Task, pk=pk)
     if request.method == 'POST':
         if not _can_manage_task(request.user, task):
@@ -255,6 +288,8 @@ def task_complete(request, pk):
 
 @login_required
 def task_block(request, pk):
+    """Marks a task blocked, with a free-text reason (see Task.block).
+    Gated by `_can_manage_task`."""
     task = get_object_or_404(Task, pk=pk)
     if request.method == 'POST':
         if not _can_manage_task(request.user, task):
@@ -271,6 +306,8 @@ def task_block(request, pk):
 
 @login_required
 def task_reopen(request, pk):
+    """Reopens a blocked/completed task (see Task.reopen). Gated by
+    `_can_manage_task`."""
     task = get_object_or_404(Task, pk=pk)
     if request.method == 'POST':
         if not _can_manage_task(request.user, task):

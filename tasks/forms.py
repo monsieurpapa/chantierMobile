@@ -1,3 +1,6 @@
+"""ModelForm for the `tasks` app. Cabinet-scoping of the `site`/`phase`/
+`assigned_to` querysets happens per-request in the view
+(tasks/views.py's `_scope_form_querysets`), not here."""
 from django import forms
 from django.utils.translation import gettext_lazy as _
 from .models import Task
@@ -6,6 +9,8 @@ from core.widgets import DynamicSelectWidget
 
 
 class TaskForm(forms.ModelForm):
+    """Task create/edit form. Status isn't a field here — transitions go
+    through Task.start/complete/block/reopen, not a form save."""
     class Meta:
         model = Task
         fields = ['site', 'phase', 'title', 'description', 'priority', 'due_date', 'assigned_to']

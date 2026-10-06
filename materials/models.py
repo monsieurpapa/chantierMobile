@@ -1,3 +1,16 @@
+"""
+Materials catalog and the "état de besoin" (material request) workflow.
+
+A Material is a shared, cabinet-agnostic catalog entry (name/unit/cost)
+that a MaterialRequest's items can point to — or an item can skip the
+catalog entirely and type a free-text name, for one-off or not-yet
+registered materials (see MaterialRequestItem). A MaterialRequest goes
+through a two-stage approval before it becomes an authorized expense:
+the magasinier validates it first (PENDING -> VALIDATED), then a
+director-tier role (FINAL_AUTHORIZATION_ROLES) gives the final
+authorization (VALIDATED -> APPROVED), which is also the point where the
+matching finance.Expense gets created and linked back via `expense`.
+"""
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
@@ -6,14 +19,23 @@ from projects.models import Site
 from chantiermobile.constants import MaterialRequestStatus
 
 class Material(BaseModel):
+    """A catalog entry (name, unit, estimated cost per unit) shared across
+    every cabinet — there is no cabinet FK here on purpose, matching how
+    MaterialQuickCreateView and StockItem already treat the catalog as one
+    system-wide list rather than a per-tenant one."""
     name = models.CharField(max_length=255)
     unit = models.CharField(max_length=50, help_text=_("e.g. kg, m3, liters"))
     estimated_cost_per_unit = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    
+
     def __str__(self):
         return f"{self.name} ({self.unit})"
 
 class MaterialRequest(BaseModel):
+    """An "état de besoin" raised against a Site: a list of MaterialRequestItem
+    rows that goes through the two-stage approval described in the module
+    docstring before it is authorized, and optionally ordered/delivered.
+    `expense` is populated only on authorization, and only when the request
+    has a positive total_estimated_cost (see authorize())."""
     site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name='material_requests')
     requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='material_requests')
     status = models.CharField(max_length=20, choices=MaterialRequestStatus.choices, default=MaterialRequestStatus.PENDING)
@@ -27,9 +49,14 @@ class MaterialRequest(BaseModel):
         return f"Request #{self.id} - {item_count} item{'s' if item_count != 1 else ''} for {self.site.name}"
     
     def clean(self):
-        """Validate material request data."""
+        """Requires at least one item — but only once the request already
+        has a pk. A brand-new MaterialRequest is always saved before its
+        MaterialRequestItem rows exist (the creation view saves the parent
+        first, then the inline formset), so checking `self.items.count()`
+        on an unsaved instance would always fail; the check only bites on
+        a subsequent save/full_clean() once items can actually exist."""
         from django.core.exceptions import ValidationError
-        
+
         # Validate that request has items
         if self.pk and self.items.count() == 0:
             raise ValidationError('Material request must have at least one item.')
@@ -170,7 +197,8 @@ class MaterialRequestItem(BaseModel):
         return self.material.name if self.material_id else self.material_name
 
     def clean(self):
-        """Validate material request item."""
+        """Enforces the catalog-or-free-text XOR described on the class
+        docstring, plus a positive quantity."""
         from django.core.exceptions import ValidationError
 
         if not self.material_id and not self.material_name:

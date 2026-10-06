@@ -1,3 +1,10 @@
+"""
+Thin views for the core app's cross-cutting pages (dashboard, pending
+approvals, global search, notifications) — every one of them is a login-
+gated wrapper around a plain function in dashboard.py / approvals.py /
+search.py, so the actual aggregation logic stays unit-testable and reusable
+independent of Django's view/template machinery.
+"""
 from django.views.generic import TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
@@ -9,6 +16,11 @@ from core.approvals import get_pending_approvals
 from core.search import global_search
 
 class HomeView(LoginRequiredMixin, TemplateView):
+    """The main "Tableau de Bord" dashboard — any authenticated user (no
+    role restriction beyond cabinet scoping, enforced inside
+    build_dashboard_context itself). What's shown (financial widgets vs.
+    operational-only) depends on the viewer's role; see
+    core.dashboard.can_view_financials."""
     template_name = 'home.html'
 
     def get_context_data(self, **kwargs):
@@ -80,6 +92,10 @@ def notification_open(request, pk):
 
 @login_required
 def notifications_mark_all_read(request):
+    """Marks every unread Notification for the current user as read in one
+    bulk update — the navbar bell's "tout marquer lu" action. Any
+    authenticated user may do this for their own notifications only (the
+    queryset is already scoped via request.user.notifications)."""
     if request.method == 'POST':
         request.user.notifications.filter(is_read=False).update(is_read=True)
     return redirect('notifications_list')

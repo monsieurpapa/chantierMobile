@@ -1,3 +1,6 @@
+"""URL routing for the accounts app: the cabinet-switcher, the user's own
+profile, and the superadmin-only user/cabinet/role-assignment management
+screens (see accounts/views.py for the per-view access rules)."""
 from django.urls import path
 from . import views
 

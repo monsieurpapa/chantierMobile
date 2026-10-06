@@ -1,3 +1,10 @@
+"""
+Views for the Material catalog and the "état de besoin" (material
+request) workflow: browsing/editing the shared catalog, raising a
+request against a Site, and the two role-gated action endpoints
+(request_validate, approve_material_request) that drive it through the
+two-stage approval described in materials/models.py.
+"""
 from django.views.generic import ListView, CreateView, UpdateView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
@@ -18,6 +25,19 @@ from chantiermobile.constants import UserRoles, FINAL_AUTHORIZATION_ROLES, Mater
 # then a Directeur Technique/Général (or Directeur de Cabinet, kept for
 # single-cabinet setups without a dedicated DT/DG role) gives the final
 # authorization.
+#
+# NOTE: unlike Expense.approve() (which explicitly blocks requester ==
+# approver), neither magasinier_validate() nor authorize() on
+# MaterialRequest checks the actor against mat_request.requested_by, and
+# MaterialRequestCreateView lets *any* logged-in user (not just a
+# WORKER-tier one) raise a request. DIRECTOR/DIRECTEUR_TECHNIQUE/
+# DIRECTEUR_GENERAL sit in both MAGASINIER_VALIDATE_ROLES and
+# FINAL_AUTHORIZATION_ROLES, so a single user holding one of those roles
+# (very plausible in a small single-cabinet setup, where DIRECTOR is
+# meant to cover exactly this) can request, validate, AND give final
+# authorization on their own request — which also auto-creates an
+# already-APPROVED Expense (see MaterialRequest.authorize()) with no
+# second person ever having reviewed it.
 MAGASINIER_VALIDATE_ROLES = ['MAGASINIER', 'DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL']
 
 # Who besides the original requester may edit a still-pending request.
@@ -30,6 +50,11 @@ MATERIAL_REQUEST_EDIT_ADMIN_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTE
 
 # Material Catalog Views
 class MaterialListView(LoginRequiredMixin, PageHeaderMixin, ListView):
+    """Browse the shared material catalog. Read-only for any logged-in
+    user — the catalog has no cabinet FK, so there is nothing to scope;
+    the "Ajouter" action is hidden (but not blocked server-side beyond
+    MaterialCreateView's own allowed_roles) for anyone outside the
+    director-tier/CHIEF_ENGINEER roles."""
     model = Material
     template_name = 'materials/material_list.html'
     context_object_name = 'materials'
@@ -54,6 +79,9 @@ class MaterialListView(LoginRequiredMixin, PageHeaderMixin, ListView):
         return []
 
 class MaterialCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, CreateView):
+    """Add a new catalog entry. Director-tier or CHIEF_ENGINEER only
+    (allowed_roles below); Material has no cabinet, so this isn't scoped
+    to one."""
     model = Material
     form_class = MaterialForm
     template_name = 'materials/material_form.html'
@@ -75,6 +103,8 @@ class MaterialCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin,
         ]
 
 class MaterialUpdateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, UpdateView):
+    """Edit a catalog entry. Same director-tier/CHIEF_ENGINEER gate as
+    MaterialCreateView."""
     model = Material
     form_class = MaterialForm
     template_name = 'materials/material_form.html'
@@ -100,6 +130,10 @@ class MaterialUpdateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin,
 
 # Material Request Views
 class MaterialRequestListView(LoginRequiredMixin, PageHeaderMixin, ListView):
+    """List material requests, cabinet-scoped by hand in get_queryset()
+    (same rule as CabinetAccessMixin, not inherited from it since this
+    view isn't otherwise cabinet-aware). Open to any logged-in user —
+    there is no role gate on viewing the list."""
     model = MaterialRequest
     template_name = 'materials/request_list.html'
     context_object_name = 'requests'
@@ -126,6 +160,14 @@ class MaterialRequestListView(LoginRequiredMixin, PageHeaderMixin, ListView):
         return qs.order_by('-created_at')
 
 class MaterialRequestCreateView(LoginRequiredMixin, PageHeaderMixin, CreateView):
+    """Raise a new état de besoin against a Site. Deliberately open to
+    any logged-in user (no allowed_roles) — any staff member, not just a
+    director or engineer, can request materials; the `site` field is
+    scoped to the user's own cabinet(s) in get_form() below so they can
+    only request against a site they belong to. The requester is always
+    the current user (set in form_valid()), and that same person is one
+    of the roles allowed to later validate/authorize it — see the
+    self-approval note in docs/modules/materials.md."""
     model = MaterialRequest
     form_class = MaterialRequestForm
     template_name = 'materials/request_form.html'
@@ -189,6 +231,11 @@ class MaterialRequestCreateView(LoginRequiredMixin, PageHeaderMixin, CreateView)
             return self.form_invalid(form)
 
 class MaterialRequestUpdateView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, UpdateView):
+    """Edit a still-PENDING material request. Cabinet membership alone
+    (via CabinetAccessMixin) isn't enough to edit — dispatch() below
+    additionally requires the request to still be PENDING and the editor
+    to be either the original requester or an admin-tier role
+    (MATERIAL_REQUEST_EDIT_ADMIN_ROLES)."""
     model = MaterialRequest
     form_class = MaterialRequestForm
     template_name = 'materials/request_form.html'
@@ -263,6 +310,10 @@ class MaterialRequestUpdateView(LoginRequiredMixin, CabinetAccessMixin, PageHead
             return self.form_invalid(form)
 
 class MaterialRequestDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, DetailView):
+    """View a single material request. Cabinet-scoped (any member of the
+    owning cabinet, any role, can view); the validate/authorize actions
+    shown on the template are gated separately by request_validate() and
+    approve_material_request() below."""
     model = MaterialRequest
     template_name = 'materials/request_detail.html'
     context_object_name = 'req'

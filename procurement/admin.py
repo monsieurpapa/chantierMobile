@@ -1,3 +1,5 @@
+"""Admin registrations for suppliers, stock items, and purchase orders
+(with their lines editable inline)."""
 from django.contrib import admin
 from .models import Supplier, StockItem, PurchaseOrder, PurchaseOrderLine, StockMovement
 

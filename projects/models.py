@@ -1,3 +1,14 @@
+"""
+The `projects` app owns the construction site itself — `Site`, the single
+object every other app (finance, personnel, materials, revenue, tasks)
+hangs its records off, plus the site's own internal structure
+(`ProjectPhase`) and the engineer-facing reporting loop around it
+(`PlanningSubmission` for schedule review, `SiteProgress`/`ProgressPhoto`/
+`ProgressComment` for day-to-day advancement reporting). See
+docs/modules/projects.md for the full walkthrough and
+docs/architecture/overview.md for how Site fits into the wider Cabinet
+multi-tenancy model.
+"""
 from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
@@ -6,6 +17,12 @@ from accounts.models import Cabinet
 from chantiermobile.constants import SiteStatus, ProjectConfig, ExpenseStatus, PlanningStatus, PhaseStatus
 
 class Site(BaseModel):
+    """A chantier (construction site) — the tenancy anchor for almost
+    every other business record (expenses, personnel assignments, tasks,
+    contracts, budgets all hang off a Site, directly or indirectly).
+    Belongs to exactly one Cabinet and optionally has a `lead_engineer`,
+    who gets the extra authority to close phases and review this site's
+    planning submissions (see ProjectPhase.close / PlanningSubmission)."""
     cabinet = models.ForeignKey(Cabinet, on_delete=models.CASCADE, related_name='sites')
     name = models.CharField(max_length=255)
     location = models.CharField(max_length=255)
@@ -83,6 +100,8 @@ class Site(BaseModel):
 
     @property
     def active_assignments(self):
+        """SiteAssignments covering today's date — open-ended (`end_date`
+        null) or not yet expired."""
         from django.utils import timezone
         today = timezone.localdate()
         return self.assignments.filter(
@@ -93,24 +112,37 @@ class Site(BaseModel):
 
     @property
     def total_daily_personnel_cost(self):
+        """Sum of `daily_rate` across today's active assignments — the
+        site's current day-labor burn rate, not a cumulative total."""
         return self.active_assignments.aggregate(
             total=models.Sum('daily_rate')
         )['total'] or 0
 
     @property
     def total_spent(self):
+        """Cumulative APPROVED+PAID expenses only — PENDING/REJECTED
+        expenses never count toward spend, so this can't be inflated by
+        a request that hasn't actually been authorized."""
         return self.expenses.filter(status__in=[ExpenseStatus.APPROVED, ExpenseStatus.PAID]).aggregate(
             total=models.Sum('amount')
         )['total'] or 0
 
     @property
     def budget_usage_percentage(self):
+        """0 when there's no Budget row yet (not an error — a site can
+        exist before its budget is set). Capped at 100 even if actual
+        spend exceeds the budget, since this drives a progress-bar style
+        display; use total_spent vs. budget.total_amount directly if the
+        overrun amount itself is needed."""
         if hasattr(self, 'budget') and self.budget.total_amount > 0:
             return min(int((self.total_spent / self.budget.total_amount) * 100), 100)
         return 0
 
     @property
     def total_revenue(self):
+        """Cumulative amount of this site's PAID invoices, via its
+        (optional, OneToOne) Contract. 0 when the site has no contract
+        yet, not an error."""
         # Site -> Contract (OneToOne) -> Invoices
         if hasattr(self, 'contract'):
             return self.contract.invoices.filter(status='PAID').aggregate(
@@ -120,9 +152,16 @@ class Site(BaseModel):
 
     @property
     def net_profit(self):
+        """Revenue collected minus spend approved so far — a running
+        figure, not a final project margin (both sides only reflect
+        money that has actually moved, not pending invoices/expenses)."""
         return self.total_revenue - self.total_spent
 
 class ProjectPhase(BaseModel):
+    """A named stage of work within a Site (e.g. "Fondations",
+    "Gros œuvre") — the unit SiteProgress reports and PlanningSubmissions
+    are filed against, and the unit a lead engineer formally closes with
+    `close()` once its work is done."""
     site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name='phases')
     name = models.CharField(max_length=255)
     start_date = models.DateField(null=True, blank=True)
@@ -140,6 +179,7 @@ class ProjectPhase(BaseModel):
 
     @property
     def is_closed(self):
+        """True once the phase has been formally closed via close()."""
         return self.status == PhaseStatus.CLOTUREE
 
     def close(self, user, notes=''):
@@ -196,6 +236,9 @@ class PlanningSubmission(BaseModel):
         return f"{self.site.name}: {self.get_status_display()}"
 
     def submit(self, user):
+        """Moves a BROUILLON submission to SOUMISE, ready for review.
+        Only a draft can be submitted — a submission already under
+        review or decided cannot be resubmitted through this method."""
         from django.core.exceptions import ValidationError
         from django.utils import timezone
         if self.status != PlanningStatus.BROUILLON:
@@ -206,6 +249,15 @@ class PlanningSubmission(BaseModel):
         self.save(update_fields=['status', 'submitted_by', 'submitted_at', 'updated_at'])
 
     def _decide(self, user, new_status, notes=''):
+        """Shared approve/reject path: only a SOUMISE submission can be
+        decided, and the self-review guard below blocks the submitter
+        from deciding their own submission. Note this only checks
+        "not the submitter" — it does not check that `user` is the
+        site's lead_engineer or otherwise specifically responsible for
+        this site, so any reviewer-role holder the call site authorizes
+        can decide any other engineer's submission (see
+        projects/views.py's PLANNING_REVIEW_ROLES / can_act_for_cabinet
+        for where that authorization actually happens)."""
         from django.core.exceptions import ValidationError
         from django.utils import timezone
         if self.status != PlanningStatus.SOUMISE:
@@ -223,23 +275,33 @@ class PlanningSubmission(BaseModel):
         self.save(update_fields=['status', 'reviewed_by', 'reviewed_at', 'review_notes', 'updated_at'])
 
     def approve(self, user, notes=''):
+        """Marks this submission APPROUVEE. See `_decide` for the
+        self-review guard this relies on."""
         self._decide(user, PlanningStatus.APPROUVEE, notes)
 
     def reject(self, user, notes=''):
+        """Marks this submission REJETEE. See `_decide` for the
+        self-review guard this relies on."""
         self._decide(user, PlanningStatus.REJETEE, notes)
 
 
 class SiteProgress(BaseModel):
+    """A dated advancement report against one ProjectPhase — "we're at X%
+    as of this date" plus free-text notes. The day-to-day counterpart to
+    PlanningSubmission's one-off schedule review; photos and comments
+    attach to this record (see ProgressPhoto, ProgressComment)."""
     phase = models.ForeignKey(ProjectPhase, on_delete=models.CASCADE, related_name='progress_reports')
     report_date = models.DateField()
     percentage_complete = models.PositiveIntegerField(help_text=_("0-100"))
     description = models.TextField()
-    
+
     def clean(self):
+        """Keeps percentage_complete within ProjectConfig's configured
+        0-100 bounds."""
         if self.percentage_complete < ProjectConfig.MIN_PROGRESS or self.percentage_complete > ProjectConfig.MAX_PROGRESS:
             from django.core.exceptions import ValidationError
             raise ValidationError(f'Progress must be between {ProjectConfig.MIN_PROGRESS} and {ProjectConfig.MAX_PROGRESS}.')
-    
+
     def __str__(self):
         return f"{self.phase.name} - {self.percentage_complete}% on {self.report_date}"
 
@@ -288,6 +350,10 @@ class ProgressComment(BaseModel):
         return f"{self.author} on {self.progress}"
 
     def clean(self):
+        """A photo-scoped comment must reference a photo that actually
+        belongs to this same progress report — prevents cross-linking a
+        comment to an unrelated report's photo (e.g. via a tampered
+        `photo` id in the POST body)."""
         if self.photo_id and self.progress_id and self.photo.progress_id != self.progress_id:
             from django.core.exceptions import ValidationError
             raise ValidationError(_("La photo commentée doit appartenir au même rapport d'avancement."))

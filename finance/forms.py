@@ -1,3 +1,10 @@
+"""Forms for the finance app. Most of these are thin ModelForms whose real
+validation lives in the model's own clean() (per the project-wide rule) —
+the form-level `clean()` overrides here exist mainly to surface a budget/
+amount error against the right field before a full_clean() round-trip, or
+to scope a dynamic queryset (e.g. "which personnel can be picked here")
+tighter than the bare model allows.
+"""
 import json
 
 from django import forms
@@ -13,6 +20,12 @@ from chantiermobile.constants import (
 from core.widgets import DynamicSelectWidget
 
 class ExpenseForm(forms.ModelForm):
+    """Expense submission form. Rebuilds the `personnel`/`phase` dropdown
+    querysets from the submitted `site` (see __init__) so a POST validates
+    against the right site even though the empty GET render had no site
+    picked yet; `clean()` duplicates Expense.clean()'s budget check purely
+    to raise it as a form-level error instead of waiting for
+    instance.full_clean() on save."""
     class Meta:
         model = Expense
         fields = ['site', 'phase', 'category', 'nature', 'personnel', 'recipient', 'amount', 'expense_date', 'description', 'receipt_image']
@@ -97,10 +110,16 @@ class ExpenseForm(forms.ModelForm):
         return cleaned_data
 
 class ExpensePayForm(forms.Form):
+    """Picks which Caisse an approved expense is paid from (Expense.pay()).
+    The queryset is set by the view to the expense's own cabinet's
+    caisses."""
     caisse = forms.ModelChoiceField(queryset=Caisse.objects.none(), widget=forms.Select(attrs={'class': 'form-select'}), label=_('Caisse de décaissement'))
 
 
 class BudgetForm(forms.ModelForm):
+    """Budget create/edit form; clean() only checks end_date > start_date —
+    the amount itself has no cap or minimum beyond the field's own
+    DecimalField validation."""
     class Meta:
         model = Budget
         fields = ['site', 'total_amount', 'start_date', 'end_date']
@@ -130,6 +149,8 @@ class BudgetForm(forms.ModelForm):
 
 
 class CaisseForm(forms.ModelForm):
+    """Caisse create/edit form. `site` is optional (a caisse need not be
+    tied to a single chantier)."""
     class Meta:
         model = Caisse
         fields = ['name', 'caisse_type', 'site', 'is_administrative', 'manual_site_entry']
@@ -147,6 +168,10 @@ class CaisseForm(forms.ModelForm):
 
 
 class CaisseTransactionForm(forms.ModelForm):
+    """Manual ledger-entry form for one Caisse (passed in as the `caisse`
+    kwarg). Swaps the `site` field for a free-text `external_site_label`
+    when the caisse has manual_site_entry set (e.g. a bétonnière caisse
+    serving external clients) — see __init__."""
     class Meta:
         model = CaisseTransaction
         fields = [
@@ -196,12 +221,18 @@ class CaisseTransactionForm(forms.ModelForm):
 
 
 class CaisseTransferForm(forms.Form):
+    """Daily-remittance transfer form (Caisse.transfer_to()); the view
+    additionally checks `amount <= caisse.balance` before calling
+    transfer_to(), since this form has no access to the source caisse to
+    validate that itself."""
     target_caisse = forms.ModelChoiceField(queryset=Caisse.objects.none(), widget=forms.Select(attrs={'class': 'form-select'}), label=_('Vers'))
     amount = forms.DecimalField(min_value=0.01, decimal_places=2, widget=forms.NumberInput(attrs={'class': 'form-control'}), label=_('Montant'))
     description = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control'}), label=_('Description'))
 
 
 class CaisseLoanForm(forms.ModelForm):
+    """CaisseLoan creation form; clean() duplicates the model's
+    same-caisse check as a form-level error, ahead of full_clean()."""
     class Meta:
         model = CaisseLoan
         fields = ['lender_caisse', 'borrower_caisse', 'amount', 'date', 'notes']
@@ -222,10 +253,15 @@ class CaisseLoanForm(forms.ModelForm):
 
 
 class CaisseLoanRepayForm(forms.Form):
+    """Partial-or-full repayment amount for CaisseLoan.repay(), which does
+    its own "doesn't exceed what's owed" check."""
     amount = forms.DecimalField(min_value=0.01, decimal_places=2, widget=forms.NumberInput(attrs={'class': 'form-control'}), label=_('Montant remboursé'))
 
 
 class PayrollListForm(forms.ModelForm):
+    """Creates the BROUILLON PayrollList shell (site + optional phase +
+    notes) — items are added afterwards via PayrollListItemForm/
+    PayrollListAllocateView."""
     class Meta:
         model = PayrollList
         fields = ['site', 'phase', 'notes']
@@ -249,6 +285,9 @@ class PayrollListForm(forms.ModelForm):
 
 
 class PayrollListItemForm(forms.ModelForm):
+    """Single-item add form for a PayrollList, scoped (via the `site`
+    kwarg) to OUVRIER personnel assigned to that site — mirrors
+    PayrollListItem.clean()'s payroll_type guard at the UI level."""
     class Meta:
         model = PayrollListItem
         fields = ['personnel', 'amount', 'progress_note', 'signed_receipt']
@@ -280,6 +319,8 @@ class PayrollListItemForm(forms.ModelForm):
 
 
 class PayrollDisburseForm(forms.Form):
+    """Picks which Caisse to disburse a PayrollList or SalaryPaymentList
+    from (shared by both disburse() flows)."""
     caisse = forms.ModelChoiceField(queryset=Caisse.objects.none(), widget=forms.Select(attrs={'class': 'form-select'}), label=_('Caisse de décaissement'))
 
 
@@ -296,6 +337,9 @@ class SalaryPaymentListForm(forms.ModelForm):
 
 
 class SalaryPaymentItemForm(forms.ModelForm):
+    """Single-item add form for a SalaryPaymentList, scoped (via the
+    `cabinet` kwarg) to active INGENIEUR personnel in that cabinet —
+    mirrors SalaryPaymentItem.clean()'s payroll_type guard."""
     class Meta:
         model = SalaryPaymentItem
         fields = ['personnel', 'period', 'amount', 'notes']
@@ -337,6 +381,9 @@ class SalaryPaymentItemForm(forms.ModelForm):
 
 
 class AvenantForm(forms.ModelForm):
+    """Avenant request form (site + amount + justification); the decision
+    itself (approve/reject) is a separate AvenantDecisionForm, not this
+    one."""
     class Meta:
         model = Avenant
         fields = ['site', 'amount', 'justification']
@@ -348,4 +395,6 @@ class AvenantForm(forms.ModelForm):
 
 
 class AvenantDecisionForm(forms.Form):
+    """Optional notes attached to an avenant approve/reject decision
+    (Avenant.approve()/reject()'s `notes` argument)."""
     notes = forms.CharField(required=False, widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2}), label=_('Notes'))

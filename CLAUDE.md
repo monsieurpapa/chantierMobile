@@ -243,4 +243,4 @@ The script is idempotent for the Cloud SQL instance (skips creation if it alread
 ### Known limitations of this setup
 
 - `min-instances`/`max-instances` are pinned to 1 on the Cloud Run service. The Dockerfile runs `migrate` on every container boot (matches the Railway/Render pattern); running that against more than one concurrent instance risks racing migrations. Raise `max-instances` only after moving `migrate` out of the boot command (e.g. a separate `gcloud run jobs execute` step in CI).
-- The Celery worker VM is a single e2-micro instance with no redundancy — acceptable for the current low-volume stage (matches the WebSocket/PWA TODOS.md items gated on "5-10 paying directors"), revisit if that changes.
+- The Celery worker VM is a single e2-micro instance with no redundancy — acceptable for the current low-volume stage (matches the WebSocket/PWA `docs/history/TODOS.md` items gated on "5-10 paying directors"), revisit if that changes.

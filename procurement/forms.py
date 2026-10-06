@@ -1,3 +1,6 @@
+"""Forms for suppliers, stock items/movements/transfers, purchase orders
+(with their line formset), the wire-transfer proof upload, and supplier
+credit/repayment."""
 from django import forms
 from django.utils.translation import gettext_lazy as _
 from django.forms import inlineformset_factory
@@ -7,6 +10,8 @@ from core.widgets import DynamicSelectWidget
 
 
 class SupplierForm(forms.ModelForm):
+    """Create/edit a supplier. `cabinet` is not a form field — it's set
+    by the view from the current user's cabinet."""
     class Meta:
         model = Supplier
         fields = ['name', 'contact_name', 'phone', 'email', 'address', 'notes']
@@ -47,6 +52,11 @@ class StockItemForm(forms.ModelForm):
 
 
 class PurchaseOrderForm(forms.ModelForm):
+    """The order's own fields; its lines are handled separately by
+    PurchaseOrderLineFormSet. `status` is intentionally not a form
+    field — it only moves through the dedicated send/receive/cancel
+    endpoints in procurement/views.py, each of which drives
+    PurchaseOrder.clean()'s status state machine."""
     class Meta:
         model = PurchaseOrder
         fields = ['site', 'supplier', 'order_number', 'order_date', 'expected_delivery_date', 'caisse', 'payment_method', 'notes']
@@ -74,6 +84,8 @@ class PurchaseOrderForm(forms.ModelForm):
 
 
 class PurchaseOrderLineForm(forms.ModelForm):
+    """A single order line. `quantity_received` is not a field here — it
+    only advances through PurchaseOrder.receive()."""
     class Meta:
         model = PurchaseOrderLine
         fields = ['stock_item', 'quantity', 'unit_price']
@@ -109,6 +121,10 @@ PurchaseOrderLineFormSet = inlineformset_factory(
 
 
 class StockMovementForm(forms.ModelForm):
+    """A manual, single-item stock movement (entry/exit/adjustment —
+    TRANSFER is excluded from the choices below since a transfer must go
+    through StockTransferForm/StockItem.transfer_to() instead, so both
+    legs of the audit trail are always created together)."""
     class Meta:
         model = StockMovement
         fields = ['movement_type', 'quantity', 'phase', 'motif', 'movement_date', 'notes', 'facture']
@@ -166,6 +182,8 @@ class TransferProofForm(forms.Form):
 
 
 class SupplierCreditForm(forms.ModelForm):
+    """Register a new achat à crédit. `purchase_order` and `due_date` are
+    optional — a credit doesn't have to be tied to a specific order."""
     class Meta:
         model = SupplierCredit
         fields = ['supplier', 'purchase_order', 'amount', 'date', 'due_date', 'notes']
@@ -188,6 +206,8 @@ class SupplierCreditForm(forms.ModelForm):
 
 
 class SupplierCreditPaymentForm(forms.Form):
+    """An installment payment against a SupplierCredit; `caisse` is
+    optional since not every repayment comes out of cash on hand."""
     amount = forms.DecimalField(min_value=0.01, decimal_places=2, widget=forms.NumberInput(attrs={'class': 'form-control'}), label=_('Montant'))
     caisse = forms.ModelChoiceField(required=False, queryset=None, widget=forms.Select(attrs={'class': 'form-select'}), label=_('Caisse (optionnel)'))
 

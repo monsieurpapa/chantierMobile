@@ -1,9 +1,17 @@
+"""ModelForms for the `projects` app. Role/cabinet gating lives in the
+views (see projects/views.py) — these forms only handle field widgets
+and the one piece of field-level validation each needs (e.g. an
+optional lead_engineer/phase)."""
 from django import forms
 from django.utils.translation import gettext_lazy as _
 from .models import Site, ProjectPhase, SiteProgress, PlanningSubmission
 from chantiermobile.constants import FormPlaceholders, DatePickerConfig
 
 class SiteForm(forms.ModelForm):
+    """Site create/edit form. `lead_engineer`'s queryset is further
+    narrowed per-request in projects/views.py's
+    `_scope_lead_engineer_queryset` — not here, since that needs the
+    request's cabinet."""
     class Meta:
         model = Site
         fields = ['name', 'location', 'status', 'start_date', 'expected_end_date', 'lead_engineer']
@@ -29,6 +37,8 @@ class SiteForm(forms.ModelForm):
         self.fields['lead_engineer'].required = False
 
 class ProjectPhaseForm(forms.ModelForm):
+    """Phase create/edit form — name and dates only; status transitions
+    go through ProjectPhase.close(), not this form."""
     class Meta:
         model = ProjectPhase
         fields = ['name', 'start_date', 'end_date']
@@ -47,6 +57,10 @@ class ProjectPhaseForm(forms.ModelForm):
         }
 
 class PlanningSubmissionForm(forms.ModelForm):
+    """Drafts a planning submission; `phase` is optional (a submission
+    can cover the whole site rather than one phase) and its queryset is
+    narrowed to the target site's own phases in
+    PlanningSubmissionCreateView.get_form()."""
     class Meta:
         model = PlanningSubmission
         fields = ['phase', 'description']
@@ -61,6 +75,9 @@ class PlanningSubmissionForm(forms.ModelForm):
 
 
 class SiteProgressForm(forms.ModelForm):
+    """Progress-report form; photos are handled separately as plain
+    multi-file uploads (see SiteProgressCreateView.form_valid), not a
+    form field here."""
     class Meta:
         model = SiteProgress
         fields = ['report_date', 'percentage_complete', 'description']

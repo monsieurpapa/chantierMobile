@@ -1,3 +1,6 @@
+"""Forms for the revenue app: contracts, invoices, payments, and the two
+inline-formset-backed line-item editors (Devis/DevisLine,
+SituationTravaux/SituationLine)."""
 from django import forms
 from django.utils.translation import gettext_lazy as _
 from django.forms import inlineformset_factory
@@ -5,6 +8,7 @@ from .models import Contract, Invoice, Payment, Devis, DevisLine, SituationTrava
 from chantiermobile.constants import FormPlaceholders, DatePickerConfig
 
 class ContractForm(forms.ModelForm):
+    """Contract create/edit form (site, client, value, signed date)."""
     class Meta:
         model = Contract
         fields = ['site', 'client_name', 'total_value', 'signed_date']
@@ -46,6 +50,8 @@ class InvoiceForm(forms.ModelForm):
         }
 
 class PaymentForm(forms.ModelForm):
+    """Records a Payment against an invoice; saving it (outside this form,
+    via Payment.save()) auto-marks the invoice PAID once fully covered."""
     class Meta:
         model = Payment
         fields = ['invoice', 'amount', 'payment_date', 'method', 'reference', 'proof_of_payment']
@@ -68,6 +74,8 @@ class PaymentForm(forms.ModelForm):
 
 
 class DevisForm(forms.ModelForm):
+    """Devis header form (site/client/dates/photo/notes); line items are
+    edited separately via DevisLineFormSet."""
     class Meta:
         model = Devis
         fields = ['site', 'devis_number', 'client_name', 'issue_date', 'validity_date', 'photo', 'notes']
@@ -95,6 +103,7 @@ class DevisForm(forms.ModelForm):
 
 
 class DevisLineForm(forms.ModelForm):
+    """One priced line on a Devis; used as the form for DevisLineFormSet."""
     class Meta:
         model = DevisLine
         fields = ['designation', 'unit', 'quantity', 'unit_price_ht', 'order']
@@ -107,6 +116,9 @@ class DevisLineForm(forms.ModelForm):
         }
 
 
+# min_num/validate_min=True by default here — the create/update views
+# (DevisCreateView/DevisUpdateView) override both to 0/False at runtime
+# when the devis has a photo attached instead of typed-in lines.
 DevisLineFormSet = inlineformset_factory(
     Devis,
     DevisLine,
@@ -119,6 +131,9 @@ DevisLineFormSet = inlineformset_factory(
 
 
 class SituationTravauxForm(forms.ModelForm):
+    """Situation header form (contract/numero/period_end_date/notes); lines
+    are edited separately via SituationLineFormSet, scoped to the
+    contract's source Devis lines by the view."""
     class Meta:
         model = SituationTravaux
         fields = ['contract', 'numero', 'period_end_date', 'notes']
@@ -135,6 +150,8 @@ class SituationTravauxForm(forms.ModelForm):
 
 
 class SituationLineForm(forms.ModelForm):
+    """One DevisLine's cumulative % on a SituationTravaux; used as the form
+    for SituationLineFormSet."""
     class Meta:
         model = SituationLine
         fields = ['devis_line', 'cumulative_percentage']

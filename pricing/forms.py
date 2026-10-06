@@ -1,3 +1,5 @@
+"""Forms for the price library (Bibliothèque de Prix) and DQE (with its
+line formset)."""
 from django import forms
 from django.forms import inlineformset_factory
 from django.utils.translation import gettext_lazy as _
@@ -5,6 +7,8 @@ from .models import PriceLibraryItem, DQE, DQELine
 
 
 class PriceLibraryItemForm(forms.ModelForm):
+    """Create/edit a price library item. `cabinet` is not a form field —
+    it's set by the view."""
     class Meta:
         model = PriceLibraryItem
         fields = ['code', 'designation', 'item_type', 'unit', 'unit_price', 'is_active', 'notes']
@@ -26,6 +30,10 @@ class PriceLibraryItemForm(forms.ModelForm):
 
 
 class DQEForm(forms.ModelForm):
+    """The DQE's own fields; its lines are handled separately by
+    DQELineFormSet. `status` is a plain form field here — there is no
+    model-level state machine for it (contrast MaterialRequest/
+    PurchaseOrder), so DQEUpdateView can set it to any value."""
     class Meta:
         model = DQE
         fields = ['site', 'reference', 'title', 'status', 'notes']
@@ -39,6 +47,10 @@ class DQEForm(forms.ModelForm):
 
 
 class DQELineForm(forms.ModelForm):
+    """A single DQE line. `price_item` choices are restricted to active
+    catalog items (__init__ below); `unit_price` defaults from the
+    catalog client-side but is a plain editable field here, so it can be
+    adjusted per-estimate without touching the catalog price."""
     class Meta:
         model = DQELine
         fields = ['price_item', 'designation', 'quantity', 'unit_price']

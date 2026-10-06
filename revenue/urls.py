@@ -1,3 +1,5 @@
+"""URL routes for the revenue app: contracts, invoices, payments, devis,
+and situations de travaux."""
 from django.urls import path
 from . import views
 

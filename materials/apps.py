@@ -1,3 +1,4 @@
+"""App config for the Material catalog and material-request app."""
 from django.apps import AppConfig
 
 

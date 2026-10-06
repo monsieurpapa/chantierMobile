@@ -1,3 +1,4 @@
+"""URL routes for the Material catalog and material-request workflow."""
 from django.urls import path
 from . import views
 

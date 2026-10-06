@@ -1,3 +1,12 @@
+"""
+Views for the accounts app: a user's own profile page, the superuser
+cabinet-context switcher, and the superadmin-only screens for managing
+users, cabinets, and cabinet role assignments. Everything gated
+"SUPERADMIN ONLY" below uses IsSuperAdminMixin (is_superuser check) rather
+than a Cabinet-scoped role — these are platform-admin operations that sit
+above the per-Cabinet RBAC model described in docs/security.md, not an
+instance of it.
+"""
 import secrets
 import string
 

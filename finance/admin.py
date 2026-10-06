@@ -1,3 +1,7 @@
+"""Django admin registrations for the finance app. Read-only reference
+data (ExpenseCategory, CaisseTransactionCategory) and the core Budget/
+Expense models — the Caisse ledger, payroll lists and Avenant are managed
+entirely through the app's own views/role gates, not the admin."""
 from django.contrib import admin
 from .models import Budget, ExpenseCategory, Expense, ExpenseApproval, CaisseTransactionCategory
 

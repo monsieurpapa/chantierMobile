@@ -1,3 +1,5 @@
+"""URL routes for the finance app: expenses, budgets, caisses (ledger,
+transfers, inter-caisse loans), the two payroll tracks, and avenants."""
 from django.urls import path
 from . import views
 

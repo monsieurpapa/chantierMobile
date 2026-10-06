@@ -1,3 +1,14 @@
+"""Money-handling models for a Cabinet's operations: project budgets and
+expense approval, the balance-tracked Caisse (cash register) ledger with
+inter-caisse loans/transfers, the two payroll tracks (ouvriers vs.
+ingénieurs/staff — see ADR 0005), and Avenant change-order authorization.
+
+This is the app where the "who can spend/move/pay money, and under what
+check" questions live. Every status field here follows the project-wide
+rule (see docs/architecture/overview.md#status-state-machines): the
+transition is validated in the model's own clean()/action method, not only
+from the one view that currently exposes it.
+"""
 from django.db import models, transaction
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
@@ -17,6 +28,11 @@ PAYROLL_OUVRIER_CATEGORY_NAME = "Main d'œuvre Ouvriers"
 PAYROLL_INGENIEUR_CATEGORY_NAME = "Salaire Ingénieurs"
 
 class Budget(BaseModel):
+    """A site's spending envelope for a fixed period. One Budget per Site
+    (OneToOneField) — Expense.clean() and .approve() check against it when
+    an expense's status is set to APPROVED, so a site with no Budget has no
+    spending cap enforced at all (budgets are optional, not implicitly
+    created)."""
     site = models.OneToOneField(Site, on_delete=models.CASCADE, related_name='budget')
     total_amount = models.DecimalField(max_digits=14, decimal_places=2)
     start_date = models.DateField()
@@ -60,9 +76,12 @@ class Budget(BaseModel):
         return Decimal(amount) > remaining
 
 class ExpenseCategory(BaseModel):
+    """A classification tag for an Expense (e.g. "Matériaux", "Transport").
+    Managed from Django admin; referenced by name from reports and the
+    expense form's dropdown."""
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
-    
+
     class Meta:
         verbose_name_plural = "Expense Categories"
 
@@ -70,6 +89,12 @@ class ExpenseCategory(BaseModel):
         return self.name
 
 class Expense(BaseModel):
+    """A single spend request against a Site, going through
+    PENDING -> APPROVED -> PAID (or REJECTED from PENDING, or REJECTED from
+    APPROVED) — see clean() for the enforced transition table and the
+    budget-cap check, and approve()/reject()/pay() for the user-facing
+    actions. Self-approval (approving your own request) is blocked in
+    approve() for everyone except a superuser."""
     site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name='expenses')
     phase = models.ForeignKey(
         ProjectPhase, on_delete=models.SET_NULL, null=True, blank=True, related_name='expenses',
@@ -99,7 +124,14 @@ class Expense(BaseModel):
     receipt_image = models.ImageField(upload_to=FileUploadConfig.EXPENSE_RECEIPT_PATH, blank=True, null=True)
 
     def clean(self):
-        """Validate expense data."""
+        """Enforces, in one place so no write path (view, admin, shell) can
+        bypass it: a positive amount, that a "main d'œuvre" personnel link
+        is actually assigned to this site and eligible, the PENDING ->
+        APPROVED/REJECTED -> PAID/REJECTED transition table, and — only
+        when transitioning TO or already APPROVED and the site has a
+        Budget — that the budget period is active and this expense's
+        amount fits what remains (see the amount_to_check delta logic
+        below for the APPROVED-editing case)."""
         from django.core.exceptions import ValidationError
         from decimal import Decimal
 
@@ -169,6 +201,12 @@ class Expense(BaseModel):
                 })
     
     def approve(self, user, comments=""):
+        """PENDING -> APPROVED, recording an ExpenseApproval row. Blocks
+        self-approval (requester approving their own request) for every
+        role except a superuser — see docs/security.md's "self-approval"
+        note. Locks the site's Budget row first (select_for_update) so two
+        concurrent approvals on the same site can't both pass the
+        budget-cap check in clean() and jointly overrun it."""
         from django.core.exceptions import ValidationError
         if not user.is_superuser and self.requester_id == user.pk:
             raise ValidationError(_("You cannot approve your own expense request."))
@@ -187,6 +225,9 @@ class Expense(BaseModel):
             )
 
     def reject(self, user, comments=""):
+        """PENDING -> REJECTED, recording an ExpenseApproval row. Unlike
+        approve(), this has no self-rejection guard — rejecting your own
+        request has no money-movement consequence, so it isn't gated."""
         with transaction.atomic():
             self.status = ExpenseStatus.REJECTED
             self.full_clean()
@@ -244,6 +285,10 @@ class Expense(BaseModel):
         return f"{self.amount} - {self.category} ({self.status})"
 
 class ExpenseApproval(BaseModel):
+    """One approve/reject decision on an Expense — the audit trail entry
+    created by Expense.approve()/reject(). An expense can accumulate more
+    than one of these if it's rejected and later resubmitted, so this is
+    never updated in place."""
     class Status(models.TextChoices):
         APPROVED = 'APPROVED', _('Approved')
         REJECTED = 'REJECTED', _('Rejected')
@@ -266,6 +311,12 @@ class ExpenseApproval(BaseModel):
 # ---------------------------------------------------------------------
 
 class Caisse(BaseModel):
+    """A physical/logical cash register whose balance is derived live from
+    its CaisseTransaction rows (see `balance`) rather than stored — so
+    there is no counter to drift out of sync, but it also means `record()`
+    (and anything that calls it) does not itself enforce a non-negative
+    result; callers (views, `pay()`, `disburse()`, `transfer_to()`) are
+    expected to check `amount <= self.balance` first."""
     cabinet = models.ForeignKey('accounts.Cabinet', on_delete=models.CASCADE, related_name='caisses')
     name = models.CharField(max_length=150, verbose_name=_('Nom'))
     caisse_type = models.CharField(max_length=20, choices=CaisseType.choices, default=CaisseType.SECONDAIRE, verbose_name=_('Type'))
@@ -294,6 +345,10 @@ class Caisse(BaseModel):
 
     @property
     def balance(self):
+        """Current balance: sum of ENTREE transactions minus sum of SORTIE
+        transactions, computed live (not cached) so a soft-deleted
+        transaction (excluded by the default manager) or an edit is always
+        reflected without a separate reconciliation step."""
         agg = self.transactions.aggregate(
             entrees=models.Sum('amount', filter=models.Q(transaction_type=CaisseTransactionType.ENTREE)),
             sorties=models.Sum('amount', filter=models.Q(transaction_type=CaisseTransactionType.SORTIE)),
@@ -349,6 +404,19 @@ class CaisseTransactionCategory(BaseModel):
 
 
 class CaisseTransaction(BaseModel):
+    """One ledger entry (entrée or sortie) on a Caisse. Created either
+    directly (manual movement, via CaisseTransactionCreateView/form, which
+    does run clean() through the ModelForm) or through Caisse.record()
+    (used by Expense.pay(), PayrollList/SalaryPaymentList.disburse(),
+    transfer_to(), CaisseLoan.disburse()/repay()) — record() uses
+    .objects.create() directly and does not call full_clean(), so those
+    programmatic paths rely on the caller having already validated the
+    amount (clean() below is only reached via the manual-entry form path).
+    Soft-deletable like every BaseModel; Caisse.balance simply excludes
+    deleted rows from its aggregate, so deleting a transaction tied to a
+    paid Expense/PayrollList/CaisseLoan changes the caisse's balance
+    without reverting that other record's own PAID/PAYEE status or
+    repaid_amount — see the finance module notes for this gap."""
     caisse = models.ForeignKey(Caisse, on_delete=models.CASCADE, related_name='transactions')
     transaction_type = models.CharField(max_length=10, choices=CaisseTransactionType.choices, verbose_name=_('Type'))
     amount = models.DecimalField(max_digits=14, decimal_places=2, verbose_name=_('Montant'))
@@ -383,6 +451,9 @@ class CaisseTransaction(BaseModel):
         return f"{self.caisse} {sign}{self.amount} ({self.date})"
 
     def clean(self):
+        """Only checked when a CaisseTransaction is saved through a
+        ModelForm (full_clean() runs there) — see the class docstring for
+        why the programmatic record()-based paths skip this."""
         from django.core.exceptions import ValidationError
         if self.amount is not None and self.amount <= 0:
             raise ValidationError({'amount': _('Le montant doit être positif.')})
@@ -407,6 +478,9 @@ class CaisseLoan(BaseModel):
         return f"{self.lender_caisse} → {self.borrower_caisse}: {self.amount} ({self.date})"
 
     def clean(self):
+        """Same-caisse and positive-amount guards, plus a lender-solvency
+        check that only runs `and not self.pk` (creation only) — see the
+        inline comment below for why that's deliberate and not a gap."""
         from django.core.exceptions import ValidationError
         if self.lender_caisse_id and self.borrower_caisse_id and self.lender_caisse_id == self.borrower_caisse_id:
             raise ValidationError(_("La caisse prêteuse et la caisse emprunteuse doivent être différentes."))
@@ -423,10 +497,13 @@ class CaisseLoan(BaseModel):
 
     @property
     def outstanding_balance(self):
+        """Amount still owed by the borrower caisse."""
         return self.amount - self.repaid_amount
 
     @property
     def is_fully_repaid(self):
+        """True once repaid_amount has caught up with the original loan
+        amount (repay() never allows it to exceed that)."""
         return self.repaid_amount >= self.amount
 
     @transaction.atomic
@@ -474,6 +551,14 @@ class CaisseLoan(BaseModel):
 # ---------------------------------------------------------------------
 
 class PayrollList(BaseModel):
+    """A site-scoped "liste de paie" for ouvriers: an engineer/director
+    prepares a draft of who-gets-paid-what against progress, submits it,
+    and a cashier/accountant/director disburses the whole list from one
+    Caisse in a single action. BROUILLON -> SOUMISE -> PAYEE, each step
+    gated by a distinct role set (see PAYROLL_PREPARE_ROLES /
+    PAYROLL_DISBURSE_ROLES in finance/views.py) — the same roles can hold
+    both gates, so there's no enforced separation between who prepares and
+    who disburses a given list."""
     site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name='payroll_lists')
     phase = models.ForeignKey(ProjectPhase, on_delete=models.SET_NULL, null=True, blank=True, related_name='payroll_lists')
     prepared_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='payroll_lists_prepared')
@@ -492,9 +577,13 @@ class PayrollList(BaseModel):
 
     @property
     def total_amount(self):
+        """Sum of this list's item amounts — what disburse() will move out
+        of the chosen Caisse in one shot."""
         return self.items.aggregate(t=models.Sum('amount'))['t'] or 0
 
     def submit(self, user):
+        """BROUILLON -> SOUMISE. Requires at least one item — an empty
+        list can't be sent to the caisse for disbursement."""
         from django.core.exceptions import ValidationError
         from django.utils import timezone as _tz
         if self.status != PayrollListStatus.BROUILLON:
@@ -507,6 +596,13 @@ class PayrollList(BaseModel):
 
     @transaction.atomic
     def disburse(self, user, caisse):
+        """SOUMISE -> PAYEE: records one or two SORTIE CaisseTransactions
+        (ouvrier total and, as a legacy safety net, any ingénieur total —
+        see the comment below) against `caisse` and stamps who/when. Checks
+        `total > caisse.balance` up front, but this is not itself
+        concurrency-safe the way Expense.approve() locks Budget — two
+        disburse() calls racing against the same caisse could both pass
+        this check before either's CaisseTransaction is written."""
         from django.core.exceptions import ValidationError
         from django.utils import timezone as _tz
         if self.status != PayrollListStatus.SOUMISE:
@@ -552,6 +648,12 @@ class PayrollList(BaseModel):
 
 
 class PayrollListItem(BaseModel):
+    """One ouvrier's line on a PayrollList. clean() enforces: positive
+    amount, the personnel is eligible, personnel.payroll_type is OUVRIER
+    (Ingénieurs/Staff are rejected — see SalaryPaymentItem instead), the
+    assignment (if any) belongs to this personnel, and — when the
+    assignment has a convention_amount cap — that this amount plus whatever
+    was already paid against that convention doesn't exceed the cap."""
     payroll_list = models.ForeignKey(PayrollList, on_delete=models.CASCADE, related_name='items')
     personnel = models.ForeignKey('personnel.Personnel', on_delete=models.CASCADE, related_name='payroll_items')
     assignment = models.ForeignKey(
@@ -635,6 +737,10 @@ class PayrollListItem(BaseModel):
 # ---------------------------------------------------------------------
 
 class SalaryPaymentList(BaseModel):
+    """Cabinet-scoped "paie du personnel" for ingénieurs/staff — the
+    counterpart to PayrollList, see ADR 0005 for why these are two separate
+    models rather than one. Same BROUILLON -> SOUMISE -> PAYEE workflow and
+    the same prepare/disburse role overlap caveat as PayrollList."""
     cabinet = models.ForeignKey(Cabinet, on_delete=models.CASCADE, related_name='salary_payment_lists')
     prepared_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
@@ -660,9 +766,11 @@ class SalaryPaymentList(BaseModel):
 
     @property
     def total_amount(self):
+        """Sum of this list's item amounts, disbursed as one outflow."""
         return self.items.aggregate(t=models.Sum('amount'))['t'] or 0
 
     def submit(self, user):
+        """BROUILLON -> SOUMISE. Requires at least one item."""
         from django.core.exceptions import ValidationError
         from django.utils import timezone as _tz
         if self.status != PayrollListStatus.BROUILLON:
@@ -675,6 +783,9 @@ class SalaryPaymentList(BaseModel):
 
     @transaction.atomic
     def disburse(self, user, caisse):
+        """SOUMISE -> PAYEE: one SORTIE CaisseTransaction for the whole
+        list's total, under the "Salaire Ingénieurs" category. Same
+        non-concurrency-safe balance check as PayrollList.disburse()."""
         from django.core.exceptions import ValidationError
         from django.utils import timezone as _tz
         if self.status != PayrollListStatus.SOUMISE:
@@ -702,6 +813,13 @@ class SalaryPaymentList(BaseModel):
 
 
 class SalaryPaymentItem(BaseModel):
+    """One ingénieur/staff member's line on a SalaryPaymentList for a given
+    `period` (AAAA-MM). clean() enforces: positive amount, valid period
+    format, personnel is eligible, personnel.payroll_type is INGENIEUR
+    (mirror image of PayrollListItem's OUVRIER-only guard), and the
+    personnel belongs to the same cabinet as the list. unique_together on
+    (personnel, period) prevents double-paying the same person for the same
+    month across different lists."""
     salary_payment_list = models.ForeignKey(SalaryPaymentList, on_delete=models.CASCADE, related_name='items')
     personnel = models.ForeignKey(
         'personnel.Personnel', on_delete=models.CASCADE, related_name='salary_payment_items',
@@ -761,6 +879,20 @@ class SalaryPaymentItem(BaseModel):
 # ---------------------------------------------------------------------
 
 class Avenant(BaseModel):
+    """A change-order request authorizing spend beyond a site's initial
+    budget: PENDING -> APPROVED (grows the site's Budget and the client's
+    Contract.avenant_debt) or PENDING -> REJECTED (no side effects). Both
+    are terminal — see approve()/reject().
+
+    Business rule / gotcha: unlike Expense.approve() (which explicitly
+    blocks a requester from approving their own expense), approve() and
+    reject() here have NO self-decision guard at all, and
+    AVENANT_REQUEST_ROLES (finance/views.py) — who may create an avenant —
+    overlaps with FINAL_AUTHORIZATION_ROLES — who may decide one — on all
+    three director-tier roles (DIRECTOR, DIRECTEUR_TECHNIQUE,
+    DIRECTEUR_GENERAL). A DIRECTOR can request an avenant and then approve
+    or reject that same request themselves, growing their own site's
+    budget and the client's debt with no second person in the loop."""
     site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name='avenants')
     amount = models.DecimalField(max_digits=14, decimal_places=2, verbose_name=_('Montant additionnel'))
     justification = models.TextField(verbose_name=_('Justification'))
@@ -778,6 +910,11 @@ class Avenant(BaseModel):
 
     @transaction.atomic
     def approve(self, user, notes=''):
+        """PENDING -> APPROVED: grows the site's Budget.total_amount by
+        this avenant's amount and, if the site has a signed Contract, adds
+        the same amount to Contract.avenant_debt (the client's extra debt
+        for work authorized beyond the original contract price). No
+        self-approval guard — see the class docstring."""
         from django.core.exceptions import ValidationError
         from django.utils import timezone as _tz
         if self.status != AvenantStatus.PENDING:
@@ -800,6 +937,8 @@ class Avenant(BaseModel):
             contract.save(update_fields=['avenant_debt', 'updated_at'])
 
     def reject(self, user, notes=''):
+        """PENDING -> REJECTED. No budget/contract side effects, and no
+        self-decision guard — see the class docstring."""
         from django.core.exceptions import ValidationError
         from django.utils import timezone as _tz
         if self.status != AvenantStatus.PENDING:

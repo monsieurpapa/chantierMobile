@@ -1,3 +1,5 @@
+"""Admin registrations for the Material catalog and material requests
+(with their items editable inline)."""
 from django.contrib import admin
 from .models import Material, MaterialRequest, MaterialRequestItem
 

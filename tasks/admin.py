@@ -1,3 +1,6 @@
+"""Django admin registration for the `tasks` app — operator-facing only;
+everyday CRUD goes through tasks/views.py's role/cabinet-gated views
+instead."""
 from django.contrib import admin
 from .models import Task
 

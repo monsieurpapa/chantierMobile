@@ -1,3 +1,5 @@
+"""Admin registrations for the price library and DQEs (with their lines
+editable inline)."""
 from django.contrib import admin
 from .models import PriceLibraryItem, DQE, DQELine
 

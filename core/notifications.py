@@ -17,6 +17,11 @@ that should never block the request that triggered it.
 
 
 def notify_role_holders(cabinet, roles, message, url, exclude_user=None):
+    """Fan out one Notification to every user holding one of `roles` in
+    `cabinet` — the "something needs your decision" direction. Pass
+    exclude_user to skip the actor who just triggered this (e.g. a
+    director approving their own prior comment), so they don't get
+    notified about their own action."""
     if cabinet is None:
         return
     from accounts.models import UserCabinetRole
@@ -35,6 +40,8 @@ def notify_role_holders(cabinet, roles, message, url, exclude_user=None):
 
 
 def notify_user(user, message, url):
+    """Sends one Notification to a single user — the "your request was
+    decided" direction, back to whoever originally submitted it."""
     if user is None:
         return
     from core.models import Notification

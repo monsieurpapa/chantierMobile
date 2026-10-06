@@ -1,3 +1,10 @@
+"""
+Base class behind every DynamicSelectWidget's "add new" popup (see
+core/widgets.py): a small generic POST endpoint so a master-data record
+(a worker, a supplier, a material, ...) can be created inline from
+whatever form the user happens to be filling out, instead of forcing a
+detour to that record's own create screen first.
+"""
 import json
 
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -47,6 +54,11 @@ class QuickCreateView(CabinetAccessMixin, LoginRequiredMixin, View):
         pass
 
     def post(self, request, *args, **kwargs):
+        """Parses the picker's payload, resolves the cabinet to tag the
+        new record with (unless `cabinet_scoped = False`), delegates
+        construction to build_instance(), and returns the new record's id
+        and display text as JSON — or a 400/403 JSON error the picker's JS
+        can show inline instead of a page reload."""
         try:
             payload = json.loads(request.body.decode('utf-8')) if request.body else {}
         except (ValueError, UnicodeDecodeError):

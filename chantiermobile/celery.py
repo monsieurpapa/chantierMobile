@@ -1,3 +1,9 @@
+"""
+Celery application entrypoint. Configuration (broker/result backend, beat
+schedule) lives in chantiermobile/settings.py under the CELERY_* /
+CELERY_BEAT_SCHEDULE settings — see docs/architecture/overview.md#async-
+tasks-celery for what currently runs on this worker/beat pair.
+"""
 import os
 from celery import Celery
 

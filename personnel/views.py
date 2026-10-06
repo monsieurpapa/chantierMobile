@@ -1,3 +1,13 @@
+"""
+Views for the `personnel` app: Personnel/Skill/SiteAssignment CRUD, the
+dossier (PersonnelDocument), congés/jours fériés (Leave/Holiday), and
+daily pointage (Attendance). The recurring pattern across this module is
+HR_ADMIN_ROLES (cabinet-wide HR authority) vs. a plain ENGINEER scoped to
+"their own crew" — the site(s) where they're Site.lead_engineer — via
+`_is_hr_admin()` and the explicit lead_engineer checks in
+SiteAssignmentCreateView.get_form, LeaveCreateView.get_form and
+`_attendance_can_act`.
+"""
 from decimal import Decimal
 import datetime
 
@@ -47,6 +57,10 @@ def _is_hr_admin(user, cabinets=None):
     return qs.exists()
 
 class PersonnelListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
+    """Lists the current user's Cabinet-scoped personnel roster, filterable
+    by type/status/category/trade. Open to any cabinet member; only the
+    "Enregistrer un personnel" header action is role-gated (director-tier
+    or CHIEF_ENGINEER)."""
     model = Personnel
     template_name = 'personnel/personnel_list.html'
     context_object_name = 'personnel_list'
@@ -93,6 +107,9 @@ class PersonnelListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin,
         return []
 
 class PersonnelCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, CreateView):
+    """Registers a new Personnel record. Director-tier or CHIEF_ENGINEER
+    only (allowed_roles) — a plain ENGINEER cannot create new personnel,
+    only assign existing ones to their own site (SiteAssignmentCreateView)."""
     model = Personnel
     form_class = PersonnelForm
     template_name = 'personnel/personnel_form.html'
@@ -119,6 +136,9 @@ class PersonnelCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMi
         return super().form_valid(form)
 
 class PersonnelDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, DetailView):
+    """A Personnel's full profile. Open to any cabinet member; the
+    "Modifier le profil" action is shown only to director-tier/
+    CHIEF_ENGINEER (see get_header_actions)."""
     model = Personnel
     template_name = 'personnel/personnel_detail.html'
     context_object_name = 'personnel'
@@ -164,6 +184,8 @@ class PersonnelDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixi
         return actions
 
 class PersonnelUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, UpdateView):
+    """Edits a Personnel profile. Director-tier or CHIEF_ENGINEER only
+    (allowed_roles)."""
     model = Personnel
     form_class = PersonnelForm
     template_name = 'personnel/personnel_form.html'
@@ -189,6 +211,9 @@ class PersonnelUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMi
         return reverse_lazy('personnel:personnel_detail', kwargs={'unique_id': self.object.unique_id})
 
 class PersonnelDeleteView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, DeleteView):
+    """Soft-deletes a Personnel record. Director-tier only
+    (allowed_roles) — narrower than Create/Update, which also allow
+    CHIEF_ENGINEER."""
     model = Personnel
     template_name = 'projects/confirm_delete.html'
     slug_field = 'unique_id'
@@ -219,6 +244,10 @@ class PersonnelDeleteView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMi
         return super().delete(request, *args, **kwargs)
 
 class SkillListView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, ListView):
+    """Lists and (via its inline POST handler) creates Skills — the
+    shared, non-cabinet-scoped tag catalog. Director-tier or
+    CHIEF_ENGINEER only (allowed_roles); note allowed_roles isn't scoped
+    to a specific cabinet here since Skill has no cabinet of its own."""
     model = Skill
     template_name = 'personnel/skill_list.html'
     context_object_name = 'skill_list'
@@ -250,6 +279,11 @@ class SkillListView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, List
 
 
 class SiteAssignmentCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, CreateView):
+    """Assigns a Personnel to a Site. HR_ADMIN_ROLES (cabinet-wide) or
+    ENGINEER (SITE_ASSIGNMENT_ROLES); get_form() further narrows a plain
+    ENGINEER's `site` choices to only the site(s) they lead (see
+    `_is_hr_admin`) — allowed_roles alone doesn't carry that
+    restriction, it's enforced by scoping the form field's queryset."""
     model = SiteAssignment
     form_class = SiteAssignmentForm
     template_name = 'personnel/assignment_form.html'
@@ -364,6 +398,9 @@ class PersonnelDocumentCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHea
 
 
 class PersonnelDocumentDeleteView(LoginRequiredMixin, RoleRequiredMixin, DeleteView):
+    """Removes a file from a Personnel's dossier. HR_ADMIN_ROLES only,
+    scoped to the document's own personnel's cabinet via
+    get_role_cabinet()."""
     model = PersonnelDocument
     allowed_roles = HR_ADMIN_ROLES
 
@@ -421,6 +458,11 @@ class LeaveListView(LoginRequiredMixin, PageHeaderMixin, ListView):
 
 
 class LeaveCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, CreateView):
+    """Declares a leave for a Personnel. HR_ADMIN_ROLES or ENGINEER
+    (LEAVE_CREATE_ROLES); get_form() narrows a plain ENGINEER's
+    `personnel` choices to workers currently assigned to a site they
+    lead. Deciding the leave (approve/reject) is a separate,
+    HR_ADMIN_ROLES-only action — see `_decide_leave`."""
     model = Leave
     form_class = LeaveForm
     template_name = 'personnel/leave_form.html'
@@ -463,6 +505,11 @@ class LeaveCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, Cr
 
 
 def _decide_leave(request, pk, approve):
+    """Shared approve/reject path for a Leave. HR_ADMIN_ROLES only,
+    scoped to the personnel's cabinet via can_act_for_cabinet — note
+    this is cabinet-wide, not restricted to "the requester's own
+    lead_engineer"; unlike planning/phase actions it also deliberately
+    excludes ENGINEER from deciding (only from creating) a leave."""
     leave = get_object_or_404(Leave, pk=pk)
     if not can_act_for_cabinet(request, leave.personnel.cabinet, HR_ADMIN_ROLES):
         messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
@@ -487,14 +534,21 @@ def _decide_leave(request, pk, approve):
 
 
 def leave_approve(request, pk):
+    """Approves a pending Leave — see `_decide_leave` for the actual
+    permission check."""
     return _decide_leave(request, pk, approve=True)
 
 
 def leave_reject(request, pk):
+    """Rejects a pending Leave — see `_decide_leave` for the actual
+    permission check."""
     return _decide_leave(request, pk, approve=False)
 
 
 class HolidayListView(LoginRequiredMixin, PageHeaderMixin, ListView):
+    """Lists the cabinet's public holidays (jours fériés). Open to any
+    cabinet member; "can_manage" (create/delete) is HR_ADMIN_ROLES-only,
+    checked separately in get_context_data."""
     model = Holiday
     template_name = 'personnel/holiday_list.html'
     context_object_name = 'holiday_list'
@@ -524,6 +578,8 @@ class HolidayListView(LoginRequiredMixin, PageHeaderMixin, ListView):
 
 
 class HolidayCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, CreateView):
+    """Adds a holiday. HR_ADMIN_ROLES only (allowed_roles), tagged to
+    the creator's own cabinet."""
     model = Holiday
     form_class = HolidayForm
     template_name = 'personnel/holiday_form.html'
@@ -543,6 +599,7 @@ class HolidayCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixi
 
 
 class HolidayDeleteView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, DeleteView):
+    """Removes a holiday. HR_ADMIN_ROLES only (allowed_roles)."""
     model = Holiday
     allowed_roles = HR_ADMIN_ROLES
     success_url = reverse_lazy('personnel:holiday_list')

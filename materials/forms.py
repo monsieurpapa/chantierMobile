@@ -1,3 +1,6 @@
+"""Forms for the Material catalog and the material-request workflow,
+including the inline formset that lets a request be submitted with
+several items (catalog-linked or free-text) in one POST."""
 from django import forms
 from django.utils.translation import gettext_lazy as _
 from django.forms import inlineformset_factory
@@ -6,6 +9,7 @@ from chantiermobile.constants import FormPlaceholders, FormHelpTexts
 from core.widgets import DynamicSelectWidget
 
 class MaterialForm(forms.ModelForm):
+    """Create/edit a shared catalog entry."""
     class Meta:
         model = Material
         fields = ['name', 'unit', 'estimated_cost_per_unit']
@@ -16,6 +20,8 @@ class MaterialForm(forms.ModelForm):
         }
 
 class MaterialRequestForm(forms.ModelForm):
+    """The request's own fields (site + notes) — its items are handled
+    separately by MaterialRequestItemFormSet."""
     class Meta:
         model = MaterialRequest
         fields = ['site', 'notes']

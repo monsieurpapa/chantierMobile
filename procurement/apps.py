@@ -1,3 +1,4 @@
+"""App config for suppliers, purchase orders, stock, and supplier credit."""
 from django.apps import AppConfig
 
 

@@ -1,3 +1,16 @@
+"""
+Views for suppliers, purchase orders, stock items/movements, the
+caissière/financier wire-transfer sign-off, and supplier credit.
+
+Function-based action endpoints below (send/receive/cancel, stock
+movement/transfer, transfer-proof submit/validate, credit repay) all
+fetch the target object unscoped and then gate the mutation itself with
+`can_act_for_cabinet(request, <object>.site.cabinet, ROLES)` — this is
+equivalent to a cabinet + role check (the object's own cabinet is used,
+so a user outside it is rejected by the role lookup even without a
+queryset filter), matching the pattern documented in
+docs/architecture/overview.md for function-based mutation views.
+"""
 from django.shortcuts import get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -29,6 +42,14 @@ PURCHASE_ORDER_ACTION_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GEN
 # La caissière saisit la preuve de virement envoyée par le financier.
 TRANSFER_ENTRY_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CASHIER']
 # Le financier (ou un directeur) valide.
+#
+# NOTE: TRANSFER_ENTRY_ROLES and TRANSFER_VALIDATE_ROLES both include
+# DIRECTOR/DIRECTEUR_TECHNIQUE/DIRECTEUR_GENERAL, and neither
+# purchase_order_submit_transfer_proof nor purchase_order_validate_transfer
+# (nor the model methods they call) checks that the two actions were
+# performed by two different people — a director-tier user can submit the
+# transfer proof and then immediately validate it themselves. See the
+# longer note on PurchaseOrder.submit_transfer_proof().
 TRANSFER_VALIDATE_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'FINANCIER']
 CREDIT_MANAGE_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'ACCOUNTANT', 'CASHIER', 'FINANCIER']
 
@@ -36,6 +57,9 @@ CREDIT_MANAGE_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', '
 # --- Supplier views ---
 
 class SupplierListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
+    """Browse the cabinet's supplier directory. Any logged-in member of
+    the cabinet can view; "Ajouter" is only shown to director-tier/
+    CHIEF_ENGINEER roles (get_header_actions below)."""
     model = Supplier
     template_name = 'procurement/supplier_list.html'
     context_object_name = 'suppliers'
@@ -68,6 +92,9 @@ class SupplierListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, 
 
 
 class SupplierCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, CreateView):
+    """Register a new supplier. Director-tier or CHIEF_ENGINEER only
+    (allowed_roles below); tagged to the creator's own cabinet in
+    form_valid()."""
     model = Supplier
     form_class = SupplierForm
     template_name = 'procurement/supplier_form.html'
@@ -94,6 +121,8 @@ class SupplierCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMix
 
 
 class SupplierUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, UpdateView):
+    """Edit a supplier. Same director-tier/CHIEF_ENGINEER gate as
+    SupplierCreateView, scoped to the supplier's own cabinet."""
     model = Supplier
     form_class = SupplierForm
     template_name = 'procurement/supplier_form.html'
@@ -121,6 +150,8 @@ class SupplierUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMix
 # --- Stock item views ---
 
 class StockItemListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
+    """Browse stock items across the cabinet's sites. Any logged-in
+    member of the cabinet can view."""
     model = StockItem
     template_name = 'procurement/stock_item_list.html'
     context_object_name = 'stock_items'
@@ -148,6 +179,10 @@ class StockItemListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin,
 
 
 class StockItemCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, CreateView):
+    """Register a new tracked stock item for a site. Director-tier or
+    CHIEF_ENGINEER only (allowed_roles below) — note MAGASINIER can
+    record movements against an existing item (STOCK_ACTION_ROLES) but
+    cannot create the catalog entry itself."""
     model = StockItem
     form_class = StockItemForm
     template_name = 'procurement/stock_item_form.html'
@@ -181,6 +216,10 @@ class StockItemCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMi
 
 
 class StockItemUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, UpdateView):
+    """Edit a stock item's catalog fields. Same gate as
+    StockItemCreateView; `quantity_on_hand` is disabled on the form past
+    creation (see StockItemForm.__init__) since it must only move through
+    a StockMovement."""
     model = StockItem
     form_class = StockItemForm
     template_name = 'procurement/stock_item_form.html'
@@ -219,6 +258,10 @@ class StockItemUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMi
 
 
 class StockItemDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, DetailView):
+    """View a stock item and its movement history; also hosts the
+    manual-movement and inter-site transfer forms (see
+    stock_movement_create/stock_transfer_create below). Any logged-in
+    member of the cabinet can view."""
     model = StockItem
     template_name = 'procurement/stock_item_detail.html'
     context_object_name = 'stock_item'
@@ -315,6 +358,8 @@ def stock_transfer_create(request, pk):
 # --- Purchase order views ---
 
 class PurchaseOrderListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
+    """List purchase orders for the cabinet. Any logged-in member of the
+    cabinet can view."""
     model = PurchaseOrder
     template_name = 'procurement/purchase_order_list.html'
     context_object_name = 'purchase_orders'
@@ -350,6 +395,10 @@ class PurchaseOrderListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMi
 
 
 class PurchaseOrderCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, CreateView):
+    """Create a purchase order with its lines, in BROUILLON.
+    allowed_roles below (director-tier, CHIEF_ENGINEER, ACCOUNTANT) —
+    note this does not include MAGASINIER or CASHIER/FINANCIER, who only
+    act on an order later (receiving, transfer proof/validation)."""
     model = PurchaseOrder
     form_class = PurchaseOrderForm
     template_name = 'procurement/purchase_order_form.html'
@@ -421,6 +470,14 @@ class PurchaseOrderCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAcce
 
 
 class PurchaseOrderUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, UpdateView):
+    """Edit a purchase order and its lines. Same allowed_roles as
+    PurchaseOrderCreateView. Note this view does not itself restrict
+    editing to BROUILLON orders — PurchaseOrder.clean()'s status state
+    machine only constrains the `status` field's own transitions, not
+    whether lines/other fields can still be edited once an order has
+    been sent or partially received; the template's "Modifier" action is
+    only offered while BROUILLON (see PurchaseOrderDetailView.
+    get_header_actions), but the URL itself has no such guard."""
     model = PurchaseOrder
     form_class = PurchaseOrderForm
     template_name = 'procurement/purchase_order_form.html'
@@ -487,6 +544,10 @@ class PurchaseOrderUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAcce
 
 
 class PurchaseOrderDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, DetailView):
+    """View a purchase order, its lines, and (via the template) the
+    send/receive/cancel and transfer-proof actions. Any logged-in member
+    of the cabinet can view; the actions themselves are gated by their
+    own endpoints below."""
     model = PurchaseOrder
     template_name = 'procurement/purchase_order_detail.html'
     context_object_name = 'purchase_order'
@@ -528,6 +589,10 @@ class PurchaseOrderDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeader
 
 @login_required
 def purchase_order_send(request, pk):
+    """BROUILLON -> ENVOYEE. PURCHASE_ORDER_ACTION_ROLES only (director-tier,
+    CHIEF_ENGINEER, ACCOUNTANT); no cabinet-scoped queryset — `po` is
+    fetched by pk alone, and the permission check below uses `po.site.cabinet`
+    directly instead."""
     po = get_object_or_404(PurchaseOrder, pk=pk)
     if request.method == 'POST':
         if not can_act_for_cabinet(request, po.site.cabinet, PURCHASE_ORDER_ACTION_ROLES):
@@ -548,6 +613,17 @@ def purchase_order_send(request, pk):
 
 @login_required
 def purchase_order_receive(request, pk):
+    """Receive every outstanding line in full (ENVOYEE/RECUE_PARTIELLE ->
+    RECUE or RECUE_PARTIELLE), creating the matching StockMovement(s).
+    PURCHASE_ORDER_ACTION_ROLES only.
+
+    NOTE: this does NOT check `po.is_transfer_validated` — a VIREMENT-
+    funded order can be received (and its stock booked in) whether or
+    not the financier ever validated the cashier's transfer proof, or
+    even before any proof was submitted at all. The caissière/financier
+    sign-off (submit_transfer_proof/validate_transfer) is purely a
+    record-keeping trail alongside the order, not a precondition enforced
+    anywhere on send/receive."""
     po = get_object_or_404(PurchaseOrder, pk=pk)
     if request.method == 'POST':
         if not can_act_for_cabinet(request, po.site.cabinet, PURCHASE_ORDER_ACTION_ROLES):
@@ -563,6 +639,9 @@ def purchase_order_receive(request, pk):
 
 @login_required
 def purchase_order_cancel(request, pk):
+    """BROUILLON/ENVOYEE -> ANNULEE. PURCHASE_ORDER_ACTION_ROLES only;
+    cannot cancel an order that's already (partially) received — that
+    would orphan the StockMovements already booked against it."""
     po = get_object_or_404(PurchaseOrder, pk=pk)
     if request.method == 'POST':
         if not can_act_for_cabinet(request, po.site.cabinet, PURCHASE_ORDER_ACTION_ROLES):
@@ -784,6 +863,10 @@ def _stock_levels_queryset(request):
 
 
 class StockReportView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, ListView):
+    """Stock movements + global stock levels, filterable by site/phase/
+    movement type/period. STOCK_REPORT_ROLES (adds ENGINEER/MAGASINIER
+    alongside the usual director-tier/CHIEF_ENGINEER set, since both need
+    visibility into stock without the broader PURCHASE_ORDER_ACTION_ROLES)."""
     model = StockMovement
     template_name = 'procurement/stock_report.html'
     context_object_name = 'movements'
@@ -873,6 +956,9 @@ def stock_report_pdf(request):
 
 @login_required
 def purchase_order_submit_transfer_proof(request, pk):
+    """La caissière (or a director) uploads the wire-transfer proof.
+    TRANSFER_ENTRY_ROLES only; see the self-validation note on
+    TRANSFER_VALIDATE_ROLES above."""
     po = get_object_or_404(PurchaseOrder, pk=pk)
     if request.method != 'POST':
         return redirect('procurement:purchase_order_detail', pk=pk)
@@ -893,6 +979,11 @@ def purchase_order_submit_transfer_proof(request, pk):
 
 @login_required
 def purchase_order_validate_transfer(request, pk):
+    """Le financier (or a director) validates the submitted proof.
+    TRANSFER_VALIDATE_ROLES only — see the overlapping-roles/no-self-check
+    note on that constant above, and purchase_order_receive's note that
+    this validation isn't actually required before the order can be
+    received."""
     po = get_object_or_404(PurchaseOrder, pk=pk)
     if request.method != 'POST':
         return redirect('procurement:purchase_order_detail', pk=pk)
@@ -912,6 +1003,9 @@ def purchase_order_validate_transfer(request, pk):
 # ---------------------------------------------------------------------
 
 class SupplierCreditListView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
+    """List the cabinet's supplier credits and their outstanding
+    balances. CREDIT_MANAGE_ROLES only (director-tier, ACCOUNTANT,
+    CASHIER, FINANCIER)."""
     model = SupplierCredit
     template_name = 'procurement/supplier_credit_list.html'
     context_object_name = 'credits'
@@ -945,6 +1039,10 @@ class SupplierCreditListView(LoginRequiredMixin, RoleRequiredMixin, CabinetAcces
 
 
 class SupplierCreditCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, CreateView):
+    """Record a new achat à crédit against a supplier, optionally tied to
+    a purchase order. CREDIT_MANAGE_ROLES only. Not CabinetAccessMixin —
+    the supplier/purchase_order choices are scoped to the user's
+    cabinet(s) directly in get_form() instead."""
     model = SupplierCredit
     form_class = SupplierCreditForm
     template_name = 'procurement/supplier_credit_form.html'
@@ -973,6 +1071,8 @@ class SupplierCreditCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeader
 
 @login_required
 def supplier_credit_repay(request, pk):
+    """Record an installment payment against a supplier credit.
+    CREDIT_MANAGE_ROLES only, checked against `credit.supplier.cabinet`."""
     credit = get_object_or_404(SupplierCredit, pk=pk)
     if request.method != 'POST':
         return redirect('procurement:supplier_credit_list')

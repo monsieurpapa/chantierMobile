@@ -1,3 +1,7 @@
+"""ModelForms for the `personnel` app. Role/cabinet gating and the
+"ENGINEER scoped to their own site" queryset narrowing both live in the
+views (personnel/views.py) — these forms handle widgets and the
+field-level validation each needs (e.g. Leave's date-range check)."""
 from django import forms
 from django.utils.translation import gettext_lazy as _
 from .models import Personnel, SiteAssignment, Skill, PersonnelDocument, Leave, Holiday
@@ -5,6 +9,9 @@ from chantiermobile.constants import FormPlaceholders, FormHelpTexts, DatePicker
 from core.widgets import DynamicSelectWidget, DynamicSelectMultipleWidget
 
 class PersonnelForm(forms.ModelForm):
+    """Personnel create/edit form — `payroll_type` must be set
+    deliberately here (see ADR 0005); there's no cross-check against
+    `personnel_type`/`category`."""
     class Meta:
         model = Personnel
         fields = [
@@ -30,6 +37,8 @@ class PersonnelForm(forms.ModelForm):
 
 
 class PersonnelDocumentForm(forms.ModelForm):
+    """Uploads one file into a Personnel's dossier (label + file only;
+    the `personnel` FK is set by the view, not this form)."""
     class Meta:
         model = PersonnelDocument
         fields = ['label', 'file']
@@ -40,6 +49,9 @@ class PersonnelDocumentForm(forms.ModelForm):
 
 
 class LeaveForm(forms.ModelForm):
+    """Declares a leave; `personnel`'s queryset is narrowed per-request
+    in LeaveCreateView.get_form() (HR_ADMIN_ROLES sees everyone, a plain
+    ENGINEER only their own crew)."""
     class Meta:
         model = Leave
         fields = ['personnel', 'leave_type', 'start_date', 'end_date', 'reason']
@@ -61,6 +73,11 @@ class LeaveForm(forms.ModelForm):
         }
 
     def clean(self):
+        """Rejects an end_date before start_date. Note: this is
+        form-level only — Leave has no model-level clean() doing the
+        same check, so a Leave created or edited outside this form
+        (shell, admin, a future API) isn't protected against an inverted
+        date range."""
         cleaned = super().clean()
         start, end = cleaned.get('start_date'), cleaned.get('end_date')
         if start and end and end < start:
@@ -69,6 +86,8 @@ class LeaveForm(forms.ModelForm):
 
 
 class HolidayForm(forms.ModelForm):
+    """Adds a company-wide public holiday; `cabinet` is set by the view,
+    not this form."""
     class Meta:
         model = Holiday
         fields = ['name', 'date']
@@ -81,6 +100,9 @@ class HolidayForm(forms.ModelForm):
         }
 
 class SiteAssignmentForm(forms.ModelForm):
+    """Assigns a Personnel to a Site; `site`/`personnel` querysets are
+    narrowed per-request in SiteAssignmentCreateView.get_form() (a plain
+    ENGINEER only sees site(s) they lead)."""
     class Meta:
         model = SiteAssignment
         fields = [
@@ -115,6 +137,7 @@ class SiteAssignmentForm(forms.ModelForm):
         self.fields['convention_amount'].required = False
 
 class SkillForm(forms.ModelForm):
+    """Adds a Skill to the shared, non-cabinet-scoped catalog."""
     class Meta:
         model = Skill
         fields = ['name', 'description']

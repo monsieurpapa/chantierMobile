@@ -1,3 +1,5 @@
+"""URL routes for the `projects` app: sites, their phases, progress
+reports (+ photos/comments), and planning submissions."""
 from django.urls import path
 from . import views
 

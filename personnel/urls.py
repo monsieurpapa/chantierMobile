@@ -1,3 +1,5 @@
+"""URL routes for the `personnel` app: staff, skills, site assignments,
+dossier documents, congés/jours fériés, and pointage (attendance)."""
 from django.urls import path
 from . import views
 

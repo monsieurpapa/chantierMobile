@@ -1,3 +1,4 @@
+"""App config for the price library (Bibliothèque de Prix) and DQE."""
 from django.apps import AppConfig
 
 

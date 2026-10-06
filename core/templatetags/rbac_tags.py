@@ -1,3 +1,10 @@
+"""
+Template filter for role-gating what a template renders (e.g. hiding an
+action button a user couldn't actually use) — a read-only convenience for
+display only. It is NOT a substitute for the server-side check
+(RoleRequiredMixin / can_act_for_cabinet) on the view or action itself;
+see docs/security.md.
+"""
 from django import template
 from accounts.models import UserCabinetRole
 

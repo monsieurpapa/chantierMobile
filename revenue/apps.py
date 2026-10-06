@@ -1,3 +1,4 @@
+"""App config for the revenue app."""
 from django.apps import AppConfig
 
 
