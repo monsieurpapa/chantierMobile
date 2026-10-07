@@ -326,7 +326,7 @@ class MaterialRequestDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHead
     cabinet_lookup_field = 'site__cabinet'
 
     def get_queryset(self):
-        return super().get_queryset().prefetch_related('items__material')
+        return super().get_queryset().prefetch_related('items__material', 'items__phase')
 
     def get_header_title(self):
         return _("Demande n°%(id)s") % {'id': self.object.id}
@@ -346,6 +346,26 @@ class MaterialRequestDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHead
             {'title': _("Demandes"), 'url': str(reverse_lazy('materials:request_list'))},
             {'title': f"REQ-{self.object.id}", 'url': None},
         ]
+
+    def get_context_data(self, **kwargs):
+        # Per-item devis/DQE variance badges (red/orange/green), and
+        # whether authorize() will require an overage_justification — lets
+        # the template warn the authorizer *before* they submit, instead
+        # of only surfacing the ValidationError after a failed POST.
+        from pricing.services import material_request_variance_report
+        from chantiermobile.constants import MaterialVarianceStatus
+        context = super().get_context_data(**kwargs)
+        variance_report = material_request_variance_report(self.object)
+        context['variance_report'] = variance_report
+        # Annotate each (prefetched, so identical-instance) item with its
+        # own comparison result, rather than passing a separate dict the
+        # template would need a custom filter to look up by a variable key.
+        for row in variance_report:
+            row['item'].variance_comparison = row['comparison']
+        context['requires_overage_justification'] = any(
+            r['comparison']['status'] == MaterialVarianceStatus.RED for r in variance_report
+        )
+        return context
 
 @login_required
 def request_validate(request, pk):
@@ -404,7 +424,8 @@ def approve_material_request(request, pk):
             )
             messages.error(request, _("Demande de matériaux rejetée."))
         else:
-            mat_request.authorize(request.user)
+            overage_justification = request.POST.get('overage_justification', '')
+            mat_request.authorize(request.user, overage_justification=overage_justification)
             notify_user(
                 mat_request.requested_by,
                 _("Votre demande de matériaux REQ-%(id)s a été autorisée.") % {'id': mat_request.pk},

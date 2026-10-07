@@ -64,6 +64,21 @@
                             </div>
                         </div>
 
+                        <div class="row mb-3">
+                            <div class="col-md-6" id="work-category-field">
+                                <label class="form-label" for="{{ form.work_category.id_for_label }}">{{ form.work_category.label }}</label>
+                                {{ form.work_category }}
+                                <div class="form-text">{% trans "Pour un article « Ouvrage (composite) » — indique la nomenclature de ratios à utiliser pour l'explosion en matériaux." %}</div>
+                                {% if form.work_category.errors %}<div class="text-danger fs--2">{{ form.work_category.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6" id="material-field">
+                                <label class="form-label" for="{{ form.material.id_for_label }}">{{ form.material.label }}</label>
+                                {{ form.material }}
+                                <div class="form-text">{% trans "Pour un article « Matériau » — le matériau élémentaire comparé directement aux demandes de matériaux." %}</div>
+                                {% if form.material.errors %}<div class="text-danger fs--2">{{ form.material.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+
                         <div class="mb-3">
                             <label class="form-label" for="{{ form.notes.id_for_label }}">{% trans "Notes" %}</label>
                             {{ form.notes }}
@@ -97,5 +112,25 @@
         if (!el.classList.contains('form-range')) el.classList.add('form-control');
         if (el.tagName === 'SELECT') { el.classList.remove('form-control'); el.classList.add('form-select'); }
     });
+
+    // Only one of work_category (WORK_ITEM) / material (MATERIAL) is ever
+    // meaningful at a time (see PriceLibraryItem.clean()) — toggle which
+    // one is shown based on the selected item_type, so the form doesn't
+    // present two fields that will immediately reject each other.
+    (function () {
+        var itemTypeSelect = document.getElementById('{{ form.item_type.id_for_label }}');
+        var workCategoryField = document.getElementById('work-category-field');
+        var materialField = document.getElementById('material-field');
+        if (!itemTypeSelect) return;
+
+        function toggleFields() {
+            var value = itemTypeSelect.value;
+            workCategoryField.style.display = (value === 'WORK_ITEM') ? '' : 'none';
+            materialField.style.display = (value === 'MATERIAL') ? '' : 'none';
+        }
+
+        itemTypeSelect.addEventListener('change', toggleFields);
+        toggleFields();
+    })();
 </script>
 {% endblock %}

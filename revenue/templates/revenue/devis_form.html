@@ -37,6 +37,12 @@
                                 {% if form.devis_number.errors %}<div class="text-danger fs--2 mt-1">{{ form.devis_number.errors }}</div>{% endif %}
                             </div>
                             <div class="col-md-6">
+                                <label class="form-label fw-semibold" for="{{ form.source_dqe.id_for_label }}">{% trans "DQE source" %}</label>
+                                {{ form.source_dqe }}
+                                <div class="form-text fs--1">{% trans "Facultatif — relie ce devis au DQE détaillé (quantités par étape) dont il est issu, pour activer le rapport de conformité devis / état de besoin." %}</div>
+                                {% if form.source_dqe.errors %}<div class="text-danger fs--2 mt-1">{{ form.source_dqe.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6">
                                 <label class="form-label fw-semibold" for="{{ form.client_name.id_for_label }}">{% trans "Client" %}</label>
                                 {{ form.client_name }}
                                 {% if form.client_name.errors %}<div class="text-danger fs--2 mt-1">{{ form.client_name.errors }}</div>{% endif %}
@@ -146,6 +152,42 @@ document.addEventListener('DOMContentLoaded', function () {
             input.classList.add('form-control');
         }
     });
+
+    // Scope "DQE source" to the picked chantier, same AJAX pattern as
+    // finance:site_phases_data for ExpenseForm's phase picker.
+    var siteSelect = document.getElementById('{{ form.site.id_for_label }}');
+    var dqeSelect = document.getElementById('{{ form.source_dqe.id_for_label }}');
+
+    function loadDqesForSite(preselectId) {
+        if (!dqeSelect || !siteSelect) return;
+        var siteId = siteSelect.value;
+        dqeSelect.innerHTML = '';
+        var blank = document.createElement('option');
+        blank.value = '';
+        blank.textContent = '{% trans "-- Aucun --" %}';
+        dqeSelect.appendChild(blank);
+        if (!siteId) return;
+        fetch('{% url "pricing:site_dqes_data" %}?site=' + encodeURIComponent(siteId), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            (data.results || []).forEach(function (item) {
+                var opt = document.createElement('option');
+                opt.value = item.id;
+                opt.textContent = item.text;
+                if (preselectId && String(item.id) === String(preselectId)) opt.selected = true;
+                dqeSelect.appendChild(opt);
+            });
+        })
+        .catch(function (err) { console.error('Error loading DQEs for site:', err); });
+    }
+
+    if (siteSelect && dqeSelect) {
+        var initialDqeId = dqeSelect.value;
+        if (siteSelect.value) loadDqesForSite(initialDqeId);
+        siteSelect.addEventListener('change', function () { loadDqesForSite(null); });
+    }
 });
 </script>
 {% endblock %}

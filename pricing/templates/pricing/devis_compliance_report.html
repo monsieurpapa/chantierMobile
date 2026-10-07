@@ -1,0 +1,120 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Conformité devis / état de besoin" %} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    <!-- vertical nav -->
+    {% include 'includes/navbar-vertical.html' with on="dqe_list" %}
+    <!-- /vertical nav -->
+
+    <div class="content">
+        <!-- navbar-top -->
+        {% include 'includes/navbar-top.html' %}
+        <!-- /navbar-top -->
+
+        <!-- Main Content -->
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            {% if not devis %}
+            <div class="alert alert-warning">
+                {% trans "Ce chantier n'a pas de devis accepté relié à un DQE source — aucune comparaison possible. Reliez un DQE au devis accepté (champ « DQE source ») pour activer ce rapport." %}
+            </div>
+            {% else %}
+            <div class="card mb-3 border-0 shadow-sm">
+                <div class="card-body p-0">
+                    <div class="table-responsive scrollbar">
+                        <table class="table table-sm table-striped fs--1 mb-0 overflow-hidden">
+                            <thead class="bg-200 text-900">
+                                <tr>
+                                    <th class="align-middle white-space-nowrap">{% trans "Étape" %}</th>
+                                    <th class="align-middle white-space-nowrap">{% trans "Matériau" %}</th>
+                                    <th class="align-middle white-space-nowrap text-end">{% trans "Estimation (devis)" %}</th>
+                                    <th class="align-middle white-space-nowrap text-end">{% trans "Demandé (cumulé)" %}</th>
+                                    <th class="align-middle white-space-nowrap text-end">{% trans "Écart" %}</th>
+                                    <th class="align-middle white-space-nowrap">{% trans "Statut" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in rows %}
+                                <tr>
+                                    <td class="align-middle white-space-nowrap">
+                                        {% if row.phase.is_sub_phase %}
+                                        <span class="text-500">{{ row.phase.parent_phase.name }} &gt;</span> {{ row.phase.name }}
+                                        {% else %}
+                                        {{ row.phase.name }}
+                                        {% endif %}
+                                    </td>
+                                    <td class="align-middle white-space-nowrap">{{ row.material.name }}</td>
+                                    <td class="align-middle white-space-nowrap text-end">{{ row.comparison.baseline|floatformat:2 }} {{ row.material.unit }}</td>
+                                    <td class="align-middle white-space-nowrap text-end">{{ row.comparison.cumulative_requested|floatformat:2 }} {{ row.material.unit }}</td>
+                                    <td class="align-middle white-space-nowrap text-end">
+                                        {% if row.comparison.variance_pct is not None %}
+                                        {{ row.comparison.variance_pct|floatformat:0 }}%
+                                        {% else %}
+                                        —
+                                        {% endif %}
+                                    </td>
+                                    <td class="align-middle white-space-nowrap">
+                                        {% if row.comparison.status == 'RED' %}
+                                        <span class="badge rounded-pill badge-subtle-danger">{% trans "Dépassement" %}</span>
+                                        {% elif row.comparison.status == 'ORANGE' %}
+                                        <span class="badge rounded-pill badge-subtle-warning">{% trans "À surveiller" %}</span>
+                                        {% elif row.comparison.status == 'NOT_BUDGETED' %}
+                                        <span class="badge rounded-pill badge-subtle-secondary">{% trans "Non chiffré au devis" %}</span>
+                                        {% else %}
+                                        <span class="badge rounded-pill badge-subtle-success">{% trans "Dans les clous" %}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center py-5">
+                                        <p class="text-600 mb-0">{% trans "Aucune étape chiffrée ou demande de matériaux enregistrée pour ce chantier." %}</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if overage_requests %}
+            <div class="card mb-3 border-0 shadow-sm">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">{% trans "Dépassements autorisés — justifications" %}</h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive scrollbar">
+                        <table class="table table-sm table-striped fs--1 mb-0 overflow-hidden">
+                            <thead class="bg-200 text-900">
+                                <tr>
+                                    <th class="align-middle white-space-nowrap">{% trans "Demande" %}</th>
+                                    <th class="align-middle white-space-nowrap">{% trans "Justification" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for req in overage_requests %}
+                                <tr>
+                                    <td class="align-middle white-space-nowrap">
+                                        <a href="{% url 'materials:request_detail' req.pk %}">REQ-{{ req.pk }}</a>
+                                    </td>
+                                    <td class="align-middle">{{ req.overage_justification }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}

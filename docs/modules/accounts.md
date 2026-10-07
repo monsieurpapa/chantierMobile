@@ -25,6 +25,7 @@ Carries no role or Cabinet reference itself — see `UserCabinetRole` below.
 
 ```
 name · address · tax_id (NIF/TIN) · logo
+material_variance_orange_threshold_pct · material_variance_red_threshold_pct
 ```
 
 The tenancy boundary (see [ADR 0001](../architecture/decisions/0001-cabinet-multi-tenancy.md)
@@ -33,6 +34,24 @@ Every `Site`, and everything that hangs off a `Site` or directly off a `Cabinet`
 (`Personnel`, `Budget`, ...), belongs to exactly one `Cabinet`. A `Cabinet` has no
 owner/admin field of its own — who can act on it is entirely determined by
 `UserCabinetRole` rows pointing at it, plus superusers, who can act on any Cabinet.
+
+- **`material_variance_orange_threshold_pct` / `_red_threshold_pct`**
+  (added 2026-10-07, `DecimalField`, defaults 100/120) — cabinet-wide
+  percentage thresholds for the `pricing` app's Devis & États de besoin
+  comparison engine: once a material's cumulative requested quantity (for
+  a given étape) reaches this percentage of the devis/DQE's budgeted
+  quantity, `pricing.services.compare_material_usage()` flags it
+  ORANGE/RED. `clean()` requires `orange_threshold_pct <=
+  red_threshold_pct` (nothing else bounds either value — see
+  `docs/modules/pricing.md`'s gotchas for what an unreasonable value, like
+  `0`, would do). Editable only by `pricing.views.PRICING_ADMIN_ROLES`
+  (director-tier + `CHIEF_ENGINEER`) via `CabinetMaterialThresholdSettingsView`
+  ("Seuils de dépassement"), which resolves the acting user's own cabinet
+  rather than taking a `pk` in the URL — there's no way to reach another
+  cabinet's thresholds through this view. These two fields are the only
+  ones on `Cabinet` this app's own screens don't manage (they belong to
+  `pricing`'s feature, not `accounts`'); listed here only because they
+  live on this model.
 
 ### `UserCabinetRole` (`accounts/models.py`) — the authorization grant
 

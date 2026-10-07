@@ -29,19 +29,36 @@
                         <div class="mb-3">
                             <label class="form-label" for="id_name">{% trans "Phase Name" %}</label>
                             <input class="form-control" id="id_name" name="name" type="text"
+                                value="{{ form.instance.name|default:'' }}"
                                 placeholder="e.g. Foundation, Roofing, electrical" required />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="id_parent_phase">{% trans "Étape parente" %}</label>
+                            <select class="form-select" id="id_parent_phase" name="parent_phase">
+                                <option value="">{% trans "Aucune — étape principale" %}</option>
+                                {% for p in top_level_phases %}
+                                <option value="{{ p.pk }}" {% if form.instance.parent_phase_id == p.pk %}selected{% endif %}>{{ p.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">{% trans "Laisser vide pour une étape principale. Sélectionner une étape existante en fait une sous-étape de celle-ci (un seul niveau de profondeur)." %}</div>
+                            {% if form.parent_phase.errors %}
+                            <div class="text-danger small mt-1">{{ form.parent_phase.errors|join:" " }}</div>
+                            {% endif %}
                         </div>
 
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label class="form-label" for="id_start_date">{% trans "Start Date" %}</label>
                                 <input class="form-control datetimepicker" id="id_start_date" name="start_date"
-                                    type="text" placeholder="YYYY-MM-DD"
+                                    type="text" value="{{ form.instance.start_date|date:'Y-m-d'|default:'' }}"
+                                    placeholder="YYYY-MM-DD"
                                     data-options='{"dateFormat":"Y-m-d","disableMobile":true}' />
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label" for="id_end_date">{% trans "End Date" %}</label>
                                 <input class="form-control datetimepicker" id="id_end_date" name="end_date" type="text"
+                                    value="{{ form.instance.end_date|date:'Y-m-d'|default:'' }}"
                                     placeholder="YYYY-MM-DD"
                                     data-options='{"dateFormat":"Y-m-d","disableMobile":true}' />
                             </div>

@@ -7,14 +7,22 @@ from django.urls import reverse_lazy
 from django.contrib import messages
 from django.http import HttpResponseRedirect
 from django.utils.translation import gettext_lazy as _
-from .models import PriceLibraryItem, DQE
-from .forms import PriceLibraryItemForm, DQEForm, DQELineFormSet
+from .models import PriceLibraryItem, DQE, MaterialConsumptionRatio
+from .forms import (
+    PriceLibraryItemForm, DQEForm, DQELineFormSet,
+    MaterialConsumptionRatioForm, CabinetMaterialThresholdForm,
+)
 from projects.models import Site
 from core.mixins import (
     CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin,
     add_ambiguous_cabinet_field, get_session_cabinet,
 )
 from chantiermobile.constants import UserRoles, ApprovalStatus
+
+# Director-tier (plus CHIEF_ENGINEER, consistent with the rest of this
+# module) — who may edit the price library/DQE/ratio catalog and the
+# cabinet's material-variance thresholds.
+PRICING_ADMIN_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER']
 
 # Kept as a module-local alias — relocated to core.mixins.add_ambiguous_cabinet_field
 # so finance/views.py (SalaryPaymentListCreateView) can reuse it too.
@@ -377,3 +385,291 @@ def price_items_data_api(request):
             'unit_price': float(item['unit_price'] or 0),
         }
     return JsonResponse(data)
+
+
+@login_required
+def site_dqes_data_api(request):
+    """JSON endpoint used by revenue's Devis form to scope `source_dqe` to
+    the picked site, the same way finance:site_phases_data scopes a phase
+    picker — the field's queryset is otherwise empty on a fresh GET (see
+    DevisForm.__init__)."""
+    from django.http import JsonResponse
+
+    site_id = request.GET.get('site')
+    if not site_id:
+        return JsonResponse({'results': []})
+
+    site_qs = Site.objects.filter(pk=site_id)
+    if not request.user.is_superuser:
+        user_cabinet_ids = request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
+        site_qs = site_qs.filter(cabinet__id__in=user_cabinet_ids)
+    site = site_qs.first()
+    if not site:
+        return JsonResponse({'results': []})
+
+    dqes = DQE.objects.filter(site=site).order_by('-created_at')
+    return JsonResponse({
+        'results': [{'id': d.id, 'text': f"{d.reference} - {d.title}"} for d in dqes]
+    })
+
+
+@login_required
+def material_usage_comparison_api(request):
+    """Live red/orange/green comparison badge for one (site, étape,
+    matériau), used by both the materials/request_form.html item rows and
+    pricing/dqe_form.html's lines (a DQE line check is informational only
+    — nothing stops a DQE line from exceeding a devis, since the DQE *is*
+    the estimate).
+
+    GET params: site, phase, material (all required ids), quantity
+    (defaults to 0 — "what if this row's quantity were added"),
+    exclude_item (a MaterialRequestItem pk already counted in the
+    cumulative total, to preview an edit to that exact row without
+    double-counting it).
+
+    Returns JSON: {ok: true, status, status_label, baseline,
+    cumulative_requested, variance_pct} or {ok: false, reason} when the
+    inputs don't resolve to a comparable (site, phase, material) —
+    callers should hide/neutralize the badge in that case rather than
+    treat it as an error."""
+    from decimal import Decimal, InvalidOperation
+    from django.http import JsonResponse
+    from projects.models import ProjectPhase
+    from materials.models import Material, MaterialRequestItem
+    from pricing.services import compare_material_usage
+
+    site_id = request.GET.get('site')
+    phase_id = request.GET.get('phase')
+    material_id = request.GET.get('material')
+    if not (site_id and phase_id and material_id):
+        return JsonResponse({'ok': False, 'reason': 'missing_params'})
+
+    site_qs = Site.objects.filter(pk=site_id)
+    if not request.user.is_superuser:
+        user_cabinet_ids = request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
+        site_qs = site_qs.filter(cabinet__id__in=user_cabinet_ids)
+    site = site_qs.first()
+    if not site:
+        return JsonResponse({'ok': False, 'reason': 'site_not_found'})
+
+    phase = ProjectPhase.objects.filter(pk=phase_id, site=site).first()
+    if not phase:
+        return JsonResponse({'ok': False, 'reason': 'phase_not_found'})
+
+    material = Material.objects.filter(pk=material_id).first()
+    if not material:
+        return JsonResponse({'ok': False, 'reason': 'material_not_found'})
+
+    try:
+        quantity = Decimal(request.GET.get('quantity') or '0')
+    except InvalidOperation:
+        quantity = Decimal('0')
+
+    exclude_item = None
+    exclude_item_id = request.GET.get('exclude_item')
+    if exclude_item_id:
+        exclude_item = MaterialRequestItem.objects.filter(pk=exclude_item_id).first()
+
+    result = compare_material_usage(
+        site, phase, material,
+        exclude_request_item=exclude_item,
+        additional_quantity=quantity,
+    )
+    return JsonResponse({
+        'ok': True,
+        'status': result['status'],
+        'status_label': str(dict(_material_variance_choices())[result['status']]),
+        'baseline': float(result['baseline']),
+        'cumulative_requested': float(result['cumulative_requested']),
+        'variance_pct': float(result['variance_pct']) if result['variance_pct'] is not None else None,
+    })
+
+
+def _material_variance_choices():
+    from chantiermobile.constants import MaterialVarianceStatus
+    return MaterialVarianceStatus.choices
+
+
+class MaterialConsumptionRatioListView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, ListView):
+    """The ratio catalog: global defaults (cabinet is null — seeded once
+    for every cabinet, see pricing/migrations/0004) plus this cabinet's
+    own overrides. Director-tier/CHIEF_ENGINEER only, since a wrong ratio
+    here silently skews every WORK_ITEM comparison badge."""
+    model = MaterialConsumptionRatio
+    template_name = 'pricing/ratio_list.html'
+    context_object_name = 'ratios'
+    allowed_roles = PRICING_ADMIN_ROLES
+    header_title = _("Ratios de consommation matière")
+    header_subtitle = _("Nomenclature utilisée pour « exploser » un ouvrage composite (béton, acier...) en quantités de matériaux élémentaires")
+
+    def _cabinet_ids(self):
+        if self.request.user.is_superuser:
+            cabinet = get_session_cabinet(self.request)
+            if cabinet:
+                return [cabinet.pk]
+            from accounts.models import Cabinet
+            return list(Cabinet.objects.values_list('pk', flat=True))
+        return list(self.request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True))
+
+    def get_queryset(self):
+        from django.db.models import Q
+        cabinet_ids = self._cabinet_ids()
+        return MaterialConsumptionRatio.objects.filter(
+            Q(cabinet__isnull=True) | Q(cabinet_id__in=cabinet_ids)
+        ).select_related('material', 'cabinet').order_by('work_category', 'material__name', 'cabinet_id')
+
+    def get_header_actions(self):
+        return [{
+            'label': _("Ajouter un ratio"),
+            'url': str(reverse_lazy('pricing:ratio_create')),
+            'icon': 'plus',
+            'class': 'btn-falcon-primary',
+        }]
+
+
+class MaterialConsumptionRatioCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, CreateView):
+    """Add a cabinet-specific ratio override. Always tagged to the
+    acting user's own cabinet — a cabinet can never create or edit a
+    global-default (cabinet=None) row through this view; those exist only
+    via the seed migration, by design (see MaterialConsumptionRatio's
+    docstring)."""
+    model = MaterialConsumptionRatio
+    form_class = MaterialConsumptionRatioForm
+    template_name = 'pricing/ratio_form.html'
+    allowed_roles = PRICING_ADMIN_ROLES
+    success_url = reverse_lazy('pricing:ratio_list')
+    header_title = _("Ajouter un ratio de consommation")
+    header_subtitle = _("Définir ou surclasser un ratio matériau pour une catégorie d'ouvrage")
+    back_url = reverse_lazy('pricing:ratio_list')
+
+    def form_valid(self, form):
+        cabinet = self.get_user_cabinet()
+        if not cabinet:
+            messages.error(self.request, _("Identification du cabinet échouée."))
+            return self.form_invalid(form)
+        form.instance.cabinet = cabinet
+        messages.success(self.request, _("Ratio ajouté."))
+        return super().form_valid(form)
+
+
+class MaterialConsumptionRatioUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, UpdateView):
+    """Edit one of this cabinet's own ratio overrides. CabinetAccessMixin's
+    default `cabinet_lookup_field = 'cabinet'` naturally excludes
+    global-default (cabinet=None) rows from this view's queryset — exactly
+    the restriction the class docstring above describes."""
+    model = MaterialConsumptionRatio
+    form_class = MaterialConsumptionRatioForm
+    template_name = 'pricing/ratio_form.html'
+    allowed_roles = PRICING_ADMIN_ROLES
+    success_url = reverse_lazy('pricing:ratio_list')
+    back_url = reverse_lazy('pricing:ratio_list')
+    header_title = _("Modifier le ratio")
+
+    def form_valid(self, form):
+        messages.success(self.request, _("Ratio mis à jour."))
+        return super().form_valid(form)
+
+
+class CabinetMaterialThresholdSettingsView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, UpdateView):
+    """Director-tier-editable cabinet-wide orange/red variance thresholds
+    (accounts.Cabinet.material_variance_*_threshold_pct). Not reached via
+    a pk in the URL — resolves to the acting user's own cabinet, the same
+    way a superuser's session-switched cabinet (or a multi-cabinet user's
+    first director-tier cabinet) is resolved elsewhere in this module."""
+    form_class = CabinetMaterialThresholdForm
+    template_name = 'pricing/cabinet_thresholds_form.html'
+    allowed_roles = PRICING_ADMIN_ROLES
+    success_url = reverse_lazy('pricing:price_item_list')
+    header_title = _("Seuils de dépassement matière")
+    header_subtitle = _("Pourcentage de l'estimation du devis au-delà duquel une comparaison matériau passe à l'orange, puis au rouge")
+
+    def get_object(self, queryset=None):
+        from django.http import Http404
+        from accounts.models import Cabinet
+        if self.request.user.is_superuser:
+            cabinet = get_session_cabinet(self.request)
+            if cabinet:
+                return cabinet
+            cabinet = Cabinet.objects.order_by('id').first()
+            if cabinet:
+                return cabinet
+            raise Http404(_("Aucun cabinet trouvé."))
+        cabinet_ids = list(
+            self.request.user.approved_cabinet_roles.filter(
+                role__in=PRICING_ADMIN_ROLES,
+            ).values_list('cabinet_id', flat=True)
+        )
+        if not cabinet_ids:
+            raise Http404(_("Aucun cabinet trouvé pour cet utilisateur."))
+        requested = self.request.GET.get('cabinet')
+        if requested and int(requested) in cabinet_ids:
+            return Cabinet.objects.get(pk=requested)
+        return Cabinet.objects.get(pk=cabinet_ids[0])
+
+    def form_valid(self, form):
+        messages.success(self.request, _("Seuils de dépassement mis à jour."))
+        return super().form_valid(form)
+
+
+class DevisComplianceReportView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, DetailView):
+    """Per-étape breakdown of a Site's material-variance comparisons
+    against its accepted Devis's source DQE — the "intelligently
+    comparing material requests to the original devis and detailed devis
+    figures" report from the brainstorm, as a read-only page any member
+    of the cabinet can consult (not just the director-tier, mirroring
+    DQEDetailView's own any-member-can-view stance; only *editing* the
+    ratio catalog/thresholds is director-tier-gated)."""
+    model = Site
+    template_name = 'pricing/devis_compliance_report.html'
+    context_object_name = 'site'
+    header_title = _("Conformité devis / état de besoin")
+
+    def get_header_subtitle(self):
+        return self.object.name
+
+    def get_back_url(self):
+        return str(reverse_lazy('projects:site_detail', kwargs={'unique_id': self.object.unique_id}))
+
+    def get_context_data(self, **kwargs):
+        from pricing.services import compare_material_usage
+        from chantiermobile.constants import DevisStatus
+        context = super().get_context_data(**kwargs)
+        site = self.object
+
+        devis = site.devis_set.filter(status=DevisStatus.ACCEPTE, source_dqe__isnull=False).first()
+        context['devis'] = devis
+
+        rows = []
+        if devis:
+            dqe = devis.source_dqe
+            # Every (phase, material) pair this DQE actually budgets for —
+            # a material never requested yet still deserves a row (so a
+            # 100%-unspent budget is visible too), but a material neither
+            # budgeted for nor requested has nothing to show.
+            seen = set()
+            for line in dqe.lines.select_related('phase', 'price_item').all():
+                if not line.phase_id:
+                    continue
+                for material_id in line.exploded_requirements().keys():
+                    seen.add((line.phase_id, material_id))
+            from materials.models import Material, MaterialRequestItem
+            requested_pairs = MaterialRequestItem.objects.filter(
+                request__site=site, phase__isnull=False, material__isnull=False,
+            ).values_list('phase_id', 'material_id').distinct()
+            seen.update(requested_pairs)
+
+            materials_by_id = {m.pk: m for m in Material.objects.filter(pk__in=[m for _p, m in seen])}
+            from projects.models import ProjectPhase
+            phases_by_id = {p.pk: p for p in ProjectPhase.objects.filter(pk__in=[p for p, _m in seen])}
+
+            for phase_id, material_id in sorted(seen, key=lambda t: (phases_by_id[t[0]].name, materials_by_id[t[1]].name)):
+                phase = phases_by_id.get(phase_id)
+                material = materials_by_id.get(material_id)
+                if not phase or not material:
+                    continue
+                comparison = compare_material_usage(site, phase, material)
+                rows.append({'phase': phase, 'material': material, 'comparison': comparison})
+
+        context['rows'] = rows
+        context['overage_requests'] = site.material_requests.exclude(overage_justification='').order_by('-updated_at')
+        return context

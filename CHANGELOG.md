@@ -163,6 +163,57 @@ dated heading cut when a deliberate release point is agreed on.
   and `docs/modules/projects.md`'s "Matériaux" tab note for the full
   detail.
 
+- Devis & États de besoin: compare material requests against what was
+  actually budgeted, étape by étape.
+  - **Sous-étapes.** `ProjectPhase.parent_phase` (self-FK, new migration)
+    lets a top-level étape carry sous-étapes, capped at exactly one level
+    deep and enforced from both directions in `clean()` (a sous-étape
+    can't itself have children; a phase that already has children can't
+    become someone else's child). The phase create/edit form and template
+    now expose an "Étape parente" picker, scoped to the site's own
+    top-level phases, so this is actually reachable from the UI rather
+    than migration-only.
+  - **Material explosion.** `PriceLibraryItem` gained `work_category`
+    (`BETON`/`ACIER`/`COFFRAGE`/`MACONNERIE`/`AUTRE`, required for
+    `WORK_ITEM`-type lines) and an optional direct `material` link (for
+    `MATERIAL`-type lines). A new `MaterialConsumptionRatio` model
+    (cabinet-nullable — `null` means a global default, usable by every
+    cabinet, overridable per cabinet) records how much of an elementary
+    material one unit of a work category consumes (e.g. sacs de ciment
+    per m³ de béton); seeded with 8 global-default rows. `DQELine` gained
+    an optional `phase` link and `exploded_requirements()`, which turns a
+    line's catalog-level quantity into elementary material quantities —
+    directly for a material-type line, via the ratio catalog for a
+    work-item line. Both ouvrage-level and material-level DQE lines are
+    allowed in the same DQE and roll up together (confirmed scope).
+  - **Comparison engine** (`pricing/services.py`): for a given
+    (site, étape, matériau), compares the cumulative quantity requested
+    across non-rejected `MaterialRequestItem`s (rolled up across a
+    top-level étape's sous-étapes) against the baseline exploded from the
+    site's accepted devis's `source_dqe`, and flags
+    GREEN/ORANGE/RED/NOT_BUDGETED against the owning cabinet's own
+    configurable thresholds (`Cabinet.material_variance_orange_threshold_pct`
+    / `_red_threshold_pct`, director-tier editable via a new
+    "Seuils de dépassement" settings screen).
+  - **Mandatory justification on red.** `MaterialRequest` gained a
+    dedicated `overage_justification` field (not a reuse of the generic
+    `notes` param); `authorize()` now refuses to approve a request with
+    any RED-variance item unless it's filled in — the same soft-overage
+    shape already used for Chef de Corps convention overages, surfaced via
+    a conditional textarea on the request detail page (not HTML-`required`,
+    so it never blocks the separate Reject action).
+  - **UI**: a debounced, color-coded live badge on the material-request
+    form as each row's matériau/étape/quantité change; a static
+    conformité column on the request detail page; a new
+    "Conformité devis" report per site (`DevisComplianceReportView`)
+    listing every (étape, matériau) comparison plus the site's overage
+    justifications; `Devis` gained an optional `source_dqe` link so a
+    devis can declare which DQE it was priced from.
+
+  See `docs/modules/pricing.md`'s "Comparison engine" section,
+  `docs/modules/materials.md`, `docs/modules/revenue.md`, and
+  `docs/modules/projects.md` for the full detail.
+
 ## [2026-10-06] — Security fixes from the documentation pass
 
 Five authorization gaps surfaced while writing `docs/` and docstrings across the

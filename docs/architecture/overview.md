@@ -16,7 +16,7 @@ pricing, procurement, tasks — hangs business data off a Site or a Cabinet.
 | `finance` | `Budget`, `Expense` (+ `ExpenseCategory`, `ExpenseApproval`), `Caisse` ledger (+ transactions, loans), `PayrollList`/`PayrollListItem` (ouvriers), `SalaryPaymentList`/`SalaryPaymentItem` (ingénieurs/staff), `Avenant` |
 | `materials` | `Material`, `MaterialRequest`/`MaterialRequestItem` |
 | `revenue` | `Contract`, `Devis`/`DevisLine`, `SituationTravaux`/`SituationLine`, `Invoice`, `Payment` |
-| `pricing` | `PriceLibraryItem` (Bibliothèque de Prix), `DQE`/`DQELine` (Détail Quantitatif Estimatif) |
+| `pricing` | `PriceLibraryItem` (Bibliothèque de Prix), `DQE`/`DQELine` (Détail Quantitatif Estimatif), `MaterialConsumptionRatio` (material-explosion ratios); `pricing/services.py`'s Devis-vs-État-de-besoin comparison engine |
 | `procurement` | `Supplier`, `SupplierCredit`/`SupplierCreditPayment`, `StockItem`, `PurchaseOrder`/`PurchaseOrderLine`, `StockMovement` |
 | `tasks` | `Task` |
 

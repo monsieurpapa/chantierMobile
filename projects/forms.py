@@ -54,13 +54,23 @@ class SiteForm(forms.ModelForm):
         return value
 
 class ProjectPhaseForm(forms.ModelForm):
-    """Phase create/edit form — name and dates only; status transitions
-    go through ProjectPhase.close(), not this form."""
+    """Phase create/edit form — name, optional parent (sous-étape) and
+    dates; status transitions go through ProjectPhase.close(), not this
+    form.
+
+    `parent_phase` (added 2026-10-07) is optional and scoped to the
+    target site's own **top-level** phases only — pass `site=` to
+    `__init__` (the create/update views do). A phase that already has its
+    own sous-étapes is excluded from being selectable as anyone's child in
+    turn (mirrors the model's own `clean()` guard against a 2nd nesting
+    level, from the other direction), and a phase being edited never
+    offers itself as its own parent."""
     class Meta:
         model = ProjectPhase
-        fields = ['name', 'start_date', 'end_date']
+        fields = ['name', 'parent_phase', 'start_date', 'end_date']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.PHASE_NAME}),
+            'parent_phase': forms.Select(attrs={'class': 'form-select'}),
             'start_date': forms.DateInput(attrs={
                 'class': 'form-control datetimepicker',
                 'placeholder': DatePickerConfig.DATE_FORMAT,
@@ -72,6 +82,23 @@ class ProjectPhaseForm(forms.ModelForm):
                 'data-options': DatePickerConfig.OPTIONS
             }),
         }
+
+    def __init__(self, *args, site=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['parent_phase'].required = False
+        self.fields['parent_phase'].empty_label = _("Aucune — étape principale")
+        site = site or getattr(self.instance, 'site', None)
+        qs = ProjectPhase.objects.none()
+        if site is not None:
+            qs = ProjectPhase.objects.filter(site=site, parent_phase__isnull=True)
+            if self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+                if self.instance.sub_phases.exists():
+                    # This phase is itself a parent already; letting it
+                    # become someone else's child would create a 2nd
+                    # nesting level — see ProjectPhase.clean().
+                    qs = ProjectPhase.objects.none()
+        self.fields['parent_phase'].queryset = qs
 
 class PlanningSubmissionForm(forms.ModelForm):
     """Drafts a planning submission; `phase` is optional (a submission

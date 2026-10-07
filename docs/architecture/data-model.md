@@ -34,6 +34,7 @@ erDiagram
     CABINET ||--o{ PERSONNEL : employs
     CABINET ||--o{ HOLIDAY : defines
     SITE ||--o{ PROJECTPHASE : "broken into"
+    PROJECTPHASE |o--o{ PROJECTPHASE : "(optional, one level only) sous-étapes"
     SITE ||--o{ SITEASSIGNMENT : staffed-by
     SITE ||--o{ PLANNINGSUBMISSION : plans
     SITE ||--o{ ATTENDANCE : records
@@ -137,11 +138,16 @@ erDiagram
     INVOICE ||--o{ PAYMENT : receives
     INVOICE ||--o| SITUATIONTRAVAUX : "(optional) generated-from"
     DEVIS ||--o{ DEVISLINE : lines
+    DEVIS }o--o| DQE : "(optional) priced-from (source_dqe)"
     SITUATIONTRAVAUX ||--o{ SITUATIONLINE : lines
     SITUATIONLINE }o--|| DEVISLINE : "percent-complete of"
     CABINET ||--o{ PRICELIBRARYITEM : catalogs
+    PRICELIBRARYITEM }o--o| MATERIAL : "(optional, MATERIAL-type only) direct link"
     DQE ||--o{ DQELINE : lines
     DQELINE }o--|| PRICELIBRARYITEM : prices
+    DQELINE }o--o| PROJECTPHASE : "(optional) scopes"
+    CABINET |o--o{ MATERIALCONSUMPTIONRATIO : "(null = global default)"
+    MATERIALCONSUMPTIONRATIO }o--|| MATERIAL : "explodes work_category into"
 
     CONTRACT {
         decimal total_value
@@ -158,11 +164,25 @@ erDiagram
     }
     PRICELIBRARYITEM {
         string item_type "Labor/Material/Equipment/Service/WorkItem"
+        string work_category "(WORK_ITEM only) Beton/Acier/Coffrage/Maconnerie/Autre"
     }
     DQE {
         string status "Draft/Validated/Archived"
     }
+    MATERIALCONSUMPTIONRATIO {
+        string work_category "Beton/Acier/Coffrage/Maconnerie/Autre"
+        decimal ratio "quantity of material per 1 unit of work_category"
+    }
 ```
+
+`pricing.services` compares a site/étape/matériau's cumulative requested
+quantity (from `materials.MaterialRequestItem`, see below) against the
+quantity baked into the site's accepted `Devis`'s `source_dqe`, exploded
+through `DQELINE.exploded_requirements()` (direct for a `MATERIAL`-type
+line, via `MATERIALCONSUMPTIONRATIO` for a `WORK_ITEM`-type line) — see
+`docs/modules/pricing.md`'s "Comparison engine" section for the full
+picture, including why this isn't drawn as its own diagram (it's a
+read-only computation over existing rows, not a new stored relationship).
 
 ## Procurement & Materials
 
@@ -173,6 +193,7 @@ erDiagram
     SITE ||--o{ PURCHASEORDER : orders
     MATERIALREQUEST ||--o{ MATERIALREQUESTITEM : lines
     MATERIALREQUESTITEM }o--o| MATERIAL : "(optional, free-text allowed)"
+    MATERIALREQUESTITEM }o--o| PROJECTPHASE : "(optional) scopes for devis comparison"
     CABINET ||--o{ SUPPLIER : sources-from
     SUPPLIER ||--o{ PURCHASEORDER : fulfills
     SUPPLIER ||--o{ SUPPLIERCREDIT : extends
@@ -184,6 +205,7 @@ erDiagram
 
     MATERIALREQUEST {
         string status "Pending/Validated/Approved/Rejected/Ordered/Delivered"
+        text overage_justification "required by authorize() iff any item is RED (devis variance)"
     }
     PURCHASEORDER {
         string status "Brouillon/Envoyee/RecuePartielle/Recue/Annulee"

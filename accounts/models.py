@@ -57,9 +57,42 @@ class Cabinet(BaseModel):
     address = models.TextField(blank=True)
     tax_id = models.CharField(max_length=50, blank=True, help_text=_("NIF/TIN"))
     logo = models.ImageField(upload_to='cabinets/logos/', blank=True, null=True)
+    material_variance_orange_threshold_pct = models.DecimalField(
+        max_digits=6, decimal_places=2, default=100,
+        verbose_name=_('Seuil orange (% du devis)'),
+        help_text=_(
+            "Au-delà de ce pourcentage de la quantité budgétée (devis/DQE), une comparaison "
+            "matériau passe à l'orange (« à surveiller »). 100 = la demande cumulée atteint "
+            "exactement l'estimation initiale."
+        ),
+    )
+    material_variance_red_threshold_pct = models.DecimalField(
+        max_digits=6, decimal_places=2, default=120,
+        verbose_name=_('Seuil rouge (% du devis)'),
+        help_text=_(
+            "Au-delà de ce pourcentage de la quantité budgétée, une comparaison matériau passe "
+            "au rouge (« dépassement ») et exige une justification à l'autorisation."
+        ),
+    )
 
     def __str__(self):
         return self.name
+
+    def clean(self):
+        """The orange threshold must not exceed the red one — otherwise a
+        single cumulative quantity could satisfy both bands at once and
+        leave the badge color ambiguous."""
+        from django.core.exceptions import ValidationError
+        if (
+            self.material_variance_orange_threshold_pct is not None
+            and self.material_variance_red_threshold_pct is not None
+            and self.material_variance_orange_threshold_pct > self.material_variance_red_threshold_pct
+        ):
+            raise ValidationError({
+                'material_variance_orange_threshold_pct': _(
+                    "Le seuil orange ne peut pas être supérieur au seuil rouge."
+                )
+            })
 
 class UserCabinetRole(BaseModel):
     """The authorization grant: (user, cabinet, role). This single table

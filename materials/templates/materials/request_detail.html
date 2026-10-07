@@ -103,8 +103,10 @@
                                     <thead class="bg-light">
                                         <tr>
                                             <th>{% trans "Material" %}</th>
+                                            <th>{% trans "Étape" %}</th>
                                             <th class="text-center">{% trans "Quantity" %}</th>
                                             <th class="text-end">{% trans "Est. Cost" %}</th>
+                                            <th>{% trans "Conformité devis" %}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -123,17 +125,46 @@
                                                     {% endif %}
                                                 </div>
                                             </td>
+                                            <td>
+                                                {% if item.phase %}
+                                                {% if item.phase.is_sub_phase %}
+                                                <span class="text-500">{{ item.phase.parent_phase.name }} &gt;</span> {{ item.phase.name }}
+                                                {% else %}
+                                                {{ item.phase.name }}
+                                                {% endif %}
+                                                {% else %}
+                                                <span class="text-500">—</span>
+                                                {% endif %}
+                                            </td>
                                             <td class="text-center fw-semibold">
                                                 <span class="badge bg-light text-dark">{{ item.quantity }}{% if item.material %} {{ item.material.unit }}{% endif %}</span>
                                             </td>
                                             <td class="text-end fw-semibold text-primary">{{ CURRENCY_SYMBOL }}{{ item.estimated_cost|floatformat:2 }}</td>
+                                            <td>
+                                                {% with comparison=item.variance_comparison %}
+                                                {% if comparison %}
+                                                {% if comparison.status == 'RED' %}
+                                                <span class="badge rounded-pill badge-subtle-danger">{% trans "Dépassement" %}{% if comparison.variance_pct is not None %} ({{ comparison.variance_pct|floatformat:0 }}%){% endif %}</span>
+                                                {% elif comparison.status == 'ORANGE' %}
+                                                <span class="badge rounded-pill badge-subtle-warning">{% trans "À surveiller" %}{% if comparison.variance_pct is not None %} ({{ comparison.variance_pct|floatformat:0 }}%){% endif %}</span>
+                                                {% elif comparison.status == 'NOT_BUDGETED' %}
+                                                <span class="badge rounded-pill badge-subtle-secondary">{% trans "Non chiffré" %}</span>
+                                                {% else %}
+                                                <span class="badge rounded-pill badge-subtle-success">{% trans "OK" %}</span>
+                                                {% endif %}
+                                                {% else %}
+                                                <span class="text-500 fs--2">—</span>
+                                                {% endif %}
+                                                {% endwith %}
+                                            </td>
                                         </tr>
                                         {% endfor %}
                                     </tbody>
                                     <tfoot class="border-top bg-light">
                                         <tr>
-                                            <td colspan="2" class="text-end fw-semibold">{% trans "Total Estimated Cost:" %}</td>
+                                            <td colspan="3" class="text-end fw-semibold">{% trans "Total Estimated Cost:" %}</td>
                                             <td class="text-end fw-bold text-success">{{ CURRENCY_SYMBOL }}{{ req.total_estimated_cost|floatformat:2 }}</td>
+                                            <td></td>
                                         </tr>
                                     </tfoot>
                                 </table>
@@ -200,8 +231,21 @@
                             <h5 class="mb-0"><i class="fas fa-check-circle me-2 text-primary"></i>{% trans "Autorisation finale" %}</h5>
                         </div>
                         <div class="card-body p-3">
+                            {% if requires_overage_justification %}
+                            <div class="alert alert-warning fs--1">
+                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                {% trans "Au moins un article dépasse largement l'estimation du devis pour son étape. Une justification est obligatoire pour autoriser." %}
+                            </div>
+                            {% endif %}
                             <form action="{% url 'materials:request_approve' pk=req.pk %}" method="post">
                                 {% csrf_token %}
+                                {% if requires_overage_justification %}
+                                <div class="mb-2">
+                                    <label class="form-label fs--1 fw-semibold">{% trans "Justification de dépassement" %}</label>
+                                    <textarea name="overage_justification" class="form-control" rows="2"></textarea>
+                                    <div class="form-text fs--2">{% trans "Obligatoire uniquement pour autoriser — non requise pour rejeter." %}</div>
+                                </div>
+                                {% endif %}
                                 <div class="d-grid gap-2">
                                     <button type="submit" name="action" value="approve" class="btn btn-success">
                                         <i class="fas fa-check me-1"></i>{% trans "Approve" %}
@@ -231,6 +275,14 @@
                     </div>
                     {% endif %}
                     {% endif %}
+
+                    <div class="card mb-3 border-0 shadow-sm">
+                        <div class="card-body p-3">
+                            <a href="{% url 'pricing:devis_compliance_report' req.site.pk %}" class="btn btn-outline-secondary btn-sm w-100">
+                                <i class="fas fa-chart-line me-1"></i>{% trans "Rapport de conformité devis" %}
+                            </a>
+                        </div>
+                    </div>
 
                     <!-- Summary Card -->
                     <div class="card border-0 shadow-sm">

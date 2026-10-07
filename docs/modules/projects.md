@@ -61,11 +61,28 @@ anchors the Cabinet multi-tenancy model.
 - `site`, `name`, `start_date`, `end_date`, `status`
   (`chantiermobile.constants.PhaseStatus`), `closed_by`, `closed_at`,
   `closure_notes`.
+- `parent_phase` **(added 2026-10-07)** — self-FK, nullable, `SET_NULL`,
+  `related_name='sub_phases'`. Lets an étape have sous-étapes — but **only
+  one level deep**: `clean()` rejects setting `parent_phase` to self, rejects
+  a `parent_phase` on a different `site`, and (the actual nesting cap)
+  rejects a `parent_phase` that **itself already has a `parent_phase`** — a
+  sous-étape can never itself have sous-étapes. This single-level
+  invariant is what the `pricing` comparison engine's
+  `_phase_and_descendants()` rollup relies on (it only ever looks one
+  `sub_phases` lookup deep, never recurses) — see
+  [`pricing.md`](pricing.md#comparison-engine-pricingservicespy-added-2026-10-07).
+- `is_sub_phase` **(added 2026-10-07)** — `parent_phase_id is not None`.
+  `top_level_phase` **(added 2026-10-07)** — `self.parent_phase` if a
+  sub-phase, else `self`. `__str__` renders a sub-phase as
+  `"{site} - {parent.name} > {name}"` so it reads unambiguously in any
+  dropdown/log line that just calls `str()` on a phase.
 - `is_closed` — `status == CLOTUREE`.
 - `close(user, notes)` — EN_COURS→CLOTUREE, stamps `closed_by`/`closed_at`,
   writes a `StatusChangeLog` entry. Raises if already closed. **Who may
   call it is enforced entirely in the view** (`projects.views.phase_close`),
-  not here — see gotchas.
+  not here — see gotchas. Closing a top-level phase does **not** cascade to
+  or require closing its sous-étapes first, and vice versa — each phase's
+  `status` is independent of its parent's/children's.
 
 ### PlanningSubmission
 The engineer self-service planning flow: "Soumettre la planification aux
@@ -222,3 +239,29 @@ self-review guard.
   moved** (PAID invoices, APPROVED+PAID expenses) — they are not a
   forecast and will understate a site's eventual margin while invoices are
   still SENT/OVERDUE or expenses still PENDING.
+- **`parent_phase` is now actually reachable from the UI (fixed
+  2026-10-07, same pass that added the field).** The field shipped in a
+  migration without ever being added to `ProjectPhaseForm` or
+  `phase_form.html` — there was a model-level sous-étape concept with no
+  way for any user to create one. `ProjectPhaseForm` now takes a `site=`
+  kwarg and exposes a `parent_phase` picker scoped to that site's
+  top-level phases (excluding the phase itself on edit, and excluding
+  everything when the phase being edited already has its own sous-étapes
+  — see the next gotcha); `phase_form.html` renders it as a plain
+  `<select>`, matching the template's existing hand-rolled-field style
+  rather than `{{ form.as_p }}`. `ProjectPhaseCreateView`/`UpdateView`
+  pass `site=` via `get_form_kwargs()` and also compute the same
+  queryset into `top_level_phases` context for the template, since the
+  template doesn't render form fields directly.
+- **One-level nesting is now enforced from both directions in
+  `ProjectPhase.clean()` (fixed 2026-10-07).** The original check only
+  looked at the *new parent's* parent (rejecting `grandchild.parent =
+  child_of(X)`), but said nothing about a phase that already **has**
+  sous-étapes being assigned a parent itself — which would have produced
+  the same 2-level nesting from the other direction
+  (`Y.parent_phase = X` where `X` already has children). `clean()` now
+  also rejects that case (`self.sub_phases.exists()` when
+  `self.parent_phase_id` is being set), and `ProjectPhaseForm` pre-empts
+  it at the UI layer by emptying the `parent_phase` queryset entirely for
+  such a phase, rather than letting the user pick an option that would
+  only fail on submit.

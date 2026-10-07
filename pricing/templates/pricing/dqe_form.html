@@ -72,12 +72,17 @@
                                 <div class="dqe-line p-3 border rounded-3 border-200 mb-2" data-form-index="{{ forloop.counter0 }}">
                                     {% if form.instance.pk %}{{ form.id }}{% endif %}
                                     <div class="row g-2 align-items-end">
-                                        <div class="col-md-4">
+                                        <div class="col-md-3">
                                             <label class="form-label fs--1 fw-semibold">{% trans "Article (bibliothèque de prix)" %}</label>
                                             {{ form.price_item }}
                                             {% if form.price_item.errors %}<div class="text-danger fs--2 mt-1">{{ form.price_item.errors }}</div>{% endif %}
                                         </div>
-                                        <div class="col-md-3">
+                                        <div class="col-md-2">
+                                            <label class="form-label fs--1 fw-semibold">{% trans "Étape" %}</label>
+                                            {{ form.phase }}
+                                            {% if form.phase.errors %}<div class="text-danger fs--2 mt-1">{{ form.phase.errors }}</div>{% endif %}
+                                        </div>
+                                        <div class="col-md-2">
                                             <label class="form-label fs--1 fw-semibold">{% trans "Désignation (optionnel)" %}</label>
                                             {{ form.designation }}
                                         </div>
@@ -271,11 +276,17 @@ document.addEventListener('DOMContentLoaded', function () {
         newLine.dataset.formIndex = newIndex;
         newLine.innerHTML = `
             <div class="row g-2 align-items-end">
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label class="form-label fs--1 fw-semibold">{% trans "Article (bibliothèque de prix)" %}</label>
                     <select name="lines-${newIndex}-price_item" class="form-select">${options}</select>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
+                    <label class="form-label fs--1 fw-semibold">{% trans "Étape" %}</label>
+                    <select name="lines-${newIndex}-phase" class="form-select dqe-line-phase">
+                        <option value="">-- {% trans "Sélectionner" %} --</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
                     <label class="form-label fs--1 fw-semibold">{% trans "Désignation (optionnel)" %}</label>
                     <input type="text" name="lines-${newIndex}-designation" class="form-control">
                 </div>
@@ -307,8 +318,55 @@ document.addEventListener('DOMContentLoaded', function () {
         container.appendChild(newLine);
         totalFormsInput.value = currentCount + 1;
         setupLine(newLine);
+        loadPhasesForLine(newLine, null);
         updateCounts();
     });
+
+    // Scope every line's "Étape" picker to the DQE's own site (same AJAX
+    // pattern as finance:site_phases_data / materials/request_form.html).
+    const siteSelect = document.getElementById('{{ form.site.id_for_label }}');
+
+    function loadPhasesForLine(line, preselectId) {
+        const select = line.querySelector('.dqe-line-phase');
+        if (!select || !siteSelect) return;
+        const siteId = siteSelect.value;
+        select.innerHTML = '';
+        const blank = document.createElement('option');
+        blank.value = '';
+        blank.textContent = '-- {% trans "Sélectionner" %} --';
+        select.appendChild(blank);
+        if (!siteId) return;
+        fetch('{% url "finance:site_phases_data" %}?site=' + encodeURIComponent(siteId), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(r => r.json())
+        .then(data => {
+            (data.results || []).forEach(item => {
+                const opt = document.createElement('option');
+                opt.value = item.id;
+                opt.textContent = item.text;
+                if (preselectId && String(item.id) === String(preselectId)) opt.selected = true;
+                select.appendChild(opt);
+            });
+        })
+        .catch(err => console.error('Error loading phases for line:', err));
+    }
+
+    function loadPhasesForAllLines(resetSelection) {
+        document.querySelectorAll('.dqe-line').forEach(line => {
+            const select = line.querySelector('.dqe-line-phase');
+            const preselectId = (!resetSelection && select) ? (select.getAttribute('data-initial') || select.value) : null;
+            loadPhasesForLine(line, preselectId);
+        });
+    }
+
+    if (siteSelect) {
+        document.querySelectorAll('.dqe-line .dqe-line-phase').forEach(select => {
+            select.setAttribute('data-initial', select.value);
+        });
+        if (siteSelect.value) loadPhasesForAllLines(false);
+        siteSelect.addEventListener('change', function () { loadPhasesForAllLines(true); });
+    }
 
     document.querySelectorAll('input, select, textarea').forEach(el => {
         if (el.type === 'checkbox' || el.type === 'hidden') return;

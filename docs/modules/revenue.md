@@ -57,6 +57,21 @@ may ever be accepted, since accepting one creates the site's `Contract`
 - A `Devis` may carry a scanned `photo` instead of typed-in lines (create/
   update views drop the "at least one line" formset requirement when a
   photo is attached).
+- `source_dqe` **(added 2026-10-07)** — optional FK to `pricing.DQE`,
+  nullable, `SET_NULL`, `related_name='devis_set'`, scoped in
+  `DevisForm.__init__` to DQEs belonging to the devis's own `site`. Purely
+  informational on the `Devis`/`Contract` state machine above (it doesn't
+  participate in any transition or validation here) — its entire purpose is
+  downstream, in `pricing`: `pricing.services.baseline_quantity()` only
+  looks at an **ACCEPTE** devis that has a `source_dqe` set, exploding that
+  DQE's lines (by étape) to get the "what was actually budgeted" figure the
+  Devis & États de besoin comparison engine checks material requests
+  against. A `Devis` with no `source_dqe` (e.g. a hand-typed or
+  photo-attached quote with no DQE behind it) simply has no baseline —
+  every material request against that site's phases shows as
+  `NOT_BUDGETED` rather than `GREEN`/`ORANGE`/`RED`. See
+  [`pricing.md`](pricing.md#comparison-engine-pricingservicespy-added-2026-10-07)
+  for the full engine.
 
 `DevisLine`: one priced row (designation/unit/quantity/unit_price_ht),
 freeform and self-contained (mirrors `pricing.DQELine`'s shape).

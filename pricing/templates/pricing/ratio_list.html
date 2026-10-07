@@ -1,0 +1,78 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Ratios de consommation matière" %} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    <!-- vertical nav -->
+    {% include 'includes/navbar-vertical.html' with on="ratio_list" %}
+    <!-- /vertical nav -->
+
+    <div class="content">
+        <!-- navbar-top -->
+        {% include 'includes/navbar-top.html' %}
+        <!-- /navbar-top -->
+
+        <!-- Main Content -->
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            <div class="card mb-3">
+                <div class="card-body p-0">
+                    <div class="table-responsive scrollbar">
+                        <table class="table table-sm table-striped fs--1 mb-0 overflow-hidden">
+                            <thead class="bg-200 text-900">
+                                <tr>
+                                    <th class="align-middle white-space-nowrap">{% trans "Catégorie d'ouvrage" %}</th>
+                                    <th class="align-middle white-space-nowrap">{% trans "Matériau" %}</th>
+                                    <th class="align-middle white-space-nowrap text-end">{% trans "Ratio" %}</th>
+                                    <th class="align-middle white-space-nowrap">{% trans "Unité du ratio" %}</th>
+                                    <th class="align-middle white-space-nowrap">{% trans "Portée" %}</th>
+                                    <th class="no-sort align-middle text-end">{% trans "Actions" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ratio in ratios %}
+                                <tr>
+                                    <td class="align-middle white-space-nowrap">{{ ratio.get_work_category_display }}</td>
+                                    <td class="align-middle white-space-nowrap">{{ ratio.material.name }}</td>
+                                    <td class="align-middle white-space-nowrap text-end fw-bold text-primary">{{ ratio.ratio }}</td>
+                                    <td class="align-middle white-space-nowrap">{{ ratio.ratio_unit }}</td>
+                                    <td class="align-middle white-space-nowrap">
+                                        {% if ratio.cabinet_id %}
+                                        <span class="badge rounded-pill badge-subtle-info">{% trans "Spécifique au cabinet" %}</span>
+                                        {% else %}
+                                        <span class="badge rounded-pill badge-subtle-secondary">{% trans "Défaut global" %}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="align-middle white-space-nowrap text-end">
+                                        {% if ratio.cabinet_id %}
+                                        <a class="btn btn-link text-600 btn-sm" href="{% url 'pricing:ratio_update' ratio.pk %}">
+                                            <span class="fas fa-edit"></span>
+                                        </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center py-5">
+                                        <span class="fas fa-flask fa-2x text-300 d-block mb-2"></span>
+                                        <p class="text-600 mb-2">{% trans "Aucun ratio défini." %}</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <p class="text-500 fs--1">
+                {% trans "Un ratio « défaut global » s'applique à tous les cabinets sauf si surclassé par un ratio spécifique au cabinet pour la même catégorie d'ouvrage et le même matériau." %}
+            </p>
+        </div>
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}

@@ -352,6 +352,20 @@ class ProjectPhaseCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMi
         # Cabinet A has no authority to add phases to Cabinet B's sites.
         return self.site.cabinet
 
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['site'] = self.site
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['site'] = self.site
+        # Top-level phases this new phase could become a sous-étape of —
+        # same scoping ProjectPhaseForm applies, kept here too since
+        # phase_form.html renders fields by hand rather than via the form.
+        context['top_level_phases'] = self.site.phases.filter(parent_phase__isnull=True).order_by('name')
+        return context
+
     def get_header_title(self):
         return _("Ajouter une phase : %(name)s") % {'name': self.site.name}
 
@@ -372,11 +386,6 @@ class ProjectPhaseCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMi
         form.instance.site = self.site
         messages.success(self.request, _("Phase '%(name)s' ajoutée au projet.") % {'name': form.instance.name})
         return super().form_valid(form)
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['site'] = self.site
-        return context
 
     def get_success_url(self):
         return reverse_lazy('projects:site_detail', kwargs={'unique_id': self.site.unique_id})
@@ -406,9 +415,22 @@ class ProjectPhaseUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAcces
             {'title': _("Modifier la phase"), 'url': None},
         ]
 
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['site'] = self.object.site
+        return kwargs
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['site'] = self.object.site
+        # Same top-level-phases scoping as ProjectPhaseCreateView, minus
+        # this phase itself (a phase can't be its own parent) and minus
+        # everything if this phase already has its own sous-étapes (see
+        # ProjectPhaseForm.__init__ / ProjectPhase.clean()).
+        qs = self.object.site.phases.filter(parent_phase__isnull=True).exclude(pk=self.object.pk)
+        if self.object.sub_phases.exists():
+            qs = qs.none()
+        context['top_level_phases'] = qs.order_by('name')
         return context
 
     def get_success_url(self):

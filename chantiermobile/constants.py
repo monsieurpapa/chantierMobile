@@ -174,6 +174,32 @@ class DQEStatus(models.TextChoices):
     ARCHIVED = 'ARCHIVED', _('Archivé')
 
 
+class WorkCategory(models.TextChoices):
+    """Structural work-item category (added 2026-10-07, Devis/État de
+    besoin comparison feature) — classifies a WORK_ITEM-type
+    PriceLibraryItem (e.g. "Béton dosé 350 — fondations") so
+    pricing.MaterialConsumptionRatio knows which elementary materials
+    (ciment, acier, sable, gravier...) and ratios to explode its quantity
+    into. Only meaningful for WORK_ITEM items — see
+    PriceLibraryItem.clean()."""
+    BETON = 'BETON', _('Béton (toutes classes de dosage)')
+    ACIER = 'ACIER', _('Acier / armatures')
+    COFFRAGE = 'COFFRAGE', _('Coffrage')
+    MACONNERIE = 'MACONNERIE', _('Maçonnerie')
+    AUTRE = 'AUTRE', _('Autre ouvrage')
+
+
+class MaterialVarianceStatus(models.TextChoices):
+    """Result of comparing cumulative état-de-besoin requests against a
+    devis/DQE baseline for one (site, étape, matériau) combination — see
+    pricing.services.compare_material_usage(). Not a model field; used as
+    a plain return value / badge color key."""
+    GREEN = 'GREEN', _('Dans les clous')
+    ORANGE = 'ORANGE', _('À surveiller')
+    RED = 'RED', _('Dépassement')
+    NOT_BUDGETED = 'NOT_BUDGETED', _('Non chiffré au devis')
+
+
 class PurchaseOrderStatus(models.TextChoices):
     """Purchase order (bon de commande) status choices"""
     BROUILLON = 'BROUILLON', _('Brouillon')
@@ -633,6 +659,8 @@ __all__ = [
     'StockReportPeriod',
     'ContractMode',
     'CONTRACT_MODE_MODULES',
+    'WorkCategory',
+    'MaterialVarianceStatus',
 
     # Configuration classes
     'FormPlaceholders',

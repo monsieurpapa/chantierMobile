@@ -15,6 +15,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from core.models import BaseModel
 from projects.models import Site
+from pricing.models import DQE
 from chantiermobile.constants import InvoiceStatus, PaymentMethod, DevisStatus, SituationStatus
 
 class Contract(BaseModel):
@@ -185,6 +186,15 @@ class Devis(BaseModel):
     ACCEPTE devis with no matching Contract.
     """
     site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name='devis_set')
+    source_dqe = models.ForeignKey(
+        DQE, on_delete=models.SET_NULL, null=True, blank=True, related_name='devis_set',
+        verbose_name=_('DQE source'),
+        help_text=_(
+            "Le DQE détaillé (quantités/matériaux par étape) dont ce devis est issu — sert de "
+            "référence pour comparer les demandes de matériaux aux estimations initiales, étape "
+            "par étape."
+        ),
+    )
     devis_number = models.CharField(max_length=50, unique=True, verbose_name=_('Numéro de devis'))
     client_name = models.CharField(max_length=255, verbose_name=_('Client'))
     issue_date = models.DateField(verbose_name=_('Date d\'émission'))

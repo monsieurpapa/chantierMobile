@@ -75,12 +75,17 @@ class PaymentForm(forms.ModelForm):
 
 class DevisForm(forms.ModelForm):
     """Devis header form (site/client/dates/photo/notes); line items are
-    edited separately via DevisLineFormSet."""
+    edited separately via DevisLineFormSet. `source_dqe` links this devis
+    to the detailed DQE (quantities/matériaux par étape) it was built
+    from, enabling the devis-compliance comparison report — optional,
+    since an older/simpler devis may have been typed directly or built
+    from a photo with no DQE behind it."""
     class Meta:
         model = Devis
-        fields = ['site', 'devis_number', 'client_name', 'issue_date', 'validity_date', 'photo', 'notes']
+        fields = ['site', 'source_dqe', 'devis_number', 'client_name', 'issue_date', 'validity_date', 'photo', 'notes']
         widgets = {
             'site': forms.Select(attrs={'class': 'form-select'}),
+            'source_dqe': forms.Select(attrs={'class': 'form-select'}),
             'devis_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.DEVIS_NUMBER}),
             'client_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.CLIENT_NAME}),
             'issue_date': forms.DateInput(attrs={
@@ -100,6 +105,20 @@ class DevisForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['photo'].required = False
+        self.fields['source_dqe'].required = False
+        from pricing.models import DQE
+        site = None
+        if self.instance and self.instance.pk and self.instance.site_id:
+            site = self.instance.site
+        elif self.initial.get('site'):
+            site = self.initial.get('site')
+        if site is not None:
+            self.fields['source_dqe'].queryset = DQE.objects.filter(site=site)
+        else:
+            # Populated live client-side (dqe_data API below) once a site
+            # is picked — same "empty until scoped" shape as ExpenseForm's
+            # phase field.
+            self.fields['source_dqe'].queryset = DQE.objects.none()
 
 
 class DevisLineForm(forms.ModelForm):

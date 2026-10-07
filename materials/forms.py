@@ -40,7 +40,7 @@ class MaterialRequestItemForm(forms.ModelForm):
     enforced by MaterialRequestItem.clean()."""
     class Meta:
         model = MaterialRequestItem
-        fields = ['material', 'material_name', 'quantity', 'notes']
+        fields = ['material', 'material_name', 'phase', 'quantity', 'notes']
         widgets = {
             'material': DynamicSelectWidget(
                 create_url_name='materials:material_quick_create',
@@ -50,6 +50,7 @@ class MaterialRequestItemForm(forms.ModelForm):
                 'class': 'form-control',
                 'placeholder': _("Ou écrire le nom du matériel..."),
             }),
+            'phase': forms.Select(attrs={'class': 'form-select material-item-phase'}),
             'quantity': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'placeholder': '0.00',
@@ -66,6 +67,21 @@ class MaterialRequestItemForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['material'].required = False
         self.fields['material_name'].required = False
+        self.fields['phase'].required = False
+        # Empty on a fresh GET (mirrors ExpenseForm's own phase field) —
+        # the request_form.html template loads the real options live via
+        # finance:site_phases_data once a site is picked, and repopulates
+        # this on an edit via the preselected id baked into the template.
+        from projects.models import ProjectPhase
+        site = None
+        if self.instance and self.instance.pk and self.instance.request_id:
+            site = self.instance.request.site
+        elif 'initial' in kwargs and kwargs.get('initial', {}).get('site'):
+            site = kwargs['initial']['site']
+        if site is not None:
+            self.fields['phase'].queryset = ProjectPhase.objects.filter(site=site).order_by('start_date')
+        else:
+            self.fields['phase'].queryset = ProjectPhase.objects.none()
 
 # Formset for handling multiple materials per request.
 #

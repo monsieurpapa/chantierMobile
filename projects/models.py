@@ -189,8 +189,25 @@ class ProjectPhase(BaseModel):
     """A named stage of work within a Site (e.g. "Fondations",
     "Gros œuvre") — the unit SiteProgress reports and PlanningSubmissions
     are filed against, and the unit a lead engineer formally closes with
-    `close()` once its work is done."""
+    `close()` once its work is done.
+
+    `parent_phase` (added 2026-10-07, Devis/État de besoin comparison
+    feature) lets one top-level étape carry one or more sous-étapes (e.g.
+    "Gros Œuvre" > "Semelles filantes bloc A") — deliberately **one level
+    deep only** (see `clean()`), matching the client's literal ask rather
+    than a generic arbitrary-depth tree. A phase with no parent is a
+    top-level étape; a phase with a parent is a sous-étape of it."""
     site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name='phases')
+    parent_phase = models.ForeignKey(
+        'self', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='sub_phases', verbose_name=_('Étape parente'),
+        help_text=_(
+            "Laisser vide pour une étape principale. Sélectionner une étape "
+            "existante en fait une sous-étape de celle-ci (un seul niveau de "
+            "profondeur — une sous-étape ne peut pas elle-même avoir de "
+            "sous-étapes)."
+        ),
+    )
     name = models.CharField(max_length=255)
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
@@ -203,7 +220,47 @@ class ProjectPhase(BaseModel):
     closure_notes = models.TextField(blank=True, verbose_name=_('Notes de clôture'))
 
     def __str__(self):
+        if self.parent_phase_id:
+            return f"{self.site.name} - {self.parent_phase.name} > {self.name}"
         return f"{self.site.name} - {self.name}"
+
+    def clean(self):
+        """Keeps the hierarchy exactly one level deep and sane:
+        - a phase can't be its own parent;
+        - a parent must belong to the same site;
+        - a parent can't itself already be a sous-étape (no 2nd level);
+        - a phase that already has its own sous-étapes can't itself become
+          a sous-étape of another phase (that would create a 2nd level from
+          the other direction — caught here, not above, since the check
+          above only looks at the *parent's* parent, not at this phase's
+          own children)."""
+        from django.core.exceptions import ValidationError
+        if self.parent_phase_id:
+            if self.pk and self.parent_phase_id == self.pk:
+                raise ValidationError({'parent_phase': _("Une étape ne peut pas être sa propre étape parente.")})
+            if self.site_id and self.parent_phase.site_id != self.site_id:
+                raise ValidationError({'parent_phase': _("L'étape parente doit appartenir au même chantier.")})
+            if self.parent_phase.parent_phase_id:
+                raise ValidationError({'parent_phase': _(
+                    "Une sous-étape ne peut pas elle-même avoir de sous-étape (un seul niveau de profondeur)."
+                )})
+            if self.pk and self.sub_phases.exists():
+                raise ValidationError({'parent_phase': _(
+                    "Cette étape a déjà ses propres sous-étapes ; elle ne peut pas devenir "
+                    "elle-même une sous-étape (un seul niveau de profondeur)."
+                )})
+
+    @property
+    def is_sub_phase(self):
+        """True when this phase is a sous-étape of another."""
+        return self.parent_phase_id is not None
+
+    @property
+    def top_level_phase(self):
+        """This phase itself if it's already top-level, else its parent —
+        the étape to roll sous-étape figures up into for a site-wide
+        devis/consommation comparison."""
+        return self.parent_phase if self.parent_phase_id else self
 
     @property
     def is_closed(self):

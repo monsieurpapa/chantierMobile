@@ -149,6 +149,35 @@ just test-fast        # stop on first failure
 - `pytest.ini` runs tests with `--nomigrations` for speed, so a broken migration won't
   surface in CI test runs — always run `just migrate` locally against a fresh database
   before merging a schema change.
+- **This sandbox's `tests/conftest.py` overrides `django_db_setup` to a no-op**, so
+  `--nomigrations`/`--reuse-db`/`--create-db` are effectively inert here: tests run
+  directly against whatever `DATABASES['default']['NAME']` resolves to in
+  `chantiermobile/settings.py`, not an isolated per-run test database. Two consequences
+  worth knowing before chasing a "regression" that isn't one:
+  - **Always run `python manage.py migrate` after `makemigrations` in this
+    environment** — generating a migration alone leaves the shared DB's schema stale,
+    and the next test run fails with a `column "X" does not exist`-style error that has
+    nothing to do with the code change itself.
+  - **A full sequential run can end with a handful of `finance` tests failing on
+    missing `ExpenseCategory`/`CaisseTransactionCategory` rows** (seeded by data
+    migrations) even though `showmigrations` shows those migrations applied. Root
+    cause: at least one `@pytest.mark.django_db(transaction=True)` test (e.g. in
+    `test_e2e_workflows.py`/`test_performance.py`) triggers Django's normal
+    `TransactionTestCase` table-flush teardown, which truncates every table —
+    including these data-migration-seeded rows — and since migrations aren't re-run
+    against this shared DB, nothing restores them afterwards. This is **not** a code
+    regression; verify independently if in doubt (a `git worktree` at the last clean
+    commit + a brand-new Postgres database + `manage.py migrate` there reproduces a
+    true, isolated baseline). The quick fix is re-running the affected migrations'
+    `get_or_create()` seed logic directly against the shared DB (see
+    `finance/migrations/0010_seed_expense_categories.py`,
+    `0013_seed_caisse_transaction_categories.py`, `0015_seed_payroll_caisse_categories.py`)
+    — not a schema or data-model problem, just this sandbox's lack of per-run DB
+    isolation.
+  - Avoid `pytest -n <N>` (xdist) for a trustworthy failure count here — parallel
+    workers share this same unisolated database with no per-worker separation, which
+    produces false-flaky errors under load that vanish when the same tests are re-run
+    individually.
 
 ## Translations
 

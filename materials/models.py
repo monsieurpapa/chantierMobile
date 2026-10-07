@@ -25,7 +25,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 from core.models import BaseModel
-from projects.models import Site
+from projects.models import Site, ProjectPhase
 from chantiermobile.constants import MaterialRequestStatus
 
 class Material(BaseModel):
@@ -50,7 +50,15 @@ class MaterialRequest(BaseModel):
     requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='material_requests')
     status = models.CharField(max_length=20, choices=MaterialRequestStatus.choices, default=MaterialRequestStatus.PENDING)
     notes = models.TextField(blank=True, null=True, help_text=_("Additional notes or instructions for this request"))
-    
+    overage_justification = models.TextField(
+        blank=True, verbose_name=_('Justification de dépassement'),
+        help_text=_(
+            "Obligatoire uniquement quand au moins un article de cette demande dépasse "
+            "largement l'estimation du devis pour son étape (voir authorize()) — expose le "
+            "dépassement au DG et au bureau technique via le rapport de conformité devis."
+        ),
+    )
+
     # Optional link to an expense if approved and purchased (aggregated)
     expense = models.OneToOneField('finance.Expense', on_delete=models.SET_NULL, null=True, blank=True, related_name='material_request')
 
@@ -92,7 +100,7 @@ class MaterialRequest(BaseModel):
         self.save(update_fields=['status', 'updated_at'])
         StatusChangeLog.log(self, changed_by=user, old_status=old_status, new_status=self.status, note=notes)
 
-    def authorize(self, user, notes=''):
+    def authorize(self, user, notes='', overage_justification=''):
         """Second/final stage: Directeur Technique, Directeur Général (or
         Directeur de Cabinet) gives the final authorization once the
         magasinier has validated the request.
@@ -114,7 +122,15 @@ class MaterialRequest(BaseModel):
         that's unaffected by this guard — the gap it closes is a
         requester approving their own request at either stage, not
         requiring the two stages to be done by different non-requester
-        people."""
+        people.
+
+        `overage_justification` is the soft-overage note requirement
+        (mirrors PayrollListItem.clean()'s chef-de-corps overage_note
+        pattern): a RED variance against the devis/DQE baseline for at
+        least one comparable item doesn't block authorization outright,
+        but does require the authorizer to leave a justification, stored
+        on the request itself (surfaced via the devis-compliance report)
+        rather than folded into the generic StatusChangeLog `notes`."""
         from django.db import transaction
         from django.core.exceptions import ValidationError
         from core.models import StatusChangeLog
@@ -122,10 +138,21 @@ class MaterialRequest(BaseModel):
             raise ValidationError(_("Vous ne pouvez pas autoriser votre propre demande de matériaux."))
         if self.status != MaterialRequestStatus.VALIDATED:
             raise ValidationError(_("Seule une demande validée par le magasinier peut être autorisée."))
+        from pricing.services import has_red_variance
+        is_overage = has_red_variance(self)
+        if is_overage and not (overage_justification or '').strip():
+            raise ValidationError(_(
+                "Au moins un article de cette demande dépasse largement l'estimation du devis "
+                "pour son étape. Ajoutez une justification de dépassement avant d'autoriser."
+            ))
         with transaction.atomic():
             old_status = self.status
             self.status = MaterialRequestStatus.APPROVED
-            self.save(update_fields=['status', 'updated_at'])
+            update_fields = ['status', 'updated_at']
+            if is_overage:
+                self.overage_justification = overage_justification.strip()
+                update_fields.append('overage_justification')
+            self.save(update_fields=update_fields)
             StatusChangeLog.log(self, changed_by=user, old_status=old_status, new_status=self.status, note=notes)
             if not self.expense_id and self.total_estimated_cost and self.total_estimated_cost > 0:
                 self._create_linked_expense(user)
@@ -215,6 +242,11 @@ class MaterialRequestItem(BaseModel):
         verbose_name=_('Nom du matériel'),
         help_text=_("À utiliser si le matériel n'est pas dans le catalogue"),
     )
+    phase = models.ForeignKey(
+        ProjectPhase, on_delete=models.SET_NULL, null=True, blank=True, related_name='material_request_items',
+        verbose_name=_('Étape'),
+        help_text=_("L'étape (ou sous-étape) du chantier à laquelle ce matériau est destiné — permet de comparer la demande aux estimations du devis pour cette étape."),
+    )
     quantity = models.DecimalField(max_digits=10, decimal_places=2)
     notes = models.TextField(blank=True, null=True, help_text=_("Notes specific to this material item"))
 
@@ -235,7 +267,13 @@ class MaterialRequestItem(BaseModel):
 
     def clean(self):
         """Enforces the catalog-or-free-text XOR described on the class
-        docstring, plus a positive quantity."""
+        docstring, plus a positive quantity. The phase/site cross-check is
+        gated on `request_id` being set — a brand-new MaterialRequestItem
+        created through the inline formset doesn't reliably have its
+        parent's `site` populated yet at this point (see
+        MaterialRequest.clean()'s own pk-gated check for the same reason),
+        so this is defense-in-depth for later edits; the real safety net
+        for the create flow is the AJAX site-scoped phase dropdown."""
         from django.core.exceptions import ValidationError
 
         if not self.material_id and not self.material_name:
@@ -248,6 +286,9 @@ class MaterialRequestItem(BaseModel):
             raise ValidationError({
                 'quantity': 'Quantity must be a positive number.'
             })
+
+        if self.phase_id and self.request_id and self.phase.site_id != self.request.site_id:
+            raise ValidationError({'phase': _("L'étape sélectionnée n'appartient pas au chantier de cette demande.")})
 
     @property
     def estimated_cost(self):

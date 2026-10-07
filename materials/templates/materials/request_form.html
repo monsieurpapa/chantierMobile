@@ -47,10 +47,10 @@
                             <!-- Materials List -->
                             <div id="materials-container" class="space-y-2">
                                 {% for form in items_formset %}
-                                <div class="material-item p-3 border rounded-3 border-200 mb-2" data-form-index="{{ forloop.counter0 }}">
+                                <div class="material-item p-3 border rounded-3 border-200 mb-2" data-form-index="{{ forloop.counter0 }}" data-item-pk="{{ form.instance.pk|default_if_none:'' }}">
                                     <div class="row g-2 align-items-end">
                                         <!-- Material Selection -->
-                                        <div class="col-md-5">
+                                        <div class="col-md-4">
                                             <label class="form-label fs--1 fw-semibold">{% trans "Material" %}</label>
                                             {{ form.material }}
                                             <div class="fs--2 text-500 my-1 text-center">{% trans "ou" %}</div>
@@ -67,8 +67,19 @@
                                             {% endif %}
                                         </div>
 
+                                        <!-- Phase (étape) -->
+                                        <div class="col-md-2">
+                                            <label class="form-label fs--1 fw-semibold">{% trans "Étape" %}</label>
+                                            {{ form.phase }}
+                                            {% if form.phase.errors %}
+                                            <div class="text-danger fs--2 mt-1">
+                                                {{ form.phase.errors }}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+
                                         <!-- Quantity -->
-                                        <div class="col-md-3">
+                                        <div class="col-md-2">
                                             <label class="form-label fs--1 fw-semibold">Quantity</label>
                                             <div class="input-group">
                                                 {{ form.quantity }}
@@ -105,10 +116,11 @@
                                         {% endif %}
                                     </div>
 
-                                    <!-- Estimated Cost Display -->
-                                    <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center">
+                                    <!-- Estimated Cost + devis/DQE variance badge -->
+                                    <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
                                         <small class="text-600">Estimated Cost:</small>
                                         <strong class="text-primary" id="cost-{{ forloop.counter0 }}">$0.00</strong>
+                                        <span class="badge rounded-pill badge-subtle-secondary variance-badge" id="variance-{{ forloop.counter0 }}" style="display: none;"></span>
                                     </div>
 
                                     <!-- Hidden delete checkbox for formset -->
@@ -302,19 +314,111 @@ document.addEventListener('DOMContentLoaded', function () {
     function setupMaterialSelect(item) {
         const select = item.querySelector('select[name*="material"]');
         const quantityInput = item.querySelector('input[name*="quantity"]');
-        
+
         if (select) {
             select.addEventListener('change', function () {
                 updateUnit(this);
                 calculateItemCost(item);
+                refreshVarianceBadge(item);
             });
         }
-        
+
         if (quantityInput) {
             quantityInput.addEventListener('input', function () {
                 calculateItemCost(item);
+                refreshVarianceBadge(item);
             });
         }
+    }
+
+    // --- Devis/État de besoin comparison: phase picker + live badge ---
+
+    function loadPhasesForItem(item, preselectId) {
+        const select = item.querySelector('.material-item-phase');
+        if (!select || !siteSelect) return;
+        const siteId = siteSelect.value;
+        select.innerHTML = '';
+        const blank = document.createElement('option');
+        blank.value = '';
+        blank.textContent = '-- {% trans "Sélectionner" %} --';
+        select.appendChild(blank);
+        if (!siteId) { refreshVarianceBadge(item); return; }
+        fetch('{% url "finance:site_phases_data" %}?site=' + encodeURIComponent(siteId), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(r => r.json())
+        .then(data => {
+            (data.results || []).forEach(function (phase) {
+                const opt = document.createElement('option');
+                opt.value = phase.id;
+                opt.textContent = phase.text;
+                if (preselectId && String(phase.id) === String(preselectId)) opt.selected = true;
+                select.appendChild(opt);
+            });
+            refreshVarianceBadge(item);
+        })
+        .catch(err => console.error('Error loading phases for item:', err));
+    }
+
+    function loadPhasesForAllItems(resetSelection) {
+        document.querySelectorAll('.material-item').forEach(function (item) {
+            const select = item.querySelector('.material-item-phase');
+            const preselectId = (!resetSelection && select) ? (select.getAttribute('data-initial') || select.value) : null;
+            loadPhasesForItem(item, preselectId);
+        });
+    }
+
+    // Live red/orange/green badge: "if this row's quantity were added,
+    // where would this (site, étape, matériau) land against the devis/DQE
+    // baseline?" — calls pricing:material_usage_comparison on every
+    // material/phase/quantity change, debounced so fast typing in the
+    // quantity field doesn't fire a request per keystroke.
+    let varianceTimers = {};
+    function refreshVarianceBadge(item) {
+        const idx = item.dataset.formIndex;
+        const badge = document.getElementById(`variance-${idx}`);
+        if (!badge) return;
+
+        const materialSelect = item.querySelector('select[name*="material"]');
+        const phaseSelect = item.querySelector('.material-item-phase');
+        const quantityInput = item.querySelector('input[name*="quantity"]');
+        const siteId = siteSelect ? siteSelect.value : '';
+        const materialId = materialSelect ? materialSelect.value : '';
+        const phaseId = phaseSelect ? phaseSelect.value : '';
+        const quantity = quantityInput ? (parseFloat(quantityInput.value) || 0) : 0;
+        const itemPk = item.dataset.itemPk;
+
+        if (!siteId || !materialId || !phaseId) {
+            badge.style.display = 'none';
+            return;
+        }
+
+        clearTimeout(varianceTimers[idx]);
+        varianceTimers[idx] = setTimeout(function () {
+            const params = new URLSearchParams({
+                site: siteId, phase: phaseId, material: materialId, quantity: quantity,
+            });
+            if (itemPk) params.set('exclude_item', itemPk);
+            fetch('{% url "pricing:material_usage_comparison" %}?' + params.toString(), {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (!data.ok) { badge.style.display = 'none'; return; }
+                const classes = {
+                    GREEN: 'badge-subtle-success',
+                    ORANGE: 'badge-subtle-warning',
+                    RED: 'badge-subtle-danger',
+                    NOT_BUDGETED: 'badge-subtle-secondary',
+                };
+                badge.className = 'badge rounded-pill variance-badge ' + (classes[data.status] || 'badge-subtle-secondary');
+                let text = data.status_label;
+                if (data.variance_pct !== null) { text += ' (' + Math.round(data.variance_pct) + '%)'; }
+                badge.textContent = text;
+                badge.style.display = '';
+            })
+            .catch(err => { console.error('Error loading variance badge:', err); badge.style.display = 'none'; });
+        }, 300);
     }
 
     // Initialize a material item
@@ -323,6 +427,10 @@ document.addEventListener('DOMContentLoaded', function () {
         setupRemoveBtn(item);
         setupMaterialSelect(item);
         calculateItemCost(item);
+        const phaseSelect = item.querySelector('.material-item-phase');
+        if (phaseSelect) {
+            phaseSelect.addEventListener('change', function () { refreshVarianceBadge(item); });
+        }
     }
 
     // Add new material form
@@ -339,7 +447,7 @@ document.addEventListener('DOMContentLoaded', function () {
         newForm.dataset.formIndex = newIndex;
         newForm.innerHTML = `
             <div class="row g-2 align-items-end">
-                <div class="col-md-5">
+                <div class="col-md-4">
                     <label class="form-label fs--1 fw-semibold">Material</label>
                     <select name="items-${newIndex}-material" id="id_items-${newIndex}-material" class="form-select"
                         data-control="select2" data-create-url="{% url 'materials:material_quick_create' %}"
@@ -352,7 +460,13 @@ document.addEventListener('DOMContentLoaded', function () {
                     <div class="fs--2 text-500 my-1 text-center">ou</div>
                     <input type="text" name="items-${newIndex}-material_name" class="form-control" placeholder="Ou écrire le nom du matériel...">
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
+                    <label class="form-label fs--1 fw-semibold">Étape</label>
+                    <select name="items-${newIndex}-phase" class="form-select material-item-phase">
+                        <option value="">-- Sélectionner --</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
                     <label class="form-label fs--1 fw-semibold">Quantity</label>
                     <div class="input-group">
                         <input type="number" name="items-${newIndex}-quantity" step="0.01" placeholder="0.00" class="form-control">
@@ -372,9 +486,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 <label class="form-label fs--1 fw-semibold">Notes (Optional)</label>
                 <textarea name="items-${newIndex}-notes" class="form-control" placeholder="Notes for this item (optional)" rows="2"></textarea>
             </div>
-            <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center">
+            <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <small class="text-600">Estimated Cost:</small>
                 <strong class="text-primary" id="cost-${newIndex}">$0.00</strong>
+                <span class="badge rounded-pill badge-subtle-secondary variance-badge" id="variance-${newIndex}" style="display: none;"></span>
             </div>
             <input type="hidden" name="items-${newIndex}-id" id="id_items-${newIndex}-id">
             <input type="hidden" name="items-${newIndex}-DELETE" id="id_items-${newIndex}-DELETE">
@@ -384,6 +499,7 @@ document.addEventListener('DOMContentLoaded', function () {
         totalFormsInput.value = currentCount + 1;
 
         initializeItem(newForm);
+        loadPhasesForItem(newForm, null);
         updateItemCount();
         if (window.initDynamicSelects) { window.initDynamicSelects(newForm); }
     });
@@ -420,6 +536,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Fetch material data on page load
     fetchMaterialData();
+
+    // Scope every row's "Étape" picker to the picked chantier, and refresh
+    // it (plus every row's variance badge) whenever the site changes —
+    // existing phase selections become stale as soon as the site does.
+    if (siteSelect) {
+        document.querySelectorAll('.material-item-phase').forEach(select => {
+            select.setAttribute('data-initial', select.value);
+        });
+        if (siteSelect.value) loadPhasesForAllItems(false);
+        siteSelect.addEventListener('change', function () { loadPhasesForAllItems(true); });
+    }
 });
 </script>
 {% endblock %}

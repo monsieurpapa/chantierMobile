@@ -71,6 +71,7 @@ see each app's `docs/modules/<app>.md` for the complete, current list per view).
 | Contracts / invoices / payments | `DIRECTOR`, `DIRECTEUR_TECHNIQUE`, `DIRECTEUR_GENERAL`, `ACCOUNTANT` (some views add `CHIEF_ENGINEER` or `CASHIER`) |
 | Purchase orders, stock receiving | `DIRECTOR`, `DIRECTEUR_TECHNIQUE`, `DIRECTEUR_GENERAL`, `CHIEF_ENGINEER` (financier sign-off adds `ACCOUNTANT`) |
 | Pricing library / DQE | `DIRECTOR`, `DIRECTEUR_TECHNIQUE`, `DIRECTEUR_GENERAL`, `CHIEF_ENGINEER` |
+| Create/edit a material-consumption ratio override, edit a cabinet's variance thresholds | `DIRECTOR`, `DIRECTEUR_TECHNIQUE`, `DIRECTEUR_GENERAL`, `CHIEF_ENGINEER` (`pricing.views.PRICING_ADMIN_ROLES`) — added 2026-10-07; reading the ratio catalog or the devis-compliance report is open to any cabinet member, same as the rest of `pricing`; see `docs/modules/pricing.md` |
 | Register/edit a Personnel profile | `DIRECTOR`, `DIRECTEUR_TECHNIQUE`, `DIRECTEUR_GENERAL`, `CHIEF_ENGINEER`, `CASHIER` (added 2026-10-06, permission table update) |
 | Other Personnel / HR administration | `DIRECTOR`, `DIRECTEUR_TECHNIQUE`, `DIRECTEUR_GENERAL`, `CHIEF_ENGINEER` (some narrowed to director-tier only) |
 | Edit an existing caisse mouvement | `CAISSE_MANAGE_ROLES` in the caisse's own cabinet, **and** only the caisse's `responsible_cashier` or whoever recorded that specific transaction (`CaisseTransaction.can_be_modified_by()`, bypassable only by `is_superuser`) — added 2026-10-06, permission table update; see `docs/modules/finance.md` |
