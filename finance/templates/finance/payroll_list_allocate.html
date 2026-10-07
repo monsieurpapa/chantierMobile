@@ -15,7 +15,7 @@
 
             <div class="alert alert-info" role="alert">
                 <span class="fas fa-info-circle me-1"></span>
-                {% trans "Un montant par affectation active sur ce chantier. Laissez vide les lignes que vous ne souhaitez pas payer maintenant. Pour un Ouvrier avec une convention, le montant ne peut pas dépasser le reste à payer." %}
+                {% trans "Un montant par affectation active sur ce chantier. Laissez vide les lignes que vous ne souhaitez pas payer maintenant. Pour un Ouvrier avec une convention, le montant ne peut pas dépasser le reste à payer — sauf pour un Chef de corps (badge ci-dessous), qui peut dépasser son plafond à condition d'expliquer pourquoi." %}
             </div>
 
             <div class="card mb-3">
@@ -39,7 +39,10 @@
                                 <tbody>
                                     {% for row in rows %}
                                     <tr>
-                                        <td>{{ row.personnel.get_full_name }}</td>
+                                        <td>
+                                            {{ row.personnel.get_full_name }}
+                                            {% if row.is_chef_de_corps %}<span class="badge bg-dark ms-1">{% trans "Chef de corps" %}</span>{% endif %}
+                                        </td>
                                         <td>{{ row.assignment.role }}</td>
                                         <td class="text-end">{{ CURRENCY_SYMBOL }}{{ row.assignment.paid_amount|floatformat:2|intcomma }}</td>
                                         <td class="text-end">
@@ -52,6 +55,11 @@
                                         <td class="text-end">
                                             <input type="number" step="0.01" min="0" class="form-control form-control-sm text-end"
                                                    name="amount_{{ row.assignment.pk }}" placeholder="0.00">
+                                            {% if row.is_chef_de_corps %}
+                                            <input type="text" class="form-control form-control-sm mt-1"
+                                                   name="overage_note_{{ row.assignment.pk }}"
+                                                   placeholder="{% trans 'Note si dépassement de la convention...' %}">
+                                            {% endif %}
                                         </td>
                                     </tr>
                                     {% empty %}

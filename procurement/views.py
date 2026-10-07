@@ -812,7 +812,13 @@ def achats_report_pdf(request):
 # projet/étape" et "un rapport global de stock" du cahier des charges.
 # ---------------------------------------------------------------------
 
-STOCK_REPORT_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER', 'ENGINEER', 'MAGASINIER']
+# MAGASINIER_GENERAL added 2026-10-07: cabinet-wide, read-only access to
+# every site's stock history (see finance.views.EXPENSE_REPORT_ROLES for
+# the matching addition on the dépenses side of the same "Magasinier
+# Général" role) — deliberately NOT added to STOCK_ACTION_ROLES below, so
+# this role stays read-only everywhere except the sites it's separately
+# assigned to as a regular MAGASINIER.
+STOCK_REPORT_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER', 'ENGINEER', 'MAGASINIER', 'MAGASINIER_GENERAL']
 
 
 def _stock_report_queryset(request):

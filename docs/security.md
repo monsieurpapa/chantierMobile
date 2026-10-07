@@ -74,6 +74,9 @@ see each app's `docs/modules/<app>.md` for the complete, current list per view).
 | Register/edit a Personnel profile | `DIRECTOR`, `DIRECTEUR_TECHNIQUE`, `DIRECTEUR_GENERAL`, `CHIEF_ENGINEER`, `CASHIER` (added 2026-10-06, permission table update) |
 | Other Personnel / HR administration | `DIRECTOR`, `DIRECTEUR_TECHNIQUE`, `DIRECTEUR_GENERAL`, `CHIEF_ENGINEER` (some narrowed to director-tier only) |
 | Edit an existing caisse mouvement | `CAISSE_MANAGE_ROLES` in the caisse's own cabinet, **and** only the caisse's `responsible_cashier` or whoever recorded that specific transaction (`CaisseTransaction.can_be_modified_by()`, bypassable only by `is_superuser`) — added 2026-10-06, permission table update; see `docs/modules/finance.md` |
+| Record a convention avenant (chef de corps) | `CASHIER`, `ACCOUNTANT`, `DIRECTOR`, `DIRECTEUR_TECHNIQUE`, `DIRECTEUR_GENERAL` (`CONVENTION_AVENANT_ROLES`) — added 2026-10-07; see `docs/modules/personnel.md` |
+| View chef-de-corps convention overages | `DIRECTOR`, `DIRECTEUR_TECHNIQUE`, `DIRECTEUR_GENERAL`, `CHIEF_ENGINEER` (`CONVENTION_OVERAGE_VIEW_ROLES`) — added 2026-10-07; see `docs/modules/finance.md` |
+| View the expense report / stock report | `EXPENSE_REPORT_ROLES` / `STOCK_REPORT_ROLES` — both now also include `MAGASINIER_GENERAL` (added 2026-10-07, read-only, cross-cabinet; see below) |
 
 Two enforcement layers exist, and a new view needs the one matching how it's built:
 
@@ -89,6 +92,24 @@ Two enforcement layers exist, and a new view needs the one matching how it's bui
 Cabinet membership. Every state-changing endpoint needs one of the two checks above.
 Reviewers: a PR adding a new mutation without either is a correctness bug, not a style
 nitpick.
+
+### Magasinier Général (added 2026-10-07)
+
+A new `UserRoles` member, `MAGASINIER_GENERAL`, giving **read-only,
+cross-cabinet visibility** into every site's expenses and stock — it was
+added to `EXPENSE_REPORT_ROLES` (`finance/views.py`) and
+`STOCK_REPORT_ROLES` (`procurement/views.py`) only. It was deliberately
+**not** added to any write-role list (`CAISSE_MANAGE_ROLES`,
+`STOCK_ACTION_ROLES`, or any approve/pay/create role list) — a Magasinier
+Général has no write rights beyond those of a regular `MAGASINIER` on
+sites they're actually assigned to. Investigation during this feature
+found that a plain `MAGASINIER` was already cabinet-wide (not site-scoped)
+for most read paths (`ExpenseListView`, `CaisseListView`, and most
+list/detail views are already open to any authenticated cabinet member
+regardless of role) — the real, specific gap this role fills is the
+filterable/exportable **Expense Report** (previously behind
+`EXPENSE_REPORT_ROLES`, which didn't include either Magasinier role) and
+formal nav-link visibility for the stock report.
 
 ### A note on duplicated role lists
 

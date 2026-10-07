@@ -1,0 +1,115 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Avenant sur convention" %} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    <!-- vertical nav -->
+    {% include 'includes/navbar-vertical.html' with on="personnel" %}
+    <!-- /vertical nav -->
+
+    <div class="content">
+        <!-- navbar-top -->
+        {% include 'includes/navbar-top.html' %}
+        <!-- /navbar-top -->
+
+        <!-- Main Content -->
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            <div class="row g-3">
+                <div class="col-lg-6">
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">{% trans "Détails de la convention" %}</h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="mb-1"><strong>{% trans "Chantier" %} :</strong> {{ assignment.site.name }}</p>
+                            {% if assignment.phase %}<p class="mb-1"><strong>{% trans "Étape" %} :</strong> {{ assignment.phase.name }}</p>{% endif %}
+                            {% if assignment.name %}<p class="mb-1"><strong>{% trans "Convention" %} :</strong> {{ assignment.name }}</p>{% endif %}
+                            <p class="mb-1"><strong>{% trans "Convention initiale" %} :</strong> {{ CURRENCY_SYMBOL }}{{ assignment.effective_initial_amount|default:"—" }}</p>
+                            <p class="mb-1"><strong>{% trans "Montant actuel (après avenants)" %} :</strong> {{ CURRENCY_SYMBOL }}{{ assignment.convention_amount|default:"—" }}</p>
+                            <p class="mb-1"><strong>{% trans "Déjà payé" %} :</strong> {{ CURRENCY_SYMBOL }}{{ assignment.paid_amount }}</p>
+                            <p class="mb-0"><strong>{% trans "Reste à payer" %} :</strong>
+                                {% if assignment.remaining_convention is not None %}
+                                {{ CURRENCY_SYMBOL }}{{ assignment.remaining_convention }}
+                                {% else %}
+                                {% trans "Aucun plafond suivi" %}
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">{% trans "Nouvel avenant" %}</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="post">
+                                {% csrf_token %}
+                                <div class="mb-3">
+                                    <label class="form-label">{{ form.date.label }}</label>
+                                    {{ form.date }}
+                                    {% if form.date.errors %}<div class="text-danger fs--2">{{ form.date.errors }}</div>{% endif %}
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">{{ form.new_amount.label }}</label>
+                                    {{ form.new_amount }}
+                                    {% if form.new_amount.errors %}<div class="text-danger fs--2">{{ form.new_amount.errors }}</div>{% endif %}
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">{{ form.reason.label }}</label>
+                                    {{ form.reason }}
+                                    {% if form.reason.errors %}<div class="text-danger fs--2">{{ form.reason.errors }}</div>{% endif %}
+                                </div>
+                                <div class="d-flex justify-content-end gap-2">
+                                    <a class="btn btn-falcon-default" href="{{ back_url }}">{% trans "Annuler" %}</a>
+                                    <button class="btn btn-primary" type="submit">{% trans "Enregistrer l'avenant" %}</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">{% trans "Historique des avenants" %}</h5>
+                        </div>
+                        <div class="card-body p-0">
+                            {% if avenants %}
+                            <ul class="list-group list-group-flush fs--1">
+                                {% for avenant in avenants %}
+                                <li class="list-group-item">
+                                    <div class="d-flex justify-content-between">
+                                        <strong>{{ avenant.date }}</strong>
+                                        <span>{{ CURRENCY_SYMBOL }}{{ avenant.previous_amount }} → {{ CURRENCY_SYMBOL }}{{ avenant.new_amount }}</span>
+                                    </div>
+                                    <p class="mb-0 text-600">{{ avenant.reason }}</p>
+                                    <p class="mb-0 text-400 fs--2">{% trans "Enregistré par" %} {{ avenant.recorded_by|default:"—" }}</p>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                            {% else %}
+                            <p class="text-center py-4 text-600 mb-0">{% trans "Aucun avenant enregistré pour cette convention." %}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.querySelectorAll('input, select, textarea').forEach(el => {
+        if (!el.classList.contains('form-range')) el.classList.add('form-control');
+        if (el.tagName === 'SELECT') { el.classList.remove('form-control'); el.classList.add('form-select'); }
+    });
+</script>
+{% endblock %}

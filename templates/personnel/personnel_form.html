@@ -68,6 +68,13 @@
                                 <p class="fs--2 text-500">{% trans "Détermine la catégorie de décaissement sur la liste de paie (Main d'œuvre Ouvriers ou Salaire Ingénieurs)." %}</p>
                                 {% if form.payroll_type.errors %}<div class="text-danger fs--2">{{ form.payroll_type.errors }}</div>{% endif %}
                             </div>
+                            <div class="col-md-8 d-flex align-items-center">
+                                <div class="form-check mt-4">
+                                    {{ form.is_chef_de_corps }}
+                                    <label class="form-check-label" for="{{ form.is_chef_de_corps.id_for_label }}">{% trans "Chef de corps" %}</label>
+                                    <p class="fs--2 text-500 mb-0">{% trans "Sous-traitant qui contracte pour tout un corps de métier et rémunère lui-même ses ouvriers — apparaît aussi dans la section « Chefs de corps »." %}</p>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="mb-3">
@@ -189,6 +196,7 @@
 <!-- Script to add Falcon classes to django form widgets if needed -->
 <script>
     document.querySelectorAll('input, select, textarea').forEach(el => {
+        if (el.type === 'checkbox' || el.type === 'radio') { el.classList.add('form-check-input'); return; }
         if (!el.classList.contains('form-range')) el.classList.add('form-control');
         if (el.tagName === 'SELECT') { el.classList.remove('form-control'); el.classList.add('form-select'); }
     });

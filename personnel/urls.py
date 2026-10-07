@@ -13,12 +13,16 @@ urlpatterns = [
     path('staff/<uuid:unique_id>/delete/', views.PersonnelDeleteView.as_view(), name='personnel_delete'),
     path('staff/quick-create/', views.PersonnelQuickCreateView.as_view(), name='personnel_quick_create'),
 
+    # Chefs de corps
+    path('chefs-de-corps/', views.ChefDeCorpsListView.as_view(), name='chef_de_corps_list'),
+
     # Skills
     path('skills/', views.SkillListView.as_view(), name='skill_list'),
     path('skills/quick-create/', views.SkillQuickCreateView.as_view(), name='skill_quick_create'),
 
     # Assignments
     path('assignments/add/', views.SiteAssignmentCreateView.as_view(), name='assignment_create'),
+    path('assignments/<int:pk>/avenant/', views.ConventionAvenantCreateView.as_view(), name='convention_avenant_create'),
 
     # Dossier (documents)
     path('staff/<uuid:unique_id>/documents/add/', views.PersonnelDocumentCreateView.as_view(), name='document_create'),

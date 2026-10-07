@@ -61,6 +61,17 @@
                                 {% endif %}
                             </div>
                             <div class="col-md-4">
+                                <label class="form-label" for="{{ form.contract_mode.id_for_label }}">{% trans "Type de contrat" %}</label>
+                                {{ form.contract_mode }}
+                                <p class="fs--2 text-500">{% trans "Détermine quelles fonctionnalités sont disponibles pour ce chantier — modifiable plus tard par un directeur." %}</p>
+                                {% if form.contract_mode.errors %}
+                                <div class="invalid-feedback d-block">{{ form.contract_mode.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-4">
                                 <label class="form-label" for="{{ form.expected_end_date.id_for_label }}">{% trans "Expected End Date" %}</label>
                                 {{ form.expected_end_date }}
                                 {% if form.expected_end_date.errors %}

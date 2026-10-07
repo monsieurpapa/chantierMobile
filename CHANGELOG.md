@@ -34,6 +34,56 @@ dated heading cut when a deliberate release point is agreed on.
   `NoReverseMatch` on the pre-fix template and pass after.
 
 ### Added
+- Chef de Corps, convention avenants, contract-mode-gated chantiers, and
+  a Magasinier Général role — from client notes on how subcontracted
+  trade leads are paid and how contract types should shape the app:
+  - **Chef de Corps & convention avenants.** `Personnel.is_chef_de_corps`
+    flags a subcontracting trade lead the entreprise contracts with per
+    chantier/convention (rather than with his individual ouvriers, whom
+    he pays himself without Cabinet involvement except in a dispute). A
+    new "Chefs de Corps" screen (`ChefDeCorpsListView`,
+    `personnel:chef_de_corps_list`, linked from the nav) lists them with
+    their chantiers and conventions, built on the existing
+    Personnel/SiteAssignment data rather than a parallel model. `Trade`
+    gained `CHARPENTIER`/`SOUDEUR` to cover all 7 corps named in the
+    client's spec (the other 5 already existed) — the list stays open to
+    future trades. A new `ConventionAvenant` model
+    (`personnel/models.py`) logs every renegotiation of a convention's
+    cap (date, previous/new amount, reason, who recorded it) via
+    `ConventionAvenant.record()`, which also updates the live
+    `SiteAssignment.convention_amount` and backfills
+    `initial_convention_amount` the first time it runs — recorded by a
+    CASHIER/ACCOUNTANT/director via `ConventionAvenantCreateView`, which
+    also shows the full avenant history. `PayrollListItem.clean()`'s
+    existing hard convention-cap block now has a soft exception for a
+    chef de corps: exceeding the cap is allowed with a mandatory
+    `overage_note` instead of being rejected outright, surfaced to the
+    DG/bureau technique via a new `ConventionOverageListView`
+    (`finance:convention_overage_list`, gated to director-tier +
+    CHIEF_ENGINEER). Everyone else keeps the original hard block,
+    unchanged.
+  - **Chantier contract modes.** `Site.contract_mode`
+    (`chantiermobile.constants.ContractMode`: clé en main, main d'œuvre
+    seulement, livraison étape par étape, suivi de chantier seulement;
+    default clé en main) is set at site creation and determines which of
+    the Personnel/Materials/Finance tabs on the site detail page are
+    available (`Site.get_enabled_modules()`/`has_module()`, driven by a
+    `CONTRACT_MODE_MODULES` lookup — fails open to the fullest set for an
+    unrecognized mode). Changeable later by a director/CHIEF_ENGINEER;
+    switching modes only toggles tab visibility, it never deletes data.
+  - **Magasinier Général role.** New `UserRoles.MAGASINIER_GENERAL`:
+    read-only, cross-cabinet visibility into every site's expenses
+    (`finance:expense_report`) and stock (`procurement:stock_report`),
+    with no extra write rights beyond a regular Magasinier's. Most of
+    "access to all projects" was already true for any cabinet member
+    (plain `MAGASINIER` was already cabinet-wide, not site-scoped, in
+    most read paths) — the actual gap this role fills is specifically
+    the filterable Expense Report and formal nav visibility for the
+    stock report.
+
+  See `docs/modules/personnel.md`, `docs/modules/finance.md`,
+  `docs/modules/projects.md`, and `docs/security.md` for the full detail.
+
 - CASHIER permission-table update, requested for the role's day-to-day
   cabinet work:
   - Hid the "Tâches" sidebar nav item from CASHIER (superusers still see

@@ -102,20 +102,26 @@
                                         href="#tab-overview" role="tab" aria-controls="tab-overview"
                                         aria-selected="true"><i class="fas fa-chart-line me-2"></i>{% trans "Overview" %}</a>
                                 </li>
+                                {% if 'personnel' in enabled_modules %}
                                 <li class="nav-item">
                                     <a class="nav-link fw-semibold py-3" id="personnel-tab" data-bs-toggle="tab"
                                         href="#tab-personnel" role="tab" aria-controls="tab-personnel"
                                         aria-selected="false"><i class="fas fa-users me-2"></i>{% trans "Personnel" %}</a>
                                 </li>
+                                {% endif %}
+                                {% if 'materials' in enabled_modules %}
                                 <li class="nav-item">
                                     <a class="nav-link fw-semibold py-3" id="materials-tab" data-bs-toggle="tab"
                                         href="#tab-materials" role="tab" aria-controls="tab-materials"
                                         aria-selected="false"><i class="fas fa-boxes me-2"></i>{% trans "Materials" %}</a>
                                 </li>
+                                {% endif %}
+                                {% if 'finance' in enabled_modules %}
                                 <li class="nav-item">
                                     <a class="nav-link fw-semibold py-3" id="finance-tab" data-bs-toggle="tab" href="#tab-finance"
                                         role="tab" aria-controls="tab-finance" aria-selected="false"><i class="fas fa-dollar-sign me-2"></i>{% trans "Finance" %}</a>
                                 </li>
+                                {% endif %}
                                 <li class="nav-item">
                                     <a class="nav-link fw-semibold py-3" id="history-tab" data-bs-toggle="tab" href="#tab-history"
                                         role="tab" aria-controls="tab-history" aria-selected="false"><i class="fas fa-history me-2"></i>{% trans "Activity" %}</a>
@@ -287,6 +293,9 @@
                                 <!-- PERSONNEL TAB -->
                                 <div class="tab-pane fade" id="tab-personnel" role="tabpanel"
                                     aria-labelledby="personnel-tab">
+                                    {% if 'personnel' not in enabled_modules %}
+                                    <p class="text-center py-4 text-600 mb-0">{% trans "Non disponible pour ce type de contrat." %}</p>
+                                    {% else %}
                                     <div class="d-flex justify-content-between align-items-center mb-4">
                                         <h5 class="mb-0"><i class="fas fa-users text-info me-2"></i>{% trans "Assigned Personnel" %}</h5>
                                         {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,CHIEF_ENGINEER' or site.lead_engineer_id == request.user.pk %}
@@ -359,15 +368,19 @@
                                         </div>
                                     </div>
                                     {% endif %}
+                                    {% endif %}
                                 </div>
 
                                 <!-- MATERIALS TAB -->
                                 <div class="tab-pane fade" id="tab-materials" role="tabpanel"
                                     aria-labelledby="materials-tab">
+                                    {% if 'materials' not in enabled_modules %}
+                                    <p class="text-center py-4 text-600 mb-0">{% trans "Non disponible pour ce type de contrat." %}</p>
+                                    {% else %}
                                     <div class="d-flex justify-content-between align-items-center mb-4">
                                         <h5 class="mb-0"><i class="fas fa-boxes text-warning me-2"></i>{% trans "Material Logistics" %}</h5>
                                         <div class="d-flex gap-2">
-                                            {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,CHIEF_ENGINEER,ENGINEER,MAGASINIER' %}
+                                            {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,CHIEF_ENGINEER,ENGINEER,MAGASINIER,MAGASINIER_GENERAL' %}
                                             <a class="btn btn-outline-secondary btn-sm"
                                                 href="{% url 'procurement:stock_report' %}?site={{ site.id }}">
                                                 <span class="fas fa-clock-rotate-left me-1"></span>{% trans "Historique des mouvements de stock" %}
@@ -470,11 +483,15 @@
                                         </div>
                                     </div>
                                     {% endif %}
+                                    {% endif %}
                                 </div>
 
                                 <!-- FINANCE TAB -->
                                 <div class="tab-pane fade" id="tab-finance" role="tabpanel"
                                     aria-labelledby="finance-tab">
+                                    {% if 'finance' not in enabled_modules %}
+                                    <p class="text-center py-4 text-600 mb-0">{% trans "Non disponible pour ce type de contrat." %}</p>
+                                    {% else %}
                                     <h5 class="mb-4"><i class="fas fa-dollar-sign text-success me-2"></i>{% trans "Revenue & Invoicing" %}</h5>
                                     
                                     <!-- Revenue/Contract Section -->
@@ -605,6 +622,7 @@
                                         </div>
                                         {% endif %}
                                     </div>
+                                    {% endif %}
                                 </div>
 
                                 <!-- HISTORY TAB (TIMELINE) -->

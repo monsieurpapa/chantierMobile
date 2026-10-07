@@ -19,6 +19,7 @@ class UserRoles(models.TextChoices):
     ACCOUNTANT = 'ACCOUNTANT', _('Comptable')
     CASHIER = 'CASHIER', _('Caissier')
     MAGASINIER = 'MAGASINIER', _('Magasinier')
+    MAGASINIER_GENERAL = 'MAGASINIER_GENERAL', _('Magasinier Général')
     WORKER = 'WORKER', _('Ouvrier')
 
 
@@ -244,7 +245,16 @@ class PersonnelPayrollType(models.TextChoices):
 
 
 class Trade(models.TextChoices):
-    """Fixed trade/function list for ouvriers, as specified by the client."""
+    """Trade/function list for ouvriers and chefs de corps. The client's
+    2026-10-07 spec names 7 "corps principaux" for subcontracted chef-de-
+    corps work (plomberie, maçonnerie, électricité, carrelage, ferraillage,
+    charpente, soudure) — "principaux" (main ones) signals this list isn't
+    meant to be exhaustive, so it stays a plain TextChoices a developer can
+    extend with one more line (e.g. a future ÉTANCHÉITÉ or PEINTRE-charpente
+    split) rather than a client-editable DB table: new trades are rare
+    enough, and consistent enough across cabinets, that code-level choices
+    (the pattern already used for every other fixed list in this file) fit
+    better than per-cabinet admin configuration."""
     MACON = 'MACON', _('Maçon')
     MENUISIER = 'MENUISIER', _('Menuisier')
     FERRAILLEUR = 'FERRAILLEUR', _('Ferrailleur')
@@ -254,6 +264,8 @@ class Trade(models.TextChoices):
     PEINTRE = 'PEINTRE', _('Peintre')
     VITRIER = 'VITRIER', _('Vitrier')
     CARRELEUR = 'CARRELEUR', _('Carreleur')
+    CHARPENTIER = 'CHARPENTIER', _('Charpentier')
+    SOUDEUR = 'SOUDEUR', _('Soudeur')
     CONSULTANT = 'CONSULTANT', _('Consultant')
 
 
@@ -308,6 +320,44 @@ class PhaseStatus(models.TextChoices):
     engineer ("l'ingénieur principal clôture les étapes du projet")."""
     EN_COURS = 'EN_COURS', _('En cours')
     CLOTUREE = 'CLOTUREE', _('Clôturée')
+
+
+class ContractMode(models.TextChoices):
+    """The kind of contract signed with the client for a Site — set once
+    at site creation (required field, defaults to the fullest mode) and
+    changeable later by a director/CHIEF_ENGINEER if the deal with the
+    client changes. Drives which of the site's tabs/sheets are even shown
+    (see CONTRACT_MODE_MODULES and Site.get_enabled_modules()) — not every
+    chantier needs the same modules: a supervision-only mandate has no
+    reason to track achats or décaisser une liste de paie through this
+    system, since the Cabinet isn't the one executing or paying for that
+    work. This list stays open-ended ("etc." in the client's spec) — a new
+    mode is a one-line addition here plus one new entry in
+    CONTRACT_MODE_MODULES."""
+    CLE_EN_MAIN = 'CLE_EN_MAIN', _('Clé en main (travaux + matériaux)')
+    MAIN_OEUVRE_SEULEMENT = 'MAIN_OEUVRE_SEULEMENT', _("Main d'œuvre seulement (client achète les matériaux)")
+    LIVRAISON_ETAPES = 'LIVRAISON_ETAPES', _('Livraison étape par étape')
+    SUIVI_SEULEMENT = 'SUIVI_SEULEMENT', _('Suivi de chantier seulement')
+
+
+# Which of a Site's optional tabs/modules are relevant for each
+# ContractMode — read by Site.get_enabled_modules(). 'personnel' covers
+# the site's own Personnel/Main-d'œuvre tab and its payroll (Liste de
+# paie); 'materials' covers material requests + "Achats de matériaux"
+# (achats-matériaux caisse lines); 'finance' covers the site's own
+# Finance tab (invoices/contract/budget). Progress/overview/history stay
+# visible regardless of mode — every contract still gets watched.
+# A mode missing from this dict (shouldn't happen, since ContractMode and
+# this dict are meant to be edited together) falls back to the fullest
+# set in Site.get_enabled_modules(), never to nothing — failing open on an
+# unrecognized/legacy value is safer here than silently hiding a tab the
+# site actually needs.
+CONTRACT_MODE_MODULES = {
+    ContractMode.CLE_EN_MAIN: {'personnel', 'materials', 'finance'},
+    ContractMode.LIVRAISON_ETAPES: {'personnel', 'materials', 'finance'},
+    ContractMode.MAIN_OEUVRE_SEULEMENT: {'personnel', 'finance'},
+    ContractMode.SUIVI_SEULEMENT: set(),
+}
 
 
 # Form field placeholders and UI constants
@@ -581,6 +631,8 @@ __all__ = [
     'PlanningStatus',
     'PhaseStatus',
     'StockReportPeriod',
+    'ContractMode',
+    'CONTRACT_MODE_MODULES',
 
     # Configuration classes
     'FormPlaceholders',

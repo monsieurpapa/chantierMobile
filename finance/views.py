@@ -57,8 +57,21 @@ from chantiermobile.constants import (
 
 # Roles that may view the expenses report / export it to PDF — mirrors
 # core.dashboard.FINANCIAL_ROLES (the same audience that sees the
-# dashboard's money widgets).
-EXPENSE_REPORT_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'ACCOUNTANT', 'CASHIER']
+# dashboard's money widgets). MAGASINIER_GENERAL added 2026-10-07: "accès
+# à toutes les dépenses de tous les projets" from the client's spec — a
+# read-only, cabinet-wide view (this role is deliberately NOT added to
+# CAISSE_MANAGE_ROLES or any approve/pay/create role list below, so it
+# never gains write access, only this report).
+EXPENSE_REPORT_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'ACCOUNTANT', 'CASHIER', 'MAGASINIER_GENERAL']
+
+# Who may see the "Dépassements de convention" report — payments to a Chef
+# de Corps that were allowed past their convention's cap because a note
+# was given (see PayrollListItem.clean()'s soft-overage path for
+# personnel.is_chef_de_corps). "le DG et le bureau technique" from the
+# client's spec: DIRECTEUR_GENERAL, DIRECTEUR_TECHNIQUE/CHIEF_ENGINEER
+# (bureau technique), plus DIRECTOR for a single-cabinet setup with no
+# separate DG/DT role (mirrors FINAL_AUTHORIZATION_ROLES's own rationale).
+CONVENTION_OVERAGE_VIEW_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER']
 
 # Roles that may manage caisses and record ledger movements.
 CAISSE_MANAGE_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'ACCOUNTANT', 'CASHIER', 'FINANCIER']
@@ -1575,6 +1588,13 @@ class PayrollListAllocateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderM
                 'personnel': personnel,
                 'is_capped': is_capped,
                 'remaining': assignment.remaining_convention,
+                # A Chef de Corps may legitimately exceed their current cap
+                # (surplus de travail ahead of the avenant catching up) —
+                # PayrollListItem.clean() allows it for them provided a
+                # note is given, instead of the hard block everyone else
+                # gets. The template only shows the note field for these
+                # rows (see is_chef_de_corps below).
+                'is_chef_de_corps': personnel.is_chef_de_corps,
             })
         return rows
 
@@ -1603,9 +1623,10 @@ class PayrollListAllocateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderM
             except (InvalidOperation, ValueError):
                 row_errors.append(_("%(name)s : montant invalide.") % {'name': assignment.personnel})
                 continue
+            overage_note = (request.POST.get(f'overage_note_{assignment.pk}') or '').strip()
             item = PayrollListItem(
                 payroll_list=self.payroll_list, personnel=assignment.personnel,
-                assignment=assignment, amount=amount,
+                assignment=assignment, amount=amount, overage_note=overage_note,
             )
             try:
                 with transaction.atomic():
@@ -1627,6 +1648,29 @@ class PayrollListAllocateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderM
         if not created_count and not row_errors:
             messages.warning(request, _("Aucun montant saisi."))
         return redirect('finance:payroll_detail', pk=self.payroll_list.pk)
+
+
+class ConventionOverageListView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
+    """"Dépassements de convention": every PayrollListItem whose amount
+    pushed a Chef de Corps's convention past its cap (so it carries a
+    mandatory overage_note — see PayrollListItem.clean()'s soft-overage
+    path). Read-only, for the DG/bureau technique to review after the
+    fact — nothing here can be decided or approved, it's a log, matching
+    the client's "une note doit être ajoutée pour future référence par le
+    DG et le bureau technique" (2026-10-07 spec)."""
+    model = PayrollListItem
+    template_name = 'finance/convention_overage_list.html'
+    context_object_name = 'overage_items'
+    allowed_roles = CONVENTION_OVERAGE_VIEW_ROLES
+    cabinet_lookup_field = 'payroll_list__site__cabinet'
+    header_title = _("Dépassements de convention")
+    header_subtitle = _("Paiements à un Chef de corps au-delà du plafond de sa convention")
+    back_url = reverse_lazy('finance:payroll_list')
+
+    def get_queryset(self):
+        return super().get_queryset().exclude(overage_note='').select_related(
+            'personnel', 'assignment__site', 'assignment__phase', 'payroll_list__site',
+        ).order_by('-created_at')
 
 
 @login_required

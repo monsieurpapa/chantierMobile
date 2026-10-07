@@ -4,7 +4,7 @@ views (personnel/views.py) — these forms handle widgets and the
 field-level validation each needs (e.g. Leave's date-range check)."""
 from django import forms
 from django.utils.translation import gettext_lazy as _
-from .models import Personnel, SiteAssignment, Skill, PersonnelDocument, Leave, Holiday
+from .models import Personnel, SiteAssignment, Skill, PersonnelDocument, Leave, Holiday, ConventionAvenant
 from projects.models import Site, ProjectPhase
 from chantiermobile.constants import FormPlaceholders, FormHelpTexts, DatePickerConfig
 from core.widgets import DynamicSelectWidget, DynamicSelectMultipleWidget
@@ -17,7 +17,7 @@ class PersonnelForm(forms.ModelForm):
         model = Personnel
         fields = [
             'first_name', 'last_name', 'personnel_type', 'category', 'trade', 'status', 'payroll_type',
-            'skills', 'default_daily_rate', 'monthly_salary', 'user',
+            'is_chef_de_corps', 'skills', 'default_daily_rate', 'monthly_salary', 'user',
         ]
         widgets = {
             'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.FIRST_NAME}),
@@ -27,6 +27,7 @@ class PersonnelForm(forms.ModelForm):
             'trade': forms.Select(attrs={'class': 'form-select'}),
             'status': forms.Select(attrs={'class': 'form-select'}),
             'payroll_type': forms.Select(attrs={'class': 'form-select'}),
+            'is_chef_de_corps': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'skills': DynamicSelectMultipleWidget(
                 create_url_name='personnel:skill_quick_create',
                 placeholder=_('Sélectionner ou ajouter une compétence...'),
@@ -210,6 +211,38 @@ ConventionFormSet = forms.inlineformset_factory(
     Personnel, SiteAssignment, form=ConventionForm,
     fk_name='personnel', extra=1, can_delete=True,
 )
+
+
+class ConventionAvenantForm(forms.Form):
+    """Records one avenant on an existing convention (SiteAssignment) —
+    backs ConventionAvenantCreateView. A plain Form, not a ModelForm:
+    `assignment`/`previous_amount`/`recorded_by` are supplied by the view
+    (from the URL and the logged-in user), not typed by the caissière —
+    see ConventionAvenant.record()."""
+    date = forms.DateField(
+        label=_("Date de l'avenant"),
+        widget=forms.DateInput(attrs={
+            'class': 'form-control datetimepicker', 'placeholder': DatePickerConfig.DATE_FORMAT,
+            'data-options': DatePickerConfig.OPTIONS,
+        }),
+    )
+    new_amount = forms.DecimalField(
+        label=_('Nouveau montant de la convention'),
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.AMOUNT}),
+    )
+    reason = forms.CharField(
+        label=_('Motif'),
+        widget=forms.Textarea(attrs={
+            'class': 'form-control', 'rows': 3,
+            'placeholder': _("Ex : surplus de travail annoncé par le chef technique..."),
+        }),
+    )
+
+    def clean_new_amount(self):
+        amount = self.cleaned_data['new_amount']
+        if amount < 0:
+            raise forms.ValidationError(_('Le montant ne peut pas être négatif.'))
+        return amount
 
 
 class SkillForm(forms.ModelForm):

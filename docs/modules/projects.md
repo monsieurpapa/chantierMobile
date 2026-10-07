@@ -17,6 +17,27 @@ anchors the Cabinet multi-tenancy model.
   (`chantiermobile.constants.SiteStatus`), `start_date`, `expected_end_date`,
   `lead_engineer` (optional FK to a user — the site's own engineer, who gets
   extra authority elsewhere in the system; see gotchas).
+- `contract_mode` (`chantiermobile.constants.ContractMode`, added
+  2026-10-07; default `CLE_EN_MAIN`) — the contract type signed with the
+  client (clé en main, main d'œuvre seulement, livraison étape par étape,
+  suivi de chantier seulement). Pre-established at site creation
+  (required field, `SiteForm`) and determines which of the Personnel/
+  Materials/Finance tabs on `site_detail.html` are available — see
+  `get_enabled_modules()`/`has_module()` below. Changeable later by a
+  director/CHIEF_ENGINEER (`SiteUpdateView`) — never locked permanently;
+  changing it only toggles which tabs are shown, it never deletes any
+  underlying data, so switching back restores full visibility of
+  whatever was already there.
+- `get_enabled_modules()` — looks up `CONTRACT_MODE_MODULES[contract_mode]`
+  (a `dict` of `ContractMode` → `set` of `'personnel'`/`'materials'`/
+  `'finance'` module keys, in `chantiermobile/constants.py`); falls back to
+  the fullest set (`{'personnel', 'materials', 'finance'}`) for an
+  unrecognized mode ("fail open", not "fail hidden" — a future mode added
+  to the enum but not yet to the dict shows everything rather than
+  nothing). `has_module(name)` — `name in get_enabled_modules()`.
+  `SiteDetailView` passes `enabled_modules` into the template context;
+  `site_detail.html` wraps each tab's nav `<li>` and pane content in
+  `{% if 'X' in enabled_modules %}`.
 - `delete()` — soft-deletes the site **and cascades** to every owned child
   record (expenses, material requests, phases + their progress reports/
   photos/comments, assignments, planning submissions, budget, contract +

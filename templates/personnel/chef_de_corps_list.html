@@ -1,0 +1,106 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n rbac_tags %}
+
+{% block title %}{% trans "Chefs de corps" %} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    <!-- vertical nav -->
+    {% include 'includes/navbar-vertical.html' with on="chef_de_corps" %}
+    <!-- /vertical nav -->
+
+    <div class="content">
+        <!-- navbar-top -->
+        {% include 'includes/navbar-top.html' %}
+        <!-- /navbar-top -->
+
+        <!-- Main Content -->
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            <div class="card mb-3">
+                <div class="card-body p-0">
+                    <div class="table-responsive scrollbar">
+                        <table class="table table-sm table-striped fs--1 mb-0 overflow-hidden">
+                            <thead class="bg-200 text-900">
+                                <tr>
+                                    <th scope="col" class="align-middle white-space-nowrap">{% trans "Nom" %}</th>
+                                    <th scope="col" class="align-middle white-space-nowrap">{% trans "Corps de métier" %}</th>
+                                    <th scope="col" class="align-middle">{% trans "Chantiers & conventions" %}</th>
+                                    <th scope="col" class="align-middle white-space-nowrap">{% trans "Statut" %}</th>
+                                    <th scope="col" class="no-sort pe-1 align-middle data-table-row-action"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for person in chefs_de_corps %}
+                                <tr class="btn-reveal-trigger">
+                                    <td class="py-2 align-middle white-space-nowrap">
+                                        <a href="{% url 'personnel:personnel_detail' unique_id=person.unique_id %}">
+                                            <strong>{{ person.get_full_name }}</strong>
+                                        </a>
+                                    </td>
+                                    <td class="py-2 align-middle white-space-nowrap">
+                                        {% if person.trade %}
+                                        <span class="badge badge-subtle-info rounded-pill">{{ person.get_trade_display }}</span>
+                                        {% else %}
+                                        <span class="text-300 fs--2">{% trans "Non renseigné" %}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="py-2 align-middle">
+                                        {% if person.assignments.exists %}
+                                        <ul class="list-unstyled mb-0">
+                                            {% for assignment in person.assignments.all %}
+                                            <li class="mb-1">
+                                                <strong>{{ assignment.site.name }}</strong>
+                                                {% if assignment.phase %}<span class="text-600">— {{ assignment.phase.name }}</span>{% endif %}
+                                                {% if assignment.name %}<span class="text-600">({{ assignment.name }})</span>{% endif %}
+                                                {% if assignment.convention_amount is not None %}
+                                                {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,ACCOUNTANT,CASHIER' %}
+                                                <span class="badge bg-light text-dark ms-1">
+                                                    {{ CURRENCY_SYMBOL }}{{ assignment.paid_amount|floatformat:0 }} / {{ CURRENCY_SYMBOL }}{{ assignment.convention_amount|floatformat:0 }}
+                                                </span>
+                                                {% endif %}
+                                                {% endif %}
+                                            </li>
+                                            {% endfor %}
+                                        </ul>
+                                        {% else %}
+                                        <span class="text-300 fs--2">{% trans "Aucun chantier affecté" %}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="py-2 align-middle white-space-nowrap">
+                                        <span class="badge rounded-pill
+                                        {% if person.status == 'ACTIF' %}bg-success
+                                        {% elif person.status == 'NON_ELIGIBLE' %}bg-danger
+                                        {% else %}bg-secondary{% endif %}">
+                                            {{ person.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td class="align-middle white-space-nowrap text-end">
+                                        <a class="btn btn-falcon-default btn-sm" href="{% url 'personnel:personnel_detail' unique_id=person.unique_id %}">
+                                            {% trans "Voir" %}
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-5">
+                                        <span class="fas fa-user-tie fa-2x text-300 d-block mb-2"></span>
+                                        <p class="text-600 mb-2">{% trans "Aucun chef de corps enregistré." %}</p>
+                                        <a href="{% url 'personnel:personnel_create' %}" class="btn btn-falcon-primary btn-sm">
+                                            <span class="fas fa-plus me-1"></span>{% trans "Enregistrer un chef de corps" %}
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}

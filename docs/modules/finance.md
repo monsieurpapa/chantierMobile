@@ -167,6 +167,14 @@ A cash advance from one `Caisse` to another that must be repaid.
   personnel; and if the assignment has a `convention_amount` cap, this
   amount plus whatever was already paid against it must not exceed the
   cap (edits exclude the item's own prior amount from "already paid").
+- **Chef de corps soft-overage rule (2026-10-07):** the cap check above is
+  a hard block for everyone *except* `personnel.is_chef_de_corps`, whose
+  renegotiated scope of work can legitimately run ahead of the avenant
+  that will eventually catch up with it. For a chef de corps, exceeding
+  the cap requires a non-empty `overage_note` instead of being rejected
+  outright — see `docs/modules/personnel.md`'s ConventionAvenant section.
+  Every chef-de-corps item with an `overage_note` is surfaced via
+  `ConventionOverageListView` (below) for the DG/bureau technique.
 - **Convention details at disbursement (2026-10-06):** `payroll_list_detail.html`
   (`PayrollListDetailView`) now shows, next to each item, the linked
   `assignment`'s convention `name` (falling back to `role` for an older,
@@ -258,8 +266,19 @@ authenticated user (cabinet-scoped); `ExpenseCreateView` same;
 (DIRECTOR/DIRECTEUR_TECHNIQUE/DIRECTEUR_GENERAL/ACCOUNTANT);
 `mark_expense_paid` gated to DIRECTOR/DIRECTEUR_TECHNIQUE/
 DIRECTEUR_GENERAL/CASHIER. `ExpenseReportView` + `expense_report_pdf` gated
-to `EXPENSE_REPORT_ROLES` (adds CASHIER to the approval roles) — PDF via
+to `EXPENSE_REPORT_ROLES` (adds CASHIER to the approval roles, and —
+2026-10-07 — `MAGASINIER_GENERAL`, read-only, see
+[`docs/security.md`](../security.md)) — PDF via
 `core.pdf_utils.render_table_report_pdf`.
+
+**Dépassements de convention** (added 2026-10-07) —
+`ConventionOverageListView` (`finance:convention_overage_list`) lists every
+`PayrollListItem` with a non-empty `overage_note` (i.e. every chef-de-corps
+payment that ran over its convention cap), for the DG/bureau technique to
+review. Gated to `CONVENTION_OVERAGE_VIEW_ROLES` (DIRECTOR tier +
+CHIEF_ENGINEER) — narrower than `EXPENSE_REPORT_ROLES`, since this is
+specifically a DG/bureau-technique-facing report, not a general finance
+report.
 
 **Budgets** — `BUDGET_FULL_ACCESS_ROLES` (DIRECTOR tier + ACCOUNTANT +
 CHIEF_ENGINEER) see every budget in the cabinet; a plain `ENGINEER`

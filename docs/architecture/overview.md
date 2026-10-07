@@ -75,6 +75,7 @@ names across the whole codebase (never hardcode a role string):
 | `ACCOUNTANT` | Comptable | Expense/payment bookkeeping |
 | `CASHIER` | Caissier | Caisse (cash register) operations |
 | `MAGASINIER` | Magasinier | Materials/stock validation |
+| `MAGASINIER_GENERAL` | Magasinier Général | Read-only, cross-cabinet visibility into every site's expenses/stock (added 2026-10-07; no extra write rights — see `docs/security.md`) |
 | `WORKER` | Ouvrier | Field worker — minimal access |
 
 `chantiermobile.constants.DIRECTOR_ROLES` groups the three director-tier roles for

@@ -34,6 +34,17 @@ cabinet-scoped (`SkillQuickCreateView.cabinet_scoped = False`).
 - **`payroll_type` is independent of `personnel_type`/`category`** — there
   is no automatic inference between the three; it must be set deliberately
   at creation (see ADR 0005's Consequences section).
+- `is_chef_de_corps` (added 2026-10-07) — flags a subcontracting trade
+  lead ("chef de corps"): the entreprise contracts with this person per
+  `SiteAssignment`/convention rather than with their individual ouvriers,
+  who the chef de corps pays himself without Cabinet involvement except in
+  a dispute. Drives the `ChefDeCorpsListView` listing and the soft
+  convention-overage rule in `finance.PayrollListItem.clean()` (see
+  `docs/modules/finance.md`). `Trade` (`chantiermobile/constants.py`) is
+  reused as the corps-de-métier lookup — extended 2026-10-07 with
+  `CHARPENTIER`/`SOUDEUR` to cover all 7 corps named in the client's spec
+  (MACON/FERRAILLEUR/PLOMBIER/ELECTRICIEN/CARRELEUR already existed); the
+  list stays open to future trades via the same `TextChoices` pattern.
 
 ### SiteAssignment
 Links a `Personnel` to a `Site` for a date range at an agreed `daily_rate`
@@ -64,6 +75,51 @@ crew list (`AttendanceDailyView.get_rows`).
 - `remaining_convention` — `convention_amount - paid_amount`; `None` when
   no cap is tracked; can go negative if items were entered before a cap
   was added.
+- `initial_convention_amount` (added 2026-10-07) — the convention's
+  original cap, backfilled automatically the first time a
+  `ConventionAvenant` is recorded against this assignment; `None` until
+  then. `effective_initial_amount` returns it, falling back to the current
+  `convention_amount` when no avenant has ever been recorded (so callers
+  don't need to branch on whether one exists).
+
+### ConventionAvenant (added 2026-10-07)
+Audit trail of every renegotiation of a `SiteAssignment`'s
+`convention_amount` — the client's "avenant sur convention" workflow: a
+chef technique announces a renegotiated scope of work (typically a
+surplus) to the caissière, who records it here with the date and a
+reason. **Not** the same model as `finance.Avenant` (a project-level
+budget/contract change-order with its own PENDING/APPROVED/REJECTED
+workflow) — the name clash is deliberate-but-scoped: this one tracks a
+single convention, not a whole chantier's budget.
+- `assignment` (FK to `SiteAssignment`), `date`, `previous_amount`,
+  `new_amount`, `reason`, `recorded_by` (the user who recorded it, usually
+  CASHIER/ACCOUNTANT/a director).
+- `ConventionAvenant.record(assignment, new_amount, reason, user, date=None)`
+  — the only way this should be created: a `@transaction.atomic`
+  classmethod that creates the audit row **and** updates
+  `assignment.convention_amount` to `new_amount` in the same transaction,
+  backfilling `initial_convention_amount` from the pre-avenant value the
+  first time it's ever called for that assignment. Calling
+  `ConventionAvenant.objects.create()` directly would log the change
+  without moving the live cap — always go through `.record()`.
+- Ordered most-recent-first (`-date`, `-created_at`); `ConventionAvenant
+  Form`/`ConventionAvenantCreateView` (`personnel/views.py`) render the
+  full history alongside the "new avenant" form so the caissière can see
+  the convention's full renegotiation trail before recording another one.
+- Gated to `CONVENTION_AVENANT_ROLES` (CASHIER/ACCOUNTANT/director-tier) —
+  the chef technique *announces* the avenant verbally/on paper; the
+  caissière (or an accountant/director) is who actually records it.
+
+### Chef de Corps overage rule (finance, added 2026-10-07)
+A chef de corps's convention can legitimately run ahead of the avenant
+that will eventually catch up with it (a renegotiation announced but not
+yet recorded). So `PayrollListItem.clean()` lets a payment to a chef de
+corps exceed the current `convention_amount` **with a mandatory
+`overage_note`** explaining the overage — a soft rule, not a hard block.
+Every other personnel record (the default case) keeps the pre-existing
+hard block: a payment that would exceed the cap is rejected outright. Every
+recorded overage is surfaced to the DG/bureau technique via
+`finance.ConventionOverageListView` — see `docs/modules/finance.md`.
 
 ### Personnel form's "Chantiers & conventions" section (2026-10-06)
 `PersonnelCreateView`/`PersonnelUpdateView` now also render an inline
@@ -185,6 +241,16 @@ HR_ADMIN_ROLES.
 `_attendance_can_act`: HR_ADMIN_ROLES for any site, or
 `site.lead_engineer_id == request.user.pk` for a plain ENGINEER's own
 site. Same ownership rule as site-assignment/leave scoping above.
+
+**Chefs de corps** (added 2026-10-07) — `ChefDeCorpsListView` (
+`personnel:chef_de_corps_list`, linked from the nav right under
+"Personnel") lists every `Personnel` with `is_chef_de_corps=True`, their
+trade, and their chantiers/conventions (built on the existing Personnel +
+SiteAssignment data, not a parallel table). Open to any authenticated
+cabinet member, like the main Personnel list — no extra role gate.
+`ConventionAvenantCreateView` (`personnel:convention_avenant_create`,
+one per `SiteAssignment`) is gated to `CONVENTION_AVENANT_ROLES`
+(CASHIER/ACCOUNTANT/director-tier).
 
 ## Business rules & gotchas
 

@@ -85,6 +85,18 @@
                     </a>
                 </li>
 
+                <!-- Chefs de corps: same underlying Personnel data as above,
+                     but a separate screen (see ChefDeCorpsListView) -->
+                <li class="nav-item">
+                    <a class="nav-link {% if on == 'chef_de_corps' %}active{% endif %}"
+                        href="{% url 'personnel:chef_de_corps_list' %}" role="button">
+                        <div class="d-flex align-items-center">
+                            <span class="nav-link-icon"><span class="fas fa-user-tie fs-1"></span></span>
+                            <span class="nav-link-text ps-1">{% trans "Chefs de corps" %}</span>
+                        </div>
+                    </a>
+                </li>
+
                 <!-- Tasks: hidden from CASHIER (permission-table update,
                      2026-10-06) — a cashier has no task-management role and
                      this menu item isn't useful to them. has_role already
@@ -131,12 +143,22 @@
                             </a>
                         </li>
                         {% endif %}
-                        {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,ACCOUNTANT,CASHIER' or request.user.is_superuser %}
+                        {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,ACCOUNTANT,CASHIER,MAGASINIER_GENERAL' or request.user.is_superuser %}
                         <li class="nav-item">
                             <a class="nav-link {% if on == 'expense_report' %}active{% endif %}"
                                 href="{% url 'finance:expense_report' %}">
                                 <div class="d-flex align-items-center">
                                     <span class="nav-link-text ps-1">{% trans "Rapport des dépenses" %}</span>
+                                </div>
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,CHIEF_ENGINEER' or request.user.is_superuser %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if on == 'convention_overage_list' %}active{% endif %}"
+                                href="{% url 'finance:convention_overage_list' %}">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-text ps-1">{% trans "Dépassements de convention" %}</span>
                                 </div>
                             </a>
                         </li>
@@ -253,7 +275,7 @@
                             </a>
                         </li>
                         {% endif %}
-                        {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,CHIEF_ENGINEER,ENGINEER,MAGASINIER' or request.user.is_superuser %}
+                        {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,CHIEF_ENGINEER,ENGINEER,MAGASINIER,MAGASINIER_GENERAL' or request.user.is_superuser %}
                         <li class="nav-item">
                             <a class="nav-link {% if on == 'stock_report' %}active{% endif %}"
                                 href="{% url 'procurement:stock_report' %}">

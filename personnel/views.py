@@ -20,14 +20,24 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-from .models import Personnel, Skill, SiteAssignment, PersonnelDocument, Leave, Holiday, Attendance
-from .forms import PersonnelForm, SiteAssignmentForm, SkillForm, PersonnelDocumentForm, LeaveForm, HolidayForm, ConventionFormSet
+from .models import Personnel, Skill, SiteAssignment, PersonnelDocument, Leave, Holiday, Attendance, ConventionAvenant
+from .forms import (
+    PersonnelForm, SiteAssignmentForm, SkillForm, PersonnelDocumentForm, LeaveForm, HolidayForm, ConventionFormSet,
+    ConventionAvenantForm,
+)
 from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet, can_act_for_cabinet
 from core.quickcreate import QuickCreateView
 from chantiermobile.constants import UserRoles, PersonnelPayrollType, DIRECTOR_ROLES, AttendanceStatus, ApprovalStatus
 from projects.models import Site, ProjectPhase
 
 HR_ADMIN_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER']
+
+# Who may record an avenant (change to a convention's amount) — "le chef
+# technique annonce avenant sur convention à la caissière, elle ajoute ces
+# détails" (client spec, 2026-10-07): the caissière is the one who types it
+# in, so CASHIER/ACCOUNTANT (who can stand in as cashier) plus director-tier
+# (who can always do anything a cashier can here).
+CONVENTION_AVENANT_ROLES = ['CASHIER', 'ACCOUNTANT', 'DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL']
 
 # An ENGINEER should be able to assign personnel to, and record leave
 # for, their OWN crew — the site(s) where they're Site.lead_engineer —
@@ -115,6 +125,50 @@ class PersonnelListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin,
                 'class': 'btn-falcon-primary'
             }]
         return []
+
+class ChefDeCorpsListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
+    """Lists the cabinet's Chefs de Corps (Personnel.is_chef_de_corps=True)
+    — a separate screen from PersonnelListView even though it's the same
+    underlying Personnel/SiteAssignment data, because a Chef de Corps'
+    day-to-day (no attendance/pointage, no tarif journalier, no leave) is
+    different enough from salaried personnel to deserve its own list. Open
+    to any cabinet member, like PersonnelListView; "Enregistrer un chef de
+    corps" reuses PersonnelCreateView (tick the "Chef de corps" checkbox
+    there) rather than a separate form."""
+    model = Personnel
+    template_name = 'personnel/chef_de_corps_list.html'
+    context_object_name = 'chefs_de_corps'
+    ordering = ['last_name', 'first_name']
+    header_title = _("Chefs de corps")
+    header_subtitle = _("Sous-traitants par corps de métier, leurs chantiers et leurs conventions")
+    back_url = reverse_lazy('personnel:personnel_list')
+
+    def get_queryset(self):
+        return super().get_queryset().filter(is_chef_de_corps=True).prefetch_related(
+            'assignments__site', 'assignments__phase',
+        )
+
+    def get_breadcrumb_items(self):
+        return [
+            {'title': _("Ressources humaines"), 'url': str(reverse_lazy('personnel:personnel_list'))},
+            {'title': _("Chefs de corps"), 'url': None},
+        ]
+
+    def get_header_actions(self):
+        from accounts.models import UserCabinetRole
+        if self.request.user.is_superuser or UserCabinetRole.objects.filter(
+            user=self.request.user,
+            role__in=[UserRoles.DIRECTOR, UserRoles.DIRECTEUR_TECHNIQUE, UserRoles.DIRECTEUR_GENERAL, UserRoles.CHIEF_ENGINEER, UserRoles.CASHIER],
+            status=ApprovalStatus.APPROVED,
+        ).exists():
+            return [{
+                'label': _("Enregistrer un chef de corps"),
+                'url': str(reverse_lazy('personnel:personnel_create')),
+                'icon': 'user-plus',
+                'class': 'btn-falcon-primary'
+            }]
+        return []
+
 
 class ConventionFormSetMixin:
     """Shared by PersonnelCreateView/PersonnelUpdateView: builds,
@@ -472,6 +526,61 @@ class SiteAssignmentCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAcc
 
     def get_success_url(self):
         return reverse_lazy('personnel:personnel_detail', kwargs={'unique_id': self.object.personnel.unique_id})
+
+
+class ConventionAvenantCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, TemplateView):
+    """Records an avenant (change to convention_amount) on one
+    SiteAssignment and shows that convention's full avenant history —
+    "le chef technique annonce avenant sur convention à la caissière, elle
+    ajoute ces détails sur la rubrique de changement de conventions avec
+    les dates et détails spécifiés" (client spec, 2026-10-07). Scoped to
+    the assignment's own personnel's cabinet; allowed_roles =
+    CONVENTION_AVENANT_ROLES (the caissière, or director-tier)."""
+    template_name = 'personnel/convention_avenant_form.html'
+    allowed_roles = CONVENTION_AVENANT_ROLES
+    header_title = _("Avenant sur convention")
+
+    def dispatch(self, request, *args, **kwargs):
+        self.assignment = get_object_or_404(SiteAssignment, pk=kwargs['pk'])
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_role_cabinet(self):
+        return self.assignment.personnel.cabinet
+
+    def get_header_subtitle(self):
+        return str(self.assignment)
+
+    def get_back_url(self):
+        return str(reverse_lazy('personnel:personnel_detail', kwargs={'unique_id': self.assignment.personnel.unique_id}))
+
+    def get_breadcrumb_items(self):
+        return [
+            {'title': _("Ressources humaines"), 'url': str(reverse_lazy('personnel:personnel_list'))},
+            {'title': self.assignment.personnel.get_full_name(), 'url': self.get_back_url()},
+            {'title': _("Avenant"), 'url': None},
+        ]
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['assignment'] = self.assignment
+        context['avenants'] = self.assignment.avenants.select_related('recorded_by').all()
+        if 'form' not in context:
+            context['form'] = ConventionAvenantForm()
+        return context
+
+    def post(self, request, *args, **kwargs):
+        form = ConventionAvenantForm(request.POST)
+        if form.is_valid():
+            ConventionAvenant.record(
+                self.assignment,
+                new_amount=form.cleaned_data['new_amount'],
+                reason=form.cleaned_data['reason'],
+                user=request.user,
+                date=form.cleaned_data['date'],
+            )
+            messages.success(request, _("Avenant enregistré."))
+            return redirect('personnel:personnel_detail', unique_id=self.assignment.personnel.unique_id)
+        return self.render_to_response(self.get_context_data(form=form))
 
 
 # ---------------------------------------------------------------------

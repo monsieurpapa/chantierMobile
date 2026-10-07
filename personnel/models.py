@@ -9,7 +9,7 @@ ouvriers and ingénieurs/staff are paid through entirely separate models
 rather than one generic payroll entity. See docs/modules/personnel.md
 for the full walkthrough.
 """
-from django.db import models
+from django.db import models, transaction
 from django.utils.translation import gettext_lazy as _
 from core.models import BaseModel
 from accounts.models import Cabinet, User
@@ -82,6 +82,18 @@ class Personnel(BaseModel):
         help_text=_(
             "Ouvrier (main d'œuvre, payé selon convention par chantier) ou Ingénieur (salarié) — "
             "détermine la catégorie de décaissement sur la liste de paie."
+        ),
+    )
+    is_chef_de_corps = models.BooleanField(
+        default=False, verbose_name=_('Chef de corps'),
+        help_text=_(
+            "Sous-traitant qui contracte avec le Cabinet pour tout un corps de métier "
+            "(plomberie, maçonnerie, électricité, carrelage, ferraillage, charpente, soudure, ...) "
+            "à une étape donnée, selon une convention négociée avec lui — il rémunère ensuite "
+            "lui-même ses propres ouvriers, sans l'intervention du Cabinet, sauf en cas de "
+            "dispute avec eux. Apparaît dans la section « Chefs de corps », distincte de la "
+            "liste Personnel classique, mais partage le même enregistrement et les mêmes "
+            "conventions par chantier (SiteAssignment)."
         ),
     )
 
@@ -161,7 +173,21 @@ class SiteAssignment(BaseModel):
         help_text=_(
             "Montant total convenu pour cette tâche (ex : communiqué par l'Archi à la caisse). "
             "Laisser vide si aucun plafond n'est suivi. Un même personnel peut avoir plusieurs "
-            "conventions actives sur un même chantier — une par tâche."
+            "conventions actives sur un même chantier — une par tâche. C'est aussi le plafond "
+            "*actuel* d'une convention de Chef de corps : ConventionAvenant.record() le met à "
+            "jour à chaque renégociation (voir initial_convention_amount pour le tout premier "
+            "montant convenu)."
+        ),
+    )
+    initial_convention_amount = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True,
+        verbose_name=_('Convention initiale'),
+        help_text=_(
+            "Montant de la toute première convention, avant le premier avenant — rempli "
+            "automatiquement par ConventionAvenant.record() la première fois qu'un avenant est "
+            "enregistré sur cette convention. Reste vide tant qu'aucun avenant n'a eu lieu : "
+            "utiliser effective_initial_amount pour lire « la convention initiale, qu'il y ait "
+            "eu un avenant ou non »."
         ),
     )
 
@@ -200,6 +226,87 @@ class SiteAssignment(BaseModel):
         if self.convention_amount is None:
             return None
         return self.convention_amount - self.paid_amount
+
+    @property
+    def effective_initial_amount(self):
+        """The convention's original amount regardless of whether an
+        avenant has since changed it: `initial_convention_amount` once
+        an avenant has been recorded, otherwise simply today's
+        `convention_amount` (no renegotiation has happened yet, so the
+        current amount *is* the initial one)."""
+        return self.initial_convention_amount if self.initial_convention_amount is not None else self.convention_amount
+
+
+class ConventionAvenant(BaseModel):
+    """A dated change to a SiteAssignment's `convention_amount` after the
+    original convention was agreed — "le chef technique annonce avenant
+    sur convention à la caissière, elle ajoute ces détails sur la rubrique
+    de changement de conventions avec les dates et détails spécifiés"
+    (client spec, 2026-10-07). Typically used for a Chef de Corps whose
+    scope grew (surplus de travail), but not restricted to one — any
+    SiteAssignment with a tracked convention_amount can have avenants.
+
+    `ConventionAvenant.record()` is the only supported way to create one:
+    besides writing the history row, it also updates the assignment's
+    live `convention_amount` (the cap PayrollListItem.clean() and the
+    payroll disbursement screen check against) and backfills
+    `initial_convention_amount` the first time an assignment is
+    renegotiated, so "what was the very first amount" is never lost once
+    it starts changing."""
+    assignment = models.ForeignKey(
+        SiteAssignment, on_delete=models.CASCADE, related_name='avenants',
+        verbose_name=_('Convention'),
+    )
+    date = models.DateField(verbose_name=_("Date de l'avenant"))
+    previous_amount = models.DecimalField(max_digits=12, decimal_places=2, verbose_name=_('Ancien montant'))
+    new_amount = models.DecimalField(max_digits=12, decimal_places=2, verbose_name=_('Nouveau montant'))
+    reason = models.TextField(
+        verbose_name=_('Motif'),
+        help_text=_(
+            "Ex : surplus de travail annoncé par le chef technique, révision de prix des "
+            "matériaux, retard du chantier..."
+        ),
+    )
+    recorded_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='convention_avenants_recorded', verbose_name=_('Enregistré par'),
+        help_text=_("La caissière (ou le caissier) qui a saisi cet avenant dans le système."),
+    )
+
+    class Meta:
+        ordering = ['-date', '-created_at']
+        verbose_name = _('Avenant de convention')
+        verbose_name_plural = _('Avenants de convention')
+
+    def __str__(self):
+        return f"{self.assignment} : {self.previous_amount} → {self.new_amount} ({self.date})"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.new_amount is not None and self.new_amount < 0:
+            raise ValidationError({'new_amount': _('Le montant ne peut pas être négatif.')})
+
+    @classmethod
+    @transaction.atomic
+    def record(cls, assignment, new_amount, reason, user, date=None):
+        """Create the avenant row and apply `new_amount` to
+        `assignment.convention_amount` in one step. Snapshots the
+        assignment's current `convention_amount` into both this row's
+        `previous_amount` and — the first time this runs for a given
+        assignment — `assignment.initial_convention_amount`, so the
+        original figure survives any number of later avenants."""
+        from django.utils import timezone as _tz
+        previous = assignment.convention_amount or 0
+        if assignment.initial_convention_amount is None:
+            assignment.initial_convention_amount = previous
+        avenant = cls.objects.create(
+            assignment=assignment, date=date or _tz.localdate(),
+            previous_amount=previous, new_amount=new_amount,
+            reason=reason, recorded_by=user,
+        )
+        assignment.convention_amount = new_amount
+        assignment.save(update_fields=['convention_amount', 'initial_convention_amount', 'updated_at'])
+        return avenant
 
 
 class PersonnelDocument(BaseModel):

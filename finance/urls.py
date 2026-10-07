@@ -49,6 +49,7 @@ urlpatterns = [
     path('payroll/<int:pk>/allocate/', views.PayrollListAllocateView.as_view(), name='payroll_allocate'),
     path('payroll/<int:pk>/submit/', views.payroll_submit, name='payroll_submit'),
     path('payroll/<int:pk>/disburse/', views.payroll_disburse, name='payroll_disburse'),
+    path('payroll/depassements/', views.ConventionOverageListView.as_view(), name='convention_overage_list'),
 
     # Paie du personnel — "Ingénieurs & Staff" tab (salaire mensuel, hors
     # chantier, même workflow brouillon/soumise/payée que Listes de paie ci-dessus)

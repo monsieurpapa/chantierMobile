@@ -764,6 +764,14 @@ class PayrollListItem(BaseModel):
         verbose_name=_('Accusé de réception signé'),
         help_text=_("Scan du reçu papier signé par l'ouvrier."),
     )
+    overage_note = models.TextField(
+        blank=True, verbose_name=_('Note de dépassement'),
+        help_text=_(
+            "Obligatoire uniquement quand ce paiement dépasse la convention actuelle d'un Chef "
+            "de corps (voir clean()) — expose le dépassement au DG et au bureau technique via le "
+            "rapport « Dépassements de convention »."
+        ),
+    )
 
     class Meta:
         ordering = ['personnel__last_name']
@@ -811,12 +819,29 @@ class PayrollListItem(BaseModel):
                 already_paid -= (prior or 0)
             remaining = self.assignment.convention_amount - already_paid
             if self.amount > remaining:
-                raise ValidationError({'amount': _(
-                    "Ce montant dépasse le reste à payer sur la convention de %(name)s : "
-                    "%(remaining)s restant sur %(total)s."
-                ) % {
-                    'name': self.personnel, 'remaining': remaining, 'total': self.assignment.convention_amount,
-                }})
+                if self.personnel.is_chef_de_corps:
+                    # Soft rule for Chefs de Corps (2026-10-07 client spec):
+                    # a renegotiated scope of work can legitimately run
+                    # ahead of the avenant that will eventually catch up
+                    # with it, so the cashier may still record the
+                    # payment — but only with a note explaining the
+                    # overage, surfaced afterward to the DG/bureau
+                    # technique (see ConventionOverageListView,
+                    # finance/views.py). Everyone else keeps the hard
+                    # block below unchanged.
+                    if not (self.overage_note or '').strip():
+                        raise ValidationError({'overage_note': _(
+                            "Ce paiement dépasse la convention de %(name)s (%(remaining)s restant sur "
+                            "%(total)s). Expliquez le dépassement — la note sera visible par le DG et "
+                            "le bureau technique."
+                        ) % {'name': self.personnel, 'remaining': remaining, 'total': self.assignment.convention_amount}})
+                else:
+                    raise ValidationError({'amount': _(
+                        "Ce montant dépasse le reste à payer sur la convention de %(name)s : "
+                        "%(remaining)s restant sur %(total)s."
+                    ) % {
+                        'name': self.personnel, 'remaining': remaining, 'total': self.assignment.convention_amount,
+                    }})
 
 
 # ---------------------------------------------------------------------

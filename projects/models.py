@@ -14,7 +14,9 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from core.models import BaseModel
 from accounts.models import Cabinet
-from chantiermobile.constants import SiteStatus, ProjectConfig, ExpenseStatus, PlanningStatus, PhaseStatus
+from chantiermobile.constants import (
+    SiteStatus, ProjectConfig, ExpenseStatus, PlanningStatus, PhaseStatus, ContractMode, CONTRACT_MODE_MODULES,
+)
 
 class Site(BaseModel):
     """A chantier (construction site) — the tenancy anchor for almost
@@ -33,6 +35,16 @@ class Site(BaseModel):
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='sites_led', verbose_name=_('Ingénieur principal'),
         help_text=_("Ingénieur responsable de ce chantier — clôture les étapes et examine la planification."),
+    )
+    contract_mode = models.CharField(
+        max_length=30, choices=ContractMode.choices, default=ContractMode.CLE_EN_MAIN,
+        verbose_name=_('Type de contrat'),
+        help_text=_(
+            "Type de contrat signé avec le client — pré-établi dès la création du chantier, "
+            "modifiable plus tard par un directeur si l'accord avec le client change. Détermine "
+            "quelles fonctionnalités (feuilles) sont pertinentes pour ce chantier : voir "
+            "get_enabled_modules()."
+        ),
     )
 
     def __str__(self):
@@ -156,6 +168,22 @@ class Site(BaseModel):
         figure, not a final project margin (both sides only reflect
         money that has actually moved, not pending invoices/expenses)."""
         return self.total_revenue - self.total_spent
+
+    def get_enabled_modules(self):
+        """Which of this site's optional tabs/modules make sense given its
+        `contract_mode` — see CONTRACT_MODE_MODULES's docstring for what
+        each module key covers and why a supervision-only or labor-only
+        contract doesn't need all of them shown. Falls back to the fullest
+        set for an unrecognized/legacy value rather than hiding everything,
+        since failing open is safer than silently hiding a tab a site
+        actually needs."""
+        return CONTRACT_MODE_MODULES.get(self.contract_mode, {'personnel', 'materials', 'finance'})
+
+    def has_module(self, module):
+        """Convenience check for a single module key (see
+        get_enabled_modules()) — used where a view needs a plain
+        True/False rather than the whole set."""
+        return module in self.get_enabled_modules()
 
 class ProjectPhase(BaseModel):
     """A named stage of work within a Site (e.g. "Fondations",

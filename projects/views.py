@@ -233,6 +233,7 @@ class SiteDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, De
         context = super().get_context_data(**kwargs)
         # Use self.object (already fetched by DetailView.get) — avoids a duplicate DB query
         site = self.object
+        context['enabled_modules'] = site.get_enabled_modules()
 
         # Financial context
         expenses_qs = site.expenses.select_related('category', 'requester').order_by('-created_at')

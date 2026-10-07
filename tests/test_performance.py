@@ -46,8 +46,12 @@ class TestDatabasePerformance:
         # (session idle timeout, 15 minutes of inactivity; see the comment on
         # SESSION_IDLE_TIMEOUT_SECONDS in settings.py). Django's session
         # save() always wraps its write in transaction.atomic() regardless of
-        # backend, hence 3 queries rather than 1 for this one write.
-        assert len(ctx.captured_queries) < 22  # No N+1 as row count grows
+        # backend, hence 3 queries rather than 1 for this one write. +1 more
+        # (2026-10-07) for the navbar's "Dépassements de convention" link
+        # (Chef de Corps convention-overage feature), another distinct
+        # has_role cache key, 'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,
+        # CHIEF_ENGINEER'.
+        assert len(ctx.captured_queries) < 23  # No N+1 as row count grows
         assert len(response.context['sites']) == 100
     
     def test_expense_list_with_optimization(self, accountant_client):
@@ -84,8 +88,12 @@ class TestDatabasePerformance:
         # request writing `last_activity` into its session
         # (core.middleware.SessionIdleTimeoutMiddleware — session idle
         # timeout, see SESSION_IDLE_TIMEOUT_SECONDS in settings.py; Django's
-        # session save() always wraps its write in transaction.atomic()).
-        assert len(ctx.captured_queries) < 20
+        # session save() always wraps its write in transaction.atomic()),
+        # plus 1 more (2026-10-07) for the navbar's "Dépassements de
+        # convention" link (Chef de Corps convention-overage feature),
+        # another distinct has_role cache key,
+        # 'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,CHIEF_ENGINEER'.
+        assert len(ctx.captured_queries) < 22
     
     def test_dashboard_query_performance(self, director_client, user):
         """Test dashboard query performance."""

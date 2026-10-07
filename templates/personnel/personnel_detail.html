@@ -48,6 +48,9 @@
                                         {% if personnel.trade %}
                                         <span class="badge badge-subtle-dark rounded-pill me-1">{{ personnel.get_trade_display }}</span>
                                         {% endif %}
+                                        {% if personnel.is_chef_de_corps %}
+                                        <span class="badge bg-dark rounded-pill me-1"><i class="fas fa-user-tie me-1"></i>{% trans "Chef de corps" %}</span>
+                                        {% endif %}
                                         {% for skill in personnel.skills.all %}
                                         <span class="badge badge-subtle-primary rounded-pill me-1">{{ skill.name }}</span>
                                         {% endfor %}
@@ -83,23 +86,30 @@
                                             <th>{% trans "Period" %}</th>
                                             <th class="text-end">{% trans "Rate" %}</th>
                                             <th>{% trans "Convention" %}</th>
+                                            {% if personnel.is_chef_de_corps %}<th>{% trans "Avenants" %}</th>{% endif %}
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {% for assignment in personnel.assignments.all %}
                                         <tr>
                                             <td>{{ assignment.site.name }}</td>
-                                            <td>{{ assignment.role }}</td>
-                                            <td>{{ assignment.start_date }} - {{ assignment.end_date|default:"Present" }}</td>
+                                            <td>{{ assignment.role|default:assignment.name }}</td>
+                                            <td>{{ assignment.start_date|default:"—" }} - {{ assignment.end_date|default:"Present" }}</td>
                                             <td class="text-end">
                                                 {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,ACCOUNTANT' %}
-                                                {{ CURRENCY_SYMBOL }}{{ assignment.daily_rate }}
+                                                {{ CURRENCY_SYMBOL }}{{ assignment.daily_rate|default:"—" }}
                                                 {% else %}
                                                 ***
                                                 {% endif %}
                                             </td>
                                             <td>
-                                                {% if assignment.agreement_document %}
+                                                {% if assignment.convention_amount is not None and request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,ACCOUNTANT,CASHIER' %}
+                                                <div class="fs--1">
+                                                    <div>{% trans "Initiale" %} : {{ CURRENCY_SYMBOL }}{{ assignment.effective_initial_amount }}</div>
+                                                    <div>{% trans "Actuelle" %} : {{ CURRENCY_SYMBOL }}{{ assignment.convention_amount }}</div>
+                                                    <div class="text-600">{% trans "Payé" %} : {{ CURRENCY_SYMBOL }}{{ assignment.paid_amount }} / {% trans "Reste" %} : {{ CURRENCY_SYMBOL }}{{ assignment.remaining_convention }}</div>
+                                                </div>
+                                                {% elif assignment.agreement_document %}
                                                 <a href="{{ assignment.agreement_document.url }}" target="_blank" rel="noopener" class="btn btn-falcon-default btn-sm" title="{% trans 'Voir la convention' %}">
                                                     <span class="fas fa-file-contract"></span>
                                                 </a>
@@ -107,6 +117,16 @@
                                                 <span class="text-300">—</span>
                                                 {% endif %}
                                             </td>
+                                            {% if personnel.is_chef_de_corps %}
+                                            <td>
+                                                {% if request.user|has_role:'CASHIER,ACCOUNTANT,DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL' %}
+                                                <a class="btn btn-falcon-default btn-sm" href="{% url 'personnel:convention_avenant_create' pk=assignment.pk %}">
+                                                    <span class="fas fa-file-signature me-1"></span>{% trans "Avenant" %}
+                                                    {% if assignment.avenants.count %}<span class="badge bg-secondary ms-1">{{ assignment.avenants.count }}</span>{% endif %}
+                                                </a>
+                                                {% endif %}
+                                            </td>
+                                            {% endif %}
                                         </tr>
                                         {% endfor %}
                                     </tbody>
