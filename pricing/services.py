@@ -135,10 +135,22 @@ def material_request_variance_report(material_request):
     skipped) — the per-item breakdown used by the request detail page and
     by the soft-overage note check at authorize() time.
 
+    Deliberately calls `.all()` with no further queryset method chained
+    (no `.select_related()` here) — chaining one creates a brand-new
+    QuerySet that bypasses Django's prefetch cache, so a caller that
+    already did `prefetch_related('items__material', 'items__phase')`
+    (e.g. MaterialRequestDetailView) would get back *different* item
+    instances than the ones it iterates elsewhere (e.g. `req.items.all()`
+    in the template). Annotating those throwaway instances with
+    `.variance_comparison` would then silently have no visible effect —
+    exactly the bug this comment is here to prevent reintroducing. Callers
+    without a prefetch (e.g. authorize()'s has_red_variance() check) just
+    take the small N+1 cost of lazily loading `material`/`phase` instead.
+
     Returns a list of {item, comparison} dicts, in the request's item
     order."""
     results = []
-    for item in material_request.items.select_related('material', 'phase').all():
+    for item in material_request.items.all():
         if not item.material_id or not item.phase_id:
             continue
         comparison = compare_material_usage(

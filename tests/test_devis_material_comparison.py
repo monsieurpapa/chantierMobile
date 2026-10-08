@@ -596,3 +596,34 @@ class TestMaterialRequestDetailVarianceDisplay:
         assert response.status_code == 200
         assert response.context['requires_overage_justification'] is True
         assert b'overage_justification' in response.content
+
+    def test_per_item_variance_badge_actually_renders(self, director_client, site, phase, dqe, work_item_beton, ciment_ratio, ciment, material_request_factory):
+        """Regression test: MaterialRequestDetailView.get_context_data()
+        annotates `row['item'].variance_comparison` on instances returned
+        by `material_request_variance_report()`. If that function's
+        queryset (`material_request.items.<...>.all()`) isn't the exact
+        same cached queryset the view already prefetched
+        ('items__material', 'items__phase'), chaining so much as a
+        `.select_related()` on it silently returns *different* item
+        instances — the annotation lands on throwaway objects, and the
+        template's `req.items.all()` loop (reusing the prefetch cache)
+        renders every row's "Conformité devis" cell as a bare '—', with
+        no visible symptom beyond that one column. Asserting on the
+        actual rendered badge (not just the context dict) is what catches
+        this; asserting on `material_request_variance_report()`'s return
+        value alone, or even on `requires_overage_justification` (computed
+        straight from that return value, not from the annotated
+        instances), would not."""
+        from django.urls import reverse
+        DQELine.objects.create(dqe=dqe, price_item=work_item_beton, phase=phase, quantity=Decimal('10'), unit_price=Decimal('120'))
+        Devis.objects.create(
+            site=site, source_dqe=dqe, devis_number='DEV-BADGE-001', client_name='Client',
+            issue_date=date.today(), status=DevisStatus.ACCEPTE,
+        )
+        req = material_request_factory(status=MaterialRequestStatus.VALIDATED)
+        MaterialRequestItem.objects.create(request=req, material=ciment, phase=phase, quantity=Decimal('100'))
+        response = director_client.get(reverse('materials:request_detail', kwargs={'pk': req.pk}))
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert 'Dépassement' in content
+        assert 'badge-subtle-danger' in content
