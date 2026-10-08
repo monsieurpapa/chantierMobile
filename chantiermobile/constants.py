@@ -60,12 +60,15 @@ class ExpenseStatus(models.TextChoices):
 
 
 class MaterialRequestStatus(models.TextChoices):
-    """Material request (état de besoin) status choices — a two-stage
-    approval: the magasinier validates the request first, then a
-    Directeur Technique/Général (or Directeur de Cabinet) gives the
-    final authorization."""
+    """Material request (état de besoin) status choices — single-stage
+    approval: the site's lead_engineer (Ingénieur en Chef du chantier)
+    submits the request, then a Directeur Technique/Général (or
+    Directeur de Cabinet) approves or rejects it directly from PENDING
+    (see materials/models.py). VALIDATED is kept only for backward
+    compatibility with requests left in that state from before this
+    change — no new request reaches it."""
     PENDING = 'PENDING', _('En attente')
-    VALIDATED = 'VALIDATED', _('Validé par le magasinier')
+    VALIDATED = 'VALIDATED', _('Validé (ancien statut)')
     APPROVED = 'APPROVED', _('Approuvé')
     REJECTED = 'REJECTED', _('Rejeté')
     ORDERED = 'ORDERED', _('Commandé')
@@ -187,6 +190,20 @@ class WorkCategory(models.TextChoices):
     COFFRAGE = 'COFFRAGE', _('Coffrage')
     MACONNERIE = 'MACONNERIE', _('Maçonnerie')
     AUTRE = 'AUTRE', _('Autre ouvrage')
+
+
+class StructureType(models.TextChoices):
+    """A Site's (chantier's) overall structural system (added 2026-10-08,
+    floors/structure feature) — mainly informational/guidance (it doesn't
+    gate which SiteLevel fields are enterable), but tells an engineer
+    filling in a level's poutres/colonnes whether that level genuinely has
+    a discrete beam-and-column frame (POTEAUX_POUTRES/MIXTE) or whether
+    load-bearing walls do the work instead (MACONNERIE_PORTANTE, where
+    those fields are typically left at 0 and the wall quantities carry
+    the structural estimate instead)."""
+    POTEAUX_POUTRES = 'POTEAUX_POUTRES', _('Poteaux-poutres (béton armé)')
+    MACONNERIE_PORTANTE = 'MACONNERIE_PORTANTE', _('Maçonnerie portante')
+    MIXTE = 'MIXTE', _('Mixte')
 
 
 class MaterialVarianceStatus(models.TextChoices):

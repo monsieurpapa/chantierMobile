@@ -11,7 +11,7 @@ pricing, procurement, tasks — hangs business data off a Site or a Cabinet.
 |---|---|
 | `accounts` | `User`, `Cabinet`, `UserCabinetRole` (who has which role in which cabinet), `CabinetContextLog` |
 | `core` | Shared base models (`BaseModel`, `StatusChangeLog`, `Notification`), RBAC mixins (`CabinetAccessMixin`, `RoleRequiredMixin`), the dashboard aggregator, the pending-approvals inbox, global search, notifications, and the session-idle-timeout middleware |
-| `projects` | `Site`, `ProjectPhase`, `PlanningSubmission`, `SiteProgress` + photos/comments |
+| `projects` | `Site` (incl. floors/structure fields, added 2026-10-08), `SiteLevel` (per-floor structural detail), `ProjectPhase`, `PlanningSubmission`, `SiteProgress` + photos/comments |
 | `personnel` | `Personnel`, `Skill`, `SiteAssignment`, `Leave`, `Holiday`, `Attendance`, `PersonnelDocument` |
 | `finance` | `Budget`, `Expense` (+ `ExpenseCategory`, `ExpenseApproval`), `Caisse` ledger (+ transactions, loans), `PayrollList`/`PayrollListItem` (ouvriers), `SalaryPaymentList`/`SalaryPaymentItem` (ingénieurs/staff), `Avenant` |
 | `materials` | `Material`, `MaterialRequest`/`MaterialRequestItem` |
@@ -114,9 +114,11 @@ silently put a record into an invalid state, because the model itself refuses it
 Expense:            PENDING → APPROVED → PAID        (terminal)
                             → REJECTED                (terminal)
 
-MaterialRequest:     PENDING → VALIDATED (magasinier) → APPROVED (director-tier)
+MaterialRequest:     PENDING → APPROVED (director-tier)
                              → ORDERED → DELIVERED     (terminal)
-                             → REJECTED (from PENDING or VALIDATED) (terminal)
+                             → REJECTED (from PENDING)  (terminal)
+                     (single-stage since 2026-10-08 — requester is always the
+                      site's lead_engineer; no magasinier validation step)
 
 Invoice:             DRAFT → SENT → PAID              (terminal)
                                   → OVERDUE → PAID     (terminal)

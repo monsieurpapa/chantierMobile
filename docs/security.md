@@ -63,9 +63,10 @@ see each app's `docs/modules/<app>.md` for the complete, current list per view).
 | Action | Roles |
 |---|---|
 | Approve/reject an expense | `DIRECTOR`, `DIRECTEUR_TECHNIQUE`, `DIRECTEUR_GENERAL`, `ACCOUNTANT` |
-| Validate a material request (1st stage) | `MAGASINIER`, `DIRECTOR`, `DIRECTEUR_TECHNIQUE`, `DIRECTEUR_GENERAL` |
-| Final-authorize a material request / avenant (2nd stage) | `DIRECTOR`, `DIRECTEUR_TECHNIQUE`, `DIRECTEUR_GENERAL` (`FINAL_AUTHORIZATION_ROLES`) |
+| Submit a material request (état de besoin) | the site's own `lead_engineer` only (not a role gate — see `docs/modules/materials.md`) — changed 2026-10-08, was any logged-in user |
+| Approve/reject a material request / avenant | `DIRECTOR`, `DIRECTEUR_TECHNIQUE`, `DIRECTEUR_GENERAL` (`FINAL_AUTHORIZATION_ROLES`) — single-stage for material requests since 2026-10-08, no magasinier validation step |
 | Create/edit a Site, budget reporting | `DIRECTOR`, `DIRECTEUR_TECHNIQUE`, `DIRECTEUR_GENERAL`, `CHIEF_ENGINEER` |
+| Edit a Site's structure (floors/étages detail, `SiteLevel` rows) | `DIRECTOR`, `DIRECTEUR_TECHNIQUE`, `DIRECTEUR_GENERAL`, `CHIEF_ENGINEER`, **or** that site's own `lead_engineer` (`_site_structure_can_act`, not `RoleRequiredMixin` — mirrors `personnel.views._attendance_can_act`) — added 2026-10-08; see `docs/modules/projects.md` |
 | Close a project phase | `DIRECTOR`, `DIRECTEUR_TECHNIQUE`, `DIRECTEUR_GENERAL` |
 | Submit/review own-site planning | `DIRECTOR`, `DIRECTEUR_TECHNIQUE`, `DIRECTEUR_GENERAL`, `CHIEF_ENGINEER`, `ENGINEER` (own site only) |
 | Contracts / invoices / payments | `DIRECTOR`, `DIRECTEUR_TECHNIQUE`, `DIRECTEUR_GENERAL`, `ACCOUNTANT` (some views add `CHIEF_ENGINEER` or `CASHIER`) |
@@ -134,7 +135,8 @@ following the same shape — `ValidationError` when the acting user is also the
 requester, bypassable only by `is_superuser` (accepted as an operator-trust
 boundary, not a gap — see `SECURITY.md`'s known limitations):
 `Expense.approve()`, `Avenant.approve()`/`reject()`, and `MaterialRequest`'s
-two-stage `magasinier_validate()`/`authorize()`/`reject()`.
+`authorize()`/`reject()` (single-stage since 2026-10-08 — see
+`docs/modules/materials.md`).
 
 `CaisseTransaction.can_be_modified_by()` (added 2026-10-06, permission table
 update) follows the same operator-trust shape but a different boundary: instead

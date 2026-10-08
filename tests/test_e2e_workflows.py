@@ -263,8 +263,27 @@ class TestExpenseManagementWorkflow:
 class TestMaterialRequestWorkflow:
     """Test complete material request workflow."""
     
-    def test_material_request_lifecycle(self, engineer_client, director_client, site, material):
-        """Test material request from creation to delivery."""
+    def test_material_request_lifecycle(self, engineer_client, engineer_user, user, user_cabinet_role, site, material):
+        """Test material request from creation to delivery.
+
+        Uses an independent `Client()` for the director's GET below,
+        rather than the shared `director_client` fixture — `director_client`
+        and `engineer_client` both log in through the same underlying
+        `client` fixture (see conftest.py), so requesting both in one test
+        silently leaves only the last-logged-in user's session active on
+        either variable. That didn't matter before 2026-10-08 (anyone could
+        submit a request), but now that submission is restricted to the
+        site's own lead_engineer, the clobbered session would submit as the
+        wrong user and the request would never be created."""
+        from django.test import Client
+        director_client = Client()
+        director_client.login(username=user.username, password='testpass123')
+
+        # Only the site's own lead_engineer may submit an état de besoin
+        # (changed 2026-10-08) — see materials/views.py.
+        site.lead_engineer = engineer_user
+        site.save(update_fields=['lead_engineer'])
+
         # Engineer creates material request
         response = engineer_client.get(reverse('materials:request_create'))
         assert response.status_code == 200

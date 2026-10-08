@@ -15,10 +15,26 @@ from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db.models import Count
 from django.utils.translation import gettext_lazy as _
-from .models import Site, ProjectPhase, SiteProgress, ProgressPhoto, ProgressComment, PlanningSubmission
-from .forms import SiteForm, ProjectPhaseForm, SiteProgressForm, PlanningSubmissionForm
+from .models import Site, ProjectPhase, SiteProgress, ProgressPhoto, ProgressComment, PlanningSubmission, SiteLevel
+from .forms import SiteForm, ProjectPhaseForm, SiteProgressForm, PlanningSubmissionForm, SiteLevelFormSet
 from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet, can_act_for_cabinet, can_view_cabinet
 from chantiermobile.constants import UserRoles, ApprovalStatus
+
+# Same director-tier/CHIEF_ENGINEER gate as SiteUpdateView — editing the
+# structure (floors, concrete/maçonnerie detail) is a technical/design
+# decision at the same level as editing the site itself.
+SITE_STRUCTURE_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER']
+
+
+def _site_structure_can_act(request, site):
+    """A director-tier/CHIEF_ENGINEER holder can edit any of their
+    cabinet's sites' structure; a plain ENGINEER may still edit their
+    *own* led site — same ownership rule as personnel.views's
+    _attendance_can_act, since the site's own engineer is usually the one
+    actually taking the on-site measurements."""
+    if can_act_for_cabinet(request, site.cabinet, SITE_STRUCTURE_ROLES):
+        return True
+    return site.lead_engineer_id == request.user.pk
 
 LEAD_ENGINEER_ROLES = ['ENGINEER', 'CHIEF_ENGINEER']
 PHASE_CLOSE_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER', 'ENGINEER']
@@ -111,7 +127,9 @@ class SiteCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, 
 
         form.instance.cabinet = cabinet
         messages.success(self.request, _("Chantier créé avec succès !"))
-        return super().form_valid(form)
+        response = super().form_valid(form)
+        self.object.sync_levels()
+        return response
 
 class SiteUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, UpdateView):
     """Edits a Site, including status transitions (validated by
@@ -154,6 +172,7 @@ class SiteUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, 
             with transaction.atomic():
                 form.save()
                 self.object = form.instance
+                self.object.sync_levels()
                 if old_status != self.object.status:
                     StatusChangeLog.log(
                         self.object,
@@ -306,8 +325,66 @@ class SiteDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, De
 
         # Sort combined timeline by timestamp descending
         context['timeline'] = sorted(timeline, key=lambda x: x['timestamp'], reverse=True)
-        
+
         return context
+
+
+class SiteStructureUpdateView(LoginRequiredMixin, PageHeaderMixin, DetailView):
+    """Fills in each of a Site's SiteLevel rows (height, murs, poutres,
+    colonnes, dalle) — the rows themselves are never created or deleted
+    here (see Site.sync_levels(), called whenever floor_count/
+    basement_count change on the Site form); this page only edits their
+    detail, one fieldset per existing level, in one formset POST.
+
+    Deliberately not a RoleRequiredMixin view — see
+    _site_structure_can_act — since the site's own lead_engineer (who did
+    the actual on-site measuring) should be able to fill this in even
+    without a director-tier/CHIEF_ENGINEER role."""
+    model = Site
+    template_name = 'projects/site_structure_form.html'
+    context_object_name = 'site'
+    slug_field = 'unique_id'
+    slug_url_kwarg = 'unique_id'
+
+    def dispatch(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        if not _site_structure_can_act(request, self.object):
+            messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+            return redirect('projects:site_detail', unique_id=self.object.unique_id)
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_header_title(self):
+        return _("Structure du chantier : %(name)s") % {'name': self.object.name}
+
+    def get_header_subtitle(self):
+        return _("Un niveau par étage (R+%(n)s) — modifiez floor_count/basement_count depuis la fiche du chantier pour en ajouter ou en retirer.") % {'n': self.object.floor_count}
+
+    def get_back_url(self):
+        return str(reverse_lazy('projects:site_detail', kwargs={'unique_id': self.object.unique_id}))
+
+    def get_breadcrumb_items(self):
+        return [
+            {'title': _("Projets & Chantiers"), 'url': str(reverse_lazy('projects:site_list'))},
+            {'title': self.object.name, 'url': str(reverse_lazy('projects:site_detail', kwargs={'unique_id': self.object.unique_id}))},
+            {'title': _("Structure"), 'url': None},
+        ]
+
+    def _formset(self, data=None):
+        return SiteLevelFormSet(data, queryset=self.object.levels.all(), prefix='levels')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.setdefault('levels_formset', self._formset(self.request.POST if self.request.method == 'POST' else None))
+        return context
+
+    def post(self, request, *args, **kwargs):
+        formset = self._formset(request.POST)
+        if formset.is_valid():
+            formset.save()
+            messages.success(request, _("Structure du chantier mise à jour."))
+            return redirect('projects:site_detail', unique_id=self.object.unique_id)
+        messages.error(request, _("Veuillez corriger les erreurs ci-dessous."))
+        return self.render_to_response(self.get_context_data(levels_formset=formset))
 
 
 # --- PHASES ---

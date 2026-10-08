@@ -56,6 +56,69 @@ anchors the Cabinet multi-tenancy model.
   site's optional one-to-one `Contract`; 0 with no contract.
 - `net_profit` — `total_revenue - total_spent` (a running figure, not a
   final project margin — neither side counts pending money).
+- **(added 2026-10-08, floors/structure feature)** `floor_count` (R+N,
+  default 0), `basement_count` (default 0), `footprint_area_m2` (optional —
+  falls back for a `SiteLevel`'s own `floor_area_m2` when left blank there),
+  `structure_type` (`chantiermobile.constants.StructureType` —
+  poteaux-poutres / maçonnerie portante / mixte; indicative only, doesn't
+  gate any field). `SiteForm` makes all three non-required with a
+  fallback-to-existing-value `clean_<field>()` (same pattern as
+  `contract_mode`) so a POST that omits one doesn't silently reset a
+  site's floor count and wipe its levels.
+- `sync_levels()` **(added 2026-10-08)** — called by `SiteCreateView`/
+  `SiteUpdateView.form_valid()` after every save. Creates/restores/removes
+  `SiteLevel` rows so they exactly match `floor_count`/`basement_count`
+  (0=RDC, 1..floor_count=R+1..R+N, -1..-basement_count=Sous-sol 1..N). A
+  level outside the new range is soft-deleted, not hard-deleted — raising
+  the count back later restores the same row (via `SiteLevel.all_objects`)
+  rather than creating a blank one.
+- `total_concrete_volume_m3` / `total_wall_area_m2` / `estimated_rebar_kg`
+  **(added 2026-10-08)** — sum of every level's own `concrete_volume_m3`/
+  `wall_area_m2`, and `total_concrete_volume_m3 × cabinet.
+  rebar_density_kg_per_m3`, respectively. Feed
+  `pricing.services.structural_quantity_estimate()` (see
+  [`pricing.md`](pricing.md)) and the "Structure du chantier" card on
+  `site_detail.html`.
+
+### SiteLevel **(added 2026-10-08)**
+One physical floor of a Site's building (RDC, R+1, R+2..., or a negative
+`level_index` for a sous-sol) — see the floors/structure feature. Rows are
+entirely managed by `Site.sync_levels()`; there is no create/delete form —
+changing `floor_count`/`basement_count` on the Site form and saving is the
+only way to add or remove one. `unique_together = ('site', 'level_index')`.
+
+Fields are deliberately *aggregated* per level, not member-by-member (one
+total beam length and a typical section, not each beam individually) — a
+quick avant-métré, not a full structural member schedule:
+- `height_m`, `floor_area_m2` (blank falls back to `Site.footprint_area_m2`
+  — see `effective_floor_area_m2`), `wall_length_m` (périmètre + refends),
+  `opening_area_m2` (portes/fenêtres, deducted from wall area).
+- `beam_count`, `beam_section_width_m`/`beam_section_height_m`,
+  `beam_total_length_m` (sum of every beam's span on this level, **not** one
+  beam's length) — `beam_volume_m3` = length × width × height.
+- `column_count`, `column_section_width_m`/`column_section_depth_m` —
+  `column_volume_m3` = count × `height_m` × width × depth (a column is
+  assumed to run the full level height).
+- `slab_thickness_m` — this level's dalle haute (the floor above, or the
+  toiture-terrasse for the top level); `slab_volume_m3` =
+  `effective_floor_area_m2` × thickness.
+- `concrete_volume_m3` = beams + columns + slab. `wall_area_m2` =
+  `wall_length_m × height_m − opening_area_m2` (floored at 0; `None`, not
+  0, when `wall_length_m`/`height_m` aren't filled in yet — "not entered"
+  and "zero wall" are different facts).
+- `label` — `"Rez-de-chaussée (RDC)"` / `"R+N"` / `"Sous-sol N"` from
+  `level_index`.
+
+Edited via `SiteStructureUpdateView` (`projects:site_structure_update`,
+`site_structure_form.html`) — a plain `modelformset_factory(extra=0,
+can_delete=False)`, since the row count is fixed by `sync_levels()`, not
+user-adjustable from this page. Gate: director-tier/`CHIEF_ENGINEER`, **or**
+the site's own `lead_engineer` (`_site_structure_can_act`, mirrors
+`personnel.views._attendance_can_act`) — the engineer who actually took the
+on-site measurements should be able to fill this in without a management
+role. The form's JS recomputes each level's concrete/wall totals live as
+the engineer types (pure client-side arithmetic — no AJAX needed, since the
+row count never changes on this page).
 
 ### ProjectPhase
 - `site`, `name`, `start_date`, `end_date`, `status`

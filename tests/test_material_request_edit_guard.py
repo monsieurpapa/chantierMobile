@@ -103,7 +103,7 @@ class TestMaterialRequestEditGuard:
         """Even the original requester loses edit rights the moment the
         request advances past PENDING (matching what the templates already
         implied by hiding the Edit link at that point)."""
-        pending_request.status = MaterialRequestStatus.VALIDATED
+        pending_request.status = MaterialRequestStatus.APPROVED
         pending_request.save(update_fields=['status'])
 
         url = reverse('materials:request_update', kwargs={'pk': pending_request.pk})

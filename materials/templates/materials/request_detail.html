@@ -203,32 +203,10 @@
                 <!-- Sidebar -->
                 <div class="col-lg-4 ps-lg-2">
                     <!-- Actions -->
-                    {% if req.status == 'PENDING' and request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,MAGASINIER' %}
+                    {% if req.status == 'PENDING' and request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL' %}
                     <div class="card mb-3 border-0 shadow-sm">
                         <div class="card-header bg-white border-bottom p-3">
-                            <h5 class="mb-0"><i class="fas fa-clipboard-check me-2 text-primary"></i>{% trans "Validation magasinier" %}</h5>
-                        </div>
-                        <div class="card-body p-3">
-                            <form action="{% url 'materials:request_validate' pk=req.pk %}" method="post">
-                                {% csrf_token %}
-                                <div class="d-grid gap-2">
-                                    <button type="submit" name="action" value="validate" class="btn btn-primary">
-                                        <i class="fas fa-check me-1"></i>{% trans "Valider" %}
-                                    </button>
-                                    <button type="submit" name="action" value="reject" class="btn btn-danger"
-                                        data-confirm="{% trans 'Reject this material request? This cannot be undone.' %}">
-                                        <i class="fas fa-times me-1"></i>{% trans "Reject" %}
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    {% if req.status == 'VALIDATED' and request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL' %}
-                    <div class="card mb-3 border-0 shadow-sm">
-                        <div class="card-header bg-white border-bottom p-3">
-                            <h5 class="mb-0"><i class="fas fa-check-circle me-2 text-primary"></i>{% trans "Autorisation finale" %}</h5>
+                            <h5 class="mb-0"><i class="fas fa-check-circle me-2 text-primary"></i>{% trans "Autorisation" %}</h5>
                         </div>
                         <div class="card-body p-3">
                             {% if requires_overage_justification %}

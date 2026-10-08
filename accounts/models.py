@@ -74,6 +74,17 @@ class Cabinet(BaseModel):
             "au rouge (« dépassement ») et exige une justification à l'autorisation."
         ),
     )
+    rebar_density_kg_per_m3 = models.DecimalField(
+        max_digits=8, decimal_places=2, default=100,
+        verbose_name=_("Densité d'armature par défaut (kg/m³)"),
+        help_text=_(
+            "Quantité d'acier (kg) estimée par m³ de béton structurel (poutres, colonnes, dalles) "
+            "— utilisée pour chiffrer l'acier des niveaux d'un chantier (Site.estimated_rebar_kg) "
+            "quand aucun ratio d'armature détaillé n'est saisi poste par poste. 100 kg/m³ est un "
+            "ordre de grandeur courant pour du bâtiment courant (un ouvrage très ferraillé — "
+            "parking, voile de soutènement — en demande davantage) ; ajustable par cabinet."
+        ),
+    )
 
     def __str__(self):
         return self.name

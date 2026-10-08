@@ -33,7 +33,61 @@ dated heading cut when a deliberate release point is agreed on.
   Site before loading the page, confirmed to reproduce the exact
   `NoReverseMatch` on the pre-fix template and pass after.
 
+### Changed
+- **État de besoin (material request) workflow simplified to a single
+  approval stage.** Previously: any logged-in user could submit a
+  request, which a magasinier then validated (`PENDING → VALIDATED`)
+  before a director-tier role gave final authorization
+  (`VALIDATED → APPROVED`). Now: only the Site's own `lead_engineer`
+  ("Ingénieur en Chef du chantier") may submit a request, and a
+  director-tier role (`FINAL_AUTHORIZATION_ROLES`) approves or rejects
+  it directly from `PENDING` — there is no magasinier validation step;
+  the magasinier's role in this app stays scoped to stock movements
+  (`procurement.StockItem`/`StockMovement`). `MaterialRequest.
+  magasinier_validate()` and the `materials:request_validate` URL/view
+  are removed; `authorize()`/`reject()` now gate on `PENDING` (not
+  `VALIDATED`, kept only for backward compatibility with any request
+  already stuck there). A companion data migration
+  (`materials/migrations/0012_migrate_validated_requests_to_pending.py`)
+  moves any request already sitting at the retired `VALIDATED` status
+  forward to `PENDING` at deploy time — caught in review: without it,
+  such a request had no `authorize()`/`reject()` path left (both now
+  reject `VALIDATED`) and had disappeared from the pending-approvals
+  inbox, so it would otherwise be stranded. See `docs/modules/materials.md`
+  and `docs/security.md`.
+
 ### Added
+- **Chantier floors/structure (R+N, emprise au sol, per-level
+  poutres/colonnes) feeding the DQE/matériaux quantity estimate.** `Site`
+  gains `floor_count`/`basement_count` (R+N / sous-sols),
+  `footprint_area_m2` (emprise au sol), and `structure_type`
+  (poteaux-poutres / maçonnerie portante / mixte, informational). A new
+  `SiteLevel` model (one row per RDC/R+N/sous-sol, entirely managed by
+  `Site.sync_levels()` — changing the floor/basement count and saving is
+  the only way to add or remove a level) carries each level's aggregated
+  structural detail: height, surface plancher, longueur de murs +
+  ouvertures, poutres (nombre, section, longueur totale) and colonnes
+  (nombre, section), épaisseur de dalle. A new "Structure du chantier"
+  page (`projects:site_structure_update`, open to director-tier/
+  `CHIEF_ENGINEER` or the site's own `lead_engineer`) shows one fieldset
+  per level with live client-side concrete/maçonnerie totals; the same
+  totals surface as a summary card + table on the site detail page.
+  `Site.total_concrete_volume_m3`/`total_wall_area_m2`/
+  `estimated_rebar_kg` (the last via a new, cabinet-configurable
+  `Cabinet.rebar_density_kg_per_m3`, default 100 kg/m³) roll every level
+  up into a site-wide estimate, exposed to the DQE form as
+  `pricing.services.structural_quantity_estimate()` — a "Suggestions
+  structurelles" panel on `dqe_form.html` (refetched via a new
+  `pricing:site_structural_estimate` endpoint whenever the DQE's site
+  picker changes) lets a quantity surveyor pre-fill a new DQE line's
+  quantity with the béton/maçonnerie/acier estimate, then pick the
+  matching price-library article and étape themselves — advisory only,
+  it never creates a DQE line on its own. See `docs/modules/projects.md`,
+  `docs/modules/pricing.md`, and `docs/security.md`. (`SiteLevel.
+  opening_area_m2` is `null=True` — caught in review: the form leaves it
+  optional, and a blank submission would otherwise hit the column's
+  NOT NULL constraint and 500.)
+
 - Chef de Corps, convention avenants, contract-mode-gated chantiers, and
   a Magasinier Général role — from client notes on how subcontracted
   trade leads are paid and how contract types should shape the app:

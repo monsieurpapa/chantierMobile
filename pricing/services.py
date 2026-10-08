@@ -161,6 +161,29 @@ def material_request_variance_report(material_request):
     return results
 
 
+def structural_quantity_estimate(site):
+    """Ouvrage-level quantities (in each work category's own natural unit,
+    not yet exploded into elementary materials) implied by `site`'s
+    floor/structure data (Site.floor_count/basement_count/
+    footprint_area_m2 and each SiteLevel's dimensions — see
+    projects.models.Site/SiteLevel, added 2026-10-08).
+
+    This is advisory: a starting point for sizing a BETON/MACONNERIE DQE
+    line for this site, surfaced on the DQE form (see pricing/views.py's
+    site_structural_estimate_api and dqe_form.html) so a quantity surveyor
+    can pre-fill a line's quantity and still pick the right price-library
+    article/étape themselves — it never creates a DQELine on its own.
+
+    Returns {'concrete_m3', 'wall_area_m2', 'rebar_kg'} — all Decimal,
+    0 when the site has no levels yet (nothing to estimate), not an
+    error."""
+    return {
+        'concrete_m3': site.total_concrete_volume_m3,
+        'wall_area_m2': site.total_wall_area_m2,
+        'rebar_kg': site.estimated_rebar_kg,
+    }
+
+
 def has_red_variance(material_request):
     """True if authorizing `material_request` as-is would leave at least
     one of its comparable items in RED — the trigger for authorize()'s

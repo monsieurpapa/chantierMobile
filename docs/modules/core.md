@@ -116,9 +116,11 @@ act on — Expense, MaterialRequest, Avenant, PlanningSubmission, Leave — into
 oldest-first list, instead of a director checking five separate list pages by hand.
 
 **Deliberately duplicated role lists.** This module hardcodes its own copy of each
-action's role list (`EXPENSE_APPROVAL_ROLES`, `MATERIAL_REQUEST_VALIDATE_ROLES`,
-`PLANNING_REVIEW_ROLES`, `LEAVE_DECIDE_ROLES`, plus the shared
-`FINAL_AUTHORIZATION_ROLES` from `chantiermobile.constants`) rather than importing each
+action's role list (`EXPENSE_APPROVAL_ROLES`, `PLANNING_REVIEW_ROLES`,
+`LEAVE_DECIDE_ROLES`, plus the shared `FINAL_AUTHORIZATION_ROLES` from
+`chantiermobile.constants`, which also gates the material-request decision —
+single-stage since 2026-10-08, no separate "validate" role list any more) rather
+than importing each
 app's view module to read its `allowed_roles` off it. This is intentional — pulling
 every app's views into one shared aggregator would create a web of cross-app imports —
 but it means **the two copies must be kept in sync by hand**: if an app's action view

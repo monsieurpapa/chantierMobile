@@ -4,22 +4,24 @@ Materials catalog and the "état de besoin" (material request) workflow.
 A Material is a shared, cabinet-agnostic catalog entry (name/unit/cost)
 that a MaterialRequest's items can point to — or an item can skip the
 catalog entirely and type a free-text name, for one-off or not-yet
-registered materials (see MaterialRequestItem). A MaterialRequest goes
-through a two-stage approval before it becomes an authorized expense:
-the magasinier validates it first (PENDING -> VALIDATED), then a
-director-tier role (FINAL_AUTHORIZATION_ROLES) gives the final
-authorization (VALIDATED -> APPROVED), which is also the point where the
-matching finance.Expense gets created and linked back via `expense`.
+registered materials (see MaterialRequestItem).
 
-FIXED 2026-10-06: magasinier_validate()/authorize()/reject() now block
-the original requester from being the one who validates, authorizes, or
-rejects their own request (every role except a superuser), mirroring
-Expense.approve()'s self-approval guard — see docs/security.md. This
-does not remove the role overlap in materials/views.py
-(MAGASINIER_VALIDATE_ROLES and FINAL_AUTHORIZATION_ROLES both include
-DIRECTOR/DIRECTEUR_TECHNIQUE/DIRECTEUR_GENERAL, so one director-tier
-user can still validate *and then* authorize someone else's request) —
-only a request's own requester is blocked from deciding on it.
+FIXED 2026-10-08: the material-request workflow is single-stage, not a
+two-stage magasinier-then-director approval. Only the Site's own
+lead_engineer (the chantier's "Ingénieur en Chef" — see
+MaterialRequestCreateView) may submit a request against it, and a
+director-tier role (FINAL_AUTHORIZATION_ROLES) decides it directly from
+PENDING via authorize()/reject() — there is no intermediate magasinier
+validation step. authorize() is also the point where the matching
+finance.Expense gets created and linked back via `expense`. The
+magasinier's role in this app is scoped to actual stock movements
+(see procurement/models.py's StockItem/StockMovement) — they play no
+part in deciding an état de besoin.
+
+FIXED 2026-10-06: authorize()/reject() block the original requester from
+being the one who authorizes or rejects their own request (every role
+except a superuser), mirroring Expense.approve()'s self-approval guard —
+see docs/security.md.
 """
 from django.db import models
 from django.utils.translation import gettext_lazy as _
@@ -79,50 +81,26 @@ class MaterialRequest(BaseModel):
         if self.pk and self.items.count() == 0:
             raise ValidationError('Material request must have at least one item.')
     
-    def magasinier_validate(self, user, notes=''):
-        """First stage of the two-step approval (état de besoin): the
-        magasinier checks the request against what's actually needed/
-        available before it goes up for final authorization. Blocks the
-        original requester from validating their own request (every role
-        except a superuser) — mirrors Expense.approve()/Avenant.approve();
-        see the module docstring and docs/security.md's "self-approval"
-        note. This alone does not fully separate the two stages when the
-        same user also holds FINAL_AUTHORIZATION_ROLES: see authorize()
-        below, which carries its own guard for that step."""
-        from django.core.exceptions import ValidationError
-        from core.models import StatusChangeLog
-        if not user.is_superuser and self.requested_by_id == user.pk:
-            raise ValidationError(_("Vous ne pouvez pas valider votre propre demande de matériaux."))
-        if self.status != MaterialRequestStatus.PENDING:
-            raise ValidationError(_('Seule une demande en attente peut être validée par le magasinier.'))
-        old_status = self.status
-        self.status = MaterialRequestStatus.VALIDATED
-        self.save(update_fields=['status', 'updated_at'])
-        StatusChangeLog.log(self, changed_by=user, old_status=old_status, new_status=self.status, note=notes)
-
     def authorize(self, user, notes='', overage_justification=''):
-        """Second/final stage: Directeur Technique, Directeur Général (or
-        Directeur de Cabinet) gives the final authorization once the
-        magasinier has validated the request.
+        """Directeur Technique, Directeur Général (or Directeur de
+        Cabinet) decides this état de besoin directly from PENDING —
+        single-stage approval, no magasinier validation step (see the
+        module docstring).
 
         This is also where "exécuter une sortie financière venant d'un état
         de besoin, validée, liée à un projet" happens: authorizing the
-        request creates the matching Expense (already APPROVED, since the
-        two-stage état de besoin approval IS the approval — it only remains
-        for the cashier to pay it) and links it back via `self.expense`, so
-        the promised amount is no longer a number that only lives on this
-        request.
+        request creates the matching Expense (already APPROVED, since this
+        authorization IS the approval — it only remains for the cashier to
+        pay it) and links it back via `self.expense`, so the promised
+        amount is no longer a number that only lives on this request.
 
-        Also blocks the original requester from giving this final
-        authorization themselves (every role except a superuser) — same
-        guard shape as magasinier_validate() above. Note this blocks the
-        *requester* specifically, not "the same person who validated it":
-        a MAGASINIER who validates and a DIRECTOR who then authorizes are
-        still two different people even if neither is the requester, and
-        that's unaffected by this guard — the gap it closes is a
-        requester approving their own request at either stage, not
-        requiring the two stages to be done by different non-requester
-        people.
+        Also blocks the original requester from giving this authorization
+        themselves (every role except a superuser) — mirrors
+        Expense.approve()'s self-approval guard (see docs/security.md);
+        the requester is always the site's lead_engineer (see
+        MaterialRequestCreateView), so this guard is what stops an
+        engineer from authorizing their own request even if they also
+        happen to hold a director-tier role.
 
         `overage_justification` is the soft-overage note requirement
         (mirrors PayrollListItem.clean()'s chef-de-corps overage_note
@@ -136,8 +114,8 @@ class MaterialRequest(BaseModel):
         from core.models import StatusChangeLog
         if not user.is_superuser and self.requested_by_id == user.pk:
             raise ValidationError(_("Vous ne pouvez pas autoriser votre propre demande de matériaux."))
-        if self.status != MaterialRequestStatus.VALIDATED:
-            raise ValidationError(_("Seule une demande validée par le magasinier peut être autorisée."))
+        if self.status != MaterialRequestStatus.PENDING:
+            raise ValidationError(_("Seule une demande en attente peut être autorisée."))
         from pricing.services import has_red_variance
         is_overage = has_red_variance(self)
         if is_overage and not (overage_justification or '').strip():
@@ -197,10 +175,13 @@ class MaterialRequest(BaseModel):
 
     def reject(self, user, notes=''):
         """Either stage may reject the request. Blocks the requester from
-        rejecting their own request too, for symmetry with
-        magasinier_validate()/authorize() — rejecting your own request
-        has no financial consequence, but it's still a review step that
-        should involve a second person."""
+        rejecting their own request too, for symmetry with authorize() —
+        rejecting your own request has no financial consequence, but it's
+        still a review step that should involve a second person.
+
+        Accepts PENDING (the normal case) and, for backward compatibility
+        with any request stuck in the retired VALIDATED status from
+        before the single-stage change, VALIDATED too."""
         from django.core.exceptions import ValidationError
         from core.models import StatusChangeLog
         if not user.is_superuser and self.requested_by_id == user.pk:

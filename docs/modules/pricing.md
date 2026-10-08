@@ -147,6 +147,20 @@ capped at exactly one level (`ProjectPhase.clean()`, see
 than one level. A sous-étape's own comparison, by contrast, is scoped to
 itself only — it never looks at its siblings or its parent.
 
+### `structural_quantity_estimate(site)` **(added 2026-10-08)**
+Thin wrapper over `Site.total_concrete_volume_m3`/`total_wall_area_m2`/
+`estimated_rebar_kg` (see `docs/modules/projects.md`'s `SiteLevel` section) —
+returns `{'concrete_m3', 'wall_area_m2', 'rebar_kg'}`, all `Decimal`, 0 when
+the site has no `SiteLevel` rows yet. **Advisory only**: it never creates a
+`DQELine` by itself. Surfaced by the `pricing:site_structural_estimate` JSON
+endpoint and `dqe_form.html`'s "Suggestions structurelles" panel, refetched
+whenever the DQE form's `site` picker changes (same AJAX pattern as
+`site_dqes_data_api`) — each of its three "+ Ligne" buttons adds a new DQE
+line (the same client-side `addNewLine()` the "Ajouter une ligne" button
+uses) with the quantity pre-filled; the user still picks the matching
+`PriceLibraryItem` (by `work_category` — BETON/MACONNERIE/ACIER) and `phase`
+themselves, since neither can be safely inferred from the estimate alone.
+
 ## State machines / workflows
 
 ```text
@@ -182,6 +196,7 @@ Who can do what, with no state-machine step in between:
 | `DevisComplianceReportView` **(added 2026-10-07)** | any member of the cabinet | `DetailView` on `projects.Site`; `CabinetAccessMixin`; shows every (étape, matériau) comparison row for the site's accepted devis plus the list of requests carrying an `overage_justification` |
 | `material_usage_comparison_api` **(added 2026-10-07)** | any authenticated member of the cabinet | GET `site`/`phase`/`material`/`quantity`/`exclude_item`; powers the debounced live badge on the material-request form; returns `{ok:False, reason}` rather than an HTTP error for "nothing to compare yet" states (no phase picked, no material picked, etc.) |
 | `site_dqes_data_api` **(added 2026-10-07)** | any authenticated member of the cabinet | mirrors `finance`'s site-scoped `*_data` API pattern; feeds `revenue.DevisForm`'s `source_dqe` picker |
+| `site_structural_estimate_api` **(added 2026-10-08)** | any authenticated member of the cabinet | GET `site`; same cabinet-scoping as `site_dqes_data_api`; returns `structural_quantity_estimate(site)` as JSON, or zeros for an unknown/foreign site — feeds `dqe_form.html`'s "Suggestions structurelles" panel |
 
 ## Business rules & gotchas
 

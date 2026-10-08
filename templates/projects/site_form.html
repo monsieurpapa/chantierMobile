@@ -90,6 +90,40 @@
                             </div>
                         </div>
 
+                        <hr class="my-4" />
+                        <h6 class="mb-3"><i class="fas fa-building me-2"></i>{% trans "Structure du bâtiment" %}</h6>
+                        <p class="fs--2 text-500">{% trans "Après enregistrement, un niveau (RDC, R+1, R+2...) apparaît pour chaque étage — leurs détails (hauteur, murs, poutres, colonnes) se renseignent depuis la fiche du chantier." %}</p>
+                        <div class="row mb-3">
+                            <div class="col-md-3">
+                                <label class="form-label" for="{{ form.floor_count.id_for_label }}">{{ form.floor_count.label }}</label>
+                                {{ form.floor_count }}
+                                {% if form.floor_count.errors %}
+                                <div class="invalid-feedback d-block">{{ form.floor_count.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label" for="{{ form.basement_count.id_for_label }}">{{ form.basement_count.label }}</label>
+                                {{ form.basement_count }}
+                                {% if form.basement_count.errors %}
+                                <div class="invalid-feedback d-block">{{ form.basement_count.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label" for="{{ form.footprint_area_m2.id_for_label }}">{{ form.footprint_area_m2.label }}</label>
+                                {{ form.footprint_area_m2 }}
+                                {% if form.footprint_area_m2.errors %}
+                                <div class="invalid-feedback d-block">{{ form.footprint_area_m2.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label" for="{{ form.structure_type.id_for_label }}">{{ form.structure_type.label }}</label>
+                                {{ form.structure_type }}
+                                {% if form.structure_type.errors %}
+                                <div class="invalid-feedback d-block">{{ form.structure_type.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
                         <div class="col-12 d-flex justify-content-end">
                             <button class="btn btn-primary" type="submit">{% trans "Save Site" %}</button>
                         </div>

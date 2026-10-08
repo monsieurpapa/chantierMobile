@@ -11,6 +11,7 @@ urlpatterns = [
     path('sites/add/', views.SiteCreateView.as_view(), name='site_create'),
     path('sites/<uuid:unique_id>/', views.SiteDetailView.as_view(), name='site_detail'),
     path('sites/<uuid:unique_id>/edit/', views.SiteUpdateView.as_view(), name='site_update'),
+    path('sites/<uuid:unique_id>/structure/', views.SiteStructureUpdateView.as_view(), name='site_structure_update'),
     path('sites/<uuid:unique_id>/delete/', views.SiteDeleteView.as_view(), name='site_delete'),
     
     # Phases

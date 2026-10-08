@@ -217,15 +217,6 @@ def material_with_cost(site, user):
 
 
 @pytest.fixture
-def magasinier_user(db, cabinet):
-    from django.contrib.auth import get_user_model
-    from accounts.models import UserCabinetRole
-    u = get_user_model().objects.create_user(username='magasinier_mf', password='testpass123')
-    UserCabinetRole.objects.create(user=u, cabinet=cabinet, role=UserRoles.MAGASINIER, status=ApprovalStatus.APPROVED)
-    return u
-
-
-@pytest.fixture
 def dt_user(db, cabinet):
     from django.contrib.auth import get_user_model
     from accounts.models import UserCabinetRole
@@ -242,9 +233,8 @@ def dt_client(client, dt_user):
 
 @pytest.mark.django_db
 class TestMaterialRequestExpenseLink:
-    def test_authorize_creates_linked_approved_expense(self, material_with_cost, magasinier_user, dt_user):
+    def test_authorize_creates_linked_approved_expense(self, material_with_cost, dt_user):
         req = material_with_cost
-        req.magasinier_validate(magasinier_user)
         req.authorize(dt_user)
         req.refresh_from_db()
         assert req.expense_id is not None
@@ -256,31 +246,28 @@ class TestMaterialRequestExpenseLink:
         assert approval.approver == dt_user
         assert approval.status == ExpenseApproval.Status.APPROVED
 
-    def test_authorize_without_estimated_cost_creates_no_expense(self, site, user, magasinier_user, dt_user):
+    def test_authorize_without_estimated_cost_creates_no_expense(self, site, user, dt_user):
         material = Material.objects.create(name='Autre', unit='u')  # no estimated_cost_per_unit
         req = MaterialRequest.objects.create(site=site, requested_by=user, status='PENDING')
         MaterialRequestItem.objects.create(request=req, material=material, quantity=Decimal('3.00'))
-        req.magasinier_validate(magasinier_user)
         req.authorize(dt_user)
         req.refresh_from_db()
         assert req.expense_id is None
 
-    def test_authorize_blocked_when_it_would_exceed_budget(self, material_with_cost, magasinier_user, dt_user, site):
+    def test_authorize_blocked_when_it_would_exceed_budget(self, material_with_cost, dt_user, site):
         from finance.models import Budget
         Budget.objects.create(site=site, total_amount=Decimal('10'), start_date=date.today(), end_date=date(date.today().year + 1, 1, 1))
         req = material_with_cost
-        req.magasinier_validate(magasinier_user)
         with pytest.raises(ValidationError):
             req.authorize(dt_user)
         req.refresh_from_db()
-        # The whole authorization rolls back — état de besoin stays VALIDATED,
+        # The whole authorization rolls back — état de besoin stays PENDING,
         # not silently APPROVED with no linked expense.
-        assert req.status == 'VALIDATED'
+        assert req.status == 'PENDING'
         assert req.expense_id is None
 
-    def test_authorize_via_view_shows_linked_expense_message(self, dt_client, material_with_cost, magasinier_user):
+    def test_authorize_via_view_shows_linked_expense_message(self, dt_client, material_with_cost):
         req = material_with_cost
-        req.magasinier_validate(magasinier_user)
         response = dt_client.post(
             reverse('materials:request_approve', kwargs={'pk': req.pk}), {'action': 'approve'}, follow=True
         )

@@ -9,6 +9,7 @@ docs/modules/projects.md for the full walkthrough and
 docs/architecture/overview.md for how Site fits into the wider Cabinet
 multi-tenancy model.
 """
+from decimal import Decimal
 from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
@@ -16,6 +17,7 @@ from core.models import BaseModel
 from accounts.models import Cabinet
 from chantiermobile.constants import (
     SiteStatus, ProjectConfig, ExpenseStatus, PlanningStatus, PhaseStatus, ContractMode, CONTRACT_MODE_MODULES,
+    StructureType,
 )
 
 class Site(BaseModel):
@@ -46,6 +48,38 @@ class Site(BaseModel):
             "get_enabled_modules()."
         ),
     )
+    floor_count = models.PositiveSmallIntegerField(
+        default=0, verbose_name=_("Nombre d'étages (R+N)"),
+        help_text=_(
+            "0 = rez-de-chaussée seul ; 1 = R+1 ; 2 = R+2, etc. Détermine combien de niveaux "
+            "apparaissent dans l'onglet Structure (voir sync_levels()) — un niveau par étage, en "
+            "plus du RDC et des sous-sols éventuels."
+        ),
+    )
+    basement_count = models.PositiveSmallIntegerField(
+        default=0, verbose_name=_('Nombre de sous-sols'),
+        help_text=_("Niveaux en sous-sol (parking, cave...) — 0 si aucun."),
+    )
+    footprint_area_m2 = models.DecimalField(
+        max_digits=8, decimal_places=2, null=True, blank=True,
+        verbose_name=_('Emprise au sol (m²)'),
+        help_text=_(
+            "Surface au sol occupée par le bâtiment. Sert de valeur par défaut pour la surface "
+            "plancher (floor_area_m2) de chaque niveau dont ce champ est laissé vide — un étage "
+            "dont l'emprise diffère réellement (retrait, porte-à-faux, extension) peut la "
+            "renseigner lui-même pour remplacer ce défaut."
+        ),
+    )
+    structure_type = models.CharField(
+        max_length=20, choices=StructureType.choices, default=StructureType.POTEAUX_POUTRES,
+        verbose_name=_('Type de structure'),
+        help_text=_(
+            "Indicatif pour la saisie des niveaux — ne bloque aucun champ. Poteaux-poutres : "
+            "chaque niveau a sa propre trame de poutres/colonnes. Maçonnerie portante : les murs "
+            "porteurs reprennent les charges, les champs poutres/colonnes restent disponibles "
+            "mais sont généralement laissés à 0."
+        ),
+    )
 
     def __str__(self):
         return f"{self.name} ({self.status})"
@@ -58,6 +92,8 @@ class Site(BaseModel):
         self.expenses.filter(is_deleted=False).update(is_deleted=True, deleted_at=now)
         # Cascade soft-delete to material requests
         self.material_requests.filter(is_deleted=False).update(is_deleted=True, deleted_at=now)
+        # Cascade soft-delete to structure levels
+        self.levels.filter(is_deleted=False).update(is_deleted=True, deleted_at=now)
         # Cascade soft-delete to phases (and their progress reports, photos, comments)
         for phase in self.phases.filter(is_deleted=False):
             for progress in phase.progress_reports.filter(is_deleted=False):
@@ -185,6 +221,61 @@ class Site(BaseModel):
         True/False rather than the whole set."""
         return module in self.get_enabled_modules()
 
+    def sync_levels(self):
+        """Creates/restores/removes SiteLevel rows so they exactly match
+        `floor_count`/`basement_count` — called from SiteCreateView/
+        SiteUpdateView.form_valid() after every save, so the "Structure du
+        chantier" page always shows exactly the right number of level
+        fieldsets without anyone having to manage them by hand.
+
+        Indexing: 0 = RDC, 1..floor_count = R+1..R+N, -1..-basement_count =
+        Sous-sol 1..N (see SiteLevel.label). A level whose index falls
+        outside the new range is soft-deleted (its data isn't lost — see
+        `restore` below — but it stops counting toward the site's
+        structural totals); raising the count back later restores the
+        same row (with whatever it had last) rather than creating a fresh
+        blank one, since a dormant row for that exact index is reused via
+        SiteLevel.all_objects instead of SiteLevel.objects.create()."""
+        wanted = set(range(-self.basement_count, self.floor_count + 1))
+        active = {lvl.level_index: lvl for lvl in self.levels.all()}
+        for idx in wanted - active.keys():
+            dormant = SiteLevel.all_objects.filter(site=self, level_index=idx, is_deleted=True).first()
+            if dormant is not None:
+                dormant.restore()
+            else:
+                SiteLevel.objects.create(site=self, level_index=idx)
+        for idx, level in active.items():
+            if idx not in wanted:
+                level.delete()
+
+    @property
+    def total_concrete_volume_m3(self):
+        """Sum of every (non-deleted) level's `concrete_volume_m3` —
+        poutres + colonnes + dalles across the whole chantier, the
+        starting point for a BETON-category DQE line quantity (see
+        pricing.services.structural_quantity_estimate)."""
+        return sum((level.concrete_volume_m3 for level in self.levels.all()), Decimal('0'))
+
+    @property
+    def total_wall_area_m2(self):
+        """Sum of every level's net `wall_area_m2` (wall length × height,
+        minus openings) — the starting point for a MACONNERIE-category
+        DQE line quantity."""
+        return sum((level.wall_area_m2 or Decimal('0') for level in self.levels.all()), Decimal('0'))
+
+    @property
+    def estimated_rebar_kg(self):
+        """Steel (acier/armatures) estimated from `total_concrete_volume_m3`
+        via the cabinet's configurable `rebar_density_kg_per_m3` — a
+        deliberately rough order-of-magnitude figure (reinforcement isn't
+        actually proportional to gross concrete volume in reality — a
+        slab and a column reinforce very differently — but a single
+        density factor is the standard quick avant-métré shortcut, and a
+        quantity surveyor is expected to refine it per DQE line as
+        needed, not take it as final)."""
+        density = (self.cabinet.rebar_density_kg_per_m3 if self.cabinet_id else None) or Decimal('100')
+        return self.total_concrete_volume_m3 * density
+
 class ProjectPhase(BaseModel):
     """A named stage of work within a Site (e.g. "Fondations",
     "Gros œuvre") — the unit SiteProgress reports and PlanningSubmissions
@@ -287,6 +378,157 @@ class ProjectPhase(BaseModel):
             self, changed_by=user, old_status=old_status, new_status=self.status,
             note=notes or _('Étape clôturée.'),
         )
+
+
+class SiteLevel(BaseModel):
+    """One physical floor/level of a Site's building — RDC, R+1, R+2...,
+    or a sous-sol (negative index) — carrying the structural detail an
+    avant-métré needs to estimate concrete/steel/maçonnerie quantities
+    for that level specifically (added 2026-10-08, floors/structure
+    feature). Rows are managed entirely through `Site.sync_levels()`
+    (called after every Site save): there is no "add a level" form —
+    changing `Site.floor_count`/`basement_count` and saving is the only
+    way to create or remove one, so the set of levels always matches
+    what the site's own R+N says, no more and no fewer.
+
+    All structural fields are optional (an engineer fills them in as
+    survey/design data becomes available) and deliberately *aggregated*
+    per level rather than member-by-member (one total beam length and a
+    typical section, not each beam individually) — precise enough for an
+    early avant-métré, far faster to fill than a full structural member
+    schedule, which belongs in dedicated structural-design software, not
+    here."""
+    site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name='levels')
+    level_index = models.SmallIntegerField(
+        verbose_name=_('Indice de niveau'),
+        help_text=_("0 = RDC, 1..N = R+1..R+N, négatif = sous-sol. Géré par Site.sync_levels()."),
+    )
+    height_m = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True,
+        verbose_name=_('Hauteur sous plafond (m)'),
+    )
+    floor_area_m2 = models.DecimalField(
+        max_digits=8, decimal_places=2, null=True, blank=True,
+        verbose_name=_('Surface plancher (m²)'),
+        help_text=_("Laisser vide pour reprendre l'emprise au sol du chantier (voir Site.footprint_area_m2)."),
+    )
+    wall_length_m = models.DecimalField(
+        max_digits=8, decimal_places=2, null=True, blank=True,
+        verbose_name=_('Longueur cumulée des murs (m)'),
+        help_text=_("Périmètre extérieur + refends (murs de séparation intérieurs) de ce niveau."),
+    )
+    opening_area_m2 = models.DecimalField(
+        max_digits=6, decimal_places=2, default=0, null=True, blank=True,
+        verbose_name=_('Surface des ouvertures (m²)'),
+        help_text=_(
+            "Portes et fenêtres de ce niveau — déduite de la surface des murs pour une "
+            "estimation plus juste des parpaings/enduit (voir wall_area_m2)."
+        ),
+    )
+    beam_count = models.PositiveIntegerField(default=0, verbose_name=_('Nombre de poutres'))
+    beam_section_width_m = models.DecimalField(
+        max_digits=4, decimal_places=2, null=True, blank=True, default=Decimal('0.20'),
+        verbose_name=_('Section des poutres — largeur (m)'),
+    )
+    beam_section_height_m = models.DecimalField(
+        max_digits=4, decimal_places=2, null=True, blank=True, default=Decimal('0.40'),
+        verbose_name=_('Section des poutres — hauteur (m)'),
+    )
+    beam_total_length_m = models.DecimalField(
+        max_digits=8, decimal_places=2, null=True, blank=True,
+        verbose_name=_('Longueur totale des poutres (m)'),
+        help_text=_("Somme des portées de toutes les poutres de ce niveau (pas la longueur d'une seule)."),
+    )
+    column_count = models.PositiveIntegerField(default=0, verbose_name=_('Nombre de colonnes'))
+    column_section_width_m = models.DecimalField(
+        max_digits=4, decimal_places=2, null=True, blank=True, default=Decimal('0.20'),
+        verbose_name=_('Section des colonnes — largeur (m)'),
+    )
+    column_section_depth_m = models.DecimalField(
+        max_digits=4, decimal_places=2, null=True, blank=True, default=Decimal('0.20'),
+        verbose_name=_('Section des colonnes — profondeur (m)'),
+    )
+    slab_thickness_m = models.DecimalField(
+        max_digits=4, decimal_places=2, null=True, blank=True, default=Decimal('0.15'),
+        verbose_name=_('Épaisseur de la dalle (m)'),
+        help_text=_("Dalle haute de ce niveau (plancher de l'étage suivant, ou toiture-terrasse pour le dernier niveau)."),
+    )
+    notes = models.TextField(blank=True, verbose_name=_('Notes'))
+
+    class Meta:
+        verbose_name = _('Niveau de chantier')
+        verbose_name_plural = _('Niveaux de chantier')
+        unique_together = ('site', 'level_index')
+        ordering = ['level_index']
+
+    def __str__(self):
+        return f"{self.site.name} — {self.label}"
+
+    @property
+    def label(self):
+        """Human-readable French level name: "RDC", "R+2", "Sous-sol 1"."""
+        if self.level_index == 0:
+            return _('Rez-de-chaussée (RDC)')
+        if self.level_index > 0:
+            return f'R+{self.level_index}'
+        return _('Sous-sol %(n)s') % {'n': abs(self.level_index)}
+
+    @property
+    def effective_floor_area_m2(self):
+        """This level's own `floor_area_m2`, falling back to the site's
+        `footprint_area_m2` when left blank (most levels share the
+        building's footprint; only a level with a real retrait/porte-à-
+        faux/extension needs its own value)."""
+        if self.floor_area_m2 is not None:
+            return self.floor_area_m2
+        return self.site.footprint_area_m2
+
+    @property
+    def wall_area_m2(self):
+        """Net wall surface (for a MACONNERIE ratio, priced per m²):
+        wall_length × height, minus openings. None (not 0) when the
+        inputs needed to compute it aren't filled in yet, since "not
+        entered" and "zero wall" are different facts worth distinguishing
+        in a summary display."""
+        if self.wall_length_m is None or self.height_m is None:
+            return None
+        gross = self.wall_length_m * self.height_m
+        net = gross - (self.opening_area_m2 or Decimal('0'))
+        return net if net > 0 else Decimal('0')
+
+    @property
+    def beam_volume_m3(self):
+        """Concrete volume of this level's beams: total span length ×
+        section (width × height). 0 (not None) when any input is missing
+        — makes concrete_volume_m3 a safe, always-summable total."""
+        if not self.beam_total_length_m or not self.beam_section_width_m or not self.beam_section_height_m:
+            return Decimal('0')
+        return self.beam_total_length_m * self.beam_section_width_m * self.beam_section_height_m
+
+    @property
+    def column_volume_m3(self):
+        """Concrete volume of this level's columns: count × height ×
+        section (width × depth) — a column is assumed to run the level's
+        full height sous plafond."""
+        if not self.column_count or not self.column_section_width_m or not self.column_section_depth_m or not self.height_m:
+            return Decimal('0')
+        return Decimal(self.column_count) * self.height_m * self.column_section_width_m * self.column_section_depth_m
+
+    @property
+    def slab_volume_m3(self):
+        """Concrete volume of this level's dalle haute: floor area ×
+        thickness."""
+        area = self.effective_floor_area_m2
+        if not area or not self.slab_thickness_m:
+            return Decimal('0')
+        return area * self.slab_thickness_m
+
+    @property
+    def concrete_volume_m3(self):
+        """Total structural concrete for this level (poutres + colonnes +
+        dalle) — the quantity a BETON-category DQE line for this level
+        would carry."""
+        return self.beam_volume_m3 + self.column_volume_m3 + self.slab_volume_m3
 
 
 class PlanningSubmission(BaseModel):

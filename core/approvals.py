@@ -26,10 +26,9 @@ from chantiermobile.constants import (
 
 # Mirrors approve_expense/reject_expense in finance/views.py.
 EXPENSE_APPROVAL_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'ACCOUNTANT']
-# Mirrors MAGASINIER_VALIDATE_ROLES in materials/views.py (request_validate).
-MATERIAL_REQUEST_VALIDATE_ROLES = ['MAGASINIER', 'DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL']
 # Mirrors FINAL_AUTHORIZATION_ROLES, used as-is by approve_material_request
-# and _avenant_decide.
+# and _avenant_decide. Single-stage since 2026-10-08 — there is no
+# magasinier validation step any more (see materials/models.py).
 # Mirrors PLANNING_REVIEW_ROLES in projects/views.py.
 PLANNING_REVIEW_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER', 'ENGINEER']
 # Mirrors HR_ADMIN_ROLES in personnel/views.py (_decide_leave).
@@ -93,23 +92,11 @@ def get_pending_approvals(request):
                 'review_url': reverse('finance:expense_detail', kwargs={'pk': expense.pk}),
             })
 
-    validate_cabinets = _allowed_cabinet_ids(request, MATERIAL_REQUEST_VALIDATE_ROLES)
-    authorize_cabinets = _allowed_cabinet_ids(request, FINAL_AUTHORIZATION_ROLES)
-    material_request_cabinets = validate_cabinets | authorize_cabinets
+    material_request_cabinets = _allowed_cabinet_ids(request, FINAL_AUTHORIZATION_ROLES)
     if material_request_cabinets:
-        pending_statuses = []
-        if validate_cabinets:
-            pending_statuses.append(MaterialRequestStatus.PENDING)
-        if authorize_cabinets:
-            pending_statuses.append(MaterialRequestStatus.VALIDATED)
         for mat_request in MaterialRequest.objects.filter(
-            status__in=pending_statuses, site__cabinet_id__in=material_request_cabinets,
+            status=MaterialRequestStatus.PENDING, site__cabinet_id__in=material_request_cabinets,
         ).select_related('site', 'requested_by').order_by('created_at'):
-            cabinet_id = mat_request.site.cabinet_id
-            if mat_request.status == MaterialRequestStatus.PENDING and cabinet_id not in validate_cabinets:
-                continue
-            if mat_request.status == MaterialRequestStatus.VALIDATED and cabinet_id not in authorize_cabinets:
-                continue
             items.append({
                 'type': 'material_request', 'type_label': _('Demande de matériaux'), 'icon': 'fa-boxes', 'badge': 'info',
                 'title': f"REQ-{mat_request.pk} — {mat_request.total_items} article(s)",

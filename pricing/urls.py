@@ -31,4 +31,5 @@ urlpatterns = [
     path('api/price-items-data/', views.price_items_data_api, name='price_items_data'),
     path('api/material-usage-comparison/', views.material_usage_comparison_api, name='material_usage_comparison'),
     path('api/site-dqes-data/', views.site_dqes_data_api, name='site_dqes_data'),
+    path('api/site-structural-estimate/', views.site_structural_estimate_api, name='site_structural_estimate'),
 ]

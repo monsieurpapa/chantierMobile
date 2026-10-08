@@ -1,0 +1,205 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Structure du chantier" %} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    <!-- vertical nav -->
+    {% include 'includes/navbar-vertical.html' with on="projects" %}
+    <!-- /vertical nav -->
+
+    <div class="content">
+        <!-- navbar-top -->
+        {% include 'includes/navbar-top.html' %}
+        <!-- /navbar-top -->
+
+        <!-- Main Content -->
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            <!-- Totals summary -->
+            <div class="card mb-3 border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <h6 class="mb-3"><i class="fas fa-calculator me-2 text-primary"></i>{% trans "Estimation structurelle du chantier" %}</h6>
+                    <p class="fs--2 text-500 mb-3">{% trans "Calculée en direct à partir des niveaux ci-dessous — béton (poutres + colonnes + dalles), maçonnerie (murs nets d'ouvertures), acier estimé via la densité d'armature du cabinet. Ces totaux alimentent les suggestions de quantités sur la page de DQE." %}</p>
+                    <div class="row g-3">
+                        <div class="col-6 col-md-4">
+                            <div class="p-3 bg-light rounded-3 text-center">
+                                <p class="fs--2 text-500 text-uppercase fw-bold mb-1">{% trans "Béton (m³)" %}</p>
+                                <h5 class="mb-0" id="total-concrete">0.00</h5>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-4">
+                            <div class="p-3 bg-light rounded-3 text-center">
+                                <p class="fs--2 text-500 text-uppercase fw-bold mb-1">{% trans "Maçonnerie (m²)" %}</p>
+                                <h5 class="mb-0" id="total-wall">0.00</h5>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-4">
+                            <div class="p-3 bg-light rounded-3 text-center">
+                                <p class="fs--2 text-500 text-uppercase fw-bold mb-1">{% trans "Acier estimé (kg)" %}</p>
+                                <h5 class="mb-0" id="total-rebar">0</h5>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <form method="post" id="structure-form">
+                {% csrf_token %}
+                {{ levels_formset.management_form }}
+                {% if levels_formset.non_form_errors %}
+                <div class="alert alert-danger">{{ levels_formset.non_form_errors }}</div>
+                {% endif %}
+
+                {% for form in levels_formset %}
+                <div class="card mb-3 border-0 shadow-sm level-card">
+                    {% if form.instance.pk %}{{ form.id }}{% endif %}
+                    <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0"><i class="fas fa-layer-group me-2 text-info"></i>{{ form.instance.label }}</h6>
+                        <div class="fs--1 text-600">
+                            {% trans "Béton :" %} <strong class="level-concrete-out">0.00</strong> m³ ·
+                            {% trans "Murs :" %} <strong class="level-wall-out">0.00</strong> m²
+                        </div>
+                    </div>
+                    <div class="card-body p-3">
+                        {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+                        <div class="row g-2 mb-2">
+                            <div class="col-6 col-md-2">
+                                <label class="form-label fs--1 fw-semibold">{{ form.height_m.label }}</label>
+                                {{ form.height_m }}
+                            </div>
+                            <div class="col-6 col-md-2">
+                                <label class="form-label fs--1 fw-semibold">{{ form.floor_area_m2.label }}</label>
+                                {{ form.floor_area_m2 }}
+                            </div>
+                            <div class="col-6 col-md-2">
+                                <label class="form-label fs--1 fw-semibold">{{ form.wall_length_m.label }}</label>
+                                {{ form.wall_length_m }}
+                            </div>
+                            <div class="col-6 col-md-2">
+                                <label class="form-label fs--1 fw-semibold">{{ form.opening_area_m2.label }}</label>
+                                {{ form.opening_area_m2 }}
+                            </div>
+                            <div class="col-6 col-md-2">
+                                <label class="form-label fs--1 fw-semibold">{{ form.slab_thickness_m.label }}</label>
+                                {{ form.slab_thickness_m }}
+                            </div>
+                        </div>
+                        <div class="row g-2 mb-2 pt-2 border-top">
+                            <div class="col-12"><p class="fs--2 text-500 fw-bold text-uppercase mb-1 mt-1">{% trans "Poutres" %}</p></div>
+                            <div class="col-6 col-md-3">
+                                <label class="form-label fs--1">{{ form.beam_count.label }}</label>
+                                {{ form.beam_count }}
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label class="form-label fs--1">{{ form.beam_total_length_m.label }}</label>
+                                {{ form.beam_total_length_m }}
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label class="form-label fs--1">{{ form.beam_section_width_m.label }}</label>
+                                {{ form.beam_section_width_m }}
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label class="form-label fs--1">{{ form.beam_section_height_m.label }}</label>
+                                {{ form.beam_section_height_m }}
+                            </div>
+                        </div>
+                        <div class="row g-2 mb-2 pt-2 border-top">
+                            <div class="col-12"><p class="fs--2 text-500 fw-bold text-uppercase mb-1 mt-1">{% trans "Colonnes" %}</p></div>
+                            <div class="col-6 col-md-4">
+                                <label class="form-label fs--1">{{ form.column_count.label }}</label>
+                                {{ form.column_count }}
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <label class="form-label fs--1">{{ form.column_section_width_m.label }}</label>
+                                {{ form.column_section_width_m }}
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <label class="form-label fs--1">{{ form.column_section_depth_m.label }}</label>
+                                {{ form.column_section_depth_m }}
+                            </div>
+                        </div>
+                        <div class="row g-2 pt-2 border-top">
+                            <div class="col-12">
+                                <label class="form-label fs--1">{{ form.notes.label }}</label>
+                                {{ form.notes }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+
+                <div class="d-flex justify-content-end gap-2 mb-4">
+                    <a href="{% url 'projects:site_detail' unique_id=site.unique_id %}" class="btn btn-outline-secondary">{% trans "Annuler" %}</a>
+                    <button type="submit" class="btn btn-primary">{% trans "Enregistrer la structure" %}</button>
+                </div>
+            </form>
+        </div>
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const SITE_FOOTPRINT = parseFloat('{{ site.footprint_area_m2|default:0 }}') || 0;
+    const REBAR_DENSITY = parseFloat('{{ site.cabinet.rebar_density_kg_per_m3|default:100 }}') || 100;
+
+    function val(el) {
+        if (!el) return 0;
+        return parseFloat(el.value) || 0;
+    }
+
+    function computeLevel(card) {
+        const height = val(card.querySelector('.level-height'));
+        const floorAreaInput = card.querySelector('.level-floor-area');
+        const floorArea = val(floorAreaInput) || SITE_FOOTPRINT;
+        const wallLen = val(card.querySelector('.level-wall-length'));
+        const openings = val(card.querySelector('.level-opening-area'));
+        const beamLen = val(card.querySelector('.level-beam-len'));
+        const beamW = val(card.querySelector('.level-beam-w'));
+        const beamH = val(card.querySelector('.level-beam-h'));
+        const colCount = val(card.querySelector('.level-col-count'));
+        const colW = val(card.querySelector('.level-col-w'));
+        const colD = val(card.querySelector('.level-col-d'));
+        const slabT = val(card.querySelector('.level-slab-t'));
+
+        const beamVol = beamLen * beamW * beamH;
+        const colVol = colCount * height * colW * colD;
+        const slabVol = floorArea * slabT;
+        const concreteVol = beamVol + colVol + slabVol;
+        const wallArea = Math.max(wallLen * height - openings, 0);
+
+        const concreteOut = card.querySelector('.level-concrete-out');
+        const wallOut = card.querySelector('.level-wall-out');
+        if (concreteOut) concreteOut.textContent = concreteVol.toFixed(2);
+        if (wallOut) wallOut.textContent = wallArea.toFixed(2);
+
+        return { concreteVol: concreteVol, wallArea: wallArea };
+    }
+
+    function recomputeAll() {
+        let totalConcrete = 0;
+        let totalWall = 0;
+        document.querySelectorAll('.level-card').forEach(function (card) {
+            const r = computeLevel(card);
+            totalConcrete += r.concreteVol;
+            totalWall += r.wallArea;
+        });
+        document.getElementById('total-concrete').textContent = totalConcrete.toFixed(2);
+        document.getElementById('total-wall').textContent = totalWall.toFixed(2);
+        document.getElementById('total-rebar').textContent = Math.round(totalConcrete * REBAR_DENSITY);
+    }
+
+    document.querySelectorAll('.level-card input[type="number"]').forEach(function (input) {
+        input.addEventListener('input', recomputeAll);
+    });
+
+    recomputeAll();
+});
+</script>
+{% endblock %}

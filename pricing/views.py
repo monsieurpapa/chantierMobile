@@ -414,6 +414,36 @@ def site_dqes_data_api(request):
 
 
 @login_required
+def site_structural_estimate_api(request):
+    """JSON endpoint backing dqe_form.html's "Suggestions structurelles"
+    panel — the site's floor/structure-derived quantity estimate (see
+    pricing.services.structural_quantity_estimate), refetched whenever
+    the DQE form's site picker changes, the same AJAX pattern as
+    site_dqes_data_api."""
+    from django.http import JsonResponse
+    from pricing.services import structural_quantity_estimate
+
+    site_id = request.GET.get('site')
+    if not site_id:
+        return JsonResponse({'concrete_m3': 0, 'wall_area_m2': 0, 'rebar_kg': 0})
+
+    site_qs = Site.objects.filter(pk=site_id)
+    if not request.user.is_superuser:
+        user_cabinet_ids = request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
+        site_qs = site_qs.filter(cabinet__id__in=user_cabinet_ids)
+    site = site_qs.select_related('cabinet').first()
+    if not site:
+        return JsonResponse({'concrete_m3': 0, 'wall_area_m2': 0, 'rebar_kg': 0})
+
+    estimate = structural_quantity_estimate(site)
+    return JsonResponse({
+        'concrete_m3': float(estimate['concrete_m3']),
+        'wall_area_m2': float(estimate['wall_area_m2']),
+        'rebar_kg': float(estimate['rebar_kg']),
+    })
+
+
+@login_required
 def material_usage_comparison_api(request):
     """Live red/orange/green comparison badge for one (site, étape,
     matériau), used by both the materials/request_form.html item rows and

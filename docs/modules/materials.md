@@ -1,16 +1,19 @@
 # `materials`
 
 The `materials` app owns the shared Material catalog and the "état de besoin"
-(material request) workflow: a Site requests a list of materials, a magasinier
-checks it against actual need, a director-tier user gives final authorization,
-and — if the request carries a positive estimated cost — that authorization
-automatically books a matching `finance.Expense`, already approved, so the
-promised spend is never just a number sitting on the request. It is the
-primary feed into `procurement`'s stock/purchasing side: a request's items
-reference the same `Material` catalog that `procurement.StockItem` optionally
-links to, but `materials` itself does not touch stock quantities — that only
-happens once a purchase order is raised and received (see
-[`procurement.md`](procurement.md)).
+(material request) workflow: a Site's own `lead_engineer` (its "Ingénieur en
+Chef") submits a list of materials, a director-tier user approves or rejects
+it directly, and — if the request carries a positive estimated cost — that
+authorization automatically books a matching `finance.Expense`, already
+approved, so the promised spend is never just a number sitting on the
+request. **(Changed 2026-10-08)** This is single-stage — there is no
+magasinier validation step; the magasinier's role in this app is limited to
+actual stock movements (`procurement.StockItem`/`StockMovement`), not to
+deciding an état de besoin. It is the primary feed into `procurement`'s
+stock/purchasing side: a request's items reference the same `Material`
+catalog that `procurement.StockItem` optionally links to, but `materials`
+itself does not touch stock quantities — that only happens once a purchase
+order is raised and received (see [`procurement.md`](procurement.md)).
 
 ## Models
 
@@ -38,11 +41,11 @@ An état de besoin raised against a `projects.Site`.
 | `overage_justification` | **(added 2026-10-07)** `TextField`, blank by default — a dedicated field, **not** a reuse of the generic `notes` param passed to `StatusChangeLog`; see `authorize()` below |
 
 Notable methods:
-- `magasinier_validate(user, notes='')` — stage 1: `PENDING → VALIDATED`.
 - `authorize(user, notes='', overage_justification='')` **(signature changed
-  2026-10-07)** — stage 2: `VALIDATED → APPROVED`; also creates and links
-  the `finance.Expense` via `_create_linked_expense()` when there's a
-  positive `total_estimated_cost`. **New in this pass**: before approving,
+  2026-10-07; precondition changed 2026-10-08)** — the single decision step:
+  `PENDING → APPROVED`; also creates and links the `finance.Expense` via
+  `_create_linked_expense()` when there's a positive `total_estimated_cost`.
+  **New in this pass**: before approving,
   checks `pricing.services.has_red_variance(self)` — if any item on this
   request compares `RED` against its étape's devis baseline (see
   [`pricing.md`](pricing.md#comparison-engine-pricingservicespy-added-2026-10-07)),
@@ -55,10 +58,12 @@ Notable methods:
   alongside `status`/`updated_at` in the same `save(update_fields=...)`
   call — but only when the request actually `is_overage`; a non-red
   approval never touches the field, even if a stray value was POSTed.
-- `reject(user, notes='')` — from `PENDING` or `VALIDATED` → `REJECTED`.
-  **Never requires `overage_justification`**, red variance or not — only
-  `authorize()` (final approval) is gated, since a request can simply be
-  rejected instead of justified.
+- `reject(user, notes='')` — from `PENDING` → `REJECTED` (also accepts the
+  retired `VALIDATED` status, for backward compatibility with any request
+  left there from before the 2026-10-08 single-stage change). **Never
+  requires `overage_justification`**, red variance or not — only
+  `authorize()` is gated, since a request can simply be rejected instead of
+  justified.
 - `total_items` / `total_estimated_cost` — properties, computed from `items`.
 - `clean()` — requires at least one item, but only once the request already
   has a `pk` (a brand-new request is always saved before its items exist).
@@ -100,33 +105,43 @@ sous-étapes and the cabinet-configurable thresholds.
 
 ```text
 MaterialRequest:
-    PENDING --magasinier_validate()--> VALIDATED --authorize()--> APPROVED --> ORDERED --> DELIVERED (terminal)
-       |                                   |
-       +----------- reject() --------------+--> REJECTED (terminal)
+    PENDING --authorize()--> APPROVED --> ORDERED --> DELIVERED (terminal)
+       |
+       +--- reject() ---> REJECTED (terminal)
 ```
 
-- **`PENDING → VALIDATED`**: `magasinier_validate()`, enforced in the model
-  (raises if not `PENDING`). Triggered from the view
-  `materials.views.request_validate`, gated by `MAGASINIER_VALIDATE_ROLES =
-  ['MAGASINIER', 'DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL']`.
-- **`VALIDATED → APPROVED`**: `authorize()`, enforced in the model (raises if
-  not `VALIDATED`). Triggered from `materials.views.approve_material_request`,
-  gated by `chantiermobile.constants.FINAL_AUTHORIZATION_ROLES = ['DIRECTOR',
+- **`PENDING → APPROVED`**: `authorize()`, enforced in the model (raises if
+  not `PENDING`) **(changed 2026-10-08 — was gated on `VALIDATED`)**.
+  Triggered from `materials.views.approve_material_request`, gated by
+  `chantiermobile.constants.FINAL_AUTHORIZATION_ROLES = ['DIRECTOR',
   'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL']`. This step also creates the
   linked `Expense` (pre-`APPROVED`) when `total_estimated_cost > 0`.
-- **`PENDING`/`VALIDATED → REJECTED`**: `reject()`, callable from either of
-  the two action views above (either stage may reject).
+- **`PENDING → REJECTED`**: `reject()`, callable from the same action view
+  (also accepts the retired `VALIDATED` status for backward compatibility).
 - **`ORDERED`/`DELIVERED`**: present in `MaterialRequestStatus` and in the
   state diagram in `docs/architecture/overview.md`, but — as of this pass —
   there is no model method or view action in `materials` that drives these
   two transitions; they appear to be reserved for a later procurement-linking
   feature rather than something currently reachable from the UI.
+- **`VALIDATED`**: retired status. `materials/migrations/
+  0012_migrate_validated_requests_to_pending.py` moves every request that
+  was sitting at `VALIDATED` forward to `PENDING` as part of the
+  2026-10-08 deploy, so no request should actually be in this status
+  afterwards — `reject()`'s backward-compatibility branch and the choice
+  itself are kept only as a defensive fallback (e.g. a request created
+  directly against the database between the code deploy and the
+  migration running), not because any request is expected to still be
+  there. No request reaches it going forward.
 
-Who can create a request at all: **anyone logged in** —
-`MaterialRequestCreateView` has no `allowed_roles`/`RoleRequiredMixin`, only
-`LoginRequiredMixin`. The `site` field is scoped to the user's own cabinet(s)
-in `get_form()`, so a user can only request against a site they belong to,
-but any role (including `WORKER`) can raise a request.
+Who can create a request: **only the site's own `lead_engineer`** (its
+"Ingénieur en Chef du chantier") **(changed 2026-10-08 — was any logged-in
+user)**. `MaterialRequestCreateView` still has no `allowed_roles`/
+`RoleRequiredMixin`, only `LoginRequiredMixin` — the restriction is enforced
+by scoping the `site` field's queryset in `get_form()` to
+`Site.objects.filter(lead_engineer=request.user)` (superuser excepted), the
+same "own site only" pattern `personnel.views._attendance_can_act` and
+`SiteAssignmentCreateView` already use for `site.lead_engineer_id ==
+user.pk`. A user who leads no site simply sees an empty `site` dropdown.
 
 ## Views & permissions
 
@@ -136,26 +151,29 @@ but any role (including `WORKER`) can raise a request.
 | `MaterialCreateView` / `MaterialUpdateView` | `DIRECTOR`, `DIRECTEUR_TECHNIQUE`, `DIRECTEUR_GENERAL`, `CHIEF_ENGINEER` | `allowed_roles` via `RoleRequiredMixin` |
 | `MaterialQuickCreateView` | any logged-in user (via the picker) | `cabinet_scoped = False` — same shared-catalog rule |
 | `MaterialRequestListView` | any logged-in user | cabinet-scoped by hand in `get_queryset()` |
-| `MaterialRequestCreateView` | any logged-in user | no role gate at all (see above) |
+| `MaterialRequestCreateView` | the site's `lead_engineer` only (or superuser) | enforced via the `site` field's queryset, not a role gate — see above |
 | `MaterialRequestUpdateView` | the original requester, **or** `DIRECTOR`/`DIRECTEUR_TECHNIQUE`/`DIRECTEUR_GENERAL`/`CHIEF_ENGINEER` | only while still `PENDING` — both checks are in `dispatch()`, not just role-based |
 | `MaterialRequestDetailView` | any member of the owning cabinet | `CabinetAccessMixin`, `cabinet_lookup_field='site__cabinet'` |
-| `request_validate` (function view) | `MAGASINIER_VALIDATE_ROLES` | `can_act_for_cabinet(request, mat_request.site.cabinet, ...)` |
-| `approve_material_request` (function view) | `FINAL_AUTHORIZATION_ROLES` | same pattern |
+| `approve_material_request` (function view) | `FINAL_AUTHORIZATION_ROLES` | `can_act_for_cabinet(request, mat_request.site.cabinet, ...)`; the only decision endpoint since 2026-10-08 |
 | `materials_data_api` | any logged-in user | `@login_required` only, no cabinet scoping — but `Material` is a shared catalog, so that's consistent with the rest of the app |
 
 ## Business rules & gotchas
 
-- **Two-stage approval now blocks self-administration (fixed 2026-10-06).**
-  `MaterialRequest.magasinier_validate()`, `authorize()`, and `reject()` all
-  block `self.requested_by_id == user.pk` (bypassable only by a superuser),
-  the same guard shape as `finance.Expense.approve()` and
-  `finance.Avenant.approve()`/`reject()`. `DIRECTOR`/`DIRECTEUR_TECHNIQUE`/
-  `DIRECTEUR_GENERAL` still sit in **both** `MAGASINIER_VALIDATE_ROLES` and
-  `FINAL_AUTHORIZATION_ROLES` — that overlap is unchanged and intentional: a
-  director-tier user can still validate *and then* authorize *someone else's*
-  request end to end, just never their own. Authorization still auto-creates
-  an already-`APPROVED` `Expense`, so the guard matters just as much there as
-  at the request stage itself.
+- **Single-stage approval, restricted submission (changed 2026-10-08).** A
+  request can only be raised by the site's `lead_engineer`, and is decided
+  directly by a director-tier role — there is no magasinier validation
+  step. The magasinier's role in this app is limited to stock movements
+  (`procurement.StockItem.transfer_to()`, `StockMovement`), never to
+  deciding an état de besoin.
+- **Self-administration guard (fixed 2026-10-06, still in force).**
+  `MaterialRequest.authorize()` and `reject()` block
+  `self.requested_by_id == user.pk` (bypassable only by a superuser), the
+  same guard shape as `finance.Expense.approve()` and
+  `finance.Avenant.approve()`/`reject()`. Since the requester is now always
+  the site's `lead_engineer`, this is what stops them from deciding their
+  own submission even if they also happen to hold a director-tier role.
+  Authorization still auto-creates an already-`APPROVED` `Expense`, so the
+  guard matters just as much there as at the request stage itself.
 - A `MaterialRequestItem` can reference `Material` **or** a free-text name,
   never both, never neither (`clean()`) — any code touching `items` directly
   (bulk import, a management command) must preserve that invariant since it's

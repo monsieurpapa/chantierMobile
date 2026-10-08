@@ -60,6 +60,43 @@
                             </div>
                         </div>
 
+                        <!-- Suggestions structurelles (floors/structure feature) -->
+                        <div class="card border-info-subtle mb-4" id="structural-estimate-panel" style="display: none;">
+                            <div class="card-body p-3">
+                                <h6 class="mb-2"><i class="fas fa-ruler-combined me-2 text-info"></i>{% trans "Suggestions structurelles (basées sur les niveaux du chantier)" %}</h6>
+                                <p class="fs--2 text-500 mb-3">{% trans "Calculées depuis l'onglet Structure du chantier choisi ci-dessus. Préremplit la quantité d'une nouvelle ligne — à vous d'y associer le bon article et la bonne étape." %}</p>
+                                <div class="row g-2">
+                                    <div class="col-md-4">
+                                        <div class="p-2 bg-light rounded-3 d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <p class="fs--2 text-500 text-uppercase fw-bold mb-0">{% trans "Béton" %}</p>
+                                                <span id="estimate-concrete">0.00</span> m³
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-outline-info prefill-btn" id="prefill-concrete-btn" data-qty="0">{% trans "+ Ligne" %}</button>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="p-2 bg-light rounded-3 d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <p class="fs--2 text-500 text-uppercase fw-bold mb-0">{% trans "Maçonnerie" %}</p>
+                                                <span id="estimate-wall">0.00</span> m²
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-outline-info prefill-btn" id="prefill-wall-btn" data-qty="0">{% trans "+ Ligne" %}</button>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="p-2 bg-light rounded-3 d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <p class="fs--2 text-500 text-uppercase fw-bold mb-0">{% trans "Acier estimé" %}</p>
+                                                <span id="estimate-rebar">0</span> kg
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-outline-info prefill-btn" id="prefill-rebar-btn" data-qty="0">{% trans "+ Ligne" %}</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Lines Formset Section -->
                         <div class="mb-4">
                             <div class="d-flex justify-content-between align-items-center mb-3">
@@ -260,8 +297,7 @@ document.addEventListener('DOMContentLoaded', function () {
         updateTotalAmount();
     }
 
-    addBtn.addEventListener('click', function (e) {
-        e.preventDefault();
+    function addNewLine() {
         const totalFormsInput = document.querySelector('input[name*="TOTAL_FORMS"]');
         const currentCount = parseInt(totalFormsInput.value);
         const newIndex = currentCount;
@@ -320,6 +356,28 @@ document.addEventListener('DOMContentLoaded', function () {
         setupLine(newLine);
         loadPhasesForLine(newLine, null);
         updateCounts();
+        return newLine;
+    }
+
+    addBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        addNewLine();
+    });
+
+    // Suggestions structurelles (floors/structure feature): each button
+    // adds a new line (addNewLine(), same as "Ajouter une ligne") and
+    // pre-fills its quantity from the site's structural estimate — the
+    // user still picks the matching article/étape themselves.
+    document.querySelectorAll('.prefill-btn').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+            e.preventDefault();
+            const newLine = addNewLine();
+            const qtyInput = newLine.querySelector('input[name*="quantity"]');
+            if (qtyInput) {
+                qtyInput.value = btn.dataset.qty || '0';
+                qtyInput.dispatchEvent(new Event('input'));
+            }
+        });
     });
 
     // Scope every line's "Étape" picker to the DQE's own site (same AJAX
@@ -360,12 +418,37 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    function fetchStructuralEstimate() {
+        const panel = document.getElementById('structural-estimate-panel');
+        if (!siteSelect || !siteSelect.value) {
+            if (panel) panel.style.display = 'none';
+            return;
+        }
+        fetch('{% url "pricing:site_structural_estimate" %}?site=' + encodeURIComponent(siteSelect.value), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(r => r.json())
+        .then(data => {
+            const concrete = parseFloat(data.concrete_m3) || 0;
+            const wall = parseFloat(data.wall_area_m2) || 0;
+            const rebar = parseFloat(data.rebar_kg) || 0;
+            document.getElementById('estimate-concrete').textContent = concrete.toFixed(2);
+            document.getElementById('estimate-wall').textContent = wall.toFixed(2);
+            document.getElementById('estimate-rebar').textContent = Math.round(rebar);
+            document.getElementById('prefill-concrete-btn').dataset.qty = concrete.toFixed(2);
+            document.getElementById('prefill-wall-btn').dataset.qty = wall.toFixed(2);
+            document.getElementById('prefill-rebar-btn').dataset.qty = Math.round(rebar);
+            if (panel) panel.style.display = (concrete || wall || rebar) ? 'block' : 'none';
+        })
+        .catch(err => console.error('Error fetching structural estimate:', err));
+    }
+
     if (siteSelect) {
         document.querySelectorAll('.dqe-line .dqe-line-phase').forEach(select => {
             select.setAttribute('data-initial', select.value);
         });
-        if (siteSelect.value) loadPhasesForAllLines(false);
-        siteSelect.addEventListener('change', function () { loadPhasesForAllLines(true); });
+        if (siteSelect.value) { loadPhasesForAllLines(false); fetchStructuralEstimate(); }
+        siteSelect.addEventListener('change', function () { loadPhasesForAllLines(true); fetchStructuralEstimate(); });
     }
 
     document.querySelectorAll('input, select, textarea').forEach(el => {

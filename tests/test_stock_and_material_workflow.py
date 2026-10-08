@@ -1,8 +1,9 @@
 """
 Tests for the Gestion des stocks gaps closed in this phase: stock
-transfers between sites (with motif/étape), and the two-stage
-état-de-besoin approval (magasinier validates, then a Directeur
-Technique/Général authorizes).
+transfers between sites (with motif/étape), and the single-stage
+état-de-besoin approval (a Directeur Technique/Général authorizes or
+rejects a PENDING request directly — see materials/models.py; the
+magasinier plays no part in this decision, only in stock movements).
 """
 import pytest
 from decimal import Decimal
@@ -181,48 +182,27 @@ def with_item(material_request):
 
 
 @pytest.mark.django_db
-class TestMaterialRequestTwoStageApproval:
-    def test_magasinier_validate_then_dt_authorize(self, with_item, magasinier_user, dt_user):
+class TestMaterialRequestApproval:
+    def test_dt_can_authorize_pending_request(self, with_item, dt_user):
         req = with_item
-        req.magasinier_validate(magasinier_user)
-        req.refresh_from_db()
-        assert req.status == MaterialRequestStatus.VALIDATED
-
         req.authorize(dt_user)
         req.refresh_from_db()
         assert req.status == MaterialRequestStatus.APPROVED
 
-    def test_cannot_authorize_before_validation(self, with_item, dt_user):
-        with pytest.raises(ValidationError):
-            with_item.authorize(dt_user)
-
-    def test_reject_from_pending(self, with_item, magasinier_user):
-        with_item.reject(magasinier_user)
-        with_item.refresh_from_db()
-        assert with_item.status == MaterialRequestStatus.REJECTED
-
-    def test_reject_from_validated(self, with_item, magasinier_user, dt_user):
-        with_item.magasinier_validate(magasinier_user)
+    def test_reject_from_pending(self, with_item, dt_user):
         with_item.reject(dt_user)
         with_item.refresh_from_db()
         assert with_item.status == MaterialRequestStatus.REJECTED
 
-    def test_cannot_validate_own_material_request(self, with_item):
+    def test_cannot_authorize_own_material_request(self, with_item):
         """Regression test for the self-administration guard: with_item's
         requester is `user` (the material_request fixture) — `user`
-        cannot be the one who validates it, mirroring Avenant.approve()
+        cannot be the one who authorizes it, mirroring Avenant.approve()
         and Expense.approve() (see docs/security.md)."""
-        with pytest.raises(ValidationError):
-            with_item.magasinier_validate(with_item.requested_by)
-        with_item.refresh_from_db()
-        assert with_item.status == MaterialRequestStatus.PENDING
-
-    def test_cannot_authorize_own_material_request(self, with_item, magasinier_user):
-        with_item.magasinier_validate(magasinier_user)
         with pytest.raises(ValidationError):
             with_item.authorize(with_item.requested_by)
         with_item.refresh_from_db()
-        assert with_item.status == MaterialRequestStatus.VALIDATED
+        assert with_item.status == MaterialRequestStatus.PENDING
 
     def test_cannot_reject_own_material_request(self, with_item):
         with pytest.raises(ValidationError):
@@ -236,28 +216,11 @@ class TestMaterialRequestTwoStageApproval:
         material = Material.objects.create(name='Gravier', unit='m3')
         req = MaterialRequest.objects.create(site=site, requested_by=superuser, status=MaterialRequestStatus.PENDING)
         MaterialRequestItem.objects.create(request=req, material=material, quantity=Decimal('1.00'))
-        req.magasinier_validate(superuser)
         req.authorize(superuser)
         req.refresh_from_db()
         assert req.status == MaterialRequestStatus.APPROVED
 
-    def test_magasinier_can_validate_via_view(self, magasinier_client, with_item):
-        response = magasinier_client.post(reverse('materials:request_validate', kwargs={'pk': with_item.pk}), {
-            'action': 'validate',
-        })
-        assert response.status_code == 302
-        with_item.refresh_from_db()
-        assert with_item.status == MaterialRequestStatus.VALIDATED
-
-    def test_engineer_cannot_validate_via_view(self, engineer_client, with_item):
-        response = engineer_client.post(reverse('materials:request_validate', kwargs={'pk': with_item.pk}), {
-            'action': 'validate',
-        })
-        with_item.refresh_from_db()
-        assert with_item.status == MaterialRequestStatus.PENDING
-
-    def test_dt_can_authorize_via_view(self, dt_client, with_item, magasinier_user):
-        with_item.magasinier_validate(magasinier_user)
+    def test_dt_can_authorize_via_view(self, dt_client, with_item):
         response = dt_client.post(reverse('materials:request_approve', kwargs={'pk': with_item.pk}), {
             'action': 'approve',
         })
@@ -265,61 +228,59 @@ class TestMaterialRequestTwoStageApproval:
         with_item.refresh_from_db()
         assert with_item.status == MaterialRequestStatus.APPROVED
 
-    def test_magasinier_cannot_authorize_via_view(self, magasinier_client, with_item, magasinier_user):
-        with_item.magasinier_validate(magasinier_user)
+    def test_magasinier_cannot_authorize_via_view(self, magasinier_client, with_item):
+        """The magasinier has no decision role in this workflow any more
+        — only stock movements (see the tests above)."""
         response = magasinier_client.post(reverse('materials:request_approve', kwargs={'pk': with_item.pk}), {
             'action': 'approve',
         })
         with_item.refresh_from_db()
-        assert with_item.status == MaterialRequestStatus.VALIDATED
+        assert with_item.status == MaterialRequestStatus.PENDING
 
-    def test_director_can_do_both_stages(self, director_client, site, django_user_model):
-        """director_client is logged in as `user`, who must NOT be the
-        request's own requester here — otherwise this would trip the
-        self-administration guard (see materials/models.py) instead of
-        exercising the role-overlap behavior this test is actually
-        about, i.e. one director-tier person validating *and then*
-        authorizing someone *else's* request."""
-        requester = django_user_model.objects.create_user(username='two_stage_requester', password='testpass123')
-        req = MaterialRequest.objects.create(site=site, requested_by=requester, status=MaterialRequestStatus.PENDING)
-        material = Material.objects.create(name='Sable', unit='m3')
-        MaterialRequestItem.objects.create(request=req, material=material, quantity=Decimal('5.00'))
-
-        response = director_client.post(reverse('materials:request_validate', kwargs={'pk': req.pk}), {
-            'action': 'validate',
+    def test_requester_cannot_authorize_own_request_via_view(self, director_client, with_item):
+        """Regression test for the self-administration guard: with_item's
+        requester is `user` (the material_request fixture), the same
+        person director_client is logged in as — so director_client
+        must not be able to authorize its own request through the view."""
+        response = director_client.post(reverse('materials:request_approve', kwargs={'pk': with_item.pk}), {
+            'action': 'approve',
         })
-        assert response.status_code == 302
-        req.refresh_from_db()
-        assert req.status == MaterialRequestStatus.VALIDATED
+        with_item.refresh_from_db()
+        assert with_item.status == MaterialRequestStatus.PENDING
 
-        response = director_client.post(reverse('materials:request_approve', kwargs={'pk': req.pk}), {
+
+class TestValidatedStatusMigratedForward:
+    """Regression test for materials/migrations/0012: a request already
+    sitting at the retired VALIDATED status (set by the now-removed
+    magasinier-validation step, before the single-stage workflow change)
+    must not be left stranded — unreachable from authorize()/reject() and
+    invisible in the pending-approvals inbox. The data migration moves any
+    such row straight to PENDING; this test re-runs that same migration
+    function against a row forced into VALIDATED and checks it becomes a
+    normal, actionable PENDING request again."""
+
+    def test_validated_row_is_migrated_to_pending_and_becomes_actionable(self, site, user, dt_client):
+        import importlib
+        migration_module = importlib.import_module(
+            'materials.migrations.0012_migrate_validated_requests_to_pending'
+        )
+
+        material = Material.objects.create(name='Sable', unit='m3')
+        req = MaterialRequest.objects.create(site=site, requested_by=user, status='VALIDATED')
+        MaterialRequestItem.objects.create(request=req, material=material, quantity=Decimal('1.00'))
+
+        class _FakeApps:
+            @staticmethod
+            def get_model(app_label, model_name):
+                return MaterialRequest
+
+        migration_module.migrate_validated_to_pending(_FakeApps(), None)
+        req.refresh_from_db()
+        assert req.status == MaterialRequestStatus.PENDING
+
+        response = dt_client.post(reverse('materials:request_approve', kwargs={'pk': req.pk}), {
             'action': 'approve',
         })
         assert response.status_code == 302
         req.refresh_from_db()
         assert req.status == MaterialRequestStatus.APPROVED
-
-    def test_requester_cannot_validate_or_authorize_own_request(self, director_client, with_item, magasinier_user):
-        """Regression test for the self-administration guard: with_item's
-        requester is `user` (the material_request fixture), the same
-        person director_client is logged in as — so director_client
-        must not be able to validate its own request through the view.
-        Once a different person (magasinier_user) validates it, the
-        same requester must still be blocked from giving the final
-        authorization either."""
-        response = director_client.post(reverse('materials:request_validate', kwargs={'pk': with_item.pk}), {
-            'action': 'validate',
-        })
-        assert response.status_code == 302
-        with_item.refresh_from_db()
-        assert with_item.status == MaterialRequestStatus.PENDING
-
-        with_item.magasinier_validate(magasinier_user)
-        with_item.refresh_from_db()
-        assert with_item.status == MaterialRequestStatus.VALIDATED
-
-        response = director_client.post(reverse('materials:request_approve', kwargs={'pk': with_item.pk}), {
-            'action': 'approve',
-        })
-        with_item.refresh_from_db()
-        assert with_item.status == MaterialRequestStatus.VALIDATED

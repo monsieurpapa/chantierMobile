@@ -81,9 +81,15 @@ class TestExpenseNotifications:
 
 @pytest.mark.django_db
 class TestMaterialRequestNotifications:
-    def test_submitting_request_notifies_magasinier_and_admins(self, engineer_client, engineer_user, site, client, cabinet, django_user_model):
-        magasinier = django_user_model.objects.create_user(username='notif_magasinier', password='testpass123')
-        UserCabinetRole.objects.create(user=magasinier, cabinet=cabinet, role=UserRoles.MAGASINIER, status=ApprovalStatus.APPROVED)
+    def test_submitting_request_notifies_final_authorizers(self, engineer_client, engineer_user, site, cabinet, django_user_model):
+        """Submission is single-stage (changed 2026-10-08): the site's own
+        lead_engineer submits, and the notification goes straight to
+        FINAL_AUTHORIZATION_ROLES — there is no magasinier validation
+        step to notify first."""
+        director = django_user_model.objects.create_user(username='notif_director', password='testpass123')
+        UserCabinetRole.objects.create(user=director, cabinet=cabinet, role=UserRoles.DIRECTOR, status=ApprovalStatus.APPROVED)
+        site.lead_engineer = engineer_user
+        site.save(update_fields=['lead_engineer'])
         material = Material.objects.create(name='Ciment', unit='sac')
 
         response = engineer_client.post(reverse('materials:request_create'), {
@@ -97,27 +103,12 @@ class TestMaterialRequestNotifications:
         }, follow=True)
         assert response.status_code == 200
 
-        assert Notification.objects.filter(recipient=magasinier).exists()
+        assert Notification.objects.filter(recipient=director).exists()
         assert not Notification.objects.filter(recipient=engineer_user).exists()
-
-    def test_validating_request_notifies_final_authorizers(self, director_client, cabinet, site, django_user_model):
-        magasinier = django_user_model.objects.create_user(username='notif_magasinier2', password='testpass123')
-        UserCabinetRole.objects.create(user=magasinier, cabinet=cabinet, role=UserRoles.MAGASINIER, status=ApprovalStatus.APPROVED)
-        material = Material.objects.create(name='Sable', unit='m3')
-        mat_request = MaterialRequest.objects.create(site=site, status=MaterialRequestStatus.PENDING)
-        MaterialRequestItem.objects.create(request=mat_request, material=material, quantity=Decimal('2.00'))
-
-        from django.test import Client
-        c = Client()
-        c.login(username='notif_magasinier2', password='testpass123')
-        c.post(reverse('materials:request_validate', kwargs={'pk': mat_request.pk}), {'action': 'validate'})
-
-        # director_client's `user` is DIRECTOR — in FINAL_AUTHORIZATION_ROLES.
-        assert Notification.objects.filter(recipient__username='testuser').exists()
 
     def test_authorizing_request_notifies_requester(self, director_client, site, engineer_user):
         material = Material.objects.create(name='Sable', unit='m3')
-        mat_request = MaterialRequest.objects.create(site=site, status=MaterialRequestStatus.VALIDATED, requested_by=engineer_user)
+        mat_request = MaterialRequest.objects.create(site=site, status=MaterialRequestStatus.PENDING, requested_by=engineer_user)
         MaterialRequestItem.objects.create(request=mat_request, material=material, quantity=Decimal('2.00'))
 
         director_client.post(reverse('materials:request_approve', kwargs={'pk': mat_request.pk}), {'action': 'authorize'})

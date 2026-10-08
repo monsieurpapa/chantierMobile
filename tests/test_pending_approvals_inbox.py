@@ -69,31 +69,25 @@ class TestPendingApprovalsInbox:
         assert response.status_code == 200
         assert response.context['approvals'] == []
 
-    def test_magasinier_sees_pending_but_not_validated_material_request(self, magasinier_client, site):
+    def test_magasinier_does_not_see_material_requests(self, magasinier_client, site):
+        """The magasinier has no decision role in this workflow — only
+        FINAL_AUTHORIZATION_ROLES do (single-stage since 2026-10-08; the
+        magasinier's role in this app is scoped to stock movements)."""
         material = Material.objects.create(name='Sable', unit='m3')
         pending_req = MaterialRequest.objects.create(site=site, status=MaterialRequestStatus.PENDING)
         MaterialRequestItem.objects.create(request=pending_req, material=material, quantity=Decimal('2.00'))
-        validated_req = MaterialRequest.objects.create(site=site, status=MaterialRequestStatus.VALIDATED)
-        MaterialRequestItem.objects.create(request=validated_req, material=material, quantity=Decimal('2.00'))
 
         response = magasinier_client.get(reverse('pending_approvals'))
-        review_urls = [a['review_url'] for a in response.context['approvals']]
-        assert reverse('materials:request_detail', kwargs={'pk': pending_req.pk}) in review_urls
-        assert reverse('materials:request_detail', kwargs={'pk': validated_req.pk}) not in review_urls
+        types = [a['type'] for a in response.context['approvals']]
+        assert 'material_request' not in types
 
-    def test_directeur_technique_sees_both_pending_and_validated_material_requests(self, dt_client, site):
-        """DIRECTEUR_TECHNIQUE is in both MATERIAL_REQUEST_VALIDATE_ROLES
-        (magasinier_validate) and FINAL_AUTHORIZATION_ROLES (authorize) —
-        unlike a plain MAGASINIER, they can act at either stage."""
+    def test_directeur_technique_sees_pending_material_request(self, dt_client, site):
         material = Material.objects.create(name='Sable', unit='m3')
         pending_req = MaterialRequest.objects.create(site=site, status=MaterialRequestStatus.PENDING)
         MaterialRequestItem.objects.create(request=pending_req, material=material, quantity=Decimal('2.00'))
-        validated_req = MaterialRequest.objects.create(site=site, status=MaterialRequestStatus.VALIDATED)
-        MaterialRequestItem.objects.create(request=validated_req, material=material, quantity=Decimal('2.00'))
 
         response = dt_client.get(reverse('pending_approvals'))
         review_urls = [a['review_url'] for a in response.context['approvals']]
-        assert reverse('materials:request_detail', kwargs={'pk': validated_req.pk}) in review_urls
         assert reverse('materials:request_detail', kwargs={'pk': pending_req.pk}) in review_urls
 
     def test_accountant_does_not_see_material_requests_or_avenants(self, accountant_client, site):

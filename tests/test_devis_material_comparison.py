@@ -393,7 +393,7 @@ class TestAuthorizeOverageJustification:
             issue_date=date.today(), status=DevisStatus.ACCEPTE,
         )
         requester = django_user_model.objects.create_user(username='overage_requester', password='testpass123')
-        req = material_request_factory(requested_by=requester, status=MaterialRequestStatus.VALIDATED)
+        req = material_request_factory(requested_by=requester, status=MaterialRequestStatus.PENDING)
         MaterialRequestItem.objects.create(request=req, material=ciment, phase=phase, quantity=Decimal('100'))
         return req
 
@@ -422,7 +422,7 @@ class TestAuthorizeOverageJustification:
         assert 'Dépassement validé' in req.overage_justification
 
     def test_authorize_without_red_variance_needs_no_justification(self, material_request_factory, django_user_model, cabinet):
-        req = material_request_factory(status=MaterialRequestStatus.VALIDATED)
+        req = material_request_factory(status=MaterialRequestStatus.PENDING)
         MaterialRequestItem.objects.create(request=req, material_name='Divers hors catalogue', quantity=Decimal('3'))
         director = django_user_model.objects.create_user(username='plain_director', password='testpass123')
         from accounts.models import UserCabinetRole
@@ -590,7 +590,7 @@ class TestMaterialRequestDetailVarianceDisplay:
             site=site, source_dqe=dqe, devis_number='DEV-DETAIL-001', client_name='Client',
             issue_date=date.today(), status=DevisStatus.ACCEPTE,
         )
-        req = material_request_factory(status=MaterialRequestStatus.VALIDATED)
+        req = material_request_factory(status=MaterialRequestStatus.PENDING)
         MaterialRequestItem.objects.create(request=req, material=ciment, phase=phase, quantity=Decimal('100'))
         response = director_client.get(reverse('materials:request_detail', kwargs={'pk': req.pk}))
         assert response.status_code == 200
@@ -620,7 +620,7 @@ class TestMaterialRequestDetailVarianceDisplay:
             site=site, source_dqe=dqe, devis_number='DEV-BADGE-001', client_name='Client',
             issue_date=date.today(), status=DevisStatus.ACCEPTE,
         )
-        req = material_request_factory(status=MaterialRequestStatus.VALIDATED)
+        req = material_request_factory(status=MaterialRequestStatus.PENDING)
         MaterialRequestItem.objects.create(request=req, material=ciment, phase=phase, quantity=Decimal('100'))
         response = director_client.get(reverse('materials:request_detail', kwargs={'pk': req.pk}))
         assert response.status_code == 200

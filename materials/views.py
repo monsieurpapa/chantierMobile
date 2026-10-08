@@ -1,9 +1,9 @@
 """
 Views for the Material catalog and the "état de besoin" (material
 request) workflow: browsing/editing the shared catalog, raising a
-request against a Site, and the two role-gated action endpoints
-(request_validate, approve_material_request) that drive it through the
-two-stage approval described in materials/models.py.
+request against a Site (only its lead_engineer may), and the single
+role-gated decision endpoint (approve_material_request) that drives it
+through the single-stage approval described in materials/models.py.
 """
 from django.views.generic import ListView, CreateView, UpdateView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -21,21 +21,20 @@ from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, 
 from core.quickcreate import QuickCreateView
 from chantiermobile.constants import UserRoles, FINAL_AUTHORIZATION_ROLES, MaterialRequestStatus, ApprovalStatus
 
-# État de besoin — two-stage approval: the magasinier validates first,
-# then a Directeur Technique/Général (or Directeur de Cabinet, kept for
-# single-cabinet setups without a dedicated DT/DG role) gives the final
-# authorization.
+# État de besoin — single-stage approval: a Directeur Technique/Général
+# (or Directeur de Cabinet, kept for single-cabinet setups without a
+# dedicated DT/DG role) approves or rejects a PENDING request directly —
+# no magasinier validation step (see materials/models.py's module
+# docstring). The magasinier's role is scoped to stock movements
+# (procurement app), not to this approval.
 #
-# FIXED 2026-10-06: magasinier_validate()/authorize()/reject() on
-# MaterialRequest now block the actor from acting on their own request
-# (requested_by == user), mirroring Expense.approve() — see
-# materials/models.py's module docstring and docs/security.md.
-# MaterialRequestCreateView still lets *any* logged-in user (not just a
-# WORKER-tier one) raise a request, and DIRECTOR/DIRECTEUR_TECHNIQUE/
-# DIRECTEUR_GENERAL still sit in both MAGASINIER_VALIDATE_ROLES and
-# FINAL_AUTHORIZATION_ROLES — so one director-tier user can still both
-# validate *and* authorize a request, as long as it isn't their own.
-MAGASINIER_VALIDATE_ROLES = ['MAGASINIER', 'DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL']
+# FIXED 2026-10-06: authorize()/reject() on MaterialRequest block the
+# actor from acting on their own request (requested_by == user),
+# mirroring Expense.approve() — see materials/models.py's module
+# docstring and docs/security.md. Since FIXED 2026-10-08,
+# MaterialRequestCreateView restricts `requested_by` to the site's own
+# lead_engineer, so this guard is what stops them from also authorizing
+# their own submission.
 
 # Who besides the original requester may edit a still-pending request.
 # The request list/detail templates already hide the "Modifier" link once
@@ -162,14 +161,23 @@ class MaterialRequestListView(LoginRequiredMixin, PageHeaderMixin, ListView):
         return qs.order_by('-created_at')
 
 class MaterialRequestCreateView(LoginRequiredMixin, PageHeaderMixin, CreateView):
-    """Raise a new état de besoin against a Site. Deliberately open to
-    any logged-in user (no allowed_roles) — any staff member, not just a
-    director or engineer, can request materials; the `site` field is
-    scoped to the user's own cabinet(s) in get_form() below so they can
-    only request against a site they belong to. The requester is always
-    the current user (set in form_valid()), and that same person is one
-    of the roles allowed to later validate/authorize it — see the
-    self-approval note in docs/modules/materials.md."""
+    """Raise a new état de besoin against a Site.
+
+    FIXED 2026-10-08: only the site's own lead_engineer (the chantier's
+    "Ingénieur en Chef" — Site.lead_engineer) may submit a request
+    against it — mirrors the "own site only" pattern already used by
+    personnel/views.py's SiteAssignmentCreateView/_attendance_can_act
+    (`site.lead_engineer_id == user.pk`), rather than any
+    ENGINEER/CHIEF_ENGINEER-role holder anywhere in the cabinet. A
+    superuser may raise a request against any site (same convention as
+    every other `is_superuser` carve-out in this view). get_form() below
+    scopes the `site` field's choices to exactly the site(s) the user
+    leads, so a plain ModelChoiceField validation failure is what stops
+    a tampered POST naming a site they don't lead — no separate
+    dispatch()-level check is needed. The requester is always the
+    current user (set in form_valid()); authorize()'s self-approval
+    guard is what then stops them from deciding their own request — see
+    the self-approval note in docs/modules/materials.md."""
     model = MaterialRequest
     form_class = MaterialRequestForm
     template_name = 'materials/request_form.html'
@@ -192,14 +200,11 @@ class MaterialRequestCreateView(LoginRequiredMixin, PageHeaderMixin, CreateView)
         return initial
 
     def get_form(self, form_class=None):
-        # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now —
-        # see core/mixins.py and docs/security.md.
         form = super().get_form(form_class)
         if self.request.user.is_superuser:
             form.fields['site'].queryset = Site.objects.all()
         else:
-            user_cabinet_ids = self.request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
-            form.fields['site'].queryset = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
+            form.fields['site'].queryset = Site.objects.filter(lead_engineer=self.request.user)
         return form
 
     def get_context_data(self, **kwargs):
@@ -219,11 +224,10 @@ class MaterialRequestCreateView(LoginRequiredMixin, PageHeaderMixin, CreateView)
             self.object = form.save()
             items_formset.instance = self.object
             items_formset.save()
-            from core.approvals import MATERIAL_REQUEST_VALIDATE_ROLES
             from core.notifications import notify_role_holders
             notify_role_holders(
-                self.object.site.cabinet, MATERIAL_REQUEST_VALIDATE_ROLES,
-                _("Nouvelle demande de matériaux à valider : REQ-%(id)s (%(count)s article(s))") % {
+                self.object.site.cabinet, FINAL_AUTHORIZATION_ROLES,
+                _("Nouvelle demande de matériaux à autoriser : REQ-%(id)s (%(count)s article(s))") % {
                     'id': self.object.pk, 'count': self.object.total_items,
                 },
                 str(reverse_lazy('materials:request_detail', kwargs={'pk': self.object.pk})),
@@ -317,9 +321,9 @@ class MaterialRequestUpdateView(LoginRequiredMixin, CabinetAccessMixin, PageHead
 
 class MaterialRequestDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, DetailView):
     """View a single material request. Cabinet-scoped (any member of the
-    owning cabinet, any role, can view); the validate/authorize actions
-    shown on the template are gated separately by request_validate() and
-    approve_material_request() below."""
+    owning cabinet, any role, can view); the approve/reject action shown
+    on the template is gated separately by approve_material_request()
+    below."""
     model = MaterialRequest
     template_name = 'materials/request_detail.html'
     context_object_name = 'req'
@@ -367,45 +371,12 @@ class MaterialRequestDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHead
         )
         return context
 
-@login_required
-def request_validate(request, pk):
-    """First stage: the magasinier (or a director) validates the état de
-    besoin before it goes up for final authorization."""
-    mat_request = get_object_or_404(MaterialRequest, pk=pk)
-    if request.method != 'POST':
-        return redirect('materials:request_detail', pk=pk)
-    if not can_act_for_cabinet(request, mat_request.site.cabinet, MAGASINIER_VALIDATE_ROLES):
-        messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
-        return redirect('materials:request_detail', pk=pk)
-    action = request.POST.get('action')
-    from core.notifications import notify_role_holders, notify_user
-    try:
-        if action == 'reject':
-            mat_request.reject(request.user)
-            notify_user(
-                mat_request.requested_by,
-                _("Votre demande de matériaux REQ-%(id)s a été rejetée.") % {'id': mat_request.pk},
-                str(reverse_lazy('materials:request_detail', kwargs={'pk': mat_request.pk})),
-            )
-            messages.error(request, _("Demande de matériaux rejetée."))
-        else:
-            mat_request.magasinier_validate(request.user)
-            notify_role_holders(
-                mat_request.site.cabinet, FINAL_AUTHORIZATION_ROLES,
-                _("Demande de matériaux REQ-%(id)s validée — en attente d'autorisation finale.") % {'id': mat_request.pk},
-                str(reverse_lazy('materials:request_detail', kwargs={'pk': mat_request.pk})),
-                exclude_user=request.user,
-            )
-            messages.success(request, _("Demande validée — en attente d'autorisation finale."))
-    except ValidationError as e:
-        messages.error(request, str(e.message) if hasattr(e, 'message') else str(e))
-    return redirect('materials:request_detail', pk=pk)
-
 
 @login_required
 def approve_material_request(request, pk):
-    """Second/final stage: Directeur Technique/Général (or Directeur de
-    Cabinet) authorizes a request the magasinier has already validated."""
+    """Directeur Technique/Général (or Directeur de Cabinet) approves or
+    rejects a PENDING état de besoin directly — the only decision step
+    in this single-stage workflow (see materials/models.py)."""
     mat_request = get_object_or_404(MaterialRequest, pk=pk)
     if request.method != 'POST':
         return redirect('materials:request_list')
