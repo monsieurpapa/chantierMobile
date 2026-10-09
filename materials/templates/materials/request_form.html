@@ -46,7 +46,7 @@
                         <div class="mb-4">
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <h6 class="mb-0"><i class="fas fa-boxes me-2 text-warning"></i>{% trans "Materials to Request" %}</h6>
-                                <span class="badge bg-info" id="item-count">{{ items_formset|length }} item{{ items_formset|length|pluralize }}</span>
+                                <span class="badge bg-info" id="item-count">{{ items_formset|length }} article{{ items_formset|length|pluralize }}</span>
                             </div>
                             
                             <!-- Materials List -->
@@ -56,7 +56,7 @@
                                     <div class="row g-2 align-items-end">
                                         <!-- Material Selection -->
                                         <div class="col-md-4">
-                                            <label class="form-label fs--1 fw-semibold">{% trans "Material" %}</label>
+                                            <label class="form-label fs--1 fw-semibold">{% trans "Matériel" %}</label>
                                             {{ form.material }}
                                             <div class="fs--2 text-500 my-1 text-center">{% trans "ou" %}</div>
                                             {{ form.material_name }}
@@ -85,10 +85,10 @@
 
                                         <!-- Quantity -->
                                         <div class="col-md-2">
-                                            <label class="form-label fs--1 fw-semibold">Quantity</label>
+                                            <label class="form-label fs--1 fw-semibold">{% trans "Quantité" %}</label>
                                             <div class="input-group">
                                                 {{ form.quantity }}
-                                                <span class="input-group-text material-unit" id="unit-{{ forloop.counter0 }}">unit</span>
+                                                <span class="input-group-text material-unit" id="unit-{{ forloop.counter0 }}">—</span>
                                             </div>
                                             {% if form.quantity.errors %}
                                             <div class="text-danger fs--2 mt-1">
@@ -100,11 +100,11 @@
                                         <!-- Actions -->
                                         <div class="col-md-4 d-flex gap-2 align-items-end">
                                             {% if not forloop.first %}
-                                            <button type="button" class="btn btn-sm btn-outline-danger remove-material" title="Remove this material">
+                                            <button type="button" class="btn btn-sm btn-outline-danger remove-material" title="{% trans "Retirer ce matériau" %}">
                                                 <i class="fas fa-trash-alt"></i>
                                             </button>
                                             {% endif %}
-                                            <button type="button" class="btn btn-sm btn-outline-secondary toggle-notes" title="Add notes">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary toggle-notes" title="{% trans "Ajouter une note" %}">
                                                 <i class="fas fa-sticky-note"></i>
                                             </button>
                                         </div>
@@ -112,7 +112,7 @@
 
                                     <!-- Notes Section (Hidden by default) -->
                                     <div class="notes-section mt-2" style="display: none;">
-                                        <label class="form-label fs--1 fw-semibold">Notes (Optional)</label>
+                                        <label class="form-label fs--1 fw-semibold">{% trans "Notes (facultatif)" %}</label>
                                         {{ form.notes }}
                                         {% if form.notes.errors %}
                                         <div class="text-danger fs--2 mt-1">
@@ -123,7 +123,7 @@
 
                                     <!-- Estimated Cost + devis/DQE variance badge -->
                                     <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                        <small class="text-600">Estimated Cost:</small>
+                                        <small class="text-600">{% trans "Coût estimé :" %}</small>
                                         <strong class="text-primary" id="cost-{{ forloop.counter0 }}">$0.00</strong>
                                         <span class="badge rounded-pill badge-subtle-secondary variance-badge" id="variance-{{ forloop.counter0 }}" style="display: none;"></span>
                                     </div>
@@ -147,7 +147,7 @@
 
                             <!-- Add Material Button -->
                             <button type="button" id="add-material-btn" class="btn btn-sm btn-outline-primary mt-3">
-                                <i class="fas fa-plus me-1"></i>Add Another Material
+                                <i class="fas fa-plus me-1"></i>{% trans "Ajouter un autre matériau" %}
                             </button>
                         </div>
 
@@ -155,11 +155,11 @@
                         <div class="p-3 bg-light rounded-3 mb-4">
                             <div class="row g-3">
                                 <div class="col-md-6">
-                                    <p class="fs--1 text-600 mb-1">Total Items:</p>
+                                    <p class="fs--1 text-600 mb-1">{% trans "Nombre d'articles :" %}</p>
                                     <h5 class="mb-0" id="total-items">{{ items_formset|length }}</h5>
                                 </div>
                                 <div class="col-md-6">
-                                    <p class="fs--1 text-600 mb-1">Estimated Total Cost:</p>
+                                    <p class="fs--1 text-600 mb-1">{% trans "Coût total estimé :" %}</p>
                                     <h5 class="mb-0 text-success" id="total-cost">$0.00</h5>
                                 </div>
                             </div>
@@ -168,7 +168,7 @@
                         <!-- General Notes -->
                         <div class="mb-4">
                             <label class="form-label fw-semibold" for="{{ form.notes.id_for_label }}">
-                                <i class="fas fa-comment me-1"></i>General Notes (Optional)
+                                <i class="fas fa-comment me-1"></i>{% trans "Notes générales (facultatif)" %}
                             </label>
                             {{ form.notes }}
                             {% if form.notes.errors %}
@@ -181,10 +181,10 @@
                         <!-- Action Buttons -->
                         <div class="d-flex justify-content-end gap-2">
                             <a href="{% url 'materials:request_list' %}" class="btn btn-outline-secondary">
-                                <i class="fas fa-times me-1"></i>Cancel
+                                <i class="fas fa-times me-1"></i>{% trans "Annuler" %}
                             </a>
                             <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-check me-1"></i>Submit Request
+                                <i class="fas fa-check me-1"></i>{% trans "Soumettre la demande" %}
                             </button>
                         </div>
                     </form>
@@ -453,11 +453,11 @@ document.addEventListener('DOMContentLoaded', function () {
         newForm.innerHTML = `
             <div class="row g-2 align-items-end">
                 <div class="col-md-4">
-                    <label class="form-label fs--1 fw-semibold">Material</label>
+                    <label class="form-label fs--1 fw-semibold">{% trans "Matériel" %}</label>
                     <select name="items-${newIndex}-material" id="id_items-${newIndex}-material" class="form-select"
                         data-control="select2" data-create-url="{% url 'materials:material_quick_create' %}"
                         data-placeholder="Sélectionner ou ajouter un matériel...">
-                        <option value="">-- Select Material --</option>
+                        <option value="">-- {% trans "Sélectionner un matériau" %} --</option>
                         {% for material in materials %}
                         <option value="${material.id}" data-unit="${material.unit}" data-cost="${material.estimated_cost_per_unit|default:0}">${material.name} (${material.unit})</option>
                         {% endfor %}
@@ -472,27 +472,27 @@ document.addEventListener('DOMContentLoaded', function () {
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label fs--1 fw-semibold">Quantity</label>
+                    <label class="form-label fs--1 fw-semibold">{% trans "Quantité" %}</label>
                     <div class="input-group">
                         <input type="number" name="items-${newIndex}-quantity" step="0.01" placeholder="0.00" class="form-control">
-                        <span class="input-group-text material-unit" id="unit-${newIndex}">unit</span>
+                        <span class="input-group-text material-unit" id="unit-${newIndex}">—</span>
                     </div>
                 </div>
                 <div class="col-md-4 d-flex gap-2 align-items-end">
-                    <button type="button" class="btn btn-sm btn-outline-danger remove-material" title="Remove this material">
+                    <button type="button" class="btn btn-sm btn-outline-danger remove-material" title="{% trans "Retirer ce matériau" %}">
                         <i class="fas fa-trash-alt"></i>
                     </button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary toggle-notes" title="Add notes">
+                    <button type="button" class="btn btn-sm btn-outline-secondary toggle-notes" title="{% trans "Ajouter une note" %}">
                         <i class="fas fa-sticky-note"></i>
                     </button>
                 </div>
             </div>
             <div class="notes-section mt-2" style="display: none;">
-                <label class="form-label fs--1 fw-semibold">Notes (Optional)</label>
-                <textarea name="items-${newIndex}-notes" class="form-control" placeholder="Notes for this item (optional)" rows="2"></textarea>
+                <label class="form-label fs--1 fw-semibold">{% trans "Notes (facultatif)" %}</label>
+                <textarea name="items-${newIndex}-notes" class="form-control" placeholder="{% trans "Notes pour cet article (facultatif)" %}" rows="2"></textarea>
             </div>
             <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <small class="text-600">Estimated Cost:</small>
+                <small class="text-600">{% trans "Coût estimé :" %}</small>
                 <strong class="text-primary" id="cost-${newIndex}">$0.00</strong>
                 <span class="badge rounded-pill badge-subtle-secondary variance-badge" id="variance-${newIndex}" style="display: none;"></span>
             </div>
@@ -514,7 +514,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const activeItems = container.querySelectorAll('.material-item').length;
         const visibleItems = container.querySelectorAll('.material-item:not([style*="opacity"])').length;
         totalItemsSpan.textContent = activeItems;
-        itemCountBadge.textContent = activeItems + ' item' + (activeItems !== 1 ? 's' : '');
+        itemCountBadge.textContent = activeItems + ' article' + (activeItems !== 1 ? 's' : '');
     }
 
     // Apply Bootstrap classes to form inputs
