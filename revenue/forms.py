@@ -107,8 +107,13 @@ class DevisForm(forms.ModelForm):
         self.fields['photo'].required = False
         self.fields['source_dqe'].required = False
         from pricing.models import DQE
+        from projects.models import Site
         site = None
-        if self.instance and self.instance.pk and self.instance.site_id:
+        # On a POST, scope to the submitted site so a DQE picked
+        # client-side isn't rejected as an invalid choice.
+        if self.data.get('site'):
+            site = Site.objects.filter(pk=self.data.get('site')).first()
+        elif self.instance and self.instance.pk and self.instance.site_id:
             site = self.instance.site
         elif self.initial.get('site'):
             site = self.initial.get('site')
