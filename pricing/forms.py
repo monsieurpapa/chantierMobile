@@ -1,7 +1,7 @@
 """Forms for the price library (Bibliothèque de Prix) and DQE (with its
 line formset)."""
 from django import forms
-from django.forms import inlineformset_factory
+from django.forms import BaseInlineFormSet, inlineformset_factory
 from django.utils.translation import gettext_lazy as _
 from .models import PriceLibraryItem, DQE, DQELine, MaterialConsumptionRatio
 
@@ -95,10 +95,23 @@ class DQELineForm(forms.ModelForm):
             self.fields['phase'].queryset = ProjectPhase.objects.none()
 
 
+class BaseDQELineFormSet(BaseInlineFormSet):
+    """Lets every unsaved row be left blank. Django otherwise makes the
+    first `min_num` extra rows mandatory, so a blank first row blocked the
+    save even when another row (e.g. one added by a structural-suggestion
+    button) held the real data. validate_min still counts only filled rows,
+    so "at least one line" is enforced unchanged."""
+    def _construct_form(self, i, **kwargs):
+        if i >= self.initial_form_count():
+            kwargs.setdefault('empty_permitted', True)
+        return super()._construct_form(i, **kwargs)
+
+
 DQELineFormSet = inlineformset_factory(
     DQE,
     DQELine,
     form=DQELineForm,
+    formset=BaseDQELineFormSet,
     extra=1,
     min_num=1,
     validate_min=True,
