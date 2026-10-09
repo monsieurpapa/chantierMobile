@@ -118,13 +118,13 @@ Also worth a look next time someone's in `docker-compose.yml`: the postgres serv
 
 *Items below added by `/qa` on 2026-10-09 (report: `.gstack/qa-reports/qa-report-localhost-2026-10-09.md`):*
 
-## P3 — Untranslated labels on the material request form (low, content)
+~~## P3 — Untranslated labels on the material request form (low, content)~~ *(Fixed by /qa on main, 2026-10-09 — bccdef9.)*
 `/materials/requests/add/` shows "Quantity", "unit", "N items" and the title "Material Request" in English in the French UI. Repro: log in as a site's lead engineer → Matériaux → Nouvelle demande.
 
-## P3 — Structure page subtitle exposes model field names (low, content)
+~~## P3 — Structure page subtitle exposes model field names (low, content)~~ *(Fixed by /qa on main, 2026-10-09 — dbf9711.)*
 "Structure du chantier" subtitle reads "modifiez floor_count/basement_count depuis la fiche du chantier"; use the form labels ("Nombre d'étages (R+N)", "Nombre de sous-sols").
 
-## P3 — Inconsistent number formatting (low, content)
+~~## P3 — Inconsistent number formatting (low, content)~~ *(Fixed by /qa on main, 2026-10-09 — 3f2d207. Root cause was worse than inconsistency: `floatformat:N|intcomma` rendered French amounts as "8,300,000,00"; all 44 uses switched to `floatformat:"Ng"`.)*
 Devis detail header shows "Total HT : 42974.8000"; amounts elsewhere mix "$8,300,000.00", "$9 800 000" and "300000 $"; decimals mix "195,34" and "37.50 m³" on the same site page.
 
 ## P3 — Seed data: PAID invoices with no Payment rows
