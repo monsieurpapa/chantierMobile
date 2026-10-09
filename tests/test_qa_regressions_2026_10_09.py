@@ -141,3 +141,32 @@ class TestIssue004SourceDqeAcceptedOnCreate:
         })
         assert not form.is_valid()
         assert 'source_dqe' in form.errors
+
+
+# Regression: ISSUE-008 — amounts rendered as "8,300,000,00" in French
+# (floatformat|intcomma inserts commas after the decimal comma).
+class TestIssue008LocalizedAmounts:
+    def test_no_template_uses_floatformat_then_intcomma(self):
+        import re
+        from pathlib import Path
+        from django.conf import settings
+        root = Path(settings.BASE_DIR)
+        offenders = [
+            str(p.relative_to(root)) for p in root.rglob('*.html')
+            if 'node_modules' not in p.parts and 'staticfiles' not in p.parts
+            and re.search(r'floatformat:[^|}]*\|intcomma', p.read_text(encoding='utf-8', errors='ignore'))
+        ]
+        assert offenders == []
+
+    @pytest.mark.django_db
+    def test_devis_header_total_is_grouped_in_french(self, director_client, site):
+        from django.utils import translation
+        from revenue.models import Devis, DevisLine
+        devis = Devis.objects.create(site=site, devis_number='DEV-FMT', client_name='Client',
+                                     issue_date=date.today())
+        DevisLine.objects.create(devis=devis, designation='Béton', unit='m3',
+                                 quantity=Decimal('195.34'), unit_price_ht=Decimal('220.00'))
+        with translation.override('fr'):
+            response = director_client.get(reverse('revenue:devis_detail', kwargs={'pk': devis.pk}))
+            subtitle = str(response.context['header_subtitle'])
+        assert 'Total HT : 42\xa0974,80' in subtitle or 'Total HT : 42 974,80' in subtitle
