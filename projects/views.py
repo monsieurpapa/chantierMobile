@@ -361,7 +361,7 @@ class SiteStructureUpdateView(LoginRequiredMixin, PageHeaderMixin, DetailView):
         return _("Structure du chantier : %(name)s") % {'name': self.object.name}
 
     def get_header_subtitle(self):
-        return _("Un niveau par étage (R+%(n)s) — modifiez floor_count/basement_count depuis la fiche du chantier pour en ajouter ou en retirer.") % {'n': self.object.floor_count}
+        return _("Un niveau par étage (R+%(n)s) — modifiez « Nombre d'étages (R+N) » et « Nombre de sous-sols » depuis la fiche du chantier pour en ajouter ou en retirer.") % {'n': self.object.floor_count}
 
     def get_back_url(self):
         return str(reverse_lazy('projects:site_detail', kwargs={'unique_id': self.object.unique_id}))
