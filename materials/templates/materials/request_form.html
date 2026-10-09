@@ -34,6 +34,11 @@
                                     {{ form.site.errors }}
                                 </div>
                                 {% endif %}
+                                {% if not form.fields.site.queryset.exists %}
+                                <div class="alert alert-warning fs--1 mt-2 mb-0">
+                                    <i class="fas fa-info-circle me-1"></i>{% trans "Seul l'ingénieur principal d'un chantier peut soumettre un état de besoin. Vous n'êtes ingénieur principal d'aucun chantier : faites-vous désigner sur la fiche du chantier, ou demandez à son ingénieur principal de soumettre la demande." %}
+                                </div>
+                                {% endif %}
                             </div>
                         </div>
 
