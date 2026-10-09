@@ -80,9 +80,14 @@ class DQELineForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['price_item'].queryset = PriceLibraryItem.objects.filter(is_active=True).order_by('item_type', 'code')
         self.fields['phase'].required = False
-        from projects.models import ProjectPhase
+        # On a POST, rebuild the queryset from the submitted parent `site`
+        # (row forms share the parent's unprefixed data) so a phase picked
+        # on a brand-new DQE isn't rejected as an invalid choice.
+        from projects.models import ProjectPhase, Site
         site = None
-        if self.instance and self.instance.pk and self.instance.dqe_id:
+        if self.data.get('site'):
+            site = Site.objects.filter(pk=self.data.get('site')).first()
+        elif self.instance and self.instance.pk and self.instance.dqe_id:
             site = self.instance.dqe.site
         if site is not None:
             self.fields['phase'].queryset = ProjectPhase.objects.filter(site=site).order_by('start_date')

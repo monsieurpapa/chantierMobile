@@ -72,9 +72,14 @@ class MaterialRequestItemForm(forms.ModelForm):
         # the request_form.html template loads the real options live via
         # finance:site_phases_data once a site is picked, and repopulates
         # this on an edit via the preselected id baked into the template.
-        from projects.models import ProjectPhase
+        # On a POST, rebuild the queryset from the submitted parent `site`
+        # (row forms share the parent's unprefixed data) so a phase picked
+        # on a brand-new request isn't rejected as an invalid choice.
+        from projects.models import ProjectPhase, Site
         site = None
-        if self.instance and self.instance.pk and self.instance.request_id:
+        if self.data.get('site'):
+            site = Site.objects.filter(pk=self.data.get('site')).first()
+        elif self.instance and self.instance.pk and self.instance.request_id:
             site = self.instance.request.site
         elif 'initial' in kwargs and kwargs.get('initial', {}).get('site'):
             site = kwargs['initial']['site']
