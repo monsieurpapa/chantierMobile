@@ -113,3 +113,22 @@ Also worth a look next time someone's in `docker-compose.yml`: the postgres serv
 `TIME_ZONE = 'Africa/Kigali'` (UTC+2) with `USE_TZ = True`, but `Budget.is_budget_period_active()` (`finance/models.py`), `BudgetDetailView`'s burn-rate forecast (`finance/views.py`), `Site.active_assignments` (`projects/models.py`), and the daily `mark_overdue_invoices` Celery task (`revenue/tasks.py`) all computed "today" via `timezone.now().date()`, which returns the **UTC** calendar date, not the local Kigali date. Any time between 22:00–23:59 UTC (i.e. after midnight in Kigali), this silently disagreed with `date.today()` used everywhere else in the codebase (forms, seed data, tests) — causing spurious "Budget period is not active" rejections and one-day-late overdue-invoice transitions right at the daily boundary. Fixed by switching all four call sites to `timezone.localdate()`. This is what was actually causing 7 of the failures in `tests/test_critical_business_logic.py` (all now pass, 50/50).
 
 ~~## Pre-existing test debt: 38 failing tests outside critical-business-logic scope~~ *(Resolved by /qa on main, 2026-09-11 — triaged and fixed all 37/38 across `test_integration.py` (12), `test_e2e_workflows.py` (8), `test_unit.py` (3), and `test_performance.py` (14). Nearly all were test-file bugs (stale `pk`-vs-`unique_id` reverse() calls, `Expense.expense_date` missing from POSTs/factories, `UserFactory` pinned to Django's builtin `auth.User` instead of the swapped `AUTH_USER_MODEL`, thread-unsafe factory Sequence usernames, `Client.request` misread as the last request object, wall-clock perf thresholds that don't hold in this dev environment). Two real app bugs surfaced along the way and got fixed too: `Invoice` only auto-transitioned to PAID from `PaymentCreateView`, never from a direct `Payment` create (now on `Invoice.check_and_mark_paid()`, called from `Payment.save()`); and the `has_role` template tag re-queried on every call with no caching, causing a 206-query N+1 on the site list page for 100 sites (now cached per-request on the user instance, 206 → 8 queries). Also deleted `TestSearchIntegration`/`TestAPIIntegration`/`TestAPIPerformance`/the search half of `TestSearchPerformance` — no `search` URL or `/api/` endpoints exist anywhere, same class of issue as the already-deleted `tests/test_api.py`. 127/127 passing full-suite.)*
+
+---
+
+*Items below added by `/qa` on 2026-10-09 (report: `.gstack/qa-reports/qa-report-localhost-2026-10-09.md`):*
+
+## P3 — Untranslated labels on the material request form (low, content)
+`/materials/requests/add/` shows "Quantity", "unit", "N items" and the title "Material Request" in English in the French UI. Repro: log in as a site's lead engineer → Matériaux → Nouvelle demande.
+
+## P3 — Structure page subtitle exposes model field names (low, content)
+"Structure du chantier" subtitle reads "modifiez floor_count/basement_count depuis la fiche du chantier"; use the form labels ("Nombre d'étages (R+N)", "Nombre de sous-sols").
+
+## P3 — Inconsistent number formatting (low, content)
+Devis detail header shows "Total HT : 42974.8000"; amounts elsewhere mix "$8,300,000.00", "$9 800 000" and "300000 $"; decimals mix "195,34" and "37.50 m³" on the same site page.
+
+## P3 — Seed data: PAID invoices with no Payment rows
+`seed_sample_data` marks invoices PAID without creating `Payment` rows, so the dashboard shows "Cumul encaissé: $0" and a large negative margin on a fresh seed. Create matching payments (Payment.save() already transitions the invoice).
+
+## P3 — Pre-existing failing test
+`tests/test_admin_user_management.py::TestRoleAssignmentListAdmin::test_lists_roles_across_all_cabinets` fails with `assert 9 == 2` on main as of b566b1f (before the 2026-10-09 QA fixes).
