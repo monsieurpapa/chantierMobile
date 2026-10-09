@@ -351,6 +351,10 @@ class SiteStructureUpdateView(LoginRequiredMixin, PageHeaderMixin, DetailView):
         if not _site_structure_can_act(request, self.object):
             messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
             return redirect('projects:site_detail', unique_id=self.object.unique_id)
+        # Sites that predate SiteLevel (or were created outside the Site
+        # form, e.g. seed commands/admin) have no level rows yet, which left
+        # this page with nothing to edit. sync_levels() is idempotent.
+        self.object.sync_levels()
         return super().dispatch(request, *args, **kwargs)
 
     def get_header_title(self):
