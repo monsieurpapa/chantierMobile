@@ -55,7 +55,7 @@
           <div class="d-flex justify-content-between align-items-start">
             <div>
               <p class="fs--1 text-600 text-uppercase fw-bold mb-1">{% trans "Encaissé ce mois-ci" %}</p>
-              <h4 class="mb-0 text-success fw-bold">{{ CURRENCY_SYMBOL }}{{ revenue_month|floatformat:0|intcomma }}</h4>
+              <h4 class="mb-0 text-success fw-bold">{{ CURRENCY_SYMBOL }}{{ revenue_month|floatformat:"0g" }}</h4>
               {% if revenue_trend is not None %}
               <span class="badge badge-subtle-{% if revenue_trend >= 0 %}success{% else %}danger{% endif %} rounded-pill fs--2 mt-2">
                 <i class="fas fa-arrow-{% if revenue_trend >= 0 %}up{% else %}down{% endif %} me-1"></i>{{ revenue_trend|floatformat:1 }}% {% trans "vs mois dernier" %}
@@ -66,7 +66,7 @@
             </div>
             <div class="icon-item icon-item-sm bg-success-subtle"><span class="text-success fas fa-file-invoice-dollar"></span></div>
           </div>
-          <p class="fs--2 text-500 mt-3 mb-0 border-top pt-2">{% trans "Cumul encaissé" %}: <strong class="text-700">{{ CURRENCY_SYMBOL }}{{ revenue_all|floatformat:0|intcomma }}</strong></p>
+          <p class="fs--2 text-500 mt-3 mb-0 border-top pt-2">{% trans "Cumul encaissé" %}: <strong class="text-700">{{ CURRENCY_SYMBOL }}{{ revenue_all|floatformat:"0g" }}</strong></p>
         </div>
       </div>
     </div>
@@ -77,7 +77,7 @@
           <div class="d-flex justify-content-between align-items-start">
             <div>
               <p class="fs--1 text-600 text-uppercase fw-bold mb-1">{% trans "Dépenses ce mois-ci" %}</p>
-              <h4 class="mb-0 text-warning fw-bold">{{ CURRENCY_SYMBOL }}{{ expense_month|floatformat:0|intcomma }}</h4>
+              <h4 class="mb-0 text-warning fw-bold">{{ CURRENCY_SYMBOL }}{{ expense_month|floatformat:"0g" }}</h4>
               {% if expense_trend is not None %}
               <span class="badge badge-subtle-{% if expense_trend <= 0 %}success{% else %}warning{% endif %} rounded-pill fs--2 mt-2">
                 <i class="fas fa-arrow-{% if expense_trend >= 0 %}up{% else %}down{% endif %} me-1"></i>{{ expense_trend|floatformat:1 }}% {% trans "vs mois dernier" %}
@@ -88,7 +88,7 @@
             </div>
             <div class="icon-item icon-item-sm bg-warning-subtle"><span class="text-warning fas fa-money-bill-wave"></span></div>
           </div>
-          <p class="fs--2 text-500 mt-3 mb-0 border-top pt-2">{% trans "Cumul dépensé" %}: <strong class="text-700">{{ CURRENCY_SYMBOL }}{{ expense_all|floatformat:0|intcomma }}</strong></p>
+          <p class="fs--2 text-500 mt-3 mb-0 border-top pt-2">{% trans "Cumul dépensé" %}: <strong class="text-700">{{ CURRENCY_SYMBOL }}{{ expense_all|floatformat:"0g" }}</strong></p>
         </div>
       </div>
     </div>
@@ -99,7 +99,7 @@
           <div class="d-flex justify-content-between align-items-start">
             <div>
               <p class="fs--1 text-600 text-uppercase fw-bold mb-1">{% trans "Marge nette (cumul)" %}</p>
-              <h4 class="mb-0 fw-bold {% if net_margin >= 0 %}text-primary{% else %}text-danger{% endif %}">{{ CURRENCY_SYMBOL }}{{ net_margin|floatformat:0|intcomma }}</h4>
+              <h4 class="mb-0 fw-bold {% if net_margin >= 0 %}text-primary{% else %}text-danger{% endif %}">{{ CURRENCY_SYMBOL }}{{ net_margin|floatformat:"0g" }}</h4>
               {% if margin_pct is not None %}
               <span class="badge badge-subtle-{% if margin_pct >= 15 %}success{% elif margin_pct >= 0 %}warning{% else %}danger{% endif %} rounded-pill fs--2 mt-2">
                 {{ margin_pct|floatformat:1 }}% {% trans "de marge" %}
@@ -197,7 +197,7 @@
         <div class="card h-100 hover-shadow">
           <div class="card-body text-center py-3">
             <span class="fas fa-file-signature fs-4 text-secondary mb-2 d-block"></span>
-            <h6 class="mb-0 text-800">{{ CURRENCY_SYMBOL }}{{ pipeline_value|floatformat:0|intcomma }}</h6>
+            <h6 class="mb-0 text-800">{{ CURRENCY_SYMBOL }}{{ pipeline_value|floatformat:"0g" }}</h6>
             <p class="fs--2 text-500 mb-0">{% trans "Pipeline devis" %} ({{ pipeline_count }})</p>
           </div>
         </div>
@@ -291,7 +291,7 @@
                 {% for row in expenses_by_site_rows %}
                 <tr>
                   <td>{{ row.name }}</td>
-                  <td class="text-end fw-semibold">{{ CURRENCY_SYMBOL }}{{ row.spent|floatformat:2|intcomma }}</td>
+                  <td class="text-end fw-semibold">{{ CURRENCY_SYMBOL }}{{ row.spent|floatformat:"2g" }}</td>
                   <td class="text-end">
                     <a href="{{ row.url }}" class="btn btn-falcon-default btn-sm">{% trans "Historique" %}</a>
                   </td>
@@ -359,7 +359,7 @@
               <div class="progress-bar {% if row.usage > 80 %}bg-danger{% elif row.usage > 60 %}bg-warning{% else %}bg-success{% endif %} rounded-pill" role="progressbar"
                 style="width: {{ row.usage }}%" aria-valuenow="{{ row.usage }}" aria-valuemin="0" aria-valuemax="100"></div>
             </div>
-            <p class="fs--2 text-500 mt-1 mb-0">{{ CURRENCY_SYMBOL }}{{ row.spent|floatformat:0|intcomma }} {% trans "sur" %} {{ CURRENCY_SYMBOL }}{{ row.total|floatformat:0|intcomma }}</p>
+            <p class="fs--2 text-500 mt-1 mb-0">{{ CURRENCY_SYMBOL }}{{ row.spent|floatformat:"0g" }} {% trans "sur" %} {{ CURRENCY_SYMBOL }}{{ row.total|floatformat:"0g" }}</p>
           </div>
           {% empty %}
           <p class="text-center text-500 fs--1 py-5 mb-0"><i class="fas fa-inbox me-2"></i>{% trans "Aucun chantier actif avec budget défini." %}</p>
@@ -432,7 +432,7 @@
                   <p class="mb-0 fs--1 fw-semibold text-800">{{ invoice.invoice_number }}</p>
                   <p class="mb-0 fs--2 text-500">{{ invoice.contract.site.name }} · {% trans "échéance" %} {{ invoice.due_date }}</p>
                 </div>
-                <span class="fs--1 fw-bold text-danger">{{ CURRENCY_SYMBOL }}{{ invoice.amount|floatformat:0|intcomma }}</span>
+                <span class="fs--1 fw-bold text-danger">{{ CURRENCY_SYMBOL }}{{ invoice.amount|floatformat:"0g" }}</span>
               </div>
             </a>
             {% empty %}

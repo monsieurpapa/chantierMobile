@@ -44,7 +44,7 @@
                                     {% if caisse.site %} · {{ caisse.site.name }}{% endif %}
                                 </p>
                                 <p class="fs-2 fw-bold {% if caisse.balance < 0 %}text-danger{% else %}text-success{% endif %} mb-0">
-                                    {{ CURRENCY_SYMBOL }}{{ caisse.balance|floatformat:2|intcomma }}
+                                    {{ CURRENCY_SYMBOL }}{{ caisse.balance|floatformat:"2g" }}
                                 </p>
                             </div>
                         </div>

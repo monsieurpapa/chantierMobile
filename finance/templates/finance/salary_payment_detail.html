@@ -26,7 +26,7 @@
                     <div class="card h-100">
                         <div class="card-body">
                             <label class="text-600 fs--1">{% trans "Total" %}</label>
-                            <p class="fs-2 fw-bold text-primary mb-0">{{ CURRENCY_SYMBOL }}{{ salary_payment_list.total_amount|floatformat:2|intcomma }}</p>
+                            <p class="fs-2 fw-bold text-primary mb-0">{{ CURRENCY_SYMBOL }}{{ salary_payment_list.total_amount|floatformat:"2g" }}</p>
                         </div>
                     </div>
                 </div>
@@ -88,7 +88,7 @@
                                 <tr>
                                     <td>{{ item.personnel.get_full_name }}</td>
                                     <td>{{ item.period }}</td>
-                                    <td class="text-end fw-semibold">{{ CURRENCY_SYMBOL }}{{ item.amount|floatformat:2|intcomma }}</td>
+                                    <td class="text-end fw-semibold">{{ CURRENCY_SYMBOL }}{{ item.amount|floatformat:"2g" }}</td>
                                     <td>{{ item.notes|default:"-" }}</td>
                                 </tr>
                                 {% empty %}

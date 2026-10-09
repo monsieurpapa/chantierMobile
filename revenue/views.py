@@ -16,6 +16,7 @@ from django.db.models import Sum
 from django.http import HttpResponseRedirect
 from django.views.generic import ListView, CreateView, UpdateView, DetailView
 from django.urls import reverse_lazy
+from django.template.defaultfilters import floatformat
 from django.utils.translation import gettext_lazy as _
 from .models import Contract, Invoice, Payment, Devis, SituationTravaux
 from chantiermobile.constants import InvoiceStatus, UserRoles, DevisStatus, SituationStatus, ApprovalStatus
@@ -726,7 +727,9 @@ class DevisDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, D
     def get_header_subtitle(self):
         return _("Client : %(client)s | Total HT : %(total)s | Statut : %(status)s") % {
             'client': self.object.client_name,
-            'total': self.object.total_ht,
+            # Same floatformat:"2g" rendering the templates use (was a
+            # raw Decimal, e.g. "42974.8000").
+            'total': floatformat(self.object.total_ht, "2g"),
             'status': self.object.get_status_display(),
         }
 

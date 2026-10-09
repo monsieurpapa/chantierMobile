@@ -148,6 +148,8 @@
 document.addEventListener('DOMContentLoaded', function () {
     const SITE_FOOTPRINT = parseFloat('{{ site.footprint_area_m2|default:0 }}') || 0;
     const REBAR_DENSITY = parseFloat('{{ site.cabinet.rebar_density_kg_per_m3|default:100 }}') || 100;
+    // Display-only: follow the page language ("195,34" in fr), like Django's floatformat.
+    const fmtNum = (n, d = 2) => Number(n).toLocaleString(document.documentElement.lang || 'fr', { minimumFractionDigits: d, maximumFractionDigits: d });
 
     function val(el) {
         if (!el) return 0;
@@ -176,8 +178,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const concreteOut = card.querySelector('.level-concrete-out');
         const wallOut = card.querySelector('.level-wall-out');
-        if (concreteOut) concreteOut.textContent = concreteVol.toFixed(2);
-        if (wallOut) wallOut.textContent = wallArea.toFixed(2);
+        if (concreteOut) concreteOut.textContent = fmtNum(concreteVol);
+        if (wallOut) wallOut.textContent = fmtNum(wallArea);
 
         return { concreteVol: concreteVol, wallArea: wallArea };
     }
@@ -190,9 +192,9 @@ document.addEventListener('DOMContentLoaded', function () {
             totalConcrete += r.concreteVol;
             totalWall += r.wallArea;
         });
-        document.getElementById('total-concrete').textContent = totalConcrete.toFixed(2);
-        document.getElementById('total-wall').textContent = totalWall.toFixed(2);
-        document.getElementById('total-rebar').textContent = Math.round(totalConcrete * REBAR_DENSITY);
+        document.getElementById('total-concrete').textContent = fmtNum(totalConcrete);
+        document.getElementById('total-wall').textContent = fmtNum(totalWall);
+        document.getElementById('total-rebar').textContent = fmtNum(Math.round(totalConcrete * REBAR_DENSITY), 0);
     }
 
     document.querySelectorAll('.level-card input[type="number"]').forEach(function (input) {

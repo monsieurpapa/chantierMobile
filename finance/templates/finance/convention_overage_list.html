@@ -39,8 +39,8 @@
                                         {% if item.assignment.phase %}— {{ item.assignment.phase.name }}{% endif %}
                                         {% if item.assignment.name %}({{ item.assignment.name }}){% endif %}
                                     </td>
-                                    <td class="text-end">{{ CURRENCY_SYMBOL }}{{ item.amount|floatformat:2|intcomma }}</td>
-                                    <td class="text-end">{{ CURRENCY_SYMBOL }}{{ item.assignment.convention_amount|floatformat:2|intcomma }}</td>
+                                    <td class="text-end">{{ CURRENCY_SYMBOL }}{{ item.amount|floatformat:"2g" }}</td>
+                                    <td class="text-end">{{ CURRENCY_SYMBOL }}{{ item.assignment.convention_amount|floatformat:"2g" }}</td>
                                     <td>{{ item.overage_note }}</td>
                                 </tr>
                                 {% empty %}

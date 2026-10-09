@@ -44,10 +44,10 @@
                                             {% if row.is_chef_de_corps %}<span class="badge bg-dark ms-1">{% trans "Chef de corps" %}</span>{% endif %}
                                         </td>
                                         <td>{{ row.assignment.role }}</td>
-                                        <td class="text-end">{{ CURRENCY_SYMBOL }}{{ row.assignment.paid_amount|floatformat:2|intcomma }}</td>
+                                        <td class="text-end">{{ CURRENCY_SYMBOL }}{{ row.assignment.paid_amount|floatformat:"2g" }}</td>
                                         <td class="text-end">
                                             {% if row.is_capped %}
-                                                {{ CURRENCY_SYMBOL }}{{ row.remaining|floatformat:2|intcomma }}
+                                                {{ CURRENCY_SYMBOL }}{{ row.remaining|floatformat:"2g" }}
                                             {% else %}
                                                 <span class="text-500">{% trans "Non plafonné" %}</span>
                                             {% endif %}

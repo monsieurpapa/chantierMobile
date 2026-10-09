@@ -86,7 +86,7 @@
                     <div class="card">
                         <div class="card-body">
                             <label class="text-600 fs--1">{% trans "Total Entrées" %}</label>
-                            <p class="fs-1 fw-bold text-success mb-0">{{ CURRENCY_SYMBOL }}{{ total_entrees|floatformat:2|intcomma }}</p>
+                            <p class="fs-1 fw-bold text-success mb-0">{{ CURRENCY_SYMBOL }}{{ total_entrees|floatformat:"2g" }}</p>
                         </div>
                     </div>
                 </div>
@@ -94,7 +94,7 @@
                     <div class="card">
                         <div class="card-body">
                             <label class="text-600 fs--1">{% trans "Total Sorties" %}</label>
-                            <p class="fs-1 fw-bold text-danger mb-0">{{ CURRENCY_SYMBOL }}{{ total_sorties|floatformat:2|intcomma }}</p>
+                            <p class="fs-1 fw-bold text-danger mb-0">{{ CURRENCY_SYMBOL }}{{ total_sorties|floatformat:"2g" }}</p>
                         </div>
                     </div>
                 </div>
@@ -132,7 +132,7 @@
                                     <td>{{ tx.recipient|default:"-" }}</td>
                                     <td>{{ tx.category.name|default:"-" }}</td>
                                     <td>{{ tx.description|default:"-" }}</td>
-                                    <td class="text-end fw-semibold">{{ CURRENCY_SYMBOL }}{{ tx.amount|floatformat:2|intcomma }}</td>
+                                    <td class="text-end fw-semibold">{{ CURRENCY_SYMBOL }}{{ tx.amount|floatformat:"2g" }}</td>
                                 </tr>
                                 {% empty %}
                                 <tr><td colspan="9" class="text-center py-4 text-500">{% trans "Aucun mouvement pour cette sélection." %}</td></tr>

@@ -14,6 +14,7 @@ from datetime import timedelta
 from django.db.models import Sum, Count, F, Q, DecimalField
 from django.db.models.functions import TruncMonth
 from django.urls import reverse
+from django.template.defaultfilters import floatformat
 from django.utils import timezone
 
 from core.mixins import get_session_cabinet
@@ -359,7 +360,7 @@ def build_dashboard_context(request):
     for e in expenses.select_related('site').order_by('-updated_at')[:6]:
         activity.append({
             'icon': 'money-bill-wave', 'color': _badge_hex(StatusBadgeClasses.EXPENSE_STATUS, e.status),
-            'title': f"Dépense {e.amount:.0f} $ — {e.get_status_display()}",
+            'title': f"Dépense ${floatformat(e.amount, '2g')} — {e.get_status_display()}",
             'subtitle': e.site.name,
             'timestamp': e.updated_at,
             'url': reverse('finance:expense_detail', kwargs={'pk': e.pk}),

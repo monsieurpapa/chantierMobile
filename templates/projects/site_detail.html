@@ -528,8 +528,8 @@
                                                 <tr class="align-middle">
                                                     <td>{{ line.display_name }}</td>
                                                     <td class="text-center">{{ line.quantity }}</td>
-                                                    <td class="text-end">{{ CURRENCY_SYMBOL }}{{ line.unit_price|floatformat:2|intcomma }}</td>
-                                                    <td class="text-end fw-semibold">{{ CURRENCY_SYMBOL }}{{ line.line_total|floatformat:2|intcomma }}</td>
+                                                    <td class="text-end">{{ CURRENCY_SYMBOL }}{{ line.unit_price|floatformat:"2g" }}</td>
+                                                    <td class="text-end fw-semibold">{{ CURRENCY_SYMBOL }}{{ line.line_total|floatformat:"2g" }}</td>
                                                     <td class="text-end text-600 fs--1">{{ line.transaction.date|date:"M d, Y" }}</td>
                                                 </tr>
                                                 {% endfor %}

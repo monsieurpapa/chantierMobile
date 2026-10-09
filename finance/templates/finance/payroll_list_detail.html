@@ -26,7 +26,7 @@
                     <div class="card h-100">
                         <div class="card-body">
                             <label class="text-600 fs--1">{% trans "Total" %}</label>
-                            <p class="fs-2 fw-bold text-primary mb-0">{{ CURRENCY_SYMBOL }}{{ payroll_list.total_amount|floatformat:2|intcomma }}</p>
+                            <p class="fs-2 fw-bold text-primary mb-0">{{ CURRENCY_SYMBOL }}{{ payroll_list.total_amount|floatformat:"2g" }}</p>
                         </div>
                     </div>
                 </div>
@@ -94,8 +94,8 @@
                                         {% if item.assignment.phase %}<div class="fs--2 text-500">{% trans "Étape" %} : {{ item.assignment.phase.name }}</div>{% endif %}
                                         {% if item.assignment.convention_amount %}
                                         <div class="fs--2 text-500">
-                                            {% trans "Plafond" %} : {{ CURRENCY_SYMBOL }}{{ item.assignment.convention_amount|floatformat:2|intcomma }}
-                                            — {% trans "reste" %} : {{ CURRENCY_SYMBOL }}{{ item.assignment.remaining_convention|floatformat:2|intcomma }}
+                                            {% trans "Plafond" %} : {{ CURRENCY_SYMBOL }}{{ item.assignment.convention_amount|floatformat:"2g" }}
+                                            — {% trans "reste" %} : {{ CURRENCY_SYMBOL }}{{ item.assignment.remaining_convention|floatformat:"2g" }}
                                         </div>
                                         {% endif %}
                                         {% else %}
@@ -103,7 +103,7 @@
                                         {% endif %}
                                     </td>
                                     <td>{{ item.progress_note|default:"-" }}</td>
-                                    <td class="text-end fw-semibold">{{ CURRENCY_SYMBOL }}{{ item.amount|floatformat:2|intcomma }}</td>
+                                    <td class="text-end fw-semibold">{{ CURRENCY_SYMBOL }}{{ item.amount|floatformat:"2g" }}</td>
                                     <td>
                                         {% if item.signed_receipt %}
                                         <a href="{{ item.signed_receipt.url }}" target="_blank" rel="noopener"><span class="fas fa-paperclip"></span></a>

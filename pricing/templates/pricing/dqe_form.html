@@ -222,6 +222,9 @@ document.addEventListener('DOMContentLoaded', function () {
         .catch(err => console.error('Error fetching price item data:', err));
     }
 
+    // Display-only: follow the page language ("195,34" in fr), like Django's floatformat.
+    const fmtNum = (n, d = 2) => Number(n).toLocaleString(document.documentElement.lang || 'fr', { minimumFractionDigits: d, maximumFractionDigits: d });
+
     function calculateLineTotal(line) {
         const idx = line.dataset.formIndex;
         const qtyInput = line.querySelector('input[name*="quantity"]');
@@ -229,7 +232,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const totalEl = document.getElementById(`line-total-${idx}`);
         const qty = parseFloat(qtyInput ? qtyInput.value : 0) || 0;
         const price = parseFloat(priceInput ? priceInput.value : 0) || 0;
-        if (totalEl) totalEl.textContent = (qty * price).toFixed(2);
+        if (totalEl) { totalEl.dataset.value = qty * price; totalEl.textContent = fmtNum(qty * price); }
     }
 
     function updateTotalAmount() {
@@ -238,9 +241,9 @@ document.addEventListener('DOMContentLoaded', function () {
             const deleteCheckbox = line.querySelector('input[name*="DELETE"]');
             if (deleteCheckbox && deleteCheckbox.checked) return;
             const totalEl = line.querySelector('[id^="line-total-"]');
-            total += parseFloat(totalEl ? totalEl.textContent : 0) || 0;
+            total += parseFloat(totalEl ? totalEl.dataset.value : 0) || 0;
         });
-        totalAmountSpan.textContent = total.toFixed(2);
+        totalAmountSpan.textContent = fmtNum(total);
     }
 
     function onPriceItemChange(select, line) {
@@ -432,9 +435,9 @@ document.addEventListener('DOMContentLoaded', function () {
             const concrete = parseFloat(data.concrete_m3) || 0;
             const wall = parseFloat(data.wall_area_m2) || 0;
             const rebar = parseFloat(data.rebar_kg) || 0;
-            document.getElementById('estimate-concrete').textContent = concrete.toFixed(2);
-            document.getElementById('estimate-wall').textContent = wall.toFixed(2);
-            document.getElementById('estimate-rebar').textContent = Math.round(rebar);
+            document.getElementById('estimate-concrete').textContent = fmtNum(concrete);
+            document.getElementById('estimate-wall').textContent = fmtNum(wall);
+            document.getElementById('estimate-rebar').textContent = fmtNum(Math.round(rebar), 0);
             document.getElementById('prefill-concrete-btn').dataset.qty = concrete.toFixed(2);
             document.getElementById('prefill-wall-btn').dataset.qty = wall.toFixed(2);
             document.getElementById('prefill-rebar-btn').dataset.qty = Math.round(rebar);
