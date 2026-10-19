@@ -2,7 +2,7 @@
 only; everyday CRUD goes through projects/views.py's role/cabinet-gated
 views instead."""
 from django.contrib import admin
-from .models import Site, ProjectPhase, SiteProgress, ProgressPhoto, ProgressComment, SiteLevel
+from .models import Site, ProjectPhase, SiteProgress, ProgressPhoto, ProgressComment, SiteLevel, PhaseTemplate
 
 class PhaseInline(admin.TabularInline):
     model = ProjectPhase
@@ -46,3 +46,14 @@ class SiteProgressAdmin(admin.ModelAdmin):
     list_display = ('phase', 'report_date', 'percentage_complete')
     list_filter = ('phase__site',)
     inlines = [ProgressPhotoInline, ProgressCommentInline]
+
+class PhaseSubTemplateInline(admin.TabularInline):
+    model = PhaseTemplate
+    fk_name = 'parent_template'
+    extra = 1
+
+@admin.register(PhaseTemplate)
+class PhaseTemplateAdmin(admin.ModelAdmin):
+    list_display = ('name', 'category', 'cabinet', 'parent_template', 'order')
+    list_filter = ('category', 'cabinet')
+    inlines = [PhaseSubTemplateInline]

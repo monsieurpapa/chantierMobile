@@ -21,6 +21,10 @@ urlpatterns = [
     path('phases/<uuid:unique_id>/delete/', views.ProjectPhaseDeleteView.as_view(), name='phase_delete'),
     path('phases/<uuid:unique_id>/close/', views.phase_close, name='phase_close'),
 
+    # Catalogue des étapes (PhaseTemplate) — reusable, not tied to a chantier
+    path('phase-templates/', views.PhaseTemplateListView.as_view(), name='phase_template_list'),
+    path('sites/<uuid:unique_id>/phases/import/', views.phase_template_import, name='phase_template_import'),
+
     # Progress
     path('phases/<uuid:phase_id>/progress/add/', views.SiteProgressCreateView.as_view(), name='progress_create'),
     path('progress/<uuid:unique_id>/', views.ProgressDetailView.as_view(), name='progress_detail'),

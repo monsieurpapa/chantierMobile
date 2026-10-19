@@ -689,3 +689,114 @@ class ProgressComment(BaseModel):
         if self.photo_id and self.progress_id and self.photo.progress_id != self.progress_id:
             from django.core.exceptions import ValidationError
             raise ValidationError(_("La photo commentée doit appartenir au même rapport d'avancement."))
+
+
+class PhaseTemplate(BaseModel):
+    """A reusable catalog entry of a standard étape/sous-étape name — e.g.
+    "Travaux de fondation" > "Semelle en BA" — independent of any
+    particular Site/chantier, unlike ProjectPhase which is always
+    site-scoped (`ProjectPhase.site` is required).
+
+    Added 2026-10-19 ("une liste d'étapes possibles irrespective of a
+    project/chantier", from exploring the Appartements CCLK devis):
+    before this, every new chantier's phases/sous-étapes were typed from
+    scratch by hand each time, even though most Gros-Œuvre/Second-Œuvre
+    chantiers at a given cabinet follow the same handful of standard
+    étapes (Fondation, Rez-de-chaussée, Étage N, Couverture, Plomberie,
+    Électricité...). This is that reusable list.
+
+    `cabinet=None` is a global default template, usable by every cabinet
+    (seeded from a real devis's standard étape/sous-étape breakdown —
+    see the projects 0011 data migration); a cabinet may add its own rows
+    for étapes specific to how it works — same global-default/override
+    split as MaterialConsumptionRatio (pricing app).
+
+    Deliberately one level deep only (parent_template), mirroring
+    ProjectPhase.parent_phase — see clean() — rather than an arbitrary
+    tree, matching how the rest of this codebase models an étape's
+    sous-étapes."""
+    cabinet = models.ForeignKey(
+        Cabinet, on_delete=models.CASCADE, null=True, blank=True, related_name='phase_templates',
+        verbose_name=_('Cabinet'),
+        help_text=_("Laisser vide pour un modèle global, proposé à tous les cabinets."),
+    )
+    parent_template = models.ForeignKey(
+        'self', on_delete=models.CASCADE, null=True, blank=True,
+        related_name='sub_templates', verbose_name=_('Modèle parent'),
+        help_text=_(
+            "Laisser vide pour une étape principale. Sélectionner un modèle existant en fait un "
+            "sous-modèle de celui-ci (un seul niveau de profondeur, comme pour les étapes d'un "
+            "chantier)."
+        ),
+    )
+    name = models.CharField(max_length=255, verbose_name=_('Nom'))
+    category = models.CharField(
+        max_length=20, choices=PhaseCategory.choices, blank=True, verbose_name=_('Catégorie'),
+        help_text=_("Gros œuvre ou finissage (second œuvre) — facultatif."),
+    )
+    order = models.PositiveIntegerField(default=0, verbose_name=_('Ordre'), help_text=_("Ordre d'affichage au sein de son parent (ou de sa catégorie, pour une étape principale)."))
+    notes = models.TextField(blank=True, verbose_name=_('Notes'))
+
+    class Meta:
+        verbose_name = _("Modèle d'étape")
+        verbose_name_plural = _('Catalogue des étapes')
+        ordering = ['category', 'order', 'name']
+
+    def __str__(self):
+        scope = self.cabinet.name if self.cabinet_id else _('Global')
+        if self.parent_template_id:
+            return f"{self.parent_template.name} > {self.name} [{scope}]"
+        return f"{self.name} [{scope}]"
+
+    def clean(self):
+        """Same one-level-deep guard as ProjectPhase.clean()."""
+        from django.core.exceptions import ValidationError
+        if self.parent_template_id:
+            if self.pk and self.parent_template_id == self.pk:
+                raise ValidationError({'parent_template': _("Un modèle ne peut pas être son propre modèle parent.")})
+            if self.parent_template.parent_template_id:
+                raise ValidationError({'parent_template': _(
+                    "Un sous-modèle ne peut pas lui-même avoir de sous-modèle (un seul niveau de profondeur)."
+                )})
+            if self.pk and self.sub_templates.exists():
+                raise ValidationError({'parent_template': _(
+                    "Ce modèle a déjà ses propres sous-modèles ; il ne peut pas devenir lui-même un sous-modèle."
+                )})
+
+    @property
+    def is_sub_template(self):
+        return self.parent_template_id is not None
+
+    @classmethod
+    def catalog_for_cabinet(cls, cabinet):
+        """Every template usable by `cabinet`: its own rows plus the
+        global defaults (cabinet=None) — same visibility rule as
+        MaterialConsumptionRatio's global-default/override split."""
+        return cls.objects.filter(
+            models.Q(cabinet=cabinet) | models.Q(cabinet__isnull=True)
+        ).select_related('parent_template')
+
+    def instantiate_for_site(self, site, include_subs=True):
+        """Creates (or returns the existing) ProjectPhase for `site`
+        matching this template — idempotent by (site, name, parent_phase)
+        so re-running this, or applying a catalog that overlaps a site's
+        already hand-made phases, never duplicates a phase. Once created,
+        the ProjectPhase is a plain, independent row — exactly like a
+        DQELine's unit_price is copied once from its price_item and never
+        kept in sync — so editing this template afterward does not
+        retroactively change any site's phases.
+
+        Recurses into sub_templates (when `include_subs`, the default)
+        for a top-level template; a sub-template instantiated on its own
+        first makes sure its own parent phase exists."""
+        parent_phase = None
+        if self.parent_template_id:
+            parent_phase = self.parent_template.instantiate_for_site(site, include_subs=False)
+        phase, _created = ProjectPhase.objects.get_or_create(
+            site=site, name=self.name, parent_phase=parent_phase,
+            defaults={'category': self.category},
+        )
+        if include_subs and not self.parent_template_id:
+            for sub in self.sub_templates.all().order_by('order', 'name'):
+                sub.instantiate_for_site(site, include_subs=False)
+        return phase

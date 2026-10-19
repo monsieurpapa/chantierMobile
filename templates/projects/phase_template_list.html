@@ -1,0 +1,70 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Catalogue des étapes" %} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    {% include 'includes/navbar-vertical.html' with on="projects" %}
+
+    <div class="content">
+        {% include 'includes/navbar-top.html' %}
+
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            <p class="text-600 mb-4">
+                {% trans "Modèles d'étapes et sous-étapes réutilisables d'un chantier à l'autre — cette liste ne dépend d'aucun chantier en particulier. Depuis la fiche d'un chantier, utilisez « Importer depuis le catalogue » pour en créer les étapes réelles." %}
+            </p>
+
+            {% regroup templates by category as category_list %}
+            {% for group in category_list %}
+            <div class="card mb-3">
+                <div class="card-header border-bottom">
+                    <h5 class="fs-0 mb-0">
+                        {% if group.grouper == 'GROS_OEUVRE' %}
+                            <span class="badge bg-dark me-2">{% trans "Gros œuvre" %}</span>
+                        {% elif group.grouper == 'FINISSAGE' %}
+                            <span class="badge bg-info me-2">{% trans "Finissage" %}</span>
+                        {% else %}
+                            <span class="badge bg-secondary me-2">{% trans "Non classé" %}</span>
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        {% for major in group.list %}
+                        <div class="col-md-6 col-lg-4">
+                            <div class="p-3 border rounded-3 border-200 h-100">
+                                <h6 class="fw-bold text-900 mb-2">
+                                    {{ major.name }}
+                                    {% if not major.cabinet_id %}
+                                    <span class="badge bg-light text-dark border ms-1 fs--2">{% trans "Global" %}</span>
+                                    {% endif %}
+                                </h6>
+                                {% if major.sub_templates.all %}
+                                <ol class="ps-3 mb-0 fs--1 text-700">
+                                    {% for sub in major.sub_templates.all %}
+                                    <li>{{ sub.name }}</li>
+                                    {% endfor %}
+                                </ol>
+                                {% else %}
+                                <p class="fs--1 text-500 mb-0">{% trans "Aucune sous-étape définie." %}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-5 text-500">
+                <span class="fas fa-layer-group fs-3 mb-2 d-block"></span>
+                {% trans "Aucun modèle d'étape disponible pour le moment." %}
+            </div>
+            {% endfor %}
+        </div>
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}

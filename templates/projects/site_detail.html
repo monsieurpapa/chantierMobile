@@ -143,6 +143,17 @@
                                                     <span class="fas fa-stream me-1"></span>{% trans "Planning (Gantt)" %}
                                                 </a>
                                                 {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,CHIEF_ENGINEER' %}
+                                                <a class="btn btn-outline-secondary btn-sm"
+                                                    href="{% url 'projects:phase_template_list' %}">
+                                                    <span class="fas fa-layer-group me-1"></span>{% trans "Catalogue des étapes" %}
+                                                </a>
+                                                <form method="post" action="{% url 'projects:phase_template_import' unique_id=site.unique_id %}" class="d-inline"
+                                                    data-confirm="{% trans 'Importer toutes les étapes du catalogue pour ce chantier ? Les étapes déjà existantes ne seront pas dupliquées.' %}">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-outline-primary btn-sm">
+                                                        <span class="fas fa-file-import me-1"></span>{% trans "Importer depuis le catalogue" %}
+                                                    </button>
+                                                </form>
                                                 <a class="btn btn-primary btn-sm"
                                                     href="{% url 'projects:phase_create' site_id=site.unique_id %}">
                                                     <span class="fas fa-plus me-1"></span>{% trans "Add Phase" %}

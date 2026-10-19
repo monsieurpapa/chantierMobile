@@ -15,7 +15,7 @@ from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db.models import Count
 from django.utils.translation import gettext_lazy as _
-from .models import Site, ProjectPhase, SiteProgress, ProgressPhoto, ProgressComment, PlanningSubmission, SiteLevel
+from .models import Site, ProjectPhase, SiteProgress, ProgressPhoto, ProgressComment, PlanningSubmission, SiteLevel, PhaseTemplate
 from .forms import SiteForm, ProjectPhaseForm, SiteProgressForm, PlanningSubmissionForm, SiteLevelFormSet
 from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet, can_act_for_cabinet, can_view_cabinet
 from chantiermobile.constants import UserRoles, ApprovalStatus
@@ -48,6 +48,10 @@ TECHNICAL_TEAM_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 
 
 LEAD_ENGINEER_ROLES = ['ENGINEER', 'CHIEF_ENGINEER']
 PHASE_CLOSE_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER', 'ENGINEER']
+# Same director-tier/CHIEF_ENGINEER gate as adding a phase by hand
+# (ProjectPhaseCreateView) — bulk-importing from the catalog is just a
+# faster way to do the same thing.
+PHASE_TEMPLATE_IMPORT_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER']
 PLANNING_REVIEW_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER', 'ENGINEER']
 # ENGINEER used to be missing here — only Director/Chief could submit a
 # planning at all. That matched the original one-directional design (a
@@ -690,6 +694,61 @@ class ProjectPhaseDeleteView(LoginRequiredMixin, RoleRequiredMixin, CabinetAcces
     def get_success_url(self):
         messages.success(self.request, _("Phase supprimée avec succès !"))
         return reverse_lazy('projects:site_detail', kwargs={'unique_id': self.object.site.unique_id})
+
+
+class PhaseTemplateListView(LoginRequiredMixin, PageHeaderMixin, ListView):
+    """"Catalogue des étapes" — the cabinet-wide list of standard
+    étape/sous-étape names (PhaseTemplate), independent of any particular
+    chantier. Open to any authenticated member of a cabinet (read-only);
+    only PhaseTemplateImportView (below) is role-gated, same split as
+    SiteListView/SiteCreateView."""
+    model = PhaseTemplate
+    template_name = 'projects/phase_template_list.html'
+    context_object_name = 'templates'
+    header_title = _("Catalogue des étapes")
+    header_subtitle = _("Modèles d'étapes et sous-étapes réutilisables, indépendants d'un chantier particulier")
+
+    def get_queryset(self):
+        # get_session_cabinet covers the common case (an active cabinet
+        # picked via the cabinet switcher); a non-superuser with no active
+        # session cabinet yet still sees their own cabinet's catalog
+        # (plus the global defaults) rather than an empty page.
+        cabinet = get_session_cabinet(self.request)
+        if cabinet is None and not self.request.user.is_superuser:
+            from accounts.models import UserCabinetRole
+            role = UserCabinetRole.objects.filter(
+                user=self.request.user, status=ApprovalStatus.APPROVED,
+            ).select_related('cabinet').first()
+            cabinet = role.cabinet if role else None
+        return PhaseTemplate.catalog_for_cabinet(cabinet).filter(parent_template__isnull=True).prefetch_related('sub_templates')
+
+    def get_breadcrumb_items(self):
+        return [
+            {'title': _("Projets & Chantiers"), 'url': str(reverse_lazy('projects:site_list'))},
+            {'title': _("Catalogue des étapes"), 'url': None},
+        ]
+
+
+def phase_template_import(request, unique_id):
+    """Bulk-instantiates the full étape catalog (global defaults + this
+    site's own cabinet's templates) onto one Site — the one place this
+    reusable, non-chantier-specific list actually turns into real
+    ProjectPhase rows. Idempotent (see PhaseTemplate.instantiate_for_site):
+    safe to run again later as the catalog grows, without duplicating
+    whatever phases the site already has."""
+    site = get_object_or_404(Site, unique_id=unique_id)
+    if request.method != 'POST':
+        return redirect('projects:site_detail', unique_id=site.unique_id)
+    if not can_act_for_cabinet(request, site.cabinet, PHASE_TEMPLATE_IMPORT_ROLES):
+        messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+        return redirect('projects:site_detail', unique_id=site.unique_id)
+    templates = PhaseTemplate.catalog_for_cabinet(site.cabinet).filter(parent_template__isnull=True)
+    count = 0
+    for template in templates:
+        template.instantiate_for_site(site)
+        count += 1
+    messages.success(request, _("%(count)s étape(s) du catalogue importée(s) pour ce chantier.") % {'count': count})
+    return redirect('projects:site_detail', unique_id=site.unique_id)
 
 
 # --- PROGRESS ---
