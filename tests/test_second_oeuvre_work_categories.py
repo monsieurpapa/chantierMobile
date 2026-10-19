@@ -12,6 +12,13 @@ WorkCategory's own docstring) — a single generic ratio would be
 misleading for fixture-count/cable-run/carpentry-dimension pricing, so
 those categories exist for a cabinet's own ratio rows, not a shipped
 default.
+
+This suite runs with --nomigrations (see pytest.ini), so RunPython seed
+migrations never execute on their own against the test database —
+TestSeededSecondOeuvreRatios instead re-runs 0006's own seed_ratios()
+function directly against the real models, the same pattern already
+used by tests/test_stock_and_material_workflow.py's
+TestValidatedStatusMigratedForward for materials/migrations/0012.
 """
 from decimal import Decimal
 
@@ -20,6 +27,19 @@ import pytest
 from pricing.models import PriceLibraryItem, DQE, DQELine, MaterialConsumptionRatio
 from materials.models import Material
 from chantiermobile.constants import PriceItemType, WorkCategory, DQEStatus
+
+
+class _FakeApps:
+    """Minimal stand-in for the historical `apps` migrations receive —
+    --nomigrations means there's no real historical state to fetch, so
+    this just hands the migration function the real, current models."""
+    _models = {
+        ('materials', 'Material'): Material,
+        ('pricing', 'MaterialConsumptionRatio'): MaterialConsumptionRatio,
+    }
+
+    def get_model(self, app_label, model_name):
+        return self._models[(app_label, model_name)]
 
 
 @pytest.fixture
@@ -49,6 +69,19 @@ class TestSecondOeuvreWorkCategoriesExist:
 
 @pytest.mark.django_db
 class TestSeededSecondOeuvreRatios:
+    """Re-runs 0006_seed_second_oeuvre_ratios's real seed_ratios()
+    function (see _FakeApps above) rather than assuming migration data
+    is already present — this suite runs with --nomigrations, so that
+    data is never actually seeded by the migration framework itself."""
+
+    @pytest.fixture(autouse=True)
+    def _run_seed_migration(self, db):
+        import importlib
+        migration_module = importlib.import_module(
+            'pricing.migrations.0006_seed_second_oeuvre_ratios'
+        )
+        migration_module.seed_ratios(_FakeApps(), None)
+
     def test_peinture_ratio_is_seeded_as_a_global_default(self):
         peinture = Material.objects.get(name='Peinture')
         ratio = MaterialConsumptionRatio.objects.get(cabinet=None, work_category=WorkCategory.PEINTURE, material=peinture)
@@ -76,23 +109,37 @@ class TestSeededSecondOeuvreRatios:
 
 @pytest.mark.django_db
 class TestExplodedRequirementsForSecondOeuvre:
-    def test_peinture_work_item_explodes_via_seeded_ratio(self, cabinet, dqe):
+    """Exercises exploded_requirements() against locally-created ratios
+    (same convention as test_devis_material_comparison.py's ciment_ratio
+    fixture) — independent of whether 0006's seed migration has run, so
+    this correctness guarantee doesn't depend on migration machinery at
+    all, only on MaterialConsumptionRatio + WorkCategory themselves."""
+
+    def test_peinture_work_item_explodes_via_its_ratio(self, cabinet, dqe):
+        peinture = Material.objects.create(name='Peinture (test)', unit='L')
+        MaterialConsumptionRatio.objects.create(
+            cabinet=None, work_category=WorkCategory.PEINTURE, material=peinture,
+            ratio=Decimal('0.2000'), ratio_unit='L/m2',
+        )
         item = _work_item(cabinet, WorkCategory.PEINTURE, 'OUV-PEINT-2')
         line = DQELine.objects.create(dqe=dqe, price_item=item, designation='Peinture murs', quantity=Decimal('50'), unit_price=item.unit_price)
 
-        peinture = Material.objects.get(name='Peinture')
         exploded = line.exploded_requirements()
         assert exploded[peinture.id] == Decimal('50') * Decimal('0.2000')
 
     def test_revetements_work_item_explodes_into_all_three_materials(self, cabinet, dqe):
+        colle = Material.objects.create(name='Colle (test)', unit='kg')
+        joint = Material.objects.create(name='Joint (test)', unit='kg')
+        carreaux = Material.objects.create(name='Carreaux (test)', unit='m2')
+        for material, ratio in [(colle, '3.0000'), (joint, '0.3000'), (carreaux, '1.1000')]:
+            MaterialConsumptionRatio.objects.create(
+                cabinet=None, work_category=WorkCategory.REVETEMENTS, material=material,
+                ratio=Decimal(ratio), ratio_unit='x/m2',
+            )
         item = _work_item(cabinet, WorkCategory.REVETEMENTS, 'OUV-REV-1')
         line = DQELine.objects.create(dqe=dqe, price_item=item, designation='Carrelage séjour', quantity=Decimal('20'), unit_price=item.unit_price)
 
-        colle = Material.objects.get(name='Colle à carrelage')
-        joint = Material.objects.get(name='Joint de carrelage')
-        carreaux = Material.objects.get(name='Carreaux')
         exploded = line.exploded_requirements()
-
         assert exploded[colle.id] == Decimal('20') * Decimal('3.0000')
         assert exploded[joint.id] == Decimal('20') * Decimal('0.3000')
         assert exploded[carreaux.id] == Decimal('20') * Decimal('1.1000')

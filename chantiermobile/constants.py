@@ -186,7 +186,18 @@ class WorkCategory(models.TextChoices):
     into. Only meaningful for WORK_ITEM items — see
     PriceLibraryItem.clean()."""
     BETON = 'BETON', _('Béton (toutes classes de dosage)')
-    ACIER = 'ACIER', _('Acier / armatures')
+    # ACIER stays available as a generic/legacy catch-all (existing items
+    # already tagged with it keep working) but new structural steel items
+    # should use one of the differentiated sub-categories below (added
+    # 2026-10-19): a single ACIER ratio would otherwise sum semelles +
+    # poteaux + poutres + dalles reinforcement together in
+    # exploded_requirements(), when each has its own, very different
+    # kg-of-acier-per-m³-of-béton density in practice.
+    ACIER = 'ACIER', _('Acier / armatures (générique)')
+    ACIER_SEMELLES = 'ACIER_SEMELLES', _('Acier — semelles')
+    ACIER_POTEAUX = 'ACIER_POTEAUX', _('Acier — poteaux')
+    ACIER_POUTRES = 'ACIER_POUTRES', _('Acier — poutres')
+    ACIER_DALLES = 'ACIER_DALLES', _('Acier — dalles')
     COFFRAGE = 'COFFRAGE', _('Coffrage')
     MACONNERIE = 'MACONNERIE', _('Maçonnerie')
     # Second œuvre (added 2026-10-19, meeting-note backlog — client asked
