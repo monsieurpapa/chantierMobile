@@ -84,10 +84,41 @@
                 <div class="col-lg-4 ps-lg-2">
                     {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,CHIEF_ENGINEER' %}
                     <div class="card mb-3 border-0 shadow-sm">
-                        <div class="card-body p-3">
+                        <div class="card-body p-3 d-grid gap-2">
                             <a href="{% url 'pricing:dqe_update' dqe.pk %}" class="btn btn-outline-primary w-100">
                                 <i class="fas fa-edit me-1"></i>{% trans "Modifier" %}
                             </a>
+                            {% if dqe.status == 'DRAFT' or dqe.status == 'REJETE' %}
+                            <form method="post" action="{% url 'pricing:dqe_submit_for_approval' dqe.pk %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-info w-100">
+                                    <i class="fas fa-paper-plane me-1"></i>{% trans "Soumettre pour approbation" %}
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if dqe.status == 'EN_ATTENTE_APPROBATION' and request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL' %}
+                    <div class="card mb-3 border-0 shadow-sm">
+                        <div class="card-header bg-white border-bottom p-3">
+                            <h6 class="mb-0">{% trans "Approbation" %}</h6>
+                        </div>
+                        <div class="card-body d-grid gap-2">
+                            <form method="post" action="{% url 'pricing:dqe_approve' dqe.pk %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-success w-100">
+                                    <i class="fas fa-check me-1"></i>{% trans "Approuver" %}
+                                </button>
+                            </form>
+                            <form method="post" action="{% url 'pricing:dqe_reject' dqe.pk %}">
+                                {% csrf_token %}
+                                <textarea name="reason" class="form-control form-control-sm mb-2" rows="2" placeholder="{% trans 'Motif du rejet (facultatif)' %}"></textarea>
+                                <button type="submit" class="btn btn-outline-danger w-100">
+                                    <i class="fas fa-times me-1"></i>{% trans "Rejeter" %}
+                                </button>
+                            </form>
                         </div>
                     </div>
                     {% endif %}
@@ -119,15 +150,25 @@
                             <div class="row g-0 mb-2 pb-2 border-bottom">
                                 <div class="col-5 text-600 fw-semibold">{% trans "Statut :" %}</div>
                                 <div class="col-7">
-                                    {% if dqe.status == 'VALIDATED' %}
+                                    {% if dqe.status == 'VALIDATED' or dqe.status == 'APPROUVE' %}
                                     <span class="badge rounded-pill badge-subtle-success">{{ dqe.get_status_display }}</span>
                                     {% elif dqe.status == 'ARCHIVED' %}
                                     <span class="badge rounded-pill badge-subtle-secondary">{{ dqe.get_status_display }}</span>
+                                    {% elif dqe.status == 'REJETE' %}
+                                    <span class="badge rounded-pill badge-subtle-danger">{{ dqe.get_status_display }}</span>
+                                    {% elif dqe.status == 'EN_ATTENTE_APPROBATION' %}
+                                    <span class="badge rounded-pill badge-subtle-info">{{ dqe.get_status_display }}</span>
                                     {% else %}
                                     <span class="badge rounded-pill badge-subtle-warning">{{ dqe.get_status_display }}</span>
                                     {% endif %}
                                 </div>
                             </div>
+                            {% if dqe.status == 'REJETE' and dqe.rejection_reason %}
+                            <div class="row g-0 mb-2 pb-2 border-bottom">
+                                <div class="col-5 text-600 fw-semibold">{% trans "Motif du rejet :" %}</div>
+                                <div class="col-7 text-danger">{{ dqe.rejection_reason }}</div>
+                            </div>
+                            {% endif %}
                             <div class="row g-0 mb-2 pb-2 border-bottom">
                                 <div class="col-5 text-600 fw-semibold">{% trans "Créé le :" %}</div>
                                 <div class="col-7">{{ dqe.created_at|date:"d M Y - H:i" }}</div>

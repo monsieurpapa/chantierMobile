@@ -171,8 +171,20 @@ class PriceItemType(models.TextChoices):
 
 
 class DQEStatus(models.TextChoices):
-    """DQE (Détail Quantitatif Estimatif) status choices"""
+    """DQE (Détail Quantitatif Estimatif) status choices.
+
+    DRAFT/VALIDATED/ARCHIVED are the original, model-unenforced states
+    (DQE.clean() didn't validate transitions at all before 2026-10-19 —
+    DQEUpdateView could set any value freely). EN_ATTENTE_APPROBATION/
+    APPROUVE/REJETE (added 2026-10-19, "devis global" approval workflow
+    from the meeting-note backlog) are the richer, DG/Directeur Technique
+    sign-off workflow the client asked for: Brouillon → En attente
+    d'approbation → Approuvé | Rejeté, with DQE.clean() now enforcing the
+    transition table for every value below (see DQE.clean())."""
     DRAFT = 'DRAFT', _('Brouillon')
+    EN_ATTENTE_APPROBATION = 'EN_ATTENTE_APPROBATION', _("En attente d'approbation")
+    APPROUVE = 'APPROUVE', _('Approuvé')
+    REJETE = 'REJETE', _('Rejeté')
     VALIDATED = 'VALIDATED', _('Validé')
     ARCHIVED = 'ARCHIVED', _('Archivé')
 

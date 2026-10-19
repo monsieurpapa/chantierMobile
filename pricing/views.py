@@ -6,6 +6,8 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from django.contrib import messages
 from django.http import HttpResponseRedirect
+from django.shortcuts import get_object_or_404, redirect
+from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from .models import PriceLibraryItem, DQE, MaterialConsumptionRatio
 from .forms import (
@@ -15,14 +17,21 @@ from .forms import (
 from projects.models import Site
 from core.mixins import (
     CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin,
-    add_ambiguous_cabinet_field, get_session_cabinet,
+    add_ambiguous_cabinet_field, get_session_cabinet, can_act_for_cabinet,
 )
-from chantiermobile.constants import UserRoles, ApprovalStatus
+from chantiermobile.constants import UserRoles, ApprovalStatus, DQEStatus
 
 # Director-tier (plus CHIEF_ENGINEER, consistent with the rest of this
 # module) — who may edit the price library/DQE/ratio catalog and the
 # cabinet's material-variance thresholds.
 PRICING_ADMIN_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER']
+
+# Narrower than PRICING_ADMIN_ROLES — submitting a DQE for approval uses
+# PRICING_ADMIN_ROLES (same as editing it), but approving/rejecting it is
+# DG/Directeur Technique only (per the client's own "probablement DG ou
+# Directeur Technique" — meeting-note backlog, devis global approval
+# workflow), same director tier as DEVIS_ACTION_ROLES minus CHIEF_ENGINEER.
+DQE_APPROVAL_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL']
 
 # Kept as a module-local alias — relocated to core.mixins.add_ambiguous_cabinet_field
 # so finance/views.py (SalaryPaymentListCreateView) can reuse it too.
@@ -343,6 +352,59 @@ class DQEDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, Det
             {'title': _("DQE"), 'url': str(reverse_lazy('pricing:dqe_list'))},
             {'title': self.object.reference, 'url': None},
         ]
+
+
+@login_required
+def dqe_submit_for_approval(request, pk):
+    """DRAFT (or REJETE) -> EN_ATTENTE_APPROBATION. Role-gated to
+    PRICING_ADMIN_ROLES (same as who may edit the DQE) in the DQE's
+    cabinet — see DQE.submit_for_approval()."""
+    dqe = get_object_or_404(DQE, pk=pk)
+    if request.method == 'POST':
+        if not can_act_for_cabinet(request, dqe.cabinet, PRICING_ADMIN_ROLES):
+            messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+            return redirect('pricing:dqe_detail', pk=pk)
+        try:
+            dqe.submit_for_approval(changed_by=request.user)
+            messages.success(request, _("DQE soumis pour approbation."))
+        except ValidationError as e:
+            messages.error(request, str(e.message) if hasattr(e, 'message') else str(e))
+    return redirect('pricing:dqe_detail', pk=pk)
+
+
+@login_required
+def dqe_approve(request, pk):
+    """EN_ATTENTE_APPROBATION -> APPROUVE. Role-gated to
+    DQE_APPROVAL_ROLES (DG/Directeur Technique) in the DQE's cabinet."""
+    dqe = get_object_or_404(DQE, pk=pk)
+    if request.method == 'POST':
+        if not can_act_for_cabinet(request, dqe.cabinet, DQE_APPROVAL_ROLES):
+            messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+            return redirect('pricing:dqe_detail', pk=pk)
+        try:
+            dqe.approve(changed_by=request.user)
+            messages.success(request, _("DQE approuvé."))
+        except ValidationError as e:
+            messages.error(request, str(e.message) if hasattr(e, 'message') else str(e))
+    return redirect('pricing:dqe_detail', pk=pk)
+
+
+@login_required
+def dqe_reject(request, pk):
+    """EN_ATTENTE_APPROBATION -> REJETE, with an optional reason.
+    Role-gated to DQE_APPROVAL_ROLES (DG/Directeur Technique) in the
+    DQE's cabinet."""
+    dqe = get_object_or_404(DQE, pk=pk)
+    if request.method == 'POST':
+        if not can_act_for_cabinet(request, dqe.cabinet, DQE_APPROVAL_ROLES):
+            messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+            return redirect('pricing:dqe_detail', pk=pk)
+        try:
+            dqe.reject(changed_by=request.user, reason=request.POST.get('reason', ''))
+            messages.success(request, _("DQE rejeté."))
+        except ValidationError as e:
+            messages.error(request, str(e.message) if hasattr(e, 'message') else str(e))
+    return redirect('pricing:dqe_detail', pk=pk)
 
 
 @login_required

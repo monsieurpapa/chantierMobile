@@ -88,7 +88,11 @@ class DQE(BaseModel):
     site = models.ForeignKey(Site, on_delete=models.SET_NULL, null=True, blank=True, related_name='dqes', verbose_name=_('Chantier'))
     reference = models.CharField(max_length=100, verbose_name=_('Référence'), help_text=_('ex. DQE-2025-001'))
     title = models.CharField(max_length=255, verbose_name=_('Intitulé'))
-    status = models.CharField(max_length=20, choices=DQEStatus.choices, default=DQEStatus.DRAFT, verbose_name=_('Statut'))
+    status = models.CharField(max_length=30, choices=DQEStatus.choices, default=DQEStatus.DRAFT, verbose_name=_('Statut'))
+    rejection_reason = models.TextField(
+        blank=True, verbose_name=_('Motif de rejet'),
+        help_text=_("Renseigné par reject() — effacé si le DQE est de nouveau soumis puis approuvé."),
+    )
     notes = models.TextField(blank=True, verbose_name=_('Notes'))
 
     class Meta:
@@ -99,6 +103,89 @@ class DQE(BaseModel):
 
     def __str__(self):
         return f"{self.reference} - {self.title}"
+
+    def clean(self):
+        """Enforces DQEStatus's transition table (added 2026-10-19,
+        "devis global" approval workflow — before this, DQEUpdateView
+        could set any status freely, with no model-level check at all).
+        DRAFT can still go straight to the legacy VALIDATED/ARCHIVED
+        states, so existing flows that don't use the approval workflow
+        (or data saved before it existed) keep working unchanged."""
+        from django.core.exceptions import ValidationError
+        if self.pk:
+            original = DQE.objects.get(pk=self.pk)
+            valid_transitions = {
+                DQEStatus.DRAFT: [DQEStatus.EN_ATTENTE_APPROBATION, DQEStatus.VALIDATED, DQEStatus.ARCHIVED],
+                DQEStatus.EN_ATTENTE_APPROBATION: [DQEStatus.APPROUVE, DQEStatus.REJETE],
+                DQEStatus.APPROUVE: [DQEStatus.ARCHIVED],
+                # A REJETE DQE can go back to DRAFT for edits, or straight
+                # back to EN_ATTENTE_APPROBATION — submit_for_approval()
+                # accepts REJETE directly as a resubmission shortcut.
+                DQEStatus.REJETE: [DQEStatus.DRAFT, DQEStatus.EN_ATTENTE_APPROBATION],
+                DQEStatus.VALIDATED: [DQEStatus.ARCHIVED],
+                DQEStatus.ARCHIVED: [],
+            }
+            if original.status != self.status and original.status in valid_transitions:
+                if self.status not in valid_transitions[original.status]:
+                    raise ValidationError({
+                        'status': _('Impossible de passer le DQE de %(old)s à %(new)s.') % {
+                            'old': original.get_status_display(),
+                            'new': self.get_status_display(),
+                        }
+                    })
+
+    def submit_for_approval(self, changed_by=None):
+        """DRAFT (or REJETE, for a resubmission after fixes) ->
+        EN_ATTENTE_APPROBATION. Mirrors Devis.accept_and_create_contract()'s
+        audit-trail pattern (StatusChangeLog)."""
+        from django.core.exceptions import ValidationError
+        from core.models import StatusChangeLog
+        if self.status not in (DQEStatus.DRAFT, DQEStatus.REJETE):
+            raise ValidationError(_('Seul un DQE en brouillon (ou rejeté) peut être soumis pour approbation.'))
+        old_status = self.status
+        self.status = DQEStatus.EN_ATTENTE_APPROBATION
+        self.full_clean()
+        self.save()
+        StatusChangeLog.log(
+            self, changed_by=changed_by, old_status=old_status, new_status=self.status,
+            note=_('DQE soumis pour approbation.'),
+        )
+
+    def approve(self, changed_by=None):
+        """EN_ATTENTE_APPROBATION -> APPROUVE. Who may call this is
+        enforced by the view (DG/Directeur Technique — see
+        pricing.views.DQE_APPROVAL_ROLES), not here; this method only
+        validates the status transition itself."""
+        from django.core.exceptions import ValidationError
+        from core.models import StatusChangeLog
+        if self.status != DQEStatus.EN_ATTENTE_APPROBATION:
+            raise ValidationError(_("Seul un DQE en attente d'approbation peut être approuvé."))
+        old_status = self.status
+        self.status = DQEStatus.APPROUVE
+        self.rejection_reason = ''
+        self.full_clean()
+        self.save()
+        StatusChangeLog.log(
+            self, changed_by=changed_by, old_status=old_status, new_status=self.status,
+            note=_('DQE approuvé.'),
+        )
+
+    def reject(self, changed_by=None, reason=''):
+        """EN_ATTENTE_APPROBATION -> REJETE, recording why (optional —
+        matches MaterialRequest.reject()'s optional `notes`)."""
+        from django.core.exceptions import ValidationError
+        from core.models import StatusChangeLog
+        if self.status != DQEStatus.EN_ATTENTE_APPROBATION:
+            raise ValidationError(_("Seul un DQE en attente d'approbation peut être rejeté."))
+        old_status = self.status
+        self.status = DQEStatus.REJETE
+        self.rejection_reason = reason
+        self.full_clean()
+        self.save()
+        StatusChangeLog.log(
+            self, changed_by=changed_by, old_status=old_status, new_status=self.status,
+            note=reason or _('DQE rejeté.'),
+        )
 
     @property
     def total_amount(self):
