@@ -1,0 +1,126 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Mouvement de caisse" %} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    {% include 'includes/navbar-vertical.html' with on="caisse_list" %}
+
+    <div class="content">
+        {% include 'includes/navbar-top.html' %}
+
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            <div class="row g-3">
+                <div class="col-lg-8">
+                    <div class="card mb-3">
+                        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0">
+                                <span class="badge {% if tx.transaction_type == 'ENTREE' %}bg-success{% else %}bg-danger{% endif %} me-2">
+                                    {{ tx.get_transaction_type_display }}
+                                </span>
+                                {{ CURRENCY_SYMBOL }}{{ tx.amount|floatformat:2 }}
+                            </h6>
+                            {% if can_modify %}
+                            <a href="{% url 'finance:caisse_transaction_update' pk=tx.pk %}" class="btn btn-falcon-default btn-sm">
+                                <i class="fas fa-pen me-1"></i>{% trans "Modifier" %}
+                            </a>
+                            {% endif %}
+                        </div>
+                        <div class="card-body">
+                            <dl class="row fs--1 mb-0">
+                                <dt class="col-sm-4">{% trans "Caisse" %}</dt>
+                                <dd class="col-sm-8"><a href="{% url 'finance:caisse_detail' pk=tx.caisse.pk %}">{{ tx.caisse.name }}</a></dd>
+
+                                <dt class="col-sm-4">{% trans "Date" %}</dt>
+                                <dd class="col-sm-8">{{ tx.date|date:"d/m/Y" }}</dd>
+
+                                <dt class="col-sm-4">{% trans "Chantier" %}</dt>
+                                <dd class="col-sm-8">{{ tx.site.name|default:tx.external_site_label|default:"—" }}</dd>
+
+                                <dt class="col-sm-4">{% trans "Étape" %}</dt>
+                                <dd class="col-sm-8">{{ tx.phase.name|default:"—" }}</dd>
+
+                                <dt class="col-sm-4">{% trans "Bénéficiaire" %}</dt>
+                                <dd class="col-sm-8">{{ tx.recipient|default:"—" }}</dd>
+
+                                <dt class="col-sm-4">{% trans "Catégorie" %}</dt>
+                                <dd class="col-sm-8">{{ tx.category.name|default:"—" }}</dd>
+
+                                <dt class="col-sm-4">{% trans "Description" %}</dt>
+                                <dd class="col-sm-8">{{ tx.description|default:"—" }}</dd>
+
+                                <dt class="col-sm-4">{% trans "État de besoin réglé" %}</dt>
+                                <dd class="col-sm-8">
+                                    {% if tx.material_request %}
+                                    <a href="{% url 'materials:request_detail' pk=tx.material_request.pk %}">{{ tx.material_request }}</a>
+                                    {% elif tx.expense.material_request %}
+                                    <a href="{% url 'materials:request_detail' pk=tx.expense.material_request.pk %}">{{ tx.expense.material_request }}</a>
+                                    <span class="text-500 fs--2">({% trans "via la dépense liée" %})</span>
+                                    {% else %}—{% endif %}
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-paperclip me-2"></i>{% trans "Documents" %}</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3 fs--1">
+                                <div class="col-md-6">
+                                    <label class="text-600 fw-semibold d-block">{% trans "Justificatif / Facture" %}</label>
+                                    {% if tx.proof %}
+                                    <a href="{{ tx.proof.url }}" target="_blank" rel="noopener"><i class="fas fa-file me-1"></i>{% trans "Ouvrir" %}</a>
+                                    {% else %}<span class="text-500">{% trans "Aucun document." %}</span>{% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="text-600 fw-semibold d-block">{% trans "Bon de réception" %}</label>
+                                    {% if tx.delivery_note %}
+                                    <a href="{{ tx.delivery_note.url }}" target="_blank" rel="noopener"><i class="fas fa-file me-1"></i>{% trans "Ouvrir" %}</a>
+                                    {% else %}<span class="text-500">{% trans "Aucun document." %}</span>{% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-signature me-2"></i>{% trans "Validation DG" %}</h6>
+                        </div>
+                        <div class="card-body">
+                            {% if tx.transaction_type != 'SORTIE' %}
+                            <p class="text-500 fs--1 mb-0">{% trans "Seules les sorties de caisse sont signées." %}</p>
+                            {% elif tx.is_dg_validated %}
+                            <p class="fs--1 mb-1"><i class="fas fa-check-circle text-success me-1"></i>{% trans "Signé" %}</p>
+                            <p class="fs--2 text-600 mb-0">{{ tx.dg_validated_by.get_full_name|default:tx.dg_validated_by.username }} — {{ tx.dg_validated_at|date:"d/m/Y H:i" }}</p>
+                            {% if can_sign_dg %}
+                            <form method="post" action="{% url 'finance:caisse_transaction_dg_sign' pk=tx.pk %}" class="mt-2">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-falcon-default btn-sm w-100">{% trans "Re-signer" %}</button>
+                            </form>
+                            {% endif %}
+                            {% else %}
+                            <p class="fs--1 text-600 mb-2"><i class="fas fa-hourglass-half me-1"></i>{% trans "Non signé." %}</p>
+                            {% if can_sign_dg %}
+                            <form method="post" action="{% url 'finance:caisse_transaction_dg_sign' pk=tx.pk %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-falcon-primary btn-sm w-100">{% trans "Signer (DG)" %}</button>
+                            </form>
+                            <p class="fs--2 text-500 mt-2 mb-0">{% trans "La signature peut se faire à tout moment, y compris après coup." %}</p>
+                            {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}

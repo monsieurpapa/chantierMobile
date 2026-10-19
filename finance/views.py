@@ -1194,6 +1194,58 @@ class CaisseTransactionUpdateView(LoginRequiredMixin, CabinetAccessMixin, PageHe
         return reverse_lazy('finance:caisse_detail', kwargs={'pk': self.caisse.pk})
 
 
+class CaisseTransactionDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, DetailView):
+    """"Workflow validation" (2026-10-19 spec item 11): one page per
+    mouvement showing its documents (justificatif/facture, bon de
+    réception), its linked état de besoin if any, and — for a SORTIE —
+    its DG/bureau-technique e-signature status, with a "Signer" action
+    for whoever holds FINAL_AUTHORIZATION_ROLES in the caisse's cabinet.
+    Before this, a CaisseTransaction had no page of its own: the proof
+    file could only be opened directly from the ledger table's paperclip
+    icon, with nowhere to see or do anything else about one movement."""
+    model = CaisseTransaction
+    template_name = 'finance/caisse_transaction_detail.html'
+    context_object_name = 'tx'
+    cabinet_lookup_field = 'caisse__cabinet'
+
+    def get_header_title(self):
+        return _("Mouvement du %(date)s") % {'date': self.object.date.strftime('%d/%m/%Y')}
+
+    def get_back_url(self):
+        return str(reverse_lazy('finance:caisse_detail', kwargs={'pk': self.object.caisse_id}))
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['can_manage'] = can_act_for_cabinet(self.request, self.object.caisse.cabinet, CAISSE_MANAGE_ROLES)
+        context['can_modify'] = context['can_manage'] and self.object.can_be_modified_by(self.request.user)
+        context['can_sign_dg'] = (
+            self.object.transaction_type == CaisseTransactionType.SORTIE
+            and can_act_for_cabinet(self.request, self.object.caisse.cabinet, FINAL_AUTHORIZATION_ROLES)
+        )
+        return context
+
+
+@login_required
+def caisse_transaction_dg_sign(request, pk):
+    """DG/bureau-technique e-signature on a SORTIE movement — see
+    CaisseTransaction.sign_by_dg(). Deliberately not restricted to recent
+    transactions: the client's spec explicitly allows signing well after
+    the fact ("signature rétroactive"), so this never blocks on the
+    movement's own date."""
+    tx = get_object_or_404(CaisseTransaction, pk=pk)
+    if request.method != 'POST':
+        return redirect('finance:caisse_transaction_detail', pk=pk)
+    if not can_act_for_cabinet(request, tx.caisse.cabinet, FINAL_AUTHORIZATION_ROLES):
+        messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+        return redirect('finance:caisse_transaction_detail', pk=pk)
+    try:
+        tx.sign_by_dg(request.user)
+        messages.success(request, _("Mouvement signé."))
+    except ValidationError as e:
+        messages.error(request, str(e))
+    return redirect('finance:caisse_transaction_detail', pk=pk)
+
+
 class CaisseTransactionDeleteView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, DeleteView):
     """Soft-deletes a single ledger entry. Caisse.balance is a live
     aggregate over non-deleted transactions, so nothing else needs to be

@@ -113,9 +113,22 @@
                                 {% if form.category.errors %}<div class="text-danger fs--2">{{ form.category.errors }}</div>{% endif %}
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label" for="{{ form.proof.id_for_label }}">{% trans "Justificatif (optionnel)" %}</label>
+                                <label class="form-label" for="{{ form.material_request.id_for_label }}">{% trans "État de besoin réglé (optionnel)" %}</label>
+                                {{ form.material_request }}
+                                {% if form.material_request.errors %}<div class="text-danger fs--2">{{ form.material_request.errors }}</div>{% endif %}
+                                <p class="fs--2 text-500 mb-0">{% trans "Si ce mouvement règle une demande de matériaux déjà enregistrée sur ce chantier." %}</p>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label" for="{{ form.proof.id_for_label }}">{% trans "Justificatif / Facture (optionnel)" %}</label>
                                 {{ form.proof }}
                                 {% if form.proof.errors %}<div class="text-danger fs--2">{{ form.proof.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="{{ form.delivery_note.id_for_label }}">{% trans "Bon de réception (optionnel)" %}</label>
+                                {{ form.delivery_note }}
+                                {% if form.delivery_note.errors %}<div class="text-danger fs--2">{{ form.delivery_note.errors }}</div>{% endif %}
                             </div>
                         </div>
                         <div class="mb-3">

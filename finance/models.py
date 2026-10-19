@@ -459,8 +459,36 @@ class CaisseTransaction(BaseModel):
         CaisseTransactionCategory, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='transactions', verbose_name=_('Catégorie'),
     )
-    proof = models.FileField(upload_to='caisse/proofs/', null=True, blank=True, verbose_name=_('Justificatif'))
+    proof = models.FileField(
+        upload_to='caisse/proofs/', null=True, blank=True, verbose_name=_('Justificatif'),
+        help_text=_("Facture, reçu ou autre pièce justificative de ce mouvement."),
+    )
     recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='caisse_transactions_recorded')
+    material_request = models.ForeignKey(
+        'materials.MaterialRequest', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='linked_caisse_transactions', verbose_name=_('État de besoin'),
+        help_text=_(
+            "L'état de besoin (demande de matériaux) que ce mouvement règle, quand il est saisi "
+            "manuellement plutôt que via le circuit Dépense habituel (voir Expense.pay(), qui lie "
+            "déjà automatiquement sa CaisseTransaction à l'état de besoin par expense.material_request "
+            "— ce champ ne concerne que le mouvement manuel). Facultatif."
+        ),
+    )
+    delivery_note = models.FileField(
+        upload_to='caisse/delivery_notes/', null=True, blank=True, verbose_name=_('Bon de réception'),
+        help_text=_("Bon de réception des matériaux/marchandises, si distinct du justificatif ci-dessus."),
+    )
+    dg_validated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='caisse_transactions_dg_validated', verbose_name=_('Signé (DG) par'),
+        help_text=_(
+            "Le DG (ou le bureau technique — DIRECTOR/DIRECTEUR_TECHNIQUE/DIRECTEUR_GENERAL, voir "
+            "FINAL_AUTHORIZATION_ROLES) qui a relu et signé cette sortie. La signature n'est pas une "
+            "condition préalable au décaissement : elle valide après coup un mouvement déjà "
+            "enregistré, y compris longtemps après (signature rétroactive — voir sign_by_dg())."
+        ),
+    )
+    dg_validated_at = models.DateTimeField(null=True, blank=True, verbose_name=_('Signé le'))
 
     class Meta:
         ordering = ['-date', '-created_at']
@@ -476,6 +504,25 @@ class CaisseTransaction(BaseModel):
         from django.core.exceptions import ValidationError
         if self.amount is not None and self.amount <= 0:
             raise ValidationError({'amount': _('Le montant doit être positif.')})
+
+    @property
+    def is_dg_validated(self):
+        return self.dg_validated_by_id is not None
+
+    def sign_by_dg(self, user):
+        """Records the DG/bureau-technique e-signature on this SORTIE
+        movement (2026-10-19 spec) — a review/validation action, not a
+        precondition for the money having already moved, so it can happen
+        well after the fact ("signature rétroactive"). Re-signing simply
+        overwrites who/when signed last; nothing blocks signing a
+        transaction more than once (e.g. after a later correction)."""
+        from django.core.exceptions import ValidationError
+        from django.utils import timezone as _tz
+        if self.transaction_type != CaisseTransactionType.SORTIE:
+            raise ValidationError(_("Seule une sortie de caisse peut être signée par le DG."))
+        self.dg_validated_by = user
+        self.dg_validated_at = _tz.now()
+        self.save(update_fields=['dg_validated_by', 'dg_validated_at', 'updated_at'])
 
     def can_be_modified_by(self, user):
         """Added 2026-10-06, permission table update: editing or deleting

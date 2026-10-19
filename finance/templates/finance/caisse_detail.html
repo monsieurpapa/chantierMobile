@@ -137,6 +137,7 @@
                                     <th class="text-end">{% trans "Montant" %}</th>
                                     <th class="text-end">{% trans "Solde" %}</th>
                                     <th>{% trans "Justificatif" %}</th>
+                                    <th></th>
                                     {% if can_manage %}<th></th>{% endif %}
                                 </tr>
                             </thead>
@@ -161,6 +162,9 @@
                                         <a href="{{ row.tx.proof.url }}" target="_blank" rel="noopener"><span class="fas fa-paperclip"></span></a>
                                         {% else %}—{% endif %}
                                     </td>
+                                    <td>
+                                        <a href="{% url 'finance:caisse_transaction_detail' pk=row.tx.pk %}" class="btn btn-link btn-sm p-0" aria-label="{% trans 'Voir le détail' %}" title="{% trans 'Voir le détail' %}"><span class="fas fa-eye"></span></a>
+                                    </td>
                                     {% if can_manage %}
                                     <td>
                                         {% if row.can_modify %}
@@ -174,7 +178,7 @@
                                     {% endif %}
                                 </tr>
                                 {% empty %}
-                                <tr><td colspan="11" class="text-center py-4 text-500">{% trans "Aucun mouvement pour cette période." %}</td></tr>
+                                <tr><td colspan="12" class="text-center py-4 text-500">{% trans "Aucun mouvement pour cette période." %}</td></tr>
                                 {% endfor %}
                             </tbody>
                         </table>

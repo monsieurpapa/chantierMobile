@@ -186,7 +186,7 @@ class CaisseTransactionForm(forms.ModelForm):
         model = CaisseTransaction
         fields = [
             'transaction_type', 'amount', 'date', 'description', 'site', 'external_site_label',
-            'phase', 'recipient', 'category', 'proof',
+            'phase', 'recipient', 'category', 'material_request', 'proof', 'delivery_note',
         ]
         widgets = {
             'transaction_type': forms.Select(attrs={'class': 'form-select'}),
@@ -198,7 +198,9 @@ class CaisseTransactionForm(forms.ModelForm):
             'phase': forms.Select(attrs={'class': 'form-select'}),
             'recipient': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('Qui a reçu / remis ce montant')}),
             'category': forms.Select(attrs={'class': 'form-select'}),
+            'material_request': forms.Select(attrs={'class': 'form-select'}),
             'proof': forms.FileInput(attrs={'class': 'form-control'}),
+            'delivery_note': forms.FileInput(attrs={'class': 'form-control'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -208,6 +210,7 @@ class CaisseTransactionForm(forms.ModelForm):
         self.fields['phase'].required = False
         self.fields['external_site_label'].required = False
         self.fields['category'].required = False
+        self.fields['material_request'].required = False
         self.fields['category'].queryset = CaisseTransactionCategory.objects.all()
         # Bétonnière-style caisses (manual_site_entry) serve external clients
         # who aren't in the system as a Site — show the free-text field
@@ -223,11 +226,27 @@ class CaisseTransactionForm(forms.ModelForm):
         if self.data.get('site'):
             from projects.models import Site
             site = Site.objects.filter(pk=self.data.get('site')).first()
+        elif self.caisse and self.caisse.site_id:
+            # A caisse with its own fixed site (e.g. a per-chantier caisse)
+            # always scopes to it, even before the form is bound — matches
+            # how the "Vue Financier" sidebar on this same page already
+            # scopes to self.caisse.site.
+            site = self.caisse.site
         if 'phase' in self.fields:
             if site:
                 self.fields['phase'].queryset = ProjectPhase.objects.filter(site=site).order_by('start_date')
             else:
                 self.fields['phase'].queryset = ProjectPhase.objects.none()
+        # L'état de besoin se choisit parmi celles du même chantier — pas de
+        # sens à proposer celles d'un autre site. Une demande déjà réglée
+        # via le circuit Dépense habituel (voir Expense.pay()) n'a besoin
+        # d'aucun lien manuel ici ; ce champ ne sert qu'au deuxième cas
+        # d'usage (saisie manuelle d'un mouvement sans passer par Expense).
+        from materials.models import MaterialRequest
+        if site:
+            self.fields['material_request'].queryset = MaterialRequest.objects.filter(site=site).order_by('-created_at')
+        else:
+            self.fields['material_request'].queryset = MaterialRequest.objects.none()
 
 
 class CaisseTransactionMaterialLineForm(forms.ModelForm):
