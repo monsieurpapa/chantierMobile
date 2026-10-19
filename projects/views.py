@@ -329,6 +329,139 @@ class SiteDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, De
         return context
 
 
+class SiteGanttView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, DetailView):
+    """Simple week-grid Gantt of a Site's planning (added 2026-10-19,
+    meeting-note backlog "Planification des travaux") — one row per
+    "tâche" (a sous-étape of a top-level ProjectPhase, matching the
+    PLANNING DES TRAVAUX sheet's étape > tâche numérotée structure; a
+    top-level phase with no sous-étapes of its own is shown as a single
+    task row instead, so every phase appears somewhere). Deliberately
+    adds no new model/fields: ProjectPhase already carries the task's
+    name and start_date/end_date, so this view only adds the time axis
+    on top of data that already exists — exactly what the client asked
+    for ("la planification ajoute seulement l'axe temporel à ce qui
+    existe déjà"). A task's "budget matériaux" is likewise not
+    duplicated here: it's the sum of the devis global/DQE lines already
+    pointing at that same ProjectPhase (DQELine.phase), per the client's
+    explicit instruction not to enter a second, disconnected amount.
+
+    Open to any authenticated member of the site's cabinet
+    (CabinetAccessMixin) — read-only, so no further role gate, same as
+    SiteDetailView."""
+    model = Site
+    template_name = 'projects/site_gantt.html'
+    context_object_name = 'site'
+    slug_field = 'unique_id'
+    slug_url_kwarg = 'unique_id'
+
+    #: Hard ceiling on the grid width so a site with a very distant
+    #: expected_end_date (or none at all) doesn't render an unusably
+    #: wide table — the client's own example used 16 weeks / 4 months.
+    MAX_WEEKS = 52
+    DEFAULT_WEEKS = 16
+
+    def get_back_url(self):
+        return str(reverse_lazy('projects:site_detail', kwargs={'unique_id': self.object.unique_id}))
+
+    def get_breadcrumb_items(self):
+        return [
+            {'title': _("Projets & Chantiers"), 'url': str(reverse_lazy('projects:site_list'))},
+            {'title': self.object.name, 'url': str(reverse_lazy('projects:site_detail', kwargs={'unique_id': self.object.unique_id}))},
+            {'title': _("Planning (Gantt)"), 'url': None},
+        ]
+
+    def get_context_data(self, **kwargs):
+        from datetime import timedelta
+        from django.db.models import Sum, F
+        from pricing.models import DQELine
+
+        context = super().get_context_data(**kwargs)
+        site = self.object
+
+        top_level_phases = list(
+            site.phases.filter(parent_phase__isnull=True)
+            .prefetch_related('sub_phases')
+            .order_by('start_date', 'id')
+        )
+        # Flatten to (top_level_phase, [task_phases]) pairs — a task is a
+        # sous-étape when any exist, otherwise the top-level phase stands
+        # in as its own single task row.
+        phase_groups = []
+        all_tasks = []
+        for phase in top_level_phases:
+            tasks = list(phase.sub_phases.all().order_by('start_date', 'id'))
+            if not tasks:
+                tasks = [phase]
+            phase_groups.append((phase, tasks))
+            all_tasks.extend(tasks)
+
+        # Budget matériaux per task phase — one aggregate query rather
+        # than N, matched back to each task below.
+        budgets_by_phase = {
+            row['phase_id']: row['total'] or 0
+            for row in DQELine.objects.filter(phase__in=all_tasks).values('phase_id').annotate(
+                total=Sum(F('quantity') * F('unit_price'))
+            )
+        }
+
+        # Grid date range: prefer the site's own dates, fall back to the
+        # earliest/latest task dates found, fall back to a flat
+        # DEFAULT_WEEKS window from today so the page still renders
+        # something useful with no dates at all yet.
+        dated_tasks = [t for t in all_tasks if t.start_date]
+        range_start = site.start_date or (min(t.start_date for t in dated_tasks) if dated_tasks else None)
+        range_end = site.expected_end_date or (
+            max((t.end_date or t.start_date) for t in dated_tasks) if dated_tasks else None
+        )
+        if not range_start:
+            from django.utils import timezone
+            range_start = timezone.localdate()
+        if not range_end or range_end < range_start:
+            range_end = range_start + timedelta(weeks=self.DEFAULT_WEEKS - 1)
+
+        total_weeks = max(1, -(-((range_end - range_start).days + 1) // 7))  # ceil division
+        total_weeks = min(total_weeks, self.MAX_WEEKS)
+
+        weeks = [
+            {'index': i, 'label': _("S%(n)s") % {'n': i + 1}, 'start': range_start + timedelta(weeks=i)}
+            for i in range(total_weeks)
+        ]
+
+        def week_span(task):
+            if not task.start_date:
+                return None
+            start_offset = (task.start_date - range_start).days // 7
+            if start_offset < 0 or start_offset >= total_weeks:
+                return None
+            end_date = task.end_date or task.start_date
+            end_offset = (end_date - range_start).days // 7
+            end_offset = min(end_offset, total_weeks - 1)
+            span = max(1, end_offset - start_offset + 1)
+            return {
+                'pre': range(start_offset),
+                'span': span,
+                'post': range(total_weeks - start_offset - span),
+            }
+
+        rows = []
+        for phase, tasks in phase_groups:
+            task_rows = []
+            for task in tasks:
+                task_rows.append({
+                    'phase': task,
+                    'is_own_phase_row': task.pk == phase.pk,
+                    'budget': budgets_by_phase.get(task.pk, 0),
+                    'grid': week_span(task),
+                })
+            rows.append({'phase': phase, 'tasks': task_rows})
+
+        context['weeks'] = weeks
+        context['rows'] = rows
+        context['total_weeks'] = total_weeks
+        context['grand_total_budget'] = sum(budgets_by_phase.values())
+        return context
+
+
 class SiteStructureUpdateView(LoginRequiredMixin, PageHeaderMixin, DetailView):
     """Fills in each of a Site's SiteLevel rows (height, murs, poutres,
     colonnes, dalle) — the rows themselves are never created or deleted

@@ -1,0 +1,97 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Planning (Gantt)" %} - {{ site.name }} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    {% include 'includes/navbar-vertical.html' with on="projects" %}
+
+    <div class="content">
+        {% include 'includes/navbar-top.html' %}
+
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom p-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div>
+                        <h5 class="mb-0"><i class="fas fa-stream text-primary me-2"></i>{% trans "Planning des travaux" %} — {{ site.name }}</h5>
+                        <p class="fs--1 text-600 mb-0">
+                            {% blocktrans with start=weeks.0.start count counter=total_weeks %}
+                            {{ counter }} semaine à partir du {{ start }}
+                            {% plural %}
+                            {{ counter }} semaines à partir du {{ start }}
+                            {% endblocktrans %}
+                        </p>
+                    </div>
+                    <div class="text-end">
+                        <p class="fs--2 text-500 text-uppercase fw-bold mb-1">{% trans "Budget matériaux total" %}</p>
+                        <h5 class="mb-0">{{ CURRENCY_SYMBOL }}{{ grand_total_budget|floatformat:2 }}</h5>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    {% if rows %}
+                    <div class="table-responsive">
+                        <table class="table table-bordered mb-0 gantt-table" style="font-size: 0.8rem;">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th style="min-width: 220px;">{% trans "Étape / Tâche" %}</th>
+                                    <th class="text-end" style="min-width: 110px;">{% trans "Budget" %}</th>
+                                    {% for week in weeks %}
+                                    <th class="text-center" style="min-width: 28px;" title="{{ week.start|date:'d M Y' }}">{{ week.label }}</th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for group in rows %}
+                                <tr class="bg-light">
+                                    <td colspan="{{ total_weeks|add:2 }}" class="fw-bold text-900">
+                                        {{ group.phase.name }}
+                                        {% if group.phase.is_closed %}
+                                        <span class="badge bg-secondary ms-1">{% trans "Clôturée" %}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% for row in group.tasks %}
+                                <tr>
+                                    <td{% if not row.is_own_phase_row %} class="ps-4"{% endif %}>
+                                        {% if not row.is_own_phase_row %}<i class="fas fa-angle-right text-500 me-1"></i>{% endif %}
+                                        {{ row.phase.name }}
+                                    </td>
+                                    <td class="text-end">{{ CURRENCY_SYMBOL }}{{ row.budget|floatformat:2 }}</td>
+                                    {% if row.grid %}
+                                        {% for i in row.grid.pre %}<td></td>{% endfor %}
+                                        <td colspan="{{ row.grid.span }}" class="gantt-bar {% cycle 'bg-primary' 'bg-info' 'bg-success' 'bg-warning' as barcolor %}" title="{{ row.phase.name }} ({{ row.phase.start_date|date:'d M Y' }} — {{ row.phase.end_date|date:'d M Y'|default:row.phase.start_date }})">&nbsp;</td>
+                                        {% for i in row.grid.post %}<td></td>{% endfor %}
+                                    {% else %}
+                                    <td colspan="{{ total_weeks }}" class="text-center text-500 fst-italic">{% trans "Non planifié (aucune date)" %}</td>
+                                    {% endif %}
+                                </tr>
+                                {% endfor %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="p-4 text-center text-600">
+                        <i class="fas fa-stream fa-2x mb-3 d-block"></i>
+                        {% trans "Aucune étape définie pour ce chantier — ajoutez des étapes (et éventuellement des sous-étapes) pour les voir apparaître ici." %}
+                        <div class="mt-3">
+                            <a class="btn btn-primary btn-sm" href="{% url 'projects:phase_create' site_id=site.unique_id %}">
+                                <span class="fas fa-plus me-1"></span>{% trans "Ajouter une étape" %}
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <p class="fs--2 text-500 mt-3">
+                <i class="fas fa-info-circle me-1"></i>
+                {% trans "Le budget matériaux de chaque tâche est la somme des lignes du devis global (DQE) rattachées à cette étape/sous-étape." %}
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
