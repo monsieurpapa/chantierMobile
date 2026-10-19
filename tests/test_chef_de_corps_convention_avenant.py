@@ -65,6 +65,22 @@ class TestTradeChoicesExtended:
         assert 'CHARPENTIER' in Trade.values
         assert 'SOUDEUR' in Trade.values
 
+    def test_coffreur_and_electronicien_are_valid_choices(self):
+        """Added 2026-10-19 — the client's chefs-de-corps reference list
+        (ACGT Congo meeting notes) named two trades the enumeration
+        didn't cover yet: Jean (Coffreur) and an électronicien in charge
+        of surveillance/réseaux, still to be hired at the time."""
+        from chantiermobile.constants import Trade
+        assert 'COFFREUR' in Trade.values
+        assert 'ELECTRONICIEN' in Trade.values
+
+    def test_personnel_can_be_saved_with_a_newly_added_trade(self, personnel_factory):
+        from chantiermobile.constants import Trade
+        coffreur = personnel_factory(first_name='Jean', last_name='Test', trade=Trade.COFFREUR)
+        electronicien = personnel_factory(first_name='Test', last_name='Electro', trade=Trade.ELECTRONICIEN)
+        assert coffreur.trade == Trade.COFFREUR
+        assert electronicien.trade == Trade.ELECTRONICIEN
+
 
 @pytest.mark.django_db
 class TestChefDeCorpsListView:

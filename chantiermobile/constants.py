@@ -325,8 +325,13 @@ class Trade(models.TextChoices):
     MACON = 'MACON', _('Maçon')
     MENUISIER = 'MENUISIER', _('Menuisier')
     FERRAILLEUR = 'FERRAILLEUR', _('Ferrailleur')
+    COFFREUR = 'COFFREUR', _('Coffreur')
     PLOMBIER = 'PLOMBIER', _('Plombier')
     ELECTRICIEN = 'ELECTRICIEN', _('Électricien')
+    # Added 2026-10-19 (meeting-note backlog, ACGT Congo chefs-de-corps
+    # reference list) — surveillance/réseaux is distinct from on-site
+    # wiring (ELECTRICIEN), hence its own trade rather than a synonym.
+    ELECTRONICIEN = 'ELECTRONICIEN', _('Électronicien (surveillance et réseaux)')
     AJUSTEUR = 'AJUSTEUR', _('Ajusteur')
     PEINTRE = 'PEINTRE', _('Peintre')
     VITRIER = 'VITRIER', _('Vitrier')
