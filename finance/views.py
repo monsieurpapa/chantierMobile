@@ -833,6 +833,12 @@ class CaisseCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin
     header_title = _("Nouvelle caisse")
     back_url = reverse_lazy('finance:caisse_list')
 
+    def get_breadcrumb_items(self):
+        return [
+            {'title': _("Caisses"), 'url': str(reverse_lazy('finance:caisse_list'))},
+            {'title': _("Nouvelle caisse"), 'url': None},
+        ]
+
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
         cabinet = self.get_user_cabinet()
@@ -860,6 +866,13 @@ class CaisseUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin
     allowed_roles = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'ACCOUNTANT']
     header_title = _("Modifier la caisse")
 
+    def get_breadcrumb_items(self):
+        return [
+            {'title': _("Caisses"), 'url': str(reverse_lazy('finance:caisse_list'))},
+            {'title': self.object.name, 'url': str(reverse_lazy('finance:caisse_detail', kwargs={'pk': self.object.pk}))},
+            {'title': _("Modifier"), 'url': None},
+        ]
+
     def get_back_url(self):
         return str(reverse_lazy('finance:caisse_detail', kwargs={'pk': self.object.pk}))
 
@@ -886,6 +899,12 @@ class CaisseDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, 
 
     def get_header_title(self):
         return self.object.name
+
+    def get_breadcrumb_items(self):
+        return [
+            {'title': _("Caisses"), 'url': str(reverse_lazy('finance:caisse_list'))},
+            {'title': self.object.name, 'url': None},
+        ]
 
     def get_back_url(self):
         return str(reverse_lazy('finance:caisse_list'))
@@ -1115,6 +1134,13 @@ class CaisseTransactionCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHea
     def get_back_url(self):
         return str(reverse_lazy('finance:caisse_detail', kwargs={'pk': self.caisse.pk}))
 
+    def get_breadcrumb_items(self):
+        return [
+            {'title': _("Caisses"), 'url': str(reverse_lazy('finance:caisse_list'))},
+            {'title': self.caisse.name, 'url': str(reverse_lazy('finance:caisse_detail', kwargs={'pk': self.caisse.pk}))},
+            {'title': _("Nouveau mouvement"), 'url': None},
+        ]
+
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['caisse'] = self.caisse
@@ -1176,6 +1202,13 @@ class CaisseTransactionUpdateView(LoginRequiredMixin, CabinetAccessMixin, PageHe
     def get_back_url(self):
         return str(reverse_lazy('finance:caisse_detail', kwargs={'pk': self.caisse.pk}))
 
+    def get_breadcrumb_items(self):
+        return [
+            {'title': _("Caisses"), 'url': str(reverse_lazy('finance:caisse_list'))},
+            {'title': self.caisse.name, 'url': str(reverse_lazy('finance:caisse_detail', kwargs={'pk': self.caisse.pk}))},
+            {'title': _("Modifier le mouvement"), 'url': None},
+        ]
+
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['caisse'] = self.caisse
@@ -1213,6 +1246,13 @@ class CaisseTransactionDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHe
 
     def get_back_url(self):
         return str(reverse_lazy('finance:caisse_detail', kwargs={'pk': self.object.caisse_id}))
+
+    def get_breadcrumb_items(self):
+        return [
+            {'title': _("Caisses"), 'url': str(reverse_lazy('finance:caisse_list'))},
+            {'title': self.object.caisse.name, 'url': str(reverse_lazy('finance:caisse_detail', kwargs={'pk': self.object.caisse_id}))},
+            {'title': self.get_header_title(), 'url': None},
+        ]
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -1301,6 +1341,12 @@ class CaisseLoanListView(LoginRequiredMixin, PageHeaderMixin, ListView):
     header_title = _("Prêts entre caisses")
     back_url = reverse_lazy('finance:caisse_list')
 
+    def get_breadcrumb_items(self):
+        return [
+            {'title': _("Caisses"), 'url': str(reverse_lazy('finance:caisse_list'))},
+            {'title': _("Prêts entre caisses"), 'url': None},
+        ]
+
     def get_queryset(self):
         qs = CaisseLoan.objects.select_related('lender_caisse', 'borrower_caisse').order_by('-date')
         user = self.request.user
@@ -1324,6 +1370,13 @@ class CaisseLoanCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixi
     success_url = reverse_lazy('finance:caisse_loan_list')
     header_title = _("Nouveau prêt entre caisses")
     back_url = reverse_lazy('finance:caisse_loan_list')
+
+    def get_breadcrumb_items(self):
+        return [
+            {'title': _("Caisses"), 'url': str(reverse_lazy('finance:caisse_list'))},
+            {'title': _("Prêts entre caisses"), 'url': str(reverse_lazy('finance:caisse_loan_list'))},
+            {'title': _("Nouveau prêt"), 'url': None},
+        ]
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
@@ -1445,6 +1498,12 @@ class CaisseReportView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, L
     header_title = _("Rapport de caisse (livre de caisse)")
     back_url = reverse_lazy('finance:caisse_list')
 
+    def get_breadcrumb_items(self):
+        return [
+            {'title': _("Caisses"), 'url': str(reverse_lazy('finance:caisse_list'))},
+            {'title': _("Rapport de caisse"), 'url': None},
+        ]
+
     def get_queryset(self):
         return _caisse_ledger_queryset(self.request)
 
@@ -1548,6 +1607,12 @@ class DGPayrollOverviewView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMix
     header_subtitle = _("Montants de convention versus montants réellement payés, par chantier et par étape")
     back_url = reverse_lazy('finance:caisse_list')
 
+    def get_breadcrumb_items(self):
+        return [
+            {'title': _("Caisses"), 'url': str(reverse_lazy('finance:caisse_list'))},
+            {'title': _("Vue DG — paiements personnel"), 'url': None},
+        ]
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         if self.request.user.is_superuser:
@@ -1625,6 +1690,12 @@ class PayrollListCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMix
     header_title = _("Nouvelle liste de paie")
     back_url = reverse_lazy('finance:payroll_list')
 
+    def get_breadcrumb_items(self):
+        return [
+            {'title': _("Listes de paie"), 'url': str(reverse_lazy('finance:payroll_list'))},
+            {'title': _("Nouvelle liste"), 'url': None},
+        ]
+
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
         user = self.request.user
@@ -1671,6 +1742,12 @@ class PayrollListDetailView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccess
 
     def get_back_url(self):
         return str(reverse_lazy('finance:payroll_list'))
+
+    def get_breadcrumb_items(self):
+        return [
+            {'title': _("Listes de paie"), 'url': str(reverse_lazy('finance:payroll_list'))},
+            {'title': str(self.object), 'url': None},
+        ]
 
     def get_header_actions(self):
         return [{
@@ -1754,6 +1831,13 @@ class PayrollListAllocateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderM
 
     def get_back_url(self):
         return str(reverse_lazy('finance:payroll_detail', kwargs={'pk': self.payroll_list.pk}))
+
+    def get_breadcrumb_items(self):
+        return [
+            {'title': _("Listes de paie"), 'url': str(reverse_lazy('finance:payroll_list'))},
+            {'title': str(self.payroll_list), 'url': str(reverse_lazy('finance:payroll_detail', kwargs={'pk': self.payroll_list.pk}))},
+            {'title': _("Allocation"), 'url': None},
+        ]
 
     def get_rows(self):
         # Main d'œuvre only — Ingénieurs & Staff are paid via SalaryPaymentList
@@ -1853,6 +1937,12 @@ class ConventionOverageListView(LoginRequiredMixin, RoleRequiredMixin, CabinetAc
     header_subtitle = _("Paiements à un Chef de corps au-delà du plafond de sa convention")
     back_url = reverse_lazy('finance:payroll_list')
 
+    def get_breadcrumb_items(self):
+        return [
+            {'title': _("Listes de paie"), 'url': str(reverse_lazy('finance:payroll_list'))},
+            {'title': _("Dépassements de convention"), 'url': None},
+        ]
+
     def get_queryset(self):
         return super().get_queryset().exclude(overage_note='').select_related(
             'personnel', 'assignment__site', 'assignment__phase', 'payroll_list__site',
@@ -1924,6 +2014,12 @@ class SalaryPaymentListListView(LoginRequiredMixin, RoleRequiredMixin, PageHeade
     header_title = _("Paie du personnel")
     header_subtitle = _("Ingénieurs & Staff — salaire mensuel fixe, hors chantier")
 
+    def get_breadcrumb_items(self):
+        return [
+            {'title': _("Listes de paie"), 'url': str(reverse_lazy('finance:payroll_list'))},
+            {'title': _("Ingénieurs & Staff"), 'url': None},
+        ]
+
     def get_queryset(self):
         qs = SalaryPaymentList.objects.select_related('cabinet', 'prepared_by').order_by('-created_at')
         user = self.request.user
@@ -1966,6 +2062,13 @@ class SalaryPaymentListCreateView(LoginRequiredMixin, RoleRequiredMixin, Cabinet
     header_title = _("Nouvelle liste — Ingénieurs & Staff")
     back_url = reverse_lazy('finance:salary_payment_list')
 
+    def get_breadcrumb_items(self):
+        return [
+            {'title': _("Listes de paie"), 'url': str(reverse_lazy('finance:payroll_list'))},
+            {'title': _("Ingénieurs & Staff"), 'url': str(reverse_lazy('finance:salary_payment_list'))},
+            {'title': _("Nouvelle liste"), 'url': None},
+        ]
+
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
         add_ambiguous_cabinet_field(self, form)
@@ -2002,6 +2105,13 @@ class SalaryPaymentListDetailView(LoginRequiredMixin, RoleRequiredMixin, Cabinet
 
     def get_back_url(self):
         return str(reverse_lazy('finance:salary_payment_list'))
+
+    def get_breadcrumb_items(self):
+        return [
+            {'title': _("Listes de paie"), 'url': str(reverse_lazy('finance:payroll_list'))},
+            {'title': _("Ingénieurs & Staff"), 'url': str(reverse_lazy('finance:salary_payment_list'))},
+            {'title': str(self.object), 'url': None},
+        ]
 
     def get_header_actions(self):
         return [{
@@ -2239,6 +2349,12 @@ class AvenantCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, 
     success_url = reverse_lazy('finance:avenant_list')
     header_title = _("Nouvel avenant")
     back_url = reverse_lazy('finance:avenant_list')
+
+    def get_breadcrumb_items(self):
+        return [
+            {'title': _("Avenants"), 'url': str(reverse_lazy('finance:avenant_list'))},
+            {'title': _("Nouvel avenant"), 'url': None},
+        ]
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)

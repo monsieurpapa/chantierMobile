@@ -178,7 +178,7 @@
                                     {% endif %}
                                 </tr>
                                 {% empty %}
-                                <tr><td colspan="12" class="text-center py-4 text-500">{% trans "Aucun mouvement pour cette période." %}</td></tr>
+                                <tr><td colspan="{% if can_manage %}12{% else %}11{% endif %}" class="text-center py-4 text-500">{% trans "Aucun mouvement pour cette période." %}</td></tr>
                                 {% endfor %}
                             </tbody>
                         </table>

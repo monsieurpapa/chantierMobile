@@ -65,8 +65,17 @@ class MaterialRequest(BaseModel):
     expense = models.OneToOneField('finance.Expense', on_delete=models.SET_NULL, null=True, blank=True, related_name='material_request')
 
     def __str__(self):
+        # Was hard-coded English ("Request #N - N items for <site>") even
+        # though every other screen in the app is French — went unnoticed
+        # while nothing rendered the bare object, but the new 2026-10-19
+        # Caisse "état de besoin" link (finance/templates/finance/
+        # caisse_transaction_detail.html, and the material_request <select>
+        # on caisse_transaction_form.html) now does, so it's user-facing.
         item_count = self.items.count()
-        return f"Request #{self.id} - {item_count} item{'s' if item_count != 1 else ''} for {self.site.name}"
+        item_label = _("article") if item_count == 1 else _("articles")
+        return _("État de besoin #%(id)s — %(count)d %(item_label)s (%(site)s)") % {
+            'id': self.id, 'count': item_count, 'item_label': item_label, 'site': self.site.name,
+        }
     
     def clean(self):
         """Requires at least one item — but only once the request already
