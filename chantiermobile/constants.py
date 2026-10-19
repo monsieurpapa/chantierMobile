@@ -189,6 +189,19 @@ class WorkCategory(models.TextChoices):
     ACIER = 'ACIER', _('Acier / armatures')
     COFFRAGE = 'COFFRAGE', _('Coffrage')
     MACONNERIE = 'MACONNERIE', _('Maçonnerie')
+    # Second œuvre (added 2026-10-19, meeting-note backlog — client asked
+    # for devis/DQE coverage to extend past structural gros œuvre). Not
+    # every second-œuvre trade gets a seeded ratio in
+    # 0006_seed_second_oeuvre_ratios: PLOMBERIE/ELECTRICITE/MENUISERIE
+    # pricing is catalog- and site-specific enough (fixture counts, cable
+    # runs, carpentry dimensions) that a single generic ratio would be
+    # more misleading than helpful — those stay available for a cabinet's
+    # own MaterialConsumptionRatio rows, with no global default seeded.
+    PLOMBERIE = 'PLOMBERIE', _('Plomberie')
+    ELECTRICITE = 'ELECTRICITE', _('Électricité')
+    MENUISERIE = 'MENUISERIE', _('Menuiserie')
+    PEINTURE = 'PEINTURE', _('Peinture')
+    REVETEMENTS = 'REVETEMENTS', _('Revêtements (carrelage, faïence)')
     AUTRE = 'AUTRE', _('Autre ouvrage')
 
 
