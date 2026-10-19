@@ -86,7 +86,12 @@
                                 {% for lform in lines_formset %}
                                 <div class="devis-line p-3 border rounded-3 border-200 mb-2">
                                     <div class="row g-2 align-items-end">
-                                        <div class="col-md-4">
+                                        <div class="col-md-3">
+                                            <label class="form-label fs--1 fw-semibold">{% trans "Étape" %}</label>
+                                            {{ lform.phase }}
+                                            {% if lform.phase.errors %}<div class="text-danger fs--2 mt-1">{{ lform.phase.errors }}</div>{% endif %}
+                                        </div>
+                                        <div class="col-md-3">
                                             <label class="form-label fs--1 fw-semibold">{% trans "Désignation" %}</label>
                                             {{ lform.designation }}
                                             {% if lform.designation.errors %}<div class="text-danger fs--2 mt-1">{{ lform.designation.errors }}</div>{% endif %}
@@ -187,6 +192,50 @@ document.addEventListener('DOMContentLoaded', function () {
         var initialDqeId = dqeSelect.value;
         if (siteSelect.value) loadDqesForSite(initialDqeId);
         siteSelect.addEventListener('change', function () { loadDqesForSite(null); });
+    }
+
+    // Scope every line's "Étape" picker to the picked chantier, same AJAX
+    // pattern as finance:site_phases_data / dqe_form.html.
+    function loadPhasesForLine(line, preselectId) {
+        var select = line.querySelector('.devis-line-phase');
+        if (!select || !siteSelect) return;
+        var siteId = siteSelect.value;
+        select.innerHTML = '';
+        var blank = document.createElement('option');
+        blank.value = '';
+        blank.textContent = '-- {% trans "Sélectionner" %} --';
+        select.appendChild(blank);
+        if (!siteId) return;
+        fetch('{% url "finance:site_phases_data" %}?site=' + encodeURIComponent(siteId), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            (data.results || []).forEach(function (item) {
+                var opt = document.createElement('option');
+                opt.value = item.id;
+                opt.textContent = item.text;
+                if (preselectId && String(item.id) === String(preselectId)) opt.selected = true;
+                select.appendChild(opt);
+            });
+        })
+        .catch(function (err) { console.error('Error loading phases for line:', err); });
+    }
+
+    function loadPhasesForAllLines(resetSelection) {
+        document.querySelectorAll('.devis-line').forEach(function (line) {
+            var select = line.querySelector('.devis-line-phase');
+            var preselectId = (!resetSelection && select) ? (select.getAttribute('data-initial') || select.value) : null;
+            loadPhasesForLine(line, preselectId);
+        });
+    }
+
+    document.querySelectorAll('.devis-line-phase').forEach(function (select) {
+        select.setAttribute('data-initial', select.value);
+    });
+    if (siteSelect) {
+        if (siteSelect.value) loadPhasesForAllLines(false);
+        siteSelect.addEventListener('change', function () { loadPhasesForAllLines(true); });
     }
 });
 </script>

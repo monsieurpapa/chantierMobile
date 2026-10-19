@@ -127,17 +127,39 @@ class DevisForm(forms.ModelForm):
 
 
 class DevisLineForm(forms.ModelForm):
-    """One priced line on a Devis; used as the form for DevisLineFormSet."""
+    """One priced line on a Devis; used as the form for DevisLineFormSet.
+    `phase` starts with an empty queryset and is rebuilt from the
+    submitted parent `site` on a POST (row forms share the parent's
+    unprefixed data) — same reasoning and pattern as DQELineForm's own
+    `phase` field, so a phase picked on a brand-new Devis isn't rejected
+    as an invalid choice."""
     class Meta:
         model = DevisLine
-        fields = ['designation', 'unit', 'quantity', 'unit_price_ht', 'order']
+        fields = ['phase', 'designation', 'unit', 'quantity', 'unit_price_ht', 'order']
         widgets = {
+            'phase': forms.Select(attrs={'class': 'form-select devis-line-phase'}),
             'designation': forms.TextInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.DESIGNATION}),
             'unit': forms.TextInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.MATERIAL_UNIT}),
             'quantity': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'unit_price_ht': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': FormPlaceholders.AMOUNT}),
             'order': forms.NumberInput(attrs={'class': 'form-control'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['phase'].required = False
+        from projects.models import ProjectPhase, Site
+        site = None
+        if self.data.get('site'):
+            site = Site.objects.filter(pk=self.data.get('site')).first()
+        elif self.instance and self.instance.pk and self.instance.devis_id:
+            site = self.instance.devis.site
+        if site is not None:
+            self.fields['phase'].queryset = ProjectPhase.objects.filter(site=site).order_by('start_date')
+        else:
+            # Populated live client-side once a site is picked — same
+            # "empty until scoped" shape as DQELineForm's own phase field.
+            self.fields['phase'].queryset = ProjectPhase.objects.none()
 
 
 # min_num/validate_min=True by default here — the create/update views

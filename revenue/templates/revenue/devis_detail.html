@@ -81,14 +81,41 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {% for line in devis.lines.all %}
+                                        {% for group in devis.lines_grouped_by_phase %}
+                                        {% if group.phase %}
+                                        <tr class="bg-200">
+                                            <td colspan="4" class="fw-bold">{{ group.phase.name }}</td>
+                                            <td class="text-end fw-bold">{{ CURRENCY_SYMBOL }}{{ group.subtotal_with_children|floatformat:2 }}</td>
+                                        </tr>
+                                        {% else %}
+                                        <tr class="bg-200">
+                                            <td colspan="5" class="fw-bold text-600">{% trans "Hors étape" %}</td>
+                                        </tr>
+                                        {% endif %}
+                                        {% for line in group.lines %}
                                         <tr>
-                                            <td>{{ line.designation }}</td>
+                                            <td class="ps-4">{{ line.designation }}</td>
                                             <td class="text-center">{{ line.unit }}</td>
                                             <td class="text-center">{{ line.quantity }}</td>
                                             <td class="text-end">{{ CURRENCY_SYMBOL }}{{ line.unit_price_ht|floatformat:2 }}</td>
                                             <td class="text-end fw-semi-bold">{{ CURRENCY_SYMBOL }}{{ line.total_ht|floatformat:2 }}</td>
                                         </tr>
+                                        {% endfor %}
+                                        {% for sub in group.sub_groups %}
+                                        <tr class="bg-100">
+                                            <td colspan="4" class="ps-4 fw-semi-bold text-600">{{ sub.phase.name }}</td>
+                                            <td class="text-end fw-semi-bold text-600">{{ CURRENCY_SYMBOL }}{{ sub.subtotal|floatformat:2 }}</td>
+                                        </tr>
+                                        {% for line in sub.lines %}
+                                        <tr>
+                                            <td class="ps-5">{{ line.designation }}</td>
+                                            <td class="text-center">{{ line.unit }}</td>
+                                            <td class="text-center">{{ line.quantity }}</td>
+                                            <td class="text-end">{{ CURRENCY_SYMBOL }}{{ line.unit_price_ht|floatformat:2 }}</td>
+                                            <td class="text-end fw-semi-bold">{{ CURRENCY_SYMBOL }}{{ line.total_ht|floatformat:2 }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                        {% endfor %}
                                         {% empty %}
                                         <tr><td colspan="5" class="text-center py-3 text-500">{% trans "Aucune ligne." %}</td></tr>
                                         {% endfor %}

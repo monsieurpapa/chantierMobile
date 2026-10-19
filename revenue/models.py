@@ -14,7 +14,7 @@ docs/architecture/overview.md#status-state-machines).
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from core.models import BaseModel
-from projects.models import Site
+from projects.models import Site, ProjectPhase
 from pricing.models import DQE
 from chantiermobile.constants import InvoiceStatus, PaymentMethod, DevisStatus, SituationStatus
 
@@ -258,6 +258,91 @@ class Devis(BaseModel):
     def total_items(self):
         return self.lines.count()
 
+    def lines_grouped_by_phase(self):
+        """Groups this devis' lines DPGF-style (lots/postes) for
+        `devis_detail.html`: one entry per top-level étape (in the order
+        it first appears among the lines), each carrying its own direct
+        lines plus a nested `sub_groups` list — one entry per sous-étape
+        tagged among its lines, same first-appearance ordering, one level
+        deep only (matching ProjectPhase.clean()'s own depth limit).
+        Lines with no phase land in one final group (`phase: None`),
+        always last regardless of where they first appear, so the
+        unassigned bucket never interrupts the detailed breakdown.
+
+        Each group/sub-group dict has: 'phase', 'lines', 'subtotal',
+        'subtotal_with_children', 'sub_groups'. For a top-level group,
+        `subtotal_with_children` is its own lines' subtotal plus every
+        one of its sub_groups' subtotals — mirroring
+        pricing.services' own top-level-rolls-up-its-sous-étapes rule for
+        the material-comparison report, so a devis and its source DQE
+        read the same way étape by étape. For the unassigned group and
+        for sub-groups, `subtotal_with_children` just equals `subtotal`.
+        """
+        NONE_KEY = object()
+        top_order = []
+        tops = {}
+
+        for line in self.lines.all():
+            phase = line.phase
+            if phase is None:
+                key, top_phase, sub_phase = NONE_KEY, None, None
+            elif phase.parent_phase_id:
+                top_phase, sub_phase = phase.parent_phase, phase
+                key = top_phase.pk
+            else:
+                top_phase, sub_phase = phase, None
+                key = phase.pk
+
+            if key not in tops:
+                tops[key] = {'phase': top_phase, 'lines': [], 'sub_order': [], 'subs': {}}
+                top_order.append(key)
+            bucket = tops[key]
+
+            if sub_phase is None:
+                bucket['lines'].append(line)
+            else:
+                if sub_phase.pk not in bucket['subs']:
+                    bucket['subs'][sub_phase.pk] = {'phase': sub_phase, 'lines': []}
+                    bucket['sub_order'].append(sub_phase.pk)
+                bucket['subs'][sub_phase.pk]['lines'].append(line)
+
+        def subtotal_of(lines):
+            return sum((l.total_ht for l in lines), 0)
+
+        groups = []
+        for key in top_order:
+            if key is NONE_KEY:
+                continue
+            bucket = tops[key]
+            own_subtotal = subtotal_of(bucket['lines'])
+            sub_groups = []
+            children_total = 0
+            for sub_key in bucket['sub_order']:
+                sub = bucket['subs'][sub_key]
+                sub_subtotal = subtotal_of(sub['lines'])
+                sub_groups.append({
+                    'phase': sub['phase'], 'lines': sub['lines'],
+                    'subtotal': sub_subtotal, 'subtotal_with_children': sub_subtotal,
+                    'sub_groups': [],
+                })
+                children_total += sub_subtotal
+            groups.append({
+                'phase': bucket['phase'], 'lines': bucket['lines'],
+                'subtotal': own_subtotal, 'subtotal_with_children': own_subtotal + children_total,
+                'sub_groups': sub_groups,
+            })
+
+        if NONE_KEY in tops:
+            bucket = tops[NONE_KEY]
+            subtotal = subtotal_of(bucket['lines'])
+            groups.append({
+                'phase': None, 'lines': bucket['lines'],
+                'subtotal': subtotal, 'subtotal_with_children': subtotal,
+                'sub_groups': [],
+            })
+
+        return groups
+
     def accept_and_create_contract(self, changed_by=None):
         """Accept this Devis and create the Site's Contract from its total.
 
@@ -301,6 +386,15 @@ class DevisLine(BaseModel):
     """A single priced line item on a Devis (freeform, self-contained —
     mirrors DQELine's designation/unit/quantity/unit_price shape)."""
     devis = models.ForeignKey(Devis, on_delete=models.CASCADE, related_name='lines')
+    phase = models.ForeignKey(
+        ProjectPhase, on_delete=models.SET_NULL, null=True, blank=True, related_name='devis_lines',
+        verbose_name=_('Étape'),
+        help_text=_(
+            "L'étape (ou sous-étape) du chantier concernée par cette ligne — permet de présenter "
+            "le devis façon DPGF (lots/postes) et de comparer plus tard l'état de besoin à ce poste, "
+            "étape par étape."
+        ),
+    )
     order = models.PositiveIntegerField(default=0, verbose_name=_('Ordre'))
     designation = models.CharField(max_length=255, verbose_name=_('Désignation'))
     unit = models.CharField(max_length=20, verbose_name=_('Unité'))
@@ -315,12 +409,16 @@ class DevisLine(BaseModel):
 
     def clean(self):
         """Quantity must be strictly positive; unit price may be zero
-        (a free/included line item) but not negative."""
+        (a free/included line item) but not negative; a selected phase
+        must belong to the same site as the parent devis (mirrors
+        DQELine.clean()'s identical check)."""
         from django.core.exceptions import ValidationError
         if self.quantity is not None and self.quantity <= 0:
             raise ValidationError({'quantity': _('La quantité doit être positive.')})
         if self.unit_price_ht is not None and self.unit_price_ht < 0:
             raise ValidationError({'unit_price_ht': _('Le prix unitaire ne peut pas être négatif.')})
+        if self.phase_id and self.devis_id and self.devis.site_id and self.phase.site_id != self.devis.site_id:
+            raise ValidationError({'phase': _("L'étape sélectionnée n'appartient pas au chantier de ce devis.")})
 
     @property
     def total_ht(self):
