@@ -17,6 +17,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.views.generic import ListView, CreateView, UpdateView, DetailView, DeleteView, TemplateView
 from django.urls import reverse_lazy
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -351,6 +352,18 @@ class PersonnelDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixi
                 'class': 'btn-falcon-default'
             })
 
+        # Added 2026-10-19 (meeting-note backlog, section Ingénieurs):
+        # "DG doit pouvoir... extraire ce profil entier en PDF" — scoped
+        # to director-tier and to an actual ingénieur (payroll_type),
+        # matching the client's literal "chaque ingénieur" wording.
+        if is_director and self.object.payroll_type == PersonnelPayrollType.INGENIEUR:
+            actions.append({
+                'label': _("Profil PDF"),
+                'url': str(reverse_lazy('personnel:personnel_profile_pdf', kwargs={'unique_id': self.object.unique_id})),
+                'icon': 'file-pdf',
+                'class': 'btn-falcon-default',
+            })
+
         return actions
 
     def get_context_data(self, **kwargs):
@@ -655,6 +668,57 @@ class PersonnelEvaluationCreateView(LoginRequiredMixin, RoleRequiredMixin, PageH
         context = super().get_context_data(**kwargs)
         context['personnel'] = self.personnel
         return context
+
+
+# ---------------------------------------------------------------------
+# Profil PDF (Ingénieurs)
+# ---------------------------------------------------------------------
+
+@login_required
+def personnel_profile_pdf(request, unique_id):
+    """Full-profile PDF export for an ingénieur (added 2026-10-19,
+    meeting-note backlog, section Ingénieurs — "DG doit pouvoir... voir
+    le profil complet de chaque ingénieur : compétences et expérience...
+    extraire ce profil entier en PDF"). DIRECTOR_ROLES only, matching the
+    client's "DG" wording broadened to director-tier (same convention
+    used throughout this app — see e.g. HR_ADMIN_ROLES). Reuses
+    core.pdf_utils.render_table_report_pdf's generic "Champ / Valeur"
+    layout (same pattern as revenue.views.invoice_pdf) rather than adding
+    a second PDF renderer: skills, affectation history and cotation
+    history are each flattened into their own repeated-label rows."""
+    personnel = get_object_or_404(Personnel, unique_id=unique_id)
+    if not can_act_for_cabinet(request, personnel.cabinet, DIRECTOR_ROLES):
+        messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+        return redirect('personnel:personnel_detail', unique_id=personnel.unique_id)
+
+    from core.pdf_utils import render_table_report_pdf
+
+    rows = [
+        (_("Nom"), personnel.get_full_name()),
+        (_("Type"), personnel.get_personnel_type_display()),
+        (_("Catégorie"), personnel.get_category_display()),
+        (_("Statut"), personnel.get_status_display()),
+        (_("Compétences"), ', '.join(s.name for s in personnel.skills.all()) or '—'),
+        (_("Expérience"), personnel.experience_notes or '—'),
+    ]
+    for assignment in personnel.assignments.select_related('site').order_by('-start_date'):
+        period = f"{assignment.start_date or '—'} → {assignment.end_date or _('en cours')}"
+        rows.append((_("Affectation"), f"{assignment.site.name} ({assignment.role or assignment.name or '—'}) — {period}"))
+    for evaluation in personnel.evaluations.select_related('phase').order_by('-created_at'):
+        rating = evaluation.note_chiffree if evaluation.note_chiffree is not None else evaluation.get_mention_qualitative_display()
+        rows.append((
+            _("Cotation — %(phase)s (%(date)s)") % {'phase': evaluation.phase.name, 'date': evaluation.created_at.strftime('%d/%m/%Y')},
+            f"{rating} — {evaluation.observation}",
+        ))
+
+    return render_table_report_pdf(
+        filename=f"profil-{personnel.unique_id}.pdf",
+        title=_("Profil ingénieur — %(name)s") % {'name': personnel.get_full_name()},
+        subtitle=personnel.cabinet.name,
+        columns=[_("Champ"), _("Valeur")],
+        rows=rows,
+        generated_by=request.user.get_full_name() or request.user.username,
+    )
 
 
 # ---------------------------------------------------------------------

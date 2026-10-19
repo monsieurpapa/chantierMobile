@@ -27,6 +27,9 @@ urlpatterns = [
     # Cotation / évaluation par étape
     path('staff/<uuid:unique_id>/evaluations/add/', views.PersonnelEvaluationCreateView.as_view(), name='evaluation_create'),
 
+    # Profil PDF (Ingénieurs)
+    path('staff/<uuid:unique_id>/profil.pdf', views.personnel_profile_pdf, name='personnel_profile_pdf'),
+
     # Dossier (documents)
     path('staff/<uuid:unique_id>/documents/add/', views.PersonnelDocumentCreateView.as_view(), name='document_create'),
     path('documents/<int:pk>/delete/', views.PersonnelDocumentDeleteView.as_view(), name='document_delete'),

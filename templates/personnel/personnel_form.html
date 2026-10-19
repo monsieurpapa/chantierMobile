@@ -93,6 +93,17 @@
                             {% endif %}
                         </div>
 
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ form.experience_notes.id_for_label }}">{% trans "Compétences et expérience" %}</label>
+                            {{ form.experience_notes }}
+                            <p class="fs--2 text-500">{% trans "Diplômes, expérience professionnelle... (utilisé pour le profil PDF des ingénieurs)." %}</p>
+                            {% if form.experience_notes.errors %}
+                            <div class="text-danger fs--2">
+                                {{ form.experience_notes.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+
                         <div class="row mb-3">
                             <div class="col-md-4">
                                 <label class="form-label" for="{{ form.default_daily_rate.id_for_label }}">{% trans "Tarif journalier ($)" %}</label>

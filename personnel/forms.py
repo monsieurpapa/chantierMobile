@@ -17,7 +17,7 @@ class PersonnelForm(forms.ModelForm):
         model = Personnel
         fields = [
             'first_name', 'last_name', 'personnel_type', 'category', 'trade', 'status', 'payroll_type',
-            'is_chef_de_corps', 'skills', 'default_daily_rate', 'monthly_salary', 'user',
+            'is_chef_de_corps', 'skills', 'experience_notes', 'default_daily_rate', 'monthly_salary', 'user',
         ]
         widgets = {
             'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.FIRST_NAME}),
@@ -32,6 +32,7 @@ class PersonnelForm(forms.ModelForm):
                 create_url_name='personnel:skill_quick_create',
                 placeholder=_('Sélectionner ou ajouter une compétence...'),
             ),
+            'experience_notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': _("Compétences, diplômes, expérience professionnelle...")}),
             'default_daily_rate': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.AMOUNT}),
             'monthly_salary': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.AMOUNT}),
             'user': forms.Select(attrs={'class': 'form-select'}),

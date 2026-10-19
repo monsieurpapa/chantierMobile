@@ -85,6 +85,17 @@ class Personnel(BaseModel):
             "détermine la catégorie de décaissement sur la liste de paie."
         ),
     )
+    experience_notes = models.TextField(
+        blank=True, verbose_name=_('Compétences et expérience'),
+        help_text=_(
+            "Texte libre — added 2026-10-19 (meeting-note backlog, section Ingénieurs: "
+            "\"le DG doit pouvoir voir le profil complet de chaque ingénieur : compétences et "
+            "expérience\"). The client's own notes left open whether this should be structured "
+            "fields or free text already captured elsewhere (CV import, ...) — a single free-form "
+            "field is the reasonable default until that's confirmed; `skills` (the existing "
+            "many-to-many tag list) covers the structured side of \"compétences\" already."
+        ),
+    )
     is_chef_de_corps = models.BooleanField(
         default=False, verbose_name=_('Chef de corps'),
         help_text=_(
