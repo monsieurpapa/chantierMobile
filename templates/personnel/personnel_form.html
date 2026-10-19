@@ -140,17 +140,21 @@
                                 <div class="convention-row p-3 border rounded-3 border-200 mb-2" data-form-index="{{ forloop.counter0 }}">
                                     {% if cform.instance.pk %}{{ cform.id }}{% endif %}
                                     <div class="row g-2 align-items-end">
-                                        <div class="col-md-3">
+                                        <div class="col-md-2">
                                             <label class="form-label fs--1 fw-semibold">{% trans "Chantier" %}</label>
                                             {{ cform.site }}
                                         </div>
-                                        <div class="col-md-3">
+                                        <div class="col-md-2">
+                                            <label class="form-label fs--1 fw-semibold">{% trans "Portée" %}</label>
+                                            {{ cform.scope }}
+                                        </div>
+                                        <div class="col-md-3 convention-phase-field">
                                             <label class="form-label fs--1 fw-semibold">{% trans "Étape" %}</label>
                                             {{ cform.phase }}
                                             <input type="text" class="form-control mt-1 new-phase-input" name="{{ cform.new_phase_name.html_name }}" id="{{ cform.new_phase_name.id_for_label }}" placeholder="{% trans 'Nom de la nouvelle étape' %}" style="display:none;" value="{{ cform.new_phase_name.value|default_if_none:'' }}">
                                             <button type="button" class="btn btn-link btn-sm p-0 toggle-new-phase">{% trans "+ Nouvelle étape…" %}</button>
                                         </div>
-                                        <div class="col-md-3">
+                                        <div class="col-md-2">
                                             <label class="form-label fs--1 fw-semibold">{% trans "Nom de la convention" %}</label>
                                             {{ cform.name }}
                                         </div>
@@ -238,8 +242,27 @@ document.addEventListener('DOMContentLoaded', function () {
         phaseSelect.innerHTML = phaseOptionsHtml(siteSelect.value, currentValue);
     }
 
+    // "Chantier entier" covers the whole site, so the étape field (and
+    // "nouvelle étape" input) make no sense once that scope is picked —
+    // hide them and clear any value, matching ConventionForm.clean()'s
+    // own phase/new_phase_name clearing on the server side.
+    function applyScopeVisibility(row) {
+        const scopeSelect = row.querySelector('.convention-scope');
+        const phaseField = row.querySelector('.convention-phase-field');
+        if (!scopeSelect || !phaseField) return;
+        const wholesite = scopeSelect.value === 'CHANTIER_ENTIER';
+        phaseField.style.display = wholesite ? 'none' : '';
+        if (wholesite) {
+            const phaseSelect = row.querySelector('select[name$="-phase"]');
+            const newPhaseInput = row.querySelector('.new-phase-input');
+            if (phaseSelect) phaseSelect.value = '';
+            if (newPhaseInput) { newPhaseInput.value = ''; newPhaseInput.style.display = 'none'; }
+        }
+    }
+
     function setupRow(row) {
         const siteSelect = row.querySelector('select[name$="-site"]');
+        const scopeSelect = row.querySelector('.convention-scope');
         const toggleBtn = row.querySelector('.toggle-new-phase');
         const newPhaseInput = row.querySelector('.new-phase-input');
         const removeBtn = row.querySelector('.remove-convention');
@@ -247,6 +270,10 @@ document.addEventListener('DOMContentLoaded', function () {
         if (siteSelect) {
             siteSelect.classList.add('form-select');
             siteSelect.addEventListener('change', function () { refreshPhaseOptions(row); });
+        }
+        if (scopeSelect) {
+            scopeSelect.addEventListener('change', function () { applyScopeVisibility(row); });
+            applyScopeVisibility(row);
         }
         if (toggleBtn && newPhaseInput) {
             toggleBtn.addEventListener('click', function (e) {
@@ -295,17 +322,24 @@ document.addEventListener('DOMContentLoaded', function () {
         newRow.dataset.formIndex = newIndex;
         newRow.innerHTML = `
             <div class="row g-2 align-items-end">
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label class="form-label fs--1 fw-semibold">{% trans "Chantier" %}</label>
                     <select name="convention-${newIndex}-site" class="form-select">${siteOptionsHtml}</select>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
+                    <label class="form-label fs--1 fw-semibold">{% trans "Portée" %}</label>
+                    <select name="convention-${newIndex}-scope" class="form-select convention-scope">
+                        <option value="PAR_ETAPE" selected>{% trans "Par étape" %}</option>
+                        <option value="CHANTIER_ENTIER">{% trans "Chantier entier" %}</option>
+                    </select>
+                </div>
+                <div class="col-md-3 convention-phase-field">
                     <label class="form-label fs--1 fw-semibold">{% trans "Étape" %}</label>
                     <select name="convention-${newIndex}-phase" class="form-select"><option value="">-- {% trans "Sélectionner une étape" %} --</option></select>
                     <input type="text" class="form-control mt-1 new-phase-input" name="convention-${newIndex}-new_phase_name" placeholder="{% trans 'Nom de la nouvelle étape' %}" style="display:none;">
                     <button type="button" class="btn btn-link btn-sm p-0 toggle-new-phase">{% trans "+ Nouvelle étape…" %}</button>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label class="form-label fs--1 fw-semibold">{% trans "Nom de la convention" %}</label>
                     <input type="text" name="convention-${newIndex}-name" class="form-control">
                 </div>

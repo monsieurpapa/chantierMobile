@@ -302,6 +302,23 @@ class PersonnelStatus(models.TextChoices):
     NON_ELIGIBLE = 'NON_ELIGIBLE', _('Non éligible')
 
 
+class ConventionScope(models.TextChoices):
+    """How far a SiteAssignment convention's agreed amount/terms reach —
+    added 2026-10-19 (meeting-note backlog, "Types de convention"): the
+    client asked for an explicit par étape / chantier entier distinction,
+    since before this a convention's `phase` being set or blank was the
+    only (implicit, easy-to-miss) signal of scope — there was no way to
+    deliberately say "this convention covers the whole chantier" rather
+    than "nobody picked an étape yet". A convention row created through
+    the Personnel form's "Chantiers & conventions" section now always
+    sets one of these explicitly (ConventionForm defaults to PAR_ETAPE,
+    matching the form's pre-existing phase-required behavior); a plain
+    affectation (SiteAssignmentForm, no convention name) still leaves
+    this blank — scope is a convention-specific concept."""
+    PAR_ETAPE = 'PAR_ETAPE', _('Par étape')
+    CHANTIER_ENTIER = 'CHANTIER_ENTIER', _('Chantier entier')
+
+
 class PersonnelPayrollType(models.TextChoices):
     """Which payroll track a Personnel's payments fall under — the two are
     kept strictly separate, each with its own tab, workflow and caisse

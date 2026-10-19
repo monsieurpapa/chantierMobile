@@ -6,7 +6,7 @@ from django import forms
 from django.utils.translation import gettext_lazy as _
 from .models import Personnel, SiteAssignment, Skill, PersonnelDocument, Leave, Holiday, ConventionAvenant
 from projects.models import Site, ProjectPhase
-from chantiermobile.constants import FormPlaceholders, FormHelpTexts, DatePickerConfig
+from chantiermobile.constants import FormPlaceholders, FormHelpTexts, DatePickerConfig, ConventionScope
 from core.widgets import DynamicSelectWidget, DynamicSelectMultipleWidget
 
 class PersonnelForm(forms.ModelForm):
@@ -150,11 +150,13 @@ class SiteAssignmentForm(forms.ModelForm):
 class ConventionForm(forms.ModelForm):
     """One row of the Personnel form's dynamic "Chantiers & conventions"
     section — a lightweight SiteAssignment capturing only `site`, a
-    user-given convention `name`, the chantier `phase` (étape) it
-    belongs to, and the optional `convention_amount`. `role`/dates/
-    `daily_rate` are left unset (all optional at the model level) — a
-    convention entered here is not a full affectation, just a payroll-
-    facing note of what the person is owed for one task on one site.
+    user-given convention `name`, its `scope` (par étape / chantier
+    entier — added 2026-10-19), the chantier `phase` (étape) it belongs
+    to when scoped par étape, and the optional `convention_amount`.
+    `role`/dates/`daily_rate` are left unset (all optional at the model
+    level) — a convention entered here is not a full affectation, just a
+    payroll-facing note of what the person is owed for one task (or the
+    whole chantier) on one site.
 
     `new_phase_name` is not a model field: when set, the view resolves
     it via get-or-create (case-insensitive, scoped to `site`) instead of
@@ -171,9 +173,10 @@ class ConventionForm(forms.ModelForm):
 
     class Meta:
         model = SiteAssignment
-        fields = ['site', 'phase', 'name', 'convention_amount']
+        fields = ['site', 'scope', 'phase', 'name', 'convention_amount']
         widgets = {
             'site': forms.Select(attrs={'class': 'form-select'}),
+            'scope': forms.Select(attrs={'class': 'form-select convention-scope'}),
             'phase': forms.Select(attrs={'class': 'form-select'}),
             'name': forms.TextInput(attrs={
                 'class': 'form-control', 'placeholder': _("Nom de la convention, ex : Finition dalle bloc B"),
@@ -188,21 +191,36 @@ class ConventionForm(forms.ModelForm):
         self.fields['phase'].required = False
         self.fields['name'].required = False
         self.fields['convention_amount'].required = False
+        self.fields['scope'].required = False
+        # Matches the form's pre-existing behavior (phase required by
+        # default) for a brand-new row — the person can still switch it
+        # to "chantier entier" before submitting.
+        if not self.initial.get('scope') and not (self.instance and self.instance.pk):
+            self.initial['scope'] = ConventionScope.PAR_ETAPE
 
     def clean(self):
         """A row left entirely untouched (no site chosen) is treated as
         blank by the formset (see `ConventionFormSet`'s
         `can_delete_extra`/empty-form handling in the view) — but a row
-        where the user picked a site must also name the convention and
-        say which étape it's for, either by picking one or naming a new
-        one."""
+        where the user picked a site must also name the convention, and
+        — only when scoped par étape (the default) — say which étape
+        it's for, either by picking one or naming a new one. A
+        "chantier entier" convention skips the étape requirement
+        entirely and clears any phase/new_phase_name the user had
+        picked before switching scope, so the two stay consistent (see
+        SiteAssignment.clean())."""
         cleaned = super().clean()
         site = cleaned.get('site')
         if not site:
             return cleaned
         if not cleaned.get('name'):
             raise forms.ValidationError(_("Donnez un nom à cette convention."))
-        if not cleaned.get('phase') and not cleaned.get('new_phase_name'):
+        scope = cleaned.get('scope') or ConventionScope.PAR_ETAPE
+        cleaned['scope'] = scope
+        if scope == ConventionScope.CHANTIER_ENTIER:
+            cleaned['phase'] = None
+            cleaned['new_phase_name'] = ''
+        elif not cleaned.get('phase') and not cleaned.get('new_phase_name'):
             raise forms.ValidationError(_("Choisissez une étape existante ou nommez-en une nouvelle."))
         return cleaned
 

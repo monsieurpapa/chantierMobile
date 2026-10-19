@@ -16,7 +16,7 @@ from accounts.models import Cabinet, User
 from projects.models import Site
 from chantiermobile.constants import (
     PersonnelType, AgentCategory, PersonnelStatus, PersonnelPayrollType, Trade, LeaveType, ApprovalStatus,
-    AttendanceStatus,
+    AttendanceStatus, ConventionScope,
 )
 
 class Skill(BaseModel):
@@ -148,6 +148,15 @@ class SiteAssignment(BaseModel):
         related_name='conventions', verbose_name=_('Étape du chantier'),
         help_text=_("L'étape (ProjectPhase) du chantier à laquelle cette convention se rapporte."),
     )
+    scope = models.CharField(
+        max_length=20, choices=ConventionScope.choices, blank=True,
+        verbose_name=_('Portée de la convention'),
+        help_text=_(
+            "Par étape (cette convention porte sur une étape précise — voir `phase`) ou pour le "
+            "chantier entier. Laisser vide pour une affectation classique (sans nom de "
+            "convention) — ce champ ne s'applique qu'aux conventions."
+        ),
+    )
     role = models.CharField(
         max_length=100, blank=True,
         help_text=_("Specific role on this site, e.g. Chef d'équipe"), verbose_name=_('Role'),
@@ -197,7 +206,19 @@ class SiteAssignment(BaseModel):
         at save time — it does not check for overlapping date ranges
         against the same personnel's other assignments, so double-
         booking the same person to two sites on the same dates is
-        currently possible."""
+        currently possible.
+
+        Also blocks a CHANTIER_ENTIER convention from carrying a phase
+        (added 2026-10-19) — it covers the whole site, not one étape, so
+        the two are never both meaningful at once. The reverse (PAR_ETAPE
+        requiring a phase) is deliberately NOT checked here: it's
+        ConventionForm.clean()'s job instead, because
+        ConventionFormSetMixin.form_valid() resolves a brand-new
+        `new_phase_name` into a real ProjectPhase (get-or-create) only
+        *after* the formset already validated — at that validation point
+        a PAR_ETAPE row naming a new étape legitimately has no `phase`
+        yet, so enforcing the requirement here would reject it before
+        the view ever gets a chance to fill it in."""
         from django.core.exceptions import ValidationError
         # Validation logic for overlapping assignments could go here
         # For MVP, we'll enforce it in the form/view or simple clean method
@@ -206,6 +227,10 @@ class SiteAssignment(BaseModel):
                 'personnel': _(
                     "%(name)s n'est pas éligible (statut : %(status)s) et ne peut pas être affecté(e) à un chantier."
                 ) % {'name': self.personnel, 'status': self.personnel.get_status_display()},
+            })
+        if self.scope == ConventionScope.CHANTIER_ENTIER and self.phase_id:
+            raise ValidationError({
+                'scope': _("Une convention « chantier entier » ne doit pas être rattachée à une étape précise."),
             })
 
     def __str__(self):
