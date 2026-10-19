@@ -44,17 +44,22 @@
                         </div>
 
                         <div class="row mb-3">
-                            <div class="col-md-4">
+                            <div class="col-md-3">
+                                <label class="form-label" for="{{ form.personnel_type.id_for_label }}">{% trans "Type" %}</label>
+                                {{ form.personnel_type }}
+                                {% if form.personnel_type.errors %}<div class="text-danger fs--2">{{ form.personnel_type.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-3">
                                 <label class="form-label" for="{{ form.category.id_for_label }}">{% trans "Catégorie" %}</label>
                                 {{ form.category }}
                                 {% if form.category.errors %}<div class="text-danger fs--2">{{ form.category.errors }}</div>{% endif %}
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label class="form-label" for="{{ form.trade.id_for_label }}">{% trans "Fonction / Métier (ouvrier)" %}</label>
                                 {{ form.trade }}
                                 {% if form.trade.errors %}<div class="text-danger fs--2">{{ form.trade.errors }}</div>{% endif %}
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label class="form-label" for="{{ form.status.id_for_label }}">{% trans "Statut" %}</label>
                                 {{ form.status }}
                                 {% if form.status.errors %}<div class="text-danger fs--2">{{ form.status.errors }}</div>{% endif %}
