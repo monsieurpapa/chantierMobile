@@ -319,6 +319,23 @@ class ConventionScope(models.TextChoices):
     CHANTIER_ENTIER = 'CHANTIER_ENTIER', _('Chantier entier')
 
 
+class EvaluationMention(models.TextChoices):
+    """Qualitative rating scale for a PersonnelEvaluation — added
+    2026-10-19 (meeting-note backlog, "Évaluation du personnel par
+    étape"). The client's own note left the scale an open question
+    ("note chiffrée, mention qualitative, les deux ?"); the reasonable
+    default taken here is to support both at once on the same
+    evaluation — `note_chiffree` (0-20, the familiar French school
+    scale) for anyone who wants a number, and this qualitative mention
+    for anyone who doesn't — rather than forcing a single answer before
+    the client confirms. A standard 4-step satisfaction scale, closest
+    to common BTP/HR practice; revisit once the client picks one."""
+    INSUFFISANT = 'INSUFFISANT', _('Insuffisant')
+    MOYEN = 'MOYEN', _('Moyen')
+    BON = 'BON', _('Bon')
+    EXCELLENT = 'EXCELLENT', _('Excellent')
+
+
 class PersonnelPayrollType(models.TextChoices):
     """Which payroll track a Personnel's payments fall under — the two are
     kept strictly separate, each with its own tab, workflow and caisse

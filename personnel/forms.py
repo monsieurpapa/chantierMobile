@@ -4,7 +4,7 @@ views (personnel/views.py) — these forms handle widgets and the
 field-level validation each needs (e.g. Leave's date-range check)."""
 from django import forms
 from django.utils.translation import gettext_lazy as _
-from .models import Personnel, SiteAssignment, Skill, PersonnelDocument, Leave, Holiday, ConventionAvenant
+from .models import Personnel, SiteAssignment, Skill, PersonnelDocument, Leave, Holiday, ConventionAvenant, PersonnelEvaluation
 from projects.models import Site, ProjectPhase
 from chantiermobile.constants import FormPlaceholders, FormHelpTexts, DatePickerConfig, ConventionScope
 from core.widgets import DynamicSelectWidget, DynamicSelectMultipleWidget
@@ -261,6 +261,53 @@ class ConventionAvenantForm(forms.Form):
         if amount < 0:
             raise forms.ValidationError(_('Le montant ne peut pas être négatif.'))
         return amount
+
+
+class PersonnelEvaluationForm(forms.ModelForm):
+    """One cotation entered from a Personnel's detail page — `personnel`
+    and `evaluated_by` are set by the view, not this form. `phase`'s
+    queryset is narrowed to the evaluator's own cabinet, same pattern as
+    ConventionForm.phase.
+
+    GOTCHA (same timing issue already fixed once for ConventionForm /
+    SiteAssignment.clean() — see that model's docstring): a CreateView
+    only assigns `form.instance.personnel` in `form_valid()`, *after*
+    `is_valid()` has already run the model's own `clean()` — so by the
+    time PersonnelEvaluation.clean()'s site-history check would run,
+    `personnel_id` is still None and the check silently no-ops. The
+    `personnel` kwarg here lets this form do that same check itself,
+    with the right data, at the right time."""
+    class Meta:
+        model = PersonnelEvaluation
+        fields = ['phase', 'note_chiffree', 'mention_qualitative', 'observation']
+        widgets = {
+            'phase': forms.Select(attrs={'class': 'form-select'}),
+            'note_chiffree': forms.NumberInput(attrs={'class': 'form-control', 'min': 0, 'max': 20, 'placeholder': _('ex : 15')}),
+            'mention_qualitative': forms.Select(attrs={'class': 'form-select'}),
+            'observation': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': _("Observation sur la prestation à cette étape...")}),
+        }
+
+    def __init__(self, *args, cabinet=None, personnel=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._personnel = personnel
+        self.fields['phase'].queryset = ProjectPhase.objects.filter(site__cabinet=cabinet) if cabinet else ProjectPhase.objects.none()
+        self.fields['note_chiffree'].required = False
+        self.fields['mention_qualitative'].required = False
+
+    def clean(self):
+        """At-least-one-rating-dimension rule (mirrors
+        PersonnelEvaluation.clean(), which still applies this same rule
+        for any non-form creation path) plus the site-history check —
+        see the class docstring for why that one has to live here
+        rather than only on the model."""
+        cleaned = super().clean()
+        if cleaned.get('note_chiffree') is None and not cleaned.get('mention_qualitative'):
+            raise forms.ValidationError(_("Donnez au moins une note chiffrée ou une mention qualitative."))
+        phase = cleaned.get('phase')
+        if self._personnel and phase and phase.site_id:
+            if not self._personnel.assignments.filter(site_id=phase.site_id).exists():
+                self.add_error('phase', _("Cette personne n'a aucune affectation connue sur le chantier de cette étape."))
+        return cleaned
 
 
 class SkillForm(forms.ModelForm):

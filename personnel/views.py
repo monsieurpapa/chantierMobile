@@ -20,10 +20,10 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-from .models import Personnel, Skill, SiteAssignment, PersonnelDocument, Leave, Holiday, Attendance, ConventionAvenant
+from .models import Personnel, Skill, SiteAssignment, PersonnelDocument, Leave, Holiday, Attendance, ConventionAvenant, PersonnelEvaluation
 from .forms import (
     PersonnelForm, SiteAssignmentForm, SkillForm, PersonnelDocumentForm, LeaveForm, HolidayForm, ConventionFormSet,
-    ConventionAvenantForm,
+    ConventionAvenantForm, PersonnelEvaluationForm,
 )
 from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet, can_act_for_cabinet
 from core.quickcreate import QuickCreateView
@@ -350,8 +350,27 @@ class PersonnelDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixi
                 'icon': 'user-edit',
                 'class': 'btn-falcon-default'
             })
-        
+
         return actions
+
+    def get_context_data(self, **kwargs):
+        """Adds the cotation/observation history (added 2026-10-19,
+        "Évaluation du personnel par étape") — every PersonnelEvaluation
+        ever made for this worker, newest first, and the add-form for
+        whoever is allowed to cote (HR_ADMIN_ROLES, same tier as
+        "Modifier le profil" — see module docstring on PersonnelEvaluation
+        for the open "who else can cote" question)."""
+        context = super().get_context_data(**kwargs)
+        context['evaluations'] = self.object.evaluations.select_related('phase', 'phase__site', 'evaluated_by').all()
+        from accounts.models import UserCabinetRole
+        user = self.request.user
+        context['can_evaluate'] = user.is_superuser or UserCabinetRole.objects.filter(
+            user=user, role__in=HR_ADMIN_ROLES, status=ApprovalStatus.APPROVED,
+        ).exists()
+        if context['can_evaluate']:
+            context['evaluation_form'] = PersonnelEvaluationForm(cabinet=self.object.cabinet, personnel=self.object)
+        return context
+
 
 class PersonnelUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ConventionFormSetMixin, UpdateView):
     """Edits a Personnel profile. Director-tier, CHIEF_ENGINEER, or
@@ -581,6 +600,61 @@ class ConventionAvenantCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHea
             messages.success(request, _("Avenant enregistré."))
             return redirect('personnel:personnel_detail', unique_id=self.assignment.personnel.unique_id)
         return self.render_to_response(self.get_context_data(form=form))
+
+
+# ---------------------------------------------------------------------
+# Cotation / évaluation par étape
+# ---------------------------------------------------------------------
+
+class PersonnelEvaluationCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, CreateView):
+    """Records one cotation/observation for a worker at a given étape
+    (added 2026-10-19, "Évaluation du personnel par étape"). There is
+    deliberately no update/delete view here — see PersonnelEvaluation's
+    own docstring on why this is append-only. HR_ADMIN_ROLES (same tier
+    as "Modifier le profil"), pending the client confirming who else may
+    cote beyond the Ingénieur en Chef."""
+    model = PersonnelEvaluation
+    form_class = PersonnelEvaluationForm
+    template_name = 'personnel/evaluation_form.html'
+    allowed_roles = HR_ADMIN_ROLES
+    header_title = _("Nouvelle cotation")
+
+    def dispatch(self, request, *args, **kwargs):
+        self.personnel = get_object_or_404(Personnel, unique_id=kwargs['unique_id'])
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_role_cabinet(self):
+        return self.personnel.cabinet
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['cabinet'] = self.personnel.cabinet
+        kwargs['personnel'] = self.personnel
+        return kwargs
+
+    def get_back_url(self):
+        return str(reverse_lazy('personnel:personnel_detail', kwargs={'unique_id': self.personnel.unique_id}))
+
+    def get_breadcrumb_items(self):
+        return [
+            {'title': _("Ressources humaines"), 'url': str(reverse_lazy('personnel:personnel_list'))},
+            {'title': self.personnel.get_full_name(), 'url': self.get_back_url()},
+            {'title': _("Cotation"), 'url': None},
+        ]
+
+    def form_valid(self, form):
+        form.instance.personnel = self.personnel
+        form.instance.evaluated_by = self.request.user
+        messages.success(self.request, _("Cotation enregistrée."))
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse_lazy('personnel:personnel_detail', kwargs={'unique_id': self.personnel.unique_id})
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['personnel'] = self.personnel
+        return context
 
 
 # ---------------------------------------------------------------------

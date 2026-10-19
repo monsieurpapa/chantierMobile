@@ -24,6 +24,9 @@ urlpatterns = [
     path('assignments/add/', views.SiteAssignmentCreateView.as_view(), name='assignment_create'),
     path('assignments/<int:pk>/avenant/', views.ConventionAvenantCreateView.as_view(), name='convention_avenant_create'),
 
+    # Cotation / évaluation par étape
+    path('staff/<uuid:unique_id>/evaluations/add/', views.PersonnelEvaluationCreateView.as_view(), name='evaluation_create'),
+
     # Dossier (documents)
     path('staff/<uuid:unique_id>/documents/add/', views.PersonnelDocumentCreateView.as_view(), name='document_create'),
     path('documents/<int:pk>/delete/', views.PersonnelDocumentDeleteView.as_view(), name='document_delete'),

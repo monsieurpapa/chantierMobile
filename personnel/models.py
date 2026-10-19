@@ -10,13 +10,14 @@ rather than one generic payroll entity. See docs/modules/personnel.md
 for the full walkthrough.
 """
 from django.db import models, transaction
+from django.core.validators import MaxValueValidator
 from django.utils.translation import gettext_lazy as _
 from core.models import BaseModel
 from accounts.models import Cabinet, User
-from projects.models import Site
+from projects.models import Site, ProjectPhase
 from chantiermobile.constants import (
     PersonnelType, AgentCategory, PersonnelStatus, PersonnelPayrollType, Trade, LeaveType, ApprovalStatus,
-    AttendanceStatus, ConventionScope,
+    AttendanceStatus, ConventionScope, EvaluationMention,
 )
 
 class Skill(BaseModel):
@@ -414,3 +415,82 @@ class Attendance(BaseModel):
 
     def __str__(self):
         return f"{self.personnel} — {self.site} — {self.date} ({self.get_status_display()})"
+
+
+class PersonnelEvaluation(BaseModel):
+    """One cotation/observation of a worker's performance on a given
+    étape (gros œuvre) — added 2026-10-19 (meeting-note backlog,
+    "Évaluation du personnel par étape"). Deliberately **append-only**
+    from the UI (no update/delete view): the client's explicit ask was
+    an "historique des observations... pas un score unique écrasé à
+    chaque mise à jour" — every cotation made is its own row, kept
+    forever, rather than one mutable rating per (personnel, phase) pair.
+    `phase` is whichever étape or sous-étape ProjectPhase the observation
+    concerns (reusing the structure already in place, same as
+    SiteAssignment/DQELine) — not necessarily the worker's *current*
+    assignment, since an évaluation can reasonably be entered for an
+    étape the worker has since moved on from.
+
+    Scale (open question in the client's own notes — "note chiffrée,
+    mention qualitative, les deux ?"): both are supported, each
+    optional, so the evaluator can fill whichever fits; `clean()` only
+    requires that at least one rating dimension be given alongside the
+    observation text. Revisit once the client settles on one.
+
+    Who may cote (open question — "qui d'autre que l'Ingénieur en Chef
+    peut coter ?"): gated to HR_ADMIN_ROLES in the view (director-tier +
+    CHIEF_ENGINEER), the same tier already trusted to edit a Personnel
+    profile — not CHIEF_ENGINEER-only, pending client confirmation."""
+    personnel = models.ForeignKey(Personnel, on_delete=models.CASCADE, related_name='evaluations')
+    phase = models.ForeignKey(
+        ProjectPhase, on_delete=models.CASCADE, related_name='personnel_evaluations',
+        verbose_name=_('Étape'),
+        help_text=_("L'étape (ou sous-étape) de chantier concernée par cette cotation."),
+    )
+    note_chiffree = models.PositiveSmallIntegerField(
+        null=True, blank=True, verbose_name=_('Note (/20)'),
+        validators=[MaxValueValidator(20)],
+        help_text=_("Note chiffrée sur 20, facultative — laisser vide si seule la mention qualitative est utilisée."),
+    )
+    mention_qualitative = models.CharField(
+        max_length=20, choices=EvaluationMention.choices, blank=True,
+        verbose_name=_('Mention qualitative'),
+    )
+    observation = models.TextField(
+        verbose_name=_('Observation'),
+        help_text=_("Le commentaire de l'Ingénieur en Chef (ou autre évaluateur habilité) sur la prestation du travailleur à cette étape."),
+    )
+    evaluated_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name='personnel_evaluations_made',
+        verbose_name=_('Évalué par'),
+    )
+
+    class Meta:
+        verbose_name = _('Cotation du personnel')
+        verbose_name_plural = _('Cotations du personnel')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.personnel} — {self.phase.name} ({self.created_at:%Y-%m-%d})"
+
+    def clean(self):
+        """At least one rating dimension (numeric or qualitative) must
+        be given — an observation with neither isn't a cotation, just a
+        free-form note (which belongs elsewhere, e.g. a progress
+        comment). `note_chiffree`'s 0-20 range is already enforced by
+        its PositiveSmallIntegerField + MaxValueValidator below."""
+        from django.core.exceptions import ValidationError
+        if self.note_chiffree is None and not self.mention_qualitative:
+            raise ValidationError(_(
+                "Donnez au moins une note chiffrée ou une mention qualitative."
+            ))
+        if self.phase_id and self.personnel_id and self.phase.site_id:
+            # Not a hard requirement that the worker is (still) assigned
+            # to this site — an évaluation can outlive the assignment —
+            # but a phase from a site the worker has never set foot on
+            # at all is almost certainly a form mistake.
+            has_history = self.personnel.assignments.filter(site_id=self.phase.site_id).exists()
+            if not has_history:
+                raise ValidationError({
+                    'phase': _("Cette personne n'a aucune affectation connue sur le chantier de cette étape."),
+                })

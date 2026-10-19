@@ -207,6 +207,45 @@
                     </div>
 
                     <div class="card mb-3">
+                        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">{% trans "Cotations par étape" %}</h5>
+                            {% if can_evaluate %}
+                            <a class="btn btn-falcon-primary btn-sm" href="{% url 'personnel:evaluation_create' unique_id=personnel.unique_id %}">
+                                <span class="fas fa-plus me-1"></span>{% trans "Ajouter" %}
+                            </a>
+                            {% endif %}
+                        </div>
+                        <div class="card-body p-0">
+                            {% if evaluations %}
+                            <ul class="list-group list-group-flush fs--1">
+                                {% for evaluation in evaluations|slice:":10" %}
+                                <li class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <strong>{{ evaluation.phase.name }}</strong>
+                                        <span class="text-500">{{ evaluation.created_at|date:"d M Y" }}</span>
+                                    </div>
+                                    <div class="mb-1">
+                                        {% if evaluation.note_chiffree is not None %}
+                                        <span class="badge bg-primary me-1">{{ evaluation.note_chiffree }}/20</span>
+                                        {% endif %}
+                                        {% if evaluation.mention_qualitative %}
+                                        <span class="badge bg-info">{{ evaluation.get_mention_qualitative_display }}</span>
+                                        {% endif %}
+                                    </div>
+                                    <p class="mb-0 text-700">{{ evaluation.observation }}</p>
+                                    {% if evaluation.evaluated_by %}
+                                    <p class="fs--2 text-500 mb-0">{% trans "Par" %} {{ evaluation.evaluated_by.get_full_name|default:evaluation.evaluated_by.username }}</p>
+                                    {% endif %}
+                                </li>
+                                {% endfor %}
+                            </ul>
+                            {% else %}
+                            <p class="text-center py-3 mb-0">{% trans "Aucune cotation enregistrée." %}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="card mb-3">
                         <div class="card-header bg-light">
                             <h5 class="mb-0">{% trans "Tâches assignées" %}</h5>
                         </div>

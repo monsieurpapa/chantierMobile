@@ -1,0 +1,69 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Nouvelle cotation" %} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    <!-- vertical nav -->
+    {% include 'includes/navbar-vertical.html' with on="personnel" %}
+    <!-- /vertical nav -->
+
+    <div class="content">
+        <!-- navbar-top -->
+        {% include 'includes/navbar-top.html' %}
+        <!-- /navbar-top -->
+
+        <!-- Main Content -->
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+            <div class="card mb-3">
+                <div class="card-body bg-light">
+                    <p class="fs--1 text-600 mb-3">{% trans "Cotation de" %} <strong>{{ personnel.get_full_name }}</strong></p>
+                    <form method="post">
+                        {% csrf_token %}
+                        {% if form.non_field_errors %}<div class="text-danger fs--1 mb-2">{{ form.non_field_errors }}</div>{% endif %}
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ form.phase.id_for_label }}">{% trans "Étape" %}</label>
+                            {{ form.phase }}
+                            {% if form.phase.errors %}<div class="text-danger fs--2">{{ form.phase.errors }}</div>{% endif %}
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="{{ form.note_chiffree.id_for_label }}">{% trans "Note (/20)" %}</label>
+                                {{ form.note_chiffree }}
+                                {% if form.note_chiffree.errors %}<div class="text-danger fs--2">{{ form.note_chiffree.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="{{ form.mention_qualitative.id_for_label }}">{% trans "Mention" %}</label>
+                                {{ form.mention_qualitative }}
+                                {% if form.mention_qualitative.errors %}<div class="text-danger fs--2">{{ form.mention_qualitative.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ form.observation.id_for_label }}">{% trans "Observation" %}</label>
+                            {{ form.observation }}
+                            {% if form.observation.errors %}<div class="text-danger fs--2">{{ form.observation.errors }}</div>{% endif %}
+                        </div>
+                        <div class="col-12 d-flex justify-content-end gap-2">
+                            <a class="btn btn-falcon-default" href="{{ back_url }}">{% trans "Cancel" %}</a>
+                            <button class="btn btn-primary" type="submit">{% trans "Enregistrer" %}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <!-- Footer -->
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.querySelectorAll('input, select, textarea').forEach(el => {
+        if (!el.classList.contains('form-range')) el.classList.add('form-control');
+        if (el.tagName === 'SELECT') { el.classList.remove('form-control'); el.classList.add('form-select'); }
+    });
+</script>
+{% endblock %}
