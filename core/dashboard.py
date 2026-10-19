@@ -9,7 +9,8 @@ user sees only the cabinets they hold a UserCabinetRole on.
 Kept out of core/views.py so HomeView stays a thin wrapper and this logic
 can be unit-tested / reused (e.g. from a future API endpoint) on its own.
 """
-from datetime import timedelta
+import calendar as calendar_module
+from datetime import date, timedelta
 
 from django.db.models import Sum, Count, F, Q, DecimalField
 from django.db.models.functions import TruncMonth
@@ -18,15 +19,15 @@ from django.template.defaultfilters import floatformat
 from django.utils import timezone
 
 from core.mixins import get_session_cabinet
-from projects.models import Site
-from finance.models import Expense
+from projects.models import Site, ProjectPhase
+from finance.models import Expense, CaisseTransaction
 from personnel.models import Personnel
 from revenue.models import Devis, DevisLine, Invoice, Payment
 from procurement.models import PurchaseOrder, StockItem
 from tasks.models import Task
 from chantiermobile.constants import (
     SiteStatus, ExpenseStatus, DevisStatus, InvoiceStatus,
-    TaskStatus, PersonnelType, StatusBadgeClasses, UserRoles,
+    TaskStatus, PersonnelType, StatusBadgeClasses, UserRoles, CaisseTransactionType,
 )
 
 # Roles that legitimately need to see money on the dashboard (revenue,
@@ -423,4 +424,130 @@ def build_dashboard_context(request):
         # RBAC: whether this user's role(s) may see financial figures
         # (revenue, expenses, margin, invoices, budgets) on the dashboard.
         'can_view_financials': can_view_financials(request),
+    }
+
+
+def build_calendar_context(request):
+    """Builds the "Accueil" calendar widget's context (added 2026-10-19,
+    meeting-note backlog "Accueil et tableau de bord" — "l'écran
+    d'accueil doit afficher la liste des chantiers, avec une vue
+    calendrier où chaque date est cliquable"). Also returns the
+    "Chantiers" list the client asked for alongside it.
+
+    The client's own note left open whether this calendar should cover
+    only caisse movements or also planning tasks, suggesting both could
+    "cohabiter... avec un code couleur distinct" — the reasonable default
+    taken here is to show both: a caisse net amount (color-coded
+    green/red, financial-role-gated via can_view_financials) and a count
+    of planning tasks starting that day (operational, shown to everyone,
+    reusing the same ProjectPhase.start_date data the Gantt view reads —
+    see projects.views.SiteGanttView).
+
+    `request.GET['month']` (format YYYY-MM) picks which month to show;
+    defaults to the current month. Each day is a plain link to
+    home_day_detail rather than client-side JS, so the whole thing works
+    without a calendar JS library (none of this app's templates actually
+    wire one up — see FullCalendar being vendored but unused)."""
+    cabinet_ids = scoped_cabinet_ids(request)
+    today = timezone.localdate()
+
+    month_param = request.GET.get('month', '')
+    try:
+        year, month = (int(p) for p in month_param.split('-', 1))
+        first_of_month = date(year, month, 1)
+    except (ValueError, TypeError):
+        first_of_month = today.replace(day=1)
+
+    sites = _scope(Site.objects.all(), 'cabinet_id', cabinet_ids).order_by('name')
+    sites_list = [
+        {
+            'name': s.name,
+            'status': s.status,
+            'status_display': s.get_status_display(),
+            'location': s.location,
+            'url': reverse('projects:site_detail', kwargs={'unique_id': s.unique_id}),
+        }
+        for s in sites
+    ]
+
+    _, days_in_month = calendar_module.monthrange(first_of_month.year, first_of_month.month)
+    month_end = first_of_month.replace(day=days_in_month)
+
+    show_financials = can_view_financials(request)
+    caisse_by_day = {}
+    if show_financials:
+        caisse_qs = _scope(CaisseTransaction.objects.all(), 'caisse__cabinet_id', cabinet_ids).filter(
+            date__gte=first_of_month, date__lte=month_end,
+        )
+        rows = caisse_qs.values('date').annotate(
+            entree=Sum('amount', filter=Q(transaction_type=CaisseTransactionType.ENTREE)),
+            sortie=Sum('amount', filter=Q(transaction_type=CaisseTransactionType.SORTIE)),
+        )
+        for row in rows:
+            caisse_by_day[row['date']] = (row['entree'] or 0) - (row['sortie'] or 0)
+
+    tasks_qs = _scope(ProjectPhase.objects.all(), 'site__cabinet_id', cabinet_ids).filter(
+        start_date__gte=first_of_month, start_date__lte=month_end,
+    )
+    task_counts_by_day = dict(tasks_qs.values_list('start_date').annotate(n=Count('id')))
+
+    # Calendar.Calendar(firstweekday=0) yields Monday-first weeks, each a
+    # list of 7 dates, with days outside first_of_month's month padded in
+    # from the previous/next one (never None) — simplest way to always
+    # get full weeks for a clean grid.
+    cal = calendar_module.Calendar(firstweekday=0)
+    weeks = []
+    for week in cal.monthdatescalendar(first_of_month.year, first_of_month.month):
+        week_days = []
+        for day in week:
+            week_days.append({
+                'date': day,
+                'in_month': day.month == first_of_month.month,
+                'is_today': day == today,
+                'caisse_net': caisse_by_day.get(day),
+                'task_count': task_counts_by_day.get(day, 0),
+                'url': reverse('home_day_detail', kwargs={'day': day.isoformat()}),
+            })
+        weeks.append(week_days)
+
+    prev_month = (first_of_month - timedelta(days=1)).replace(day=1)
+    next_month = (month_end + timedelta(days=1))
+
+    return {
+        'calendar_sites': sites_list,
+        'calendar_weeks': weeks,
+        'calendar_month_label': _month_label(first_of_month),
+        'calendar_prev_month': prev_month.strftime('%Y-%m'),
+        'calendar_next_month': next_month.strftime('%Y-%m'),
+        'calendar_current_month': first_of_month.strftime('%Y-%m'),
+        'calendar_show_financials': show_financials,
+    }
+
+
+def build_day_detail_context(request, day):
+    """Context for the "opérations de ce jour" page a calendar day links
+    to — every CaisseTransaction and every ProjectPhase (task) starting
+    on `day`, both cabinet-scoped. Financial rows are omitted entirely
+    (not just hidden in the template) for a viewer can_view_financials
+    doesn't clear, same gating as the calendar widget itself."""
+    cabinet_ids = scoped_cabinet_ids(request)
+
+    show_financials = can_view_financials(request)
+    caisse_rows = []
+    if show_financials:
+        caisse_rows = list(
+            _scope(CaisseTransaction.objects.all(), 'caisse__cabinet_id', cabinet_ids)
+            .filter(date=day).select_related('caisse', 'site', 'category').order_by('-created_at')
+        )
+
+    task_rows = list(
+        _scope(ProjectPhase.objects.all(), 'site__cabinet_id', cabinet_ids)
+        .filter(start_date=day).select_related('site', 'parent_phase').order_by('site__name', 'name')
+    )
+
+    return {
+        'day': day,
+        'caisse_rows': caisse_rows,
+        'task_rows': task_rows,
+        'can_view_financials': show_financials,
     }

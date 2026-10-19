@@ -414,6 +414,77 @@
   </div>
 
   <!-- ============================================================ -->
+  <!-- Chantiers + Calendrier (added 2026-10-19, meeting-note backlog -->
+  <!-- "Accueil et tableau de bord") -->
+  <!-- ============================================================ -->
+  <div class="row g-3 mb-3">
+    <div class="col-lg-4">
+      <div class="card h-100">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+          <h6 class="mb-0"><i class="fas fa-building me-2 text-primary"></i>{% trans "Chantiers" %}</h6>
+          <a href="{% url 'projects:site_list' %}" class="fs--2">{% trans "Voir tout" %}</a>
+        </div>
+        <div class="card-body p-0" style="max-height: 420px; overflow-y: auto;">
+          {% if calendar_sites %}
+          <ul class="list-group list-group-flush fs--1">
+            {% for s in calendar_sites %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <a href="{{ s.url }}" class="text-800 hover-primary text-truncate me-2">{{ s.name }}</a>
+              <span class="badge rounded-pill fs--2 {% if s.status == 'ACTIVE' %}bg-success{% elif s.status == 'PAUSED' %}bg-warning{% elif s.status == 'COMPLETED' %}bg-secondary{% else %}bg-info{% endif %}">{{ s.status_display }}</span>
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <p class="text-center text-500 fs--1 py-5 mb-0"><i class="fas fa-inbox me-2"></i>{% trans "Aucun chantier." %}</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-8">
+      <div class="card h-100">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+          <h6 class="mb-0"><i class="fas fa-calendar-alt me-2 text-info"></i>{% trans "Calendrier" %} — {{ calendar_month_label }}</h6>
+          <div class="btn-group btn-group-sm">
+            <a class="btn btn-falcon-default" href="?month={{ calendar_prev_month }}"><i class="fas fa-chevron-left"></i></a>
+            <a class="btn btn-falcon-default" href="?month={{ calendar_next_month }}"><i class="fas fa-chevron-right"></i></a>
+          </div>
+        </div>
+        <div class="card-body p-2">
+          <table class="table table-bordered mb-0 fs--2" style="table-layout: fixed;">
+            <thead>
+              <tr class="text-center text-600">
+                <th>{% trans "Lun" %}</th><th>{% trans "Mar" %}</th><th>{% trans "Mer" %}</th>
+                <th>{% trans "Jeu" %}</th><th>{% trans "Ven" %}</th><th>{% trans "Sam" %}</th><th>{% trans "Dim" %}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for week in calendar_weeks %}
+              <tr>
+                {% for day in week %}
+                <td class="p-1 align-top {% if not day.in_month %}bg-100 text-400{% endif %} {% if day.is_today %}border-primary border-2{% endif %}" style="height: 64px;">
+                  <a href="{{ day.url }}" class="d-block text-decoration-none {% if day.in_month %}text-800{% else %}text-400{% endif %}">
+                    <div class="fw-bold">{{ day.date|date:"j" }}</div>
+                    {% if calendar_show_financials and day.caisse_net is not None %}
+                    <div class="fs--2 {% if day.caisse_net >= 0 %}text-success{% else %}text-danger{% endif %}">
+                      {% if day.caisse_net >= 0 %}+{% endif %}{{ day.caisse_net|floatformat:"0g" }}
+                    </div>
+                    {% endif %}
+                    {% if day.task_count %}
+                    <span class="badge rounded-pill bg-info fs--3">{{ day.task_count }} <i class="fas fa-stream"></i></span>
+                    {% endif %}
+                  </a>
+                </td>
+                {% endfor %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
   <!-- Watchlists -->
   <!-- ============================================================ -->
   <div class="row g-3 mb-3">

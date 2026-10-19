@@ -11,7 +11,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.utils.translation import gettext_lazy as _
-from core.dashboard import build_dashboard_context
+from core.dashboard import build_dashboard_context, build_calendar_context, build_day_detail_context
 from core.approvals import get_pending_approvals
 from core.search import global_search
 
@@ -20,12 +20,36 @@ class HomeView(LoginRequiredMixin, TemplateView):
     role restriction beyond cabinet scoping, enforced inside
     build_dashboard_context itself). What's shown (financial widgets vs.
     operational-only) depends on the viewer's role; see
-    core.dashboard.can_view_financials."""
+    core.dashboard.can_view_financials.
+
+    Also carries the "Chantiers" list + clickable calendar widget added
+    2026-10-19 (meeting-note backlog, "Accueil et tableau de bord") —
+    see core.dashboard.build_calendar_context."""
     template_name = 'home.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context.update(build_dashboard_context(self.request))
+        context.update(build_calendar_context(self.request))
+        return context
+
+
+class DayDetailView(LoginRequiredMixin, TemplateView):
+    """"Opérations de ce jour" — what a calendar day on the Accueil
+    dashboard links to (added 2026-10-19, same feature as HomeView's
+    calendar widget above): every caisse movement and every planning
+    task starting on that date, cabinet-scoped."""
+    template_name = 'core/day_detail.html'
+
+    def get_context_data(self, **kwargs):
+        from datetime import date as date_cls
+        from django.http import Http404
+        context = super().get_context_data(**kwargs)
+        try:
+            day = date_cls.fromisoformat(self.kwargs['day'])
+        except ValueError:
+            raise Http404("Date invalide.")
+        context.update(build_day_detail_context(self.request, day))
         return context
 
 

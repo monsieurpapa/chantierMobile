@@ -10,7 +10,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
 from core.views import (
-    HomeView, PendingApprovalsView, GlobalSearchView,
+    HomeView, DayDetailView, PendingApprovalsView, GlobalSearchView,
     NotificationListView, notification_open, notifications_mark_all_read,
 )
 from django.views.i18n import set_language
@@ -18,6 +18,7 @@ from django.views.i18n import set_language
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', HomeView.as_view(), name='home'),
+    path('jour/<str:day>/', DayDetailView.as_view(), name='home_day_detail'),
     path('approbations/', PendingApprovalsView.as_view(), name='pending_approvals'),
     path('recherche/', GlobalSearchView.as_view(), name='global_search'),
     path('notifications/', NotificationListView.as_view(), name='notifications_list'),
