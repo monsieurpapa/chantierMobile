@@ -34,6 +34,7 @@ urlpatterns = [
     path('caisses/<int:pk>/transfer/', views.caisse_transfer, name='caisse_transfer'),
     path('caisses/report/', views.CaisseReportView.as_view(), name='caisse_report'),
     path('caisses/report/pdf/', views.caisse_report_pdf, name='caisse_report_pdf'),
+    path('vue-dg-paiements/', views.DGPayrollOverviewView.as_view(), name='dg_payroll_overview'),
 
     # Prêts entre caisses
     path('caisse-loans/', views.CaisseLoanListView.as_view(), name='caisse_loan_list'),

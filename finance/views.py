@@ -45,7 +45,7 @@ from .forms import (
     PayrollDisburseForm, SalaryPaymentListForm, SalaryPaymentItemForm, AvenantForm, AvenantDecisionForm,
 )
 from projects.models import Site
-from personnel.models import SiteAssignment
+from personnel.models import SiteAssignment, Personnel
 from core.mixins import (
     CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet, can_act_for_cabinet,
     add_ambiguous_cabinet_field,
@@ -1019,10 +1019,86 @@ class MaterialLineFormSetMixin:
         return response
 
 
+def _personnel_payment_summary(cabinet_ids=None, site=None):
+    """"Vue Financier"/"Vue DG" shared aggregation (2026-10-19 spec item
+    10): cumulative montant-de-convention (plafond) vs. montant payé, for
+    every tracked convention (a SiteAssignment with convention_amount
+    set — a plain role-based affectation has nothing to reconcile here),
+    grouped by site then by étape (ProjectPhase). A convention with no
+    phase (scope=CHANTIER_ENTIER, or a classic affectation that happens to
+    carry a convention_amount) is grouped under a "Chantier entier" row
+    rather than dropped.
+
+    `paid_amount` reuses SiteAssignment's own property (itself a
+    `payroll_items.aggregate(Sum('amount'))`) rather than a fresh SQL
+    aggregation, so this always agrees with what the assignment detail
+    page and the convention-overage report already show — one convention
+    list per site is small enough that summing the property in Python
+    costs nothing noticeable.
+
+    `cabinet_ids=None` means "no cabinet filter" (superuser with no
+    active cabinet switched in, mirroring CaisseReportView's own
+    Site.objects.all() fallback) — ignored when `site` is given, since a
+    single site already identifies its cabinet unambiguously.
+
+    Returns a list of dicts, one per site with conventions:
+    {'site', 'phases': [{'phase', 'label', 'cap', 'paid', 'remaining'}],
+    'cap_total', 'paid_total', 'remaining_total'} — sorted by site name,
+    each site's phases sorted by label."""
+    qs = SiteAssignment.objects.select_related('site', 'phase').filter(convention_amount__isnull=False)
+    if site is not None:
+        qs = qs.filter(site=site)
+    elif cabinet_ids is not None:
+        qs = qs.filter(site__cabinet_id__in=cabinet_ids)
+
+    sites = {}
+    for assignment in qs:
+        site_entry = sites.setdefault(assignment.site_id, {
+            'site': assignment.site, 'phases': {}, 'cap_total': Decimal('0'), 'paid_total': Decimal('0'),
+        })
+        phase_key = assignment.phase_id or 'chantier_entier'
+        phase_entry = site_entry['phases'].setdefault(phase_key, {
+            'phase': assignment.phase, 'cap': Decimal('0'), 'paid': Decimal('0'),
+        })
+        cap = assignment.convention_amount or Decimal('0')
+        paid = Decimal(assignment.paid_amount or 0)
+        phase_entry['cap'] += cap
+        phase_entry['paid'] += paid
+        site_entry['cap_total'] += cap
+        site_entry['paid_total'] += paid
+
+    rows = []
+    for site_entry in sites.values():
+        phase_rows = [{
+            'phase': phase_entry['phase'],
+            'label': phase_entry['phase'].name if phase_entry['phase'] else str(_("Chantier entier")),
+            'cap': phase_entry['cap'],
+            'paid': phase_entry['paid'],
+            'remaining': phase_entry['cap'] - phase_entry['paid'],
+        } for phase_entry in site_entry['phases'].values()]
+        phase_rows.sort(key=lambda r: r['label'])
+        rows.append({
+            'site': site_entry['site'],
+            'phases': phase_rows,
+            'cap_total': site_entry['cap_total'],
+            'paid_total': site_entry['paid_total'],
+            'remaining_total': site_entry['cap_total'] - site_entry['paid_total'],
+        })
+    rows.sort(key=lambda r: r['site'].name)
+    return rows
+
+
 class CaisseTransactionCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, MaterialLineFormSetMixin, CreateView):
     """Manual ledger entry (entrée/sortie) on one caisse, scoped via
     get_role_cabinet() to that caisse's own cabinet. allowed_roles =
-    CAISSE_MANAGE_ROLES."""
+    CAISSE_MANAGE_ROLES.
+
+    Also shows a "Vue Financier" sidebar (2026-10-19 spec item 10):
+    cumulative paid-vs-convention totals for this caisse's own site, by
+    étape — see _personnel_payment_summary. A caisse with no fixed site
+    (external-client caisse) shows nothing here, since there's no single
+    site to scope the reconciliation to; use the cross-site "Vue DG" page
+    for that case instead."""
     model = CaisseTransaction
     form_class = CaisseTransactionForm
     template_name = 'finance/caisse_transaction_form.html'
@@ -1047,6 +1123,9 @@ class CaisseTransactionCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHea
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['caisse'] = self.caisse
+        context['personnel_payment_rows'] = (
+            _personnel_payment_summary(site=self.caisse.site) if self.caisse.site else []
+        )
         return context
 
     def form_valid(self, form):
@@ -1270,6 +1349,18 @@ def _caisse_ledger_queryset(request):
     if category_id:
         qs = qs.filter(category_id=category_id)
 
+    chef_de_corps_id = request.GET.get('chef_de_corps')
+    if chef_de_corps_id:
+        cdc = Personnel.objects.filter(pk=chef_de_corps_id, is_chef_de_corps=True).first()
+        if cdc:
+            # CaisseTransaction.recipient is free text with no FK to
+            # Personnel, so a Chef de corps filter can only be an
+            # approximate name match — not an exact join. Documented
+            # limitation (2026-10-19 spec): a recipient typed differently
+            # from Personnel.get_full_name() (nickname, typo, reversed
+            # name order) won't match.
+            qs = qs.filter(recipient__icontains=cdc.get_full_name())
+
     date_from = request.GET.get('date_from')
     date_to = request.GET.get('date_to')
     if date_from:
@@ -1322,10 +1413,15 @@ class CaisseReportView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, L
             active_cabinet = get_session_cabinet(self.request)
             context['caisses'] = Caisse.objects.filter(cabinet=active_cabinet) if active_cabinet else Caisse.objects.all()
             context['sites'] = Site.objects.filter(cabinet=active_cabinet) if active_cabinet else Site.objects.all()
+            context['chefs_de_corps'] = (
+                Personnel.objects.filter(cabinet=active_cabinet, is_chef_de_corps=True) if active_cabinet
+                else Personnel.objects.filter(is_chef_de_corps=True)
+            )
         else:
             user_cabinet_ids = self.request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
             context['caisses'] = Caisse.objects.filter(cabinet__id__in=user_cabinet_ids)
             context['sites'] = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
+            context['chefs_de_corps'] = Personnel.objects.filter(cabinet__id__in=user_cabinet_ids, is_chef_de_corps=True)
         context['selected_caisse'] = self.request.GET.get('caisse', '')
         context['selected_site'] = self.request.GET.get('site', '')
         context['date_from'] = self.request.GET.get('date_from', '')
@@ -1333,6 +1429,7 @@ class CaisseReportView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, L
         context['period'] = self.request.GET.get('period', '')
         context['selected_type'] = self.request.GET.get('type', '')
         context['selected_category'] = self.request.GET.get('category', '')
+        context['selected_chef_de_corps'] = self.request.GET.get('chef_de_corps', '')
         context['categories'] = CaisseTransactionCategory.objects.all()
         return context
 
@@ -1359,6 +1456,7 @@ def caisse_report_pdf(request):
             tx.get_transaction_type_display(),
             tx.site.name if tx.site else '-',
             tx.phase.name if tx.phase else '-',
+            tx.recipient or '-',
             tx.description[:50],
             f"{tx.amount:.2f} $",
         )
@@ -1372,11 +1470,47 @@ def caisse_report_pdf(request):
         subtitle=_("%(count)s mouvement(s) — Entrées: %(in)s $ · Sorties: %(out)s $") % {
             'count': qs.count(), 'in': f"{total_entrees:.2f}", 'out': f"{total_sorties:.2f}",
         },
-        columns=["Date", "Caisse", "Type", "Chantier", "Étape", "Description", "Montant"],
+        columns=["Date", "Caisse", "Type", "Chantier", "Étape", "Bénéficiaire", "Description", "Montant"],
         rows=rows,
-        totals_row=["", "", "", "", "", "Solde net", f"{(total_entrees - total_sorties):.2f} $"],
+        totals_row=["", "", "", "", "", "", "Solde net", f"{(total_entrees - total_sorties):.2f} $"],
         generated_by=request.user.get_full_name() or request.user.username,
     )
+
+
+class DGPayrollOverviewView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, TemplateView):
+    """"Vue DG" (2026-10-19 spec item 10): reconciles payments actually
+    disbursed to personnel against each site's étape, across every site
+    at once — the cross-site counterpart to CaisseTransactionCreateView's
+    own single-caisse "Vue Financier" sidebar (both built on the same
+    _personnel_payment_summary helper, so the figures always agree).
+    Read-only, filterable to one chantier via ?site=<pk>.
+
+    Role-gated to CONVENTION_OVERAGE_VIEW_ROLES — "le DG et le bureau
+    technique", the same audience already established for
+    ConventionOverageListView, which this page is the natural companion
+    to (that one flags individual overage payments; this one shows the
+    running total behind them)."""
+    template_name = 'finance/dg_payroll_overview.html'
+    allowed_roles = CONVENTION_OVERAGE_VIEW_ROLES
+    header_title = _("Vue DG — paiements du personnel par étape")
+    header_subtitle = _("Montants de convention versus montants réellement payés, par chantier et par étape")
+    back_url = reverse_lazy('finance:caisse_list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.request.user.is_superuser:
+            active_cabinet = get_session_cabinet(self.request)
+            cabinet_ids = [active_cabinet.id] if active_cabinet else None
+            context['sites'] = Site.objects.filter(cabinet=active_cabinet) if active_cabinet else Site.objects.all()
+        else:
+            cabinet_ids = list(self.request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True))
+            context['sites'] = Site.objects.filter(cabinet__id__in=cabinet_ids)
+
+        site_id = self.request.GET.get('site')
+        selected_site = context['sites'].filter(pk=site_id).first() if site_id else None
+        context['selected_site'] = site_id or ''
+        context['site_rows'] = _personnel_payment_summary(cabinet_ids, site=selected_site)
+        return context
 
 
 # ---------------------------------------------------------------------

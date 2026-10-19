@@ -12,6 +12,48 @@
 
         <div class="container-fluid py-4">
             {% include 'includes/page_header.html' %}
+
+            {% if personnel_payment_rows %}
+            <div class="card mb-3">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="fas fa-users me-2 text-primary"></i>{% trans "Vue Financier — paiements du personnel par étape" %}</h6>
+                    <p class="fs--2 text-500 mb-0">{% trans "Montant de convention versus montant déjà payé, pour ce chantier." %}</p>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped fs--1 mb-0">
+                            <thead class="bg-200 text-900">
+                                <tr>
+                                    <th>{% trans "Étape" %}</th>
+                                    <th class="text-end">{% trans "Convention" %}</th>
+                                    <th class="text-end">{% trans "Payé" %}</th>
+                                    <th class="text-end">{% trans "Restant" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for site_row in personnel_payment_rows %}
+                                {% for phase_row in site_row.phases %}
+                                <tr>
+                                    <td>{{ phase_row.label }}</td>
+                                    <td class="text-end">{{ CURRENCY_SYMBOL }}{{ phase_row.cap|floatformat:2 }}</td>
+                                    <td class="text-end">{{ CURRENCY_SYMBOL }}{{ phase_row.paid|floatformat:2 }}</td>
+                                    <td class="text-end {% if phase_row.remaining < 0 %}text-danger{% endif %}">{{ CURRENCY_SYMBOL }}{{ phase_row.remaining|floatformat:2 }}</td>
+                                </tr>
+                                {% endfor %}
+                                <tr class="fw-bold bg-light">
+                                    <td>{% trans "Total chantier" %}</td>
+                                    <td class="text-end">{{ CURRENCY_SYMBOL }}{{ site_row.cap_total|floatformat:2 }}</td>
+                                    <td class="text-end">{{ CURRENCY_SYMBOL }}{{ site_row.paid_total|floatformat:2 }}</td>
+                                    <td class="text-end {% if site_row.remaining_total < 0 %}text-danger{% endif %}">{{ CURRENCY_SYMBOL }}{{ site_row.remaining_total|floatformat:2 }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
             <div class="card mb-3">
                 <div class="card-body bg-light">
                     <p class="fs--1 text-600 mb-3">{% trans "Caisse" %}: <strong>{{ caisse.name }}</strong></p>

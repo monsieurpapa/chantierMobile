@@ -69,6 +69,16 @@
                                 {% endfor %}
                             </select>
                         </div>
+                        <div class="col-md-2">
+                            <label class="form-label fs--1 fw-semibold">{% trans "Chef de corps" %}</label>
+                            <select name="chef_de_corps" class="form-select">
+                                <option value="">{% trans "Tous" %}</option>
+                                {% for cdc in chefs_de_corps %}
+                                <option value="{{ cdc.pk }}" {% if selected_chef_de_corps == cdc.pk|stringformat:"s" %}selected{% endif %}>{{ cdc.get_full_name }}</option>
+                                {% endfor %}
+                            </select>
+                            <p class="fs--2 text-500 mb-0 mt-1">{% trans "Filtre approximatif (nom tel que saisi en bénéficiaire)." %}</p>
+                        </div>
                         <div class="col-md-2 d-flex gap-2">
                             <button type="submit" class="btn btn-falcon-primary flex-fill">
                                 <i class="fas fa-filter me-1"></i>{% trans "Filtrer" %}
