@@ -17,7 +17,7 @@ from core.models import BaseModel
 from accounts.models import Cabinet
 from chantiermobile.constants import (
     SiteStatus, ProjectConfig, ExpenseStatus, PlanningStatus, PhaseStatus, ContractMode, CONTRACT_MODE_MODULES,
-    StructureType,
+    StructureType, PhaseCategory,
 )
 
 class Site(BaseModel):
@@ -300,6 +300,11 @@ class ProjectPhase(BaseModel):
         ),
     )
     name = models.CharField(max_length=255)
+    category = models.CharField(
+        max_length=20, choices=PhaseCategory.choices, blank=True,
+        verbose_name=_('Catégorie'),
+        help_text=_("Gros œuvre ou finissage (second œuvre) — facultatif, laisser vide si non classé."),
+    )
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=PhaseStatus.choices, default=PhaseStatus.EN_COURS)

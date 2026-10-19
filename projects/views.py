@@ -36,6 +36,16 @@ def _site_structure_can_act(request, site):
         return True
     return site.lead_engineer_id == request.user.pk
 
+# Who counts as "l'équipe technique" for the rapport-submission
+# notification below (added 2026-10-19, meeting-note backlog
+# "Notifications et séparation des étapes" — "l'équipe technique doit
+# être notifiée automatiquement dès qu'un rapport est soumis") — the
+# client didn't define this list explicitly, so the reasonable default
+# is director-tier + the site's own engineering roles, which already
+# covers everyone who can act on a progress report elsewhere in this
+# app (see PLANNING_REVIEW_ROLES just below, same membership).
+TECHNICAL_TEAM_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER', 'ENGINEER']
+
 LEAD_ENGINEER_ROLES = ['ENGINEER', 'CHIEF_ENGINEER']
 PHASE_CLOSE_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER', 'ENGINEER']
 PLANNING_REVIEW_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER', 'ENGINEER']
@@ -764,6 +774,15 @@ class SiteProgressCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMi
         # forcing a formset for what's really a single "attach these" action.
         for f in self.request.FILES.getlist('photos'):
             ProgressPhoto.objects.create(progress=self.object, image=f, uploaded_by=self.request.user)
+        from core.notifications import notify_role_holders
+        notify_role_holders(
+            self.phase.site.cabinet, TECHNICAL_TEAM_ROLES,
+            _("Nouveau rapport d'avancement : %(phase)s (%(site)s)") % {
+                'phase': self.phase.name, 'site': self.phase.site.name,
+            },
+            str(reverse_lazy('projects:progress_detail', kwargs={'unique_id': self.object.unique_id})),
+            exclude_user=self.request.user,
+        )
         messages.success(self.request, _("Rapport d'avancement enregistré avec succès !"))
         return response
 

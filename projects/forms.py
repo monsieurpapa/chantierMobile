@@ -110,9 +110,10 @@ class ProjectPhaseForm(forms.ModelForm):
     offers itself as its own parent."""
     class Meta:
         model = ProjectPhase
-        fields = ['name', 'parent_phase', 'start_date', 'end_date']
+        fields = ['name', 'category', 'parent_phase', 'start_date', 'end_date']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.PHASE_NAME}),
+            'category': forms.Select(attrs={'class': 'form-select'}),
             'parent_phase': forms.Select(attrs={'class': 'form-select'}),
             'start_date': forms.DateInput(attrs={
                 'class': 'form-control datetimepicker',

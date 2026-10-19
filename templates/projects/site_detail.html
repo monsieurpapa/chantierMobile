@@ -159,6 +159,11 @@
                                                     <div>
                                                         <h6 class="mb-1 fw-bold text-900">
                                                             {{ phase.name }}
+                                                            {% if phase.category == 'GROS_OEUVRE' %}
+                                                            <span class="badge bg-dark ms-1">{% trans "Gros œuvre" %}</span>
+                                                            {% elif phase.category == 'FINISSAGE' %}
+                                                            <span class="badge bg-info ms-1">{% trans "Finissage" %}</span>
+                                                            {% endif %}
                                                             {% if phase.is_closed %}
                                                             <span class="badge bg-secondary ms-1">{% trans "Clôturée" %}</span>
                                                             {% endif %}

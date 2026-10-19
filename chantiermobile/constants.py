@@ -189,6 +189,22 @@ class DQEStatus(models.TextChoices):
     ARCHIVED = 'ARCHIVED', _('Archivé')
 
 
+class PhaseCategory(models.TextChoices):
+    """Gros œuvre vs finissage (second œuvre) tag on a ProjectPhase —
+    added 2026-10-19 (meeting-note backlog, "Notifications et séparation
+    des étapes": "dans les phases/étapes d'un chantier, séparer
+    explicitement Gros œuvre et Finissage"). The client's own note
+    pointed to an undelivered reference file ("voir fichier Ir Brave")
+    for the exact split desired, so this is deliberately the simplest
+    reasonable default — a flat two-value tag on the étape itself,
+    optional (blank='' for a phase nobody has categorized yet) — rather
+    than guessing at a finer breakdown the file might have specified.
+    Revisit once that file (or Ir Brave directly) confirms the intended
+    split."""
+    GROS_OEUVRE = 'GROS_OEUVRE', _('Gros œuvre')
+    FINISSAGE = 'FINISSAGE', _('Finissage (second œuvre)')
+
+
 class WorkCategory(models.TextChoices):
     """Structural work-item category (added 2026-10-07, Devis/État de
     besoin comparison feature) — classifies a WORK_ITEM-type

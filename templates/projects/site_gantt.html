@@ -48,6 +48,11 @@
                                 <tr class="bg-light">
                                     <td colspan="{{ total_weeks|add:2 }}" class="fw-bold text-900">
                                         {{ group.phase.name }}
+                                        {% if group.phase.category == 'GROS_OEUVRE' %}
+                                        <span class="badge bg-dark ms-1">{% trans "Gros œuvre" %}</span>
+                                        {% elif group.phase.category == 'FINISSAGE' %}
+                                        <span class="badge bg-info ms-1">{% trans "Finissage" %}</span>
+                                        {% endif %}
                                         {% if group.phase.is_closed %}
                                         <span class="badge bg-secondary ms-1">{% trans "Clôturée" %}</span>
                                         {% endif %}

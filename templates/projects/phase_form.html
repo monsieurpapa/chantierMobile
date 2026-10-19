@@ -34,6 +34,22 @@
                         </div>
 
                         <div class="mb-3">
+                            <label class="form-label" for="id_category">{% trans "Catégorie" %}</label>
+                            <select class="form-select" id="id_category" name="category">
+                                <option value="" {% if not form.instance.category %}selected{% endif %}>{% trans "Non classée" %}</option>
+                                {% for value, label in form.fields.category.choices %}
+                                {% if value %}
+                                <option value="{{ value }}" {% if form.instance.category == value %}selected{% endif %}>{{ label }}</option>
+                                {% endif %}
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">{% trans "Gros œuvre ou finissage (second œuvre) — facultatif." %}</div>
+                            {% if form.category.errors %}
+                            <div class="text-danger small mt-1">{{ form.category.errors|join:" " }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
                             <label class="form-label" for="id_parent_phase">{% trans "Étape parente" %}</label>
                             <select class="form-select" id="id_parent_phase" name="parent_phase">
                                 <option value="">{% trans "Aucune — étape principale" %}</option>
