@@ -20,8 +20,9 @@ from chantiermobile.constants import (
     PersonnelPayrollType, PersonnelStatus,
 )
 from core.widgets import DynamicSelectWidget
+from projects.phase_fields import PhaseCatalogFormMixin, enable_phase_catalog
 
-class ExpenseForm(forms.ModelForm):
+class ExpenseForm(PhaseCatalogFormMixin, forms.ModelForm):
     """Expense submission form. Rebuilds the `personnel`/`phase` dropdown
     querysets from the submitted `site` (see __init__) so a POST validates
     against the right site even though the empty GET render had no site
@@ -80,6 +81,8 @@ class ExpenseForm(forms.ModelForm):
         else:
             self.fields['personnel'].queryset = Personnel.objects.none()
             self.fields['phase'].queryset = ProjectPhase.objects.none()
+        # Also offer the Catalogue des étapes for the chosen chantier.
+        enable_phase_catalog(self, 'phase', [site])
 
     def clean_nature(self):
         # Not required (see __init__) — fall back to the model default
@@ -177,7 +180,7 @@ class CaisseForm(forms.ModelForm):
         self.fields['responsible_cashier'].required = False
 
 
-class CaisseTransactionForm(forms.ModelForm):
+class CaisseTransactionForm(PhaseCatalogFormMixin, forms.ModelForm):
     """Manual ledger-entry form for one Caisse (passed in as the `caisse`
     kwarg). Swaps the `site` field for a free-text `external_site_label`
     when the caisse has manual_site_entry set (e.g. a bétonnière caisse
@@ -237,6 +240,7 @@ class CaisseTransactionForm(forms.ModelForm):
                 self.fields['phase'].queryset = ProjectPhase.objects.filter(site=site).order_by('start_date')
             else:
                 self.fields['phase'].queryset = ProjectPhase.objects.none()
+            enable_phase_catalog(self, 'phase', [site])
         # L'état de besoin se choisit parmi celles du même chantier — pas de
         # sens à proposer celles d'un autre site. Une demande déjà réglée
         # via le circuit Dépense habituel (voir Expense.pay()) n'a besoin
@@ -333,7 +337,7 @@ class CaisseLoanRepayForm(forms.Form):
     amount = forms.DecimalField(min_value=0.01, decimal_places=2, widget=forms.NumberInput(attrs={'class': 'form-control'}), label=_('Montant remboursé'))
 
 
-class PayrollListForm(forms.ModelForm):
+class PayrollListForm(PhaseCatalogFormMixin, forms.ModelForm):
     """Creates the BROUILLON PayrollList shell (site + optional phase +
     notes) — items are added afterwards via PayrollListItemForm/
     PayrollListAllocateView."""
@@ -357,6 +361,7 @@ class PayrollListForm(forms.ModelForm):
         elif self.instance and self.instance.pk:
             site = self.instance.site
         self.fields['phase'].queryset = ProjectPhase.objects.filter(site=site) if site else ProjectPhase.objects.none()
+        enable_phase_catalog(self, 'phase', [site])
 
 
 class PayrollListItemForm(forms.ModelForm):

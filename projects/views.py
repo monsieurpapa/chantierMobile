@@ -17,6 +17,7 @@ from django.db.models import Count
 from django.utils.translation import gettext_lazy as _
 from .models import Site, ProjectPhase, SiteProgress, ProgressPhoto, ProgressComment, PlanningSubmission, SiteLevel, PhaseTemplate
 from .forms import SiteForm, ProjectPhaseForm, SiteProgressForm, PlanningSubmissionForm, SiteLevelFormSet
+from .phase_fields import enable_phase_catalog
 from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet, can_act_for_cabinet, can_view_cabinet
 from chantiermobile.constants import UserRoles, ApprovalStatus
 
@@ -588,10 +589,6 @@ class ProjectPhaseCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMi
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['site'] = self.site
-        # Top-level phases this new phase could become a sous-étape of —
-        # same scoping ProjectPhaseForm applies, kept here too since
-        # phase_form.html renders fields by hand rather than via the form.
-        context['top_level_phases'] = self.site.phases.filter(parent_phase__isnull=True).order_by('name')
         return context
 
     def get_header_title(self):
@@ -651,14 +648,6 @@ class ProjectPhaseUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAcces
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['site'] = self.object.site
-        # Same top-level-phases scoping as ProjectPhaseCreateView, minus
-        # this phase itself (a phase can't be its own parent) and minus
-        # everything if this phase already has its own sous-étapes (see
-        # ProjectPhaseForm.__init__ / ProjectPhase.clean()).
-        qs = self.object.site.phases.filter(parent_phase__isnull=True).exclude(pk=self.object.pk)
-        if self.object.sub_phases.exists():
-            qs = qs.none()
-        context['top_level_phases'] = qs.order_by('name')
         return context
 
     def get_success_url(self):
@@ -1012,6 +1001,7 @@ class PlanningSubmissionCreateView(LoginRequiredMixin, RoleRequiredMixin, PageHe
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
         form.fields['phase'].queryset = self.site.phases.all()
+        enable_phase_catalog(form, 'phase', [self.site])
         return form
 
     def get_context_data(self, **kwargs):

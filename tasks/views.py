@@ -150,6 +150,7 @@ class TaskCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, 
         form.fields['site'].queryset = site_qs
         form.fields['assigned_to'].queryset = personnel_qs
         form.fields['phase'].queryset = ProjectPhase.objects.filter(site__in=site_qs)
+        form.offer_phase_catalog(site_qs)
         return form
 
     def get_form(self, form_class=None):
@@ -204,6 +205,7 @@ class TaskUpdateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, 
         form.fields['site'].queryset = site_qs
         form.fields['assigned_to'].queryset = personnel_qs
         form.fields['phase'].queryset = ProjectPhase.objects.filter(site__in=site_qs)
+        form.offer_phase_catalog(site_qs)
         return form
 
     def get_form(self, form_class=None):

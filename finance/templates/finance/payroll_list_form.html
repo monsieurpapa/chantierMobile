@@ -47,6 +47,19 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'js/phase-select.js' %}"></script>
+{% if form.site and form.phase %}
+<script>
+// Étape list follows the chosen chantier: its own étapes + the Catalogue des étapes.
+document.addEventListener('DOMContentLoaded', function () {
+    window.ChantierPhases.bind(
+        document.getElementById('{{ form.site.id_for_label }}'),
+        document.getElementById('{{ form.phase.id_for_label }}'),
+        '{% url "finance:site_phases_data" %}', '{% trans "-- Sélectionner --" %}', false
+    );
+});
+</script>
+{% endif %}
 <script>
     document.querySelectorAll('input, select, textarea').forEach(el => {
         if (!el.classList.contains('form-range')) el.classList.add('form-control');

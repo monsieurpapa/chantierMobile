@@ -25,21 +25,52 @@
                 <div class="card-body bg-light">
                     <form method="post">
                         {% csrf_token %}
+                        {% if form.non_field_errors %}<div class="alert alert-danger py-2">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+
+                        {% if form.catalog_template %}
+                        <div class="mb-3">
+                            <label class="form-label" for="id_catalog_template">{% trans "Étape du catalogue" %}</label>
+                            <select class="form-select" id="id_catalog_template" name="catalog_template">
+                                <option value="">{% trans "— Étape libre (saisir le nom) —" %}</option>
+                                {% for opt in form.catalog_options %}
+                                <option value="{{ opt.value }}" data-name="{{ opt.name }}" data-category="{{ opt.category }}"
+                                    data-parent-name="{{ opt.parent_name }}" data-has-subs="{{ opt.has_subs|yesno:'1,0' }}"
+                                    {% if form.catalog_template.value == opt.value %}selected{% endif %}>{{ opt.label }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">
+                                {% trans "Toutes les étapes et sous-étapes du catalogue que ce chantier n'a pas encore." %}
+                                <a href="{% url 'projects:phase_template_list' %}" target="_blank" rel="noopener">{% trans "Voir le catalogue" %}</a>
+                            </div>
+                            {% if form.catalog_template.errors %}
+                            <div class="text-danger small mt-1">{{ form.catalog_template.errors|join:" " }}</div>
+                            {% endif %}
+                            <div class="form-check mt-2" id="include-subs-wrapper" style="display:none;">
+                                <input class="form-check-input" type="checkbox" id="id_include_sub_templates" name="include_sub_templates"
+                                    {% if not form.is_bound or form.include_sub_templates.value %}checked{% endif %}>
+                                <label class="form-check-label" for="id_include_sub_templates">{% trans "Ajouter aussi ses sous-étapes du catalogue" %}</label>
+                            </div>
+                        </div>
+                        {% endif %}
 
                         <div class="mb-3">
                             <label class="form-label" for="id_name">{% trans "Phase Name" %}</label>
                             <input class="form-control" id="id_name" name="name" type="text"
-                                value="{{ form.instance.name|default:'' }}"
-                                placeholder="e.g. Foundation, Roofing, electrical" required />
+                                value="{{ form.name.value|default_if_none:'' }}"
+                                placeholder="e.g. Foundation, Roofing, electrical" {% if form.fields.name.required %}required{% endif %} />
+                            {% if form.catalog_template %}<div class="form-text">{% trans "Rempli automatiquement depuis le catalogue ; vous pouvez le modifier." %}</div>{% endif %}
+                            {% if form.name.errors %}
+                            <div class="text-danger small mt-1">{{ form.name.errors|join:" " }}</div>
+                            {% endif %}
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label" for="id_category">{% trans "Catégorie" %}</label>
                             <select class="form-select" id="id_category" name="category">
-                                <option value="" {% if not form.instance.category %}selected{% endif %}>{% trans "Non classée" %}</option>
+                                <option value="" {% if not form.category.value %}selected{% endif %}>{% trans "Non classée" %}</option>
                                 {% for value, label in form.fields.category.choices %}
                                 {% if value %}
-                                <option value="{{ value }}" {% if form.instance.category == value %}selected{% endif %}>{{ label }}</option>
+                                <option value="{{ value }}" {% if form.category.value == value %}selected{% endif %}>{{ label }}</option>
                                 {% endif %}
                                 {% endfor %}
                             </select>
@@ -50,14 +81,9 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label" for="id_parent_phase">{% trans "Étape parente" %}</label>
-                            <select class="form-select" id="id_parent_phase" name="parent_phase">
-                                <option value="">{% trans "Aucune — étape principale" %}</option>
-                                {% for p in top_level_phases %}
-                                <option value="{{ p.pk }}" {% if form.instance.parent_phase_id == p.pk %}selected{% endif %}>{{ p.name }}</option>
-                                {% endfor %}
-                            </select>
-                            <div class="form-text">{% trans "Laisser vide pour une étape principale. Sélectionner une étape existante en fait une sous-étape de celle-ci (un seul niveau de profondeur)." %}</div>
+                            <label class="form-label" for="{{ form.parent_phase.id_for_label }}">{% trans "Étape parente" %}</label>
+                            {{ form.parent_phase }}
+                            <div class="form-text">{% trans "Laisser vide pour une étape principale. Sélectionner une étape existante (ou du catalogue) en fait une sous-étape de celle-ci (un seul niveau de profondeur)." %}</div>
                             {% if form.parent_phase.errors %}
                             <div class="text-danger small mt-1">{{ form.parent_phase.errors|join:" " }}</div>
                             {% endif %}
@@ -95,4 +121,46 @@
 
 {% block extra_js %}
 <script src="{% static 'assets/js/flatpickr.js' %}"></script>
+<script>
+// Picking a catalog étape fills the name/category (unless edited by hand)
+// and, for a catalog sous-étape, selects its parent étape.
+document.addEventListener('DOMContentLoaded', function () {
+    var catalog = document.getElementById('id_catalog_template');
+    if (!catalog) return;
+    var nameInput = document.getElementById('id_name');
+    var categorySelect = document.getElementById('id_category');
+    var parentSelect = document.getElementById('{{ form.parent_phase.id_for_label }}');
+    var subsWrapper = document.getElementById('include-subs-wrapper');
+    var autoName = '';
+
+    function selectParentByName(parentName) {
+        if (!parentSelect) return;
+        if (!parentName) { parentSelect.value = ''; return; }
+        for (var i = 0; i < parentSelect.options.length; i++) {
+            if (parentSelect.options[i].textContent.trim().toLowerCase() === parentName.trim().toLowerCase()) {
+                parentSelect.selectedIndex = i;
+                return;
+            }
+        }
+    }
+
+    function apply(fromUser) {
+        var opt = catalog.options[catalog.selectedIndex];
+        var picked = opt && opt.value;
+        if (subsWrapper) subsWrapper.style.display = (picked && opt.dataset.hasSubs === '1') ? '' : 'none';
+        if (!picked) return;
+        if (fromUser) {
+            if (!nameInput.value || nameInput.value === autoName) {
+                nameInput.value = opt.dataset.name;
+                autoName = opt.dataset.name;
+            }
+            if (categorySelect && opt.dataset.category) categorySelect.value = opt.dataset.category;
+            selectParentByName(opt.dataset.parentName);
+        }
+    }
+
+    catalog.addEventListener('change', function () { apply(true); });
+    apply(false);
+});
+</script>
 {% endblock %}

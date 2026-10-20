@@ -571,13 +571,13 @@ def site_personnel_data(request):
 
 @login_required
 def site_phases_data(request):
-    """JSON endpoint used by the expense form's "Étape" picker: given a
+    """JSON endpoint used by every "Étape" picker (expense, état de besoin,
+    DQE, devis, task, caisse, payroll forms): given a
     ?site=<id>, returns that site's phases, so they can be loaded as soon
     as a site is picked instead of requiring the form to be saved and
     reopened (the phase field's queryset is otherwise empty on a fresh GET
     — see ExpenseForm.__init__). Mirrors site_personnel_data above."""
     from django.http import JsonResponse
-    from projects.models import ProjectPhase
 
     site_id = request.GET.get('site')
     if not site_id:
@@ -591,10 +591,11 @@ def site_phases_data(request):
     if not site:
         return JsonResponse({'results': []})
 
-    phases = ProjectPhase.objects.filter(site=site).order_by('start_date')
-    return JsonResponse({
-        'results': [{'id': p.id, 'text': p.name} for p in phases]
-    })
+    # The site's own étapes, then the Catalogue des étapes entries it
+    # doesn't have yet (each with a `group` and a "catalogue:…" id; the
+    # étape is created on the site when the form using it is saved).
+    from projects.phase_fields import site_phase_options
+    return JsonResponse({'results': site_phase_options(site)})
 
 
 def _expense_report_queryset(request):

@@ -199,6 +199,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'js/phase-select.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const form = document.getElementById('material-request-form');
@@ -358,7 +359,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 opt.value = phase.id;
                 opt.textContent = phase.text;
                 if (preselectId && String(phase.id) === String(preselectId)) opt.selected = true;
-                select.appendChild(opt);
+                window.ChantierPhases.place(select, opt, phase.group);
             });
             refreshVarianceBadge(item);
         })

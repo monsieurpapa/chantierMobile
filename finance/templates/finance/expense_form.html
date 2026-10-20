@@ -119,6 +119,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'js/phase-select.js' %}"></script>
 <script>
     document.querySelectorAll('input, select, textarea').forEach(el => {
         if (!el.classList.contains('form-range')) el.classList.add('form-control');
@@ -161,7 +162,7 @@
                     opt.value = item.id;
                     opt.textContent = item.text;
                     if (preselectId && String(item.id) === String(preselectId)) opt.selected = true;
-                    select.appendChild(opt);
+                    window.ChantierPhases.place(select, opt, item.group);
                 });
                 if (useSelect2 && window.jQuery) { window.jQuery(select).trigger('change'); }
             })

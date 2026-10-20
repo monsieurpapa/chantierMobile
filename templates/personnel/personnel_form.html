@@ -236,12 +236,28 @@ document.addEventListener('DOMContentLoaded', function () {
     siteOptionsHtml += '<option value="{{ site.pk }}">{{ site.name }}</option>';
     {% endfor %}
 
+    function escapeHtml(text) {
+        return String(text).replace(/[&<>"']/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+    }
+
+    // The site's own étapes, then its Catalogue des étapes entries (those
+    // carry a `group`; the étape is created on the chantier on save).
     function phaseOptionsHtml(siteId, selectedId) {
         let html = '<option value="">-- {% trans "Sélectionner une étape" %} --</option>';
+        let openGroup = null;
         (phasesBySite[String(siteId)] || []).forEach(function (phase) {
+            const group = phase.group || null;
+            if (group !== openGroup) {
+                if (openGroup) html += '</optgroup>';
+                if (group) html += '<optgroup label="' + escapeHtml(group) + '">';
+                openGroup = group;
+            }
             const selected = (String(phase.id) === String(selectedId)) ? ' selected' : '';
-            html += '<option value="' + phase.id + '"' + selected + '>' + phase.name + '</option>';
+            html += '<option value="' + escapeHtml(phase.id) + '"' + selected + '>' + escapeHtml(phase.name) + '</option>';
         });
+        if (openGroup) html += '</optgroup>';
         return html;
     }
 

@@ -2,6 +2,7 @@
 inline-formset-backed line-item editors (Devis/DevisLine,
 SituationTravaux/SituationLine)."""
 from django import forms
+from projects.phase_fields import PhaseCatalogFormMixin, enable_phase_catalog
 from django.utils.translation import gettext_lazy as _
 from django.forms import inlineformset_factory
 from .models import Contract, Invoice, Payment, Devis, DevisLine, SituationTravaux, SituationLine
@@ -126,7 +127,7 @@ class DevisForm(forms.ModelForm):
             self.fields['source_dqe'].queryset = DQE.objects.none()
 
 
-class DevisLineForm(forms.ModelForm):
+class DevisLineForm(PhaseCatalogFormMixin, forms.ModelForm):
     """One priced line on a Devis; used as the form for DevisLineFormSet.
     `phase` starts with an empty queryset and is rebuilt from the
     submitted parent `site` on a POST (row forms share the parent's
@@ -160,6 +161,8 @@ class DevisLineForm(forms.ModelForm):
             # Populated live client-side once a site is picked — same
             # "empty until scoped" shape as DQELineForm's own phase field.
             self.fields['phase'].queryset = ProjectPhase.objects.none()
+        # Also offer the Catalogue des étapes for the devis's chantier.
+        enable_phase_catalog(self, 'phase', [site])
 
 
 # min_num/validate_min=True by default here — the create/update views

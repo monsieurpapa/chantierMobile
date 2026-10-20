@@ -144,6 +144,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'js/phase-select.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('#devis-form input, #devis-form select, #devis-form textarea').forEach(function (input) {
@@ -216,7 +217,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 opt.value = item.id;
                 opt.textContent = item.text;
                 if (preselectId && String(item.id) === String(preselectId)) opt.selected = true;
-                select.appendChild(opt);
+                window.ChantierPhases.place(select, opt, item.group);
             });
         })
         .catch(function (err) { console.error('Error loading phases for line:', err); });

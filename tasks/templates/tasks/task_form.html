@@ -76,6 +76,17 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'js/phase-select.js' %}"></script>
+<script>
+// Étape list follows the chosen chantier: its own étapes + the Catalogue des étapes.
+document.addEventListener('DOMContentLoaded', function () {
+    window.ChantierPhases.bind(
+        document.getElementById('{{ form.site.id_for_label }}'),
+        document.getElementById('{{ form.phase.id_for_label }}'),
+        '{% url "finance:site_phases_data" %}', '{% trans "-- Sélectionner --" %}', true
+    );
+});
+</script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('#task-form input, #task-form select, #task-form textarea').forEach(function (input) {

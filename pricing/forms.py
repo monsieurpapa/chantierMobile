@@ -1,6 +1,7 @@
 """Forms for the price library (Bibliothèque de Prix) and DQE (with its
 line formset)."""
 from django import forms
+from projects.phase_fields import PhaseCatalogFormMixin, enable_phase_catalog
 from django.forms import BaseInlineFormSet, inlineformset_factory
 from django.utils.translation import gettext_lazy as _
 from .models import PriceLibraryItem, DQE, DQELine, MaterialConsumptionRatio
@@ -57,7 +58,7 @@ class DQEForm(forms.ModelForm):
         }
 
 
-class DQELineForm(forms.ModelForm):
+class DQELineForm(PhaseCatalogFormMixin, forms.ModelForm):
     """A single DQE line. `price_item` choices are restricted to active
     catalog items (__init__ below); `unit_price` defaults from the
     catalog client-side but is a plain editable field here, so it can be
@@ -93,6 +94,8 @@ class DQELineForm(forms.ModelForm):
             self.fields['phase'].queryset = ProjectPhase.objects.filter(site=site).order_by('start_date')
         else:
             self.fields['phase'].queryset = ProjectPhase.objects.none()
+        # Also offer the Catalogue des étapes for the DQE's chantier.
+        enable_phase_catalog(self, 'phase', [site])
 
 
 class BaseDQELineFormSet(BaseInlineFormSet):

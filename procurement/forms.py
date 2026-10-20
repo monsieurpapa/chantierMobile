@@ -2,6 +2,7 @@
 (with their line formset), the wire-transfer proof upload, and supplier
 credit/repayment."""
 from django import forms
+from projects.phase_fields import PhaseCatalogFormMixin, enable_phase_catalog
 from django.utils.translation import gettext_lazy as _
 from django.forms import inlineformset_factory
 from .models import Supplier, StockItem, PurchaseOrder, PurchaseOrderLine, StockMovement, SupplierCredit
@@ -120,7 +121,7 @@ PurchaseOrderLineFormSet = inlineformset_factory(
 )
 
 
-class StockMovementForm(forms.ModelForm):
+class StockMovementForm(PhaseCatalogFormMixin, forms.ModelForm):
     """A manual, single-item stock movement (entry/exit/adjustment —
     TRANSFER is excluded from the choices below since a transfer must go
     through StockTransferForm/StockItem.transfer_to() instead, so both
@@ -158,6 +159,8 @@ class StockMovementForm(forms.ModelForm):
             self.fields['phase'].queryset = stock_item.site.phases.all()
         else:
             self.fields['phase'].queryset = self.fields['phase'].queryset.none()
+        # Also offer the Catalogue des étapes for the stock item's chantier.
+        enable_phase_catalog(self, 'phase', [stock_item.site if stock_item is not None else None])
 
 
 class StockTransferForm(forms.Form):
