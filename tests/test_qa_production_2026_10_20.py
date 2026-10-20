@@ -26,3 +26,12 @@ class TestFinding4NoDollarNone:
         person = personnel_factory(first_name='Avec', last_name='Tarif', default_daily_rate=Decimal('1500'))
         response = director_client.get(reverse('personnel:personnel_detail', kwargs={'unique_id': person.unique_id}))
         assert '1\xa0500,00'.encode() in response.content or '1 500,00'.encode() in response.content
+
+
+@pytest.mark.django_db
+class TestFinding5NoDeadButtons:
+    def test_site_list_has_no_dead_filter_export_buttons(self, director_client, site):
+        response = director_client.get(reverse('projects:site_list'))
+        assert response.status_code == 200
+        assert b'>Filter</button>' not in response.content
+        assert b'>Export</button>' not in response.content
