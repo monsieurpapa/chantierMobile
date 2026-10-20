@@ -563,6 +563,47 @@ class DevisListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, Lis
         return qs
 
 
+@login_required
+def devis_create_from_dqe(request, dqe_pk):
+    """"Créer un devis depuis ce DQE" (POST, from the DQE page): a draft
+    devis for the DQE's chantier, linked to the DQE, with every DQE line
+    copied and its unit price raised by the margin entered (%). Same roles
+    as creating a devis by hand (DEVIS_ACTION_ROLES), in the DQE's own
+    cabinet."""
+    from decimal import Decimal, InvalidOperation
+    from pricing.models import DQE
+    from .services import create_devis_from_dqe
+
+    dqe = get_object_or_404(DQE.objects.select_related('site', 'cabinet'), pk=dqe_pk)
+    back = redirect('pricing:dqe_detail', pk=dqe.pk)
+    if request.method != 'POST':
+        return back
+    if not can_act_for_cabinet(request, dqe.cabinet, DEVIS_ACTION_ROLES):
+        messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+        return back
+    if dqe.site_id is None:
+        messages.error(request, _("Rattachez d'abord ce DQE à un chantier : un devis appartient toujours à un chantier."))
+        return back
+    client_name = (request.POST.get('client_name') or '').strip()
+    if not client_name:
+        messages.error(request, _("Indiquez le client (maître d'ouvrage) du devis."))
+        return back
+    try:
+        margin = Decimal((request.POST.get('margin_pct') or '0').replace(',', '.'))
+        validity_days = int(request.POST.get('validity_days') or 30)
+    except (InvalidOperation, ValueError):
+        messages.error(request, _("Marge ou durée de validité invalide."))
+        return back
+    if margin < 0 or margin > 1000 or validity_days < 0 or validity_days > 3650:
+        messages.error(request, _("Marge ou durée de validité invalide."))
+        return back
+    devis = create_devis_from_dqe(dqe, client_name=client_name, margin_pct=margin, validity_days=validity_days)
+    messages.success(request, _(
+        "Devis %(num)s créé depuis %(ref)s (%(count)s lignes, marge %(margin)s %%). Relisez-le avant de l'envoyer."
+    ) % {'num': devis.devis_number, 'ref': dqe.reference, 'count': devis.lines.count(), 'margin': floatformat(margin, -2)})
+    return redirect('revenue:devis_detail', pk=devis.pk)
+
+
 class DevisCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, CreateView):
     """Creates a Devis plus its DevisLine formset (or just a photo, with no
     typed-in lines — see the has_photo handling below). allowed_roles =

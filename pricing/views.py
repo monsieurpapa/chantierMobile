@@ -338,6 +338,16 @@ class DQEDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, Det
     def get_queryset(self):
         return super().get_queryset().select_related('site').prefetch_related('lines__price_item')
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Pre-fill "Créer un devis" with the client already known for this
+        # chantier (latest devis), if any.
+        site = self.object.site
+        if site is not None:
+            latest = site.devis_set.exclude(client_name='').order_by('-issue_date', '-pk').first()
+            context['dqe_client_name'] = latest.client_name if latest else ''
+        return context
+
     def get_header_title(self):
         return self.object.reference
 

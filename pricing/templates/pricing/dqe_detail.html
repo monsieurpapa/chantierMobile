@@ -100,6 +100,48 @@
                     </div>
                     {% endif %}
 
+                    {% if dqe.site and request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,CHIEF_ENGINEER,ACCOUNTANT' %}
+                    <div class="card mb-3 border-0 shadow-sm">
+                        <div class="card-header bg-white border-bottom p-3">
+                            <h6 class="mb-0"><i class="fas fa-file-signature me-2 text-primary"></i>{% trans "Créer un devis depuis ce DQE" %}</h6>
+                        </div>
+                        <div class="card-body">
+                            <form method="post" action="{% url 'revenue:devis_create_from_dqe' dqe.pk %}" class="d-grid gap-2">
+                                {% csrf_token %}
+                                <div>
+                                    <label class="form-label fs--1 mb-1" for="devis-client">{% trans "Client (maître d'ouvrage)" %}</label>
+                                    <input class="form-control form-control-sm" id="devis-client" name="client_name" required maxlength="255"
+                                        value="{{ dqe_client_name|default:'' }}">
+                                </div>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <label class="form-label fs--1 mb-1" for="devis-margin">{% trans "Marge (%)" %}</label>
+                                        <input class="form-control form-control-sm" id="devis-margin" name="margin_pct" type="number" min="0" max="1000" step="0.01" value="0">
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label fs--1 mb-1" for="devis-validity">{% trans "Validité (jours)" %}</label>
+                                        <input class="form-control form-control-sm" id="devis-validity" name="validity_days" type="number" min="0" max="3650" value="30">
+                                    </div>
+                                </div>
+                                <p class="fs--2 text-600 mb-0">{% trans "Copie toutes les lignes (étape, désignation, unité, quantité) ; chaque prix unitaire est majoré de la marge. Le devis est créé en brouillon, relié à ce DQE." %}</p>
+                                <button type="submit" class="btn btn-primary btn-sm w-100">
+                                    <i class="fas fa-copy me-1"></i>{% trans "Créer le devis" %}
+                                </button>
+                            </form>
+                            {% with linked=dqe.devis_set.all %}
+                            {% if linked %}
+                            <div class="mt-3 fs--1">
+                                <div class="text-600 fw-semibold mb-1">{% trans "Devis issus de ce DQE" %}</div>
+                                {% for d in linked %}
+                                <div><a href="{% url 'revenue:devis_detail' d.pk %}">{{ d.devis_number }}</a> — {{ d.client_name }} <span class="badge rounded-pill badge-subtle-secondary">{{ d.get_status_display }}</span></div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            {% endwith %}
+                        </div>
+                    </div>
+                    {% endif %}
+
                     {% if dqe.status == 'EN_ATTENTE_APPROBATION' and request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL' %}
                     <div class="card mb-3 border-0 shadow-sm">
                         <div class="card-header bg-white border-bottom p-3">

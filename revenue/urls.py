@@ -31,6 +31,7 @@ urlpatterns = [
     path('devis/', views.DevisListView.as_view(), name='devis_list'),
     path('devis/add/', views.DevisCreateView.as_view(), name='devis_create'),
     path('site/<uuid:site_id>/devis/add/', views.DevisCreateView.as_view(), name='devis_create_from_site'),
+    path('devis/depuis-dqe/<int:dqe_pk>/', views.devis_create_from_dqe, name='devis_create_from_dqe'),
     path('devis/<int:pk>/', views.DevisDetailView.as_view(), name='devis_detail'),
     path('devis/<int:pk>/edit/', views.DevisUpdateView.as_view(), name='devis_update'),
     path('devis/<int:pk>/envoyer/', views.devis_send, name='devis_send'),
