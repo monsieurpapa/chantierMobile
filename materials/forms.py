@@ -2,6 +2,7 @@
 including the inline formset that lets a request be submitted with
 several items (catalog-linked or free-text) in one POST."""
 from django import forms
+from projects.phase_fields import PhaseCatalogFormMixin, enable_phase_catalog
 from django.utils.translation import gettext_lazy as _
 from django.forms import inlineformset_factory
 from .models import Material, MaterialRequest, MaterialRequestItem
@@ -34,7 +35,7 @@ class MaterialRequestForm(forms.ModelForm):
             }),
         }
 
-class MaterialRequestItemForm(forms.ModelForm):
+class MaterialRequestItemForm(PhaseCatalogFormMixin, forms.ModelForm):
     """Form for individual material items in a request. Either `material`
     (catalog) or `material_name` (free text) must be filled — not both;
     enforced by MaterialRequestItem.clean()."""
@@ -87,6 +88,8 @@ class MaterialRequestItemForm(forms.ModelForm):
             self.fields['phase'].queryset = ProjectPhase.objects.filter(site=site).order_by('start_date')
         else:
             self.fields['phase'].queryset = ProjectPhase.objects.none()
+        # Also offer the Catalogue des étapes for the request's chantier.
+        enable_phase_catalog(self, 'phase', [site])
 
 # Formset for handling multiple materials per request.
 #

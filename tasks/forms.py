@@ -6,9 +6,10 @@ from django.utils.translation import gettext_lazy as _
 from .models import Task
 from chantiermobile.constants import FormPlaceholders, FormHelpTexts, DatePickerConfig
 from core.widgets import DynamicSelectWidget
+from projects.phase_fields import PhaseCatalogFormMixin, enable_phase_catalog
 
 
-class TaskForm(forms.ModelForm):
+class TaskForm(PhaseCatalogFormMixin, forms.ModelForm):
     """Task create/edit form. Status isn't a field here — transitions go
     through Task.start/complete/block/reopen, not a form save."""
     class Meta:
@@ -30,3 +31,19 @@ class TaskForm(forms.ModelForm):
                 placeholder=_('Sélectionner ou ajouter un ouvrier...'),
             ),
         }
+
+    def offer_phase_catalog(self, site_qs):
+        """Adds the Catalogue des étapes to the `phase` select for the
+        task's chantier: the submitted one on a POST, else the task's own
+        or the ?site= initial one. Limited to `site_qs` (the requester's
+        cabinet-scoped sites), so a catalog étape can only ever be created
+        on a chantier the user may already pick."""
+        site_id = self.data.get(self.add_prefix('site')) if self.is_bound else None
+        if not site_id:
+            if self.instance and self.instance.site_id:
+                site_id = self.instance.site_id
+            else:
+                initial_site = self.initial.get('site')
+                site_id = getattr(initial_site, 'pk', initial_site)
+        site = site_qs.filter(pk=site_id).first() if site_id and str(site_id).isdigit() else None
+        enable_phase_catalog(self, 'phase', [site])

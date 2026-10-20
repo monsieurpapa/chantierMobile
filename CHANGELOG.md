@@ -57,6 +57,17 @@ dated heading cut when a deliberate release point is agreed on.
   and `docs/security.md`.
 
 ### Added
+- **Every étape select now offers the Catalogue des étapes.** Creating an
+  étape on a chantier, and every form that asks for an étape (planning
+  submission, expense, caisse movement, payroll list, état de besoin, DQE,
+  devis, stock movement, task, convention, cotation), lists the chantier's
+  own étapes and then every catalog étape/sous-étape it doesn't have yet.
+  Picking a catalog entry creates the étape on the chantier when the form
+  is saved (with its parent étape, for a sous-étape); an invalid
+  submission creates nothing. The étape form gets an "Étape du catalogue"
+  picker that fills the name/category and can add the étape's catalog
+  sous-étapes too. No migration. See `docs/modules/projects.md` and
+  `tests/test_phase_catalog_selects.py`.
 - **Chantier floors/structure (R+N, emprise au sol, per-level
   poutres/colonnes) feeding the DQE/matériaux quantity estimate.** `Site`
   gains `floor_count`/`basement_count` (R+N / sous-sols),

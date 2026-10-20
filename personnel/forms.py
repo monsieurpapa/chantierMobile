@@ -6,6 +6,7 @@ from django import forms
 from django.utils.translation import gettext_lazy as _
 from .models import Personnel, SiteAssignment, Skill, PersonnelDocument, Leave, Holiday, ConventionAvenant, PersonnelEvaluation
 from projects.models import Site, ProjectPhase
+from projects.phase_fields import PhaseCatalogFormMixin, enable_phase_catalog
 from chantiermobile.constants import FormPlaceholders, FormHelpTexts, DatePickerConfig, ConventionScope
 from core.widgets import DynamicSelectWidget, DynamicSelectMultipleWidget
 
@@ -148,7 +149,7 @@ class SiteAssignmentForm(forms.ModelForm):
         self.fields['daily_rate'].required = True
 
 
-class ConventionForm(forms.ModelForm):
+class ConventionForm(PhaseCatalogFormMixin, forms.ModelForm):
     """One row of the Personnel form's dynamic "Chantiers & conventions"
     section — a lightweight SiteAssignment capturing only `site`, a
     user-given convention `name`, its `scope` (par étape / chantier
@@ -190,6 +191,16 @@ class ConventionForm(forms.ModelForm):
         self.fields['site'].queryset = Site.objects.filter(cabinet=cabinet) if cabinet else Site.objects.none()
         self.fields['phase'].queryset = ProjectPhase.objects.filter(site__cabinet=cabinet) if cabinet else ProjectPhase.objects.none()
         self.fields['phase'].required = False
+        # Also offer the Catalogue des étapes for this row's chantier (the
+        # submitted one, else the convention's own) — always one of the
+        # cabinet's sites, like the `site` field itself.
+        row_site_id = self.data.get(self.add_prefix('site')) if self.is_bound else None
+        if not row_site_id and self.instance and self.instance.site_id:
+            row_site_id = self.instance.site_id
+        row_site = None
+        if cabinet and row_site_id and str(row_site_id).isdigit():
+            row_site = Site.objects.filter(cabinet=cabinet, pk=row_site_id).first()
+        enable_phase_catalog(self, 'phase', [row_site])
         self.fields['name'].required = False
         self.fields['convention_amount'].required = False
         self.fields['scope'].required = False
@@ -264,7 +275,7 @@ class ConventionAvenantForm(forms.Form):
         return amount
 
 
-class PersonnelEvaluationForm(forms.ModelForm):
+class PersonnelEvaluationForm(PhaseCatalogFormMixin, forms.ModelForm):
     """One cotation entered from a Personnel's detail page — `personnel`
     and `evaluated_by` are set by the view, not this form. `phase`'s
     queryset is narrowed to the evaluator's own cabinet, same pattern as
@@ -292,6 +303,14 @@ class PersonnelEvaluationForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self._personnel = personnel
         self.fields['phase'].queryset = ProjectPhase.objects.filter(site__cabinet=cabinet) if cabinet else ProjectPhase.objects.none()
+        # Also offer the Catalogue des étapes, for each chantier this person
+        # is assigned to (the only chantiers clean() accepts anyway).
+        catalog_sites = []
+        if cabinet and personnel is not None:
+            catalog_sites = list(Site.objects.filter(
+                cabinet=cabinet, pk__in=personnel.assignments.values('site_id'),
+            ).order_by('name'))
+        enable_phase_catalog(self, 'phase', catalog_sites)
         self.fields['note_chiffree'].required = False
         self.fields['mention_qualitative'].required = False
 

@@ -5,7 +5,10 @@ optional lead_engineer/phase)."""
 from django import forms
 from django.forms import modelformset_factory
 from django.utils.translation import gettext_lazy as _
-from .models import Site, ProjectPhase, SiteProgress, PlanningSubmission, SiteLevel
+from .models import Site, ProjectPhase, SiteProgress, PlanningSubmission, SiteLevel, PhaseTemplate
+from .phase_fields import (
+    PhaseCatalogFormMixin, enable_phase_catalog, catalog_entries_for_site, pending_phase_from_template,
+)
 from chantiermobile.constants import FormPlaceholders, DatePickerConfig, ContractMode, StructureType
 
 class SiteForm(forms.ModelForm):
@@ -96,7 +99,7 @@ class SiteForm(forms.ModelForm):
             return StructureType.POTEAUX_POUTRES
         return value
 
-class ProjectPhaseForm(forms.ModelForm):
+class ProjectPhaseForm(PhaseCatalogFormMixin, forms.ModelForm):
     """Phase create/edit form — name, optional parent (sous-étape) and
     dates; status transitions go through ProjectPhase.close(), not this
     form.
@@ -107,7 +110,24 @@ class ProjectPhaseForm(forms.ModelForm):
     own sous-étapes is excluded from being selectable as anyone's child in
     turn (mirrors the model's own `clean()` guard against a 2nd nesting
     level, from the other direction), and a phase being edited never
-    offers itself as its own parent."""
+    offers itself as its own parent.
+
+    Catalogue des étapes (added 2026-10-20): on create, `catalog_template`
+    lists every catalog étape/sous-étape the chantier doesn't have yet.
+    Picking one fills `name` and `category` (when left blank) and, for a
+    catalog sous-étape, its parent étape — created on the chantier if
+    needed. `include_sub_templates` also adds a catalog étape's own
+    sous-étapes. `parent_phase` also offers the catalog's main étapes,
+    created on the chantier when the form is saved."""
+    catalog_template = forms.ChoiceField(
+        required=False, label=_("Étape du catalogue"),
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        help_text=_("Choisissez une étape du Catalogue des étapes, ou laissez vide pour saisir une étape libre."),
+    )
+    include_sub_templates = forms.BooleanField(
+        required=False, initial=True, label=_("Ajouter aussi ses sous-étapes du catalogue"),
+    )
+
     class Meta:
         model = ProjectPhase
         fields = ['name', 'category', 'parent_phase', 'start_date', 'end_date']
@@ -132,19 +152,98 @@ class ProjectPhaseForm(forms.ModelForm):
         self.fields['parent_phase'].required = False
         self.fields['parent_phase'].empty_label = _("Aucune — étape principale")
         site = site or getattr(self.instance, 'site', None)
+        self.site = site
         qs = ProjectPhase.objects.none()
+        has_own_subs = bool(self.instance.pk and self.instance.sub_phases.exists())
         if site is not None:
             qs = ProjectPhase.objects.filter(site=site, parent_phase__isnull=True)
             if self.instance.pk:
                 qs = qs.exclude(pk=self.instance.pk)
-                if self.instance.sub_phases.exists():
+                if has_own_subs:
                     # This phase is itself a parent already; letting it
                     # become someone else's child would create a 2nd
                     # nesting level — see ProjectPhase.clean().
                     qs = ProjectPhase.objects.none()
         self.fields['parent_phase'].queryset = qs
+        if site is not None and not has_own_subs:
+            parent_field = enable_phase_catalog(self, 'parent_phase', [site], top_level_only=True)
+            parent_field.label_from_instance = lambda phase: phase.name
 
-class PlanningSubmissionForm(forms.ModelForm):
+        self.catalog_entries = []
+        if self.instance.pk or site is None:
+            del self.fields['catalog_template']
+            del self.fields['include_sub_templates']
+        else:
+            self.catalog_entries = catalog_entries_for_site(site)
+            self.fields['catalog_template'].choices = [('', _("— Étape libre (saisir le nom) —"))] + [
+                (str(t.pk), label) for t, label in self.catalog_entries
+            ]
+            # The name comes from the catalog when one is picked; clean()
+            # still requires one or the other.
+            self.fields['name'].required = False
+
+    @property
+    def catalog_options(self):
+        """Catalog choices with the data phase_form.html's script needs to
+        pre-fill the name/category/parent fields."""
+        sub_parent_ids = set(
+            PhaseTemplate.objects.filter(
+                pk__in=[t.pk for t, _label in self.catalog_entries], sub_templates__isnull=False,
+            ).values_list('pk', flat=True)
+        ) if self.catalog_entries else set()
+        return [
+            {
+                'value': str(t.pk), 'label': label, 'name': t.name, 'category': t.category,
+                'parent_name': t.parent_template.name if t.parent_template_id else '',
+                'has_subs': t.pk in sub_parent_ids,
+            }
+            for t, label in self.catalog_entries
+        ]
+
+    def clean(self):
+        cleaned = super().clean()
+        template = None
+        template_id = cleaned.get('catalog_template')
+        if template_id:
+            template = next((t for t, _label in self.catalog_entries if str(t.pk) == str(template_id)), None)
+            if template is None:
+                self.add_error('catalog_template', _("Cette étape du catalogue n'est plus disponible pour ce chantier."))
+        self._picked_template = template
+        if template is not None:
+            if not (cleaned.get('name') or '').strip():
+                cleaned['name'] = template.name
+            if not cleaned.get('category'):
+                cleaned['category'] = template.category
+            if template.parent_template_id and not cleaned.get('parent_phase'):
+                cleaned['parent_phase'] = pending_phase_from_template(self.site, template.parent_template)
+        if not (cleaned.get('name') or '').strip() and 'name' not in self.errors:
+            self.add_error('name', _("Donnez un nom à l'étape ou choisissez-en une dans le catalogue."))
+        return cleaned
+
+    def save(self, commit=True):
+        phase = super().save(commit=commit)
+        if commit:
+            self.add_catalog_sub_phases(phase)
+        return phase
+
+    def add_catalog_sub_phases(self, phase):
+        """When a catalog main étape was picked with "Ajouter aussi ses
+        sous-étapes", adds its catalog sous-étapes under the new étape
+        (skipping any it already has)."""
+        template = getattr(self, '_picked_template', None)
+        if (template is None or template.parent_template_id or phase.parent_phase_id
+                or not self.cleaned_data.get('include_sub_templates')):
+            return
+        subs = PhaseTemplate.catalog_for_cabinet(phase.site.cabinet).filter(
+            parent_template__name__iexact=template.name, parent_template__parent_template__isnull=True,
+        ).order_by('order', 'name')
+        for sub in subs:
+            ProjectPhase.objects.get_or_create(
+                site=phase.site, parent_phase=phase, name__iexact=sub.name,
+                defaults={'name': sub.name, 'category': sub.category},
+            )
+
+class PlanningSubmissionForm(PhaseCatalogFormMixin, forms.ModelForm):
     """Drafts a planning submission; `phase` is optional (a submission
     can cover the whole site rather than one phase) and its queryset is
     narrowed to the target site's own phases in

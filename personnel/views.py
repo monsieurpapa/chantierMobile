@@ -30,6 +30,7 @@ from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, 
 from core.quickcreate import QuickCreateView
 from chantiermobile.constants import UserRoles, PersonnelPayrollType, DIRECTOR_ROLES, AttendanceStatus, ApprovalStatus
 from projects.models import Site, ProjectPhase
+from projects.phase_fields import site_phase_options
 
 HR_ADMIN_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER']
 
@@ -227,10 +228,17 @@ class ConventionFormSetMixin:
         # Client-side filtering of the phase <select> by whichever site a
         # convention row has selected — one JSON map, built server-side,
         # keyed by site id. See personnel_form.html's extra_js.
+        # Each site's own étapes, then the Catalogue des étapes entries it
+        # doesn't have yet (`group` set — created on save if picked).
         phases_by_site = {}
         if cabinet:
             for phase in ProjectPhase.objects.filter(site__cabinet=cabinet).order_by('name'):
                 phases_by_site.setdefault(str(phase.site_id), []).append({'id': phase.pk, 'name': phase.name})
+            for site in sites:
+                phases_by_site.setdefault(str(site.pk), []).extend(
+                    {'id': opt['id'], 'name': opt['text'], 'group': opt['group']}
+                    for opt in site_phase_options(site) if opt.get('group')
+                )
         context['phases_by_site_json'] = json.dumps(phases_by_site)
         return context
 

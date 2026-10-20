@@ -147,6 +147,53 @@ row count never changes on this page).
   or require closing its sous-étapes first, and vice versa — each phase's
   `status` is independent of its parent's/children's.
 
+### PhaseTemplate — Catalogue des étapes **(added 2026-10-19)**
+A reusable étape/sous-étape name not tied to any chantier. `cabinet=None`
+is a global default (seeded by `projects/0012_seed_phase_templates.py`
+from the Appartements CCLK devis); a cabinet may add its own rows.
+`catalog_for_cabinet(cabinet)` returns the cabinet's rows plus the global
+ones. One level deep only (`parent_template`), like `ProjectPhase`.
+`instantiate_for_site(site)` turns a template into real, idempotent
+`ProjectPhase` rows; the "Importer depuis le catalogue" action on a site
+runs it for the whole catalog.
+
+**Catalog étapes in every étape select (added 2026-10-20)** —
+`projects/phase_fields.py`. Every form with an étape select lists the
+chantier's own étapes, then a "Catalogue des étapes" group with every
+catalog étape/sous-étape the chantier doesn't have yet (matched by name,
+case-insensitive, under the same parent name). Covered forms: the étape
+form itself (`ProjectPhaseForm`), planning submission, expense, caisse
+movement, payroll list, état de besoin line, DQE line, devis line, stock
+movement, task, personnel convention row and cotation.
+
+- A catalog option's value is `catalogue:<site pk>:<template pk>`. Picking
+  one creates the `ProjectPhase` on that chantier (its parent étape too,
+  for a catalog sous-étape; an existing parent with the same name is
+  reused) **only when the whole form is valid** —
+  `PhaseCatalogFormMixin._post_clean()`. Until then the field holds an
+  unsaved `ProjectPhase`, excluded from model validation so it never shows
+  a bogus "required" error next to the real one.
+- The catalog is only offered for chantiers the form already allows: the
+  form's own chantier, the requester's cabinet-scoped sites for tasks, and
+  the person's assigned chantiers for a cotation. A forged value for any
+  other chantier or another cabinet's template is rejected as an invalid
+  choice.
+- To add the catalog to a new étape select: give the form class
+  `PhaseCatalogFormMixin`, set the field's queryset as usual, then call
+  `enable_phase_catalog(form, 'phase', [site])`.
+- Selects filled by AJAX use `finance:site_phases_data`, which returns the
+  catalog entries with a `group` key; `static/js/phase-select.js` puts them
+  in an `<optgroup>`. The task, caisse and payroll-list forms now reload
+  their étape list when the chantier changes.
+- `ProjectPhaseForm` (create only) adds an "Étape du catalogue" picker:
+  it fills the name and category (both still editable), picks the parent
+  for a catalog sous-étape, and "Ajouter aussi ses sous-étapes du
+  catalogue" also creates a main étape's sous-étapes. Its "Étape parente"
+  select also offers the catalog's main étapes.
+- Report filters (expense report, caisse report, stock report) still list
+  only existing étapes, since there is nothing to filter on before an
+  étape exists.
+
 ### PlanningSubmission
 The engineer self-service planning flow: "Soumettre la planification aux
 ingénieurs concernés". `site`, optional `phase`, `description`, `status`

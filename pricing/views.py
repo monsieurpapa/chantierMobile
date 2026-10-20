@@ -544,7 +544,10 @@ def material_usage_comparison_api(request):
     if not site:
         return JsonResponse({'ok': False, 'reason': 'site_not_found'})
 
-    phase = ProjectPhase.objects.filter(pk=phase_id, site=site).first()
+    # A "catalogue:…" value is a Catalogue des étapes entry not yet on the
+    # chantier (created when the form is saved) — it has no devis/DQE
+    # baseline to compare against yet.
+    phase = ProjectPhase.objects.filter(pk=phase_id, site=site).first() if str(phase_id).isdigit() else None
     if not phase:
         return JsonResponse({'ok': False, 'reason': 'phase_not_found'})
 
