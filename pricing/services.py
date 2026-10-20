@@ -1,6 +1,6 @@
 """The Devis/État de besoin comparison engine: how much of a given
-material was budgeted for a site+étape (via its accepted Devis's source
-DQE) versus how much has actually been requested so far
+material was budgeted for a site+étape (via the chantier's budget DQE —
+see budget_dqe_for_site()) versus how much has actually been requested so far
 (materials.MaterialRequestItem), and whether that's within, approaching,
 or past the initial estimate.
 
@@ -28,31 +28,70 @@ def _phase_and_descendants(phase):
     return ids
 
 
+def budget_dqe_for_site(site):
+    """The DQE that serves as this chantier's material budget:
+
+    1. the source DQE of the chantier's accepted devis (most recent first)
+       — once the client has signed, the priced offer is the reference;
+    2. otherwise the chantier's approved DQE (most recently updated) — the
+       internal budget the DG / Directeur Technique signed off.
+
+    Added 2026-10-20: before, only (1) counted, so an approved DQE did
+    nothing for the état de besoin comparison until a devis had been
+    created, linked to it and accepted. Returns None when neither exists.
+    """
+    from chantiermobile.constants import DevisStatus, DQEStatus
+
+    devis = (
+        site.devis_set.filter(status=DevisStatus.ACCEPTE, source_dqe__isnull=False)
+        .select_related('source_dqe').order_by('-issue_date', '-pk').first()
+    )
+    if devis is not None:
+        return devis.source_dqe
+    return site.dqes.filter(status=DQEStatus.APPROUVE).order_by('-updated_at', '-pk').first()
+
+
+def _budgeted_quantity(dqe, phase_ids, material):
+    total = Decimal('0')
+    for line in dqe.lines.filter(phase_id__in=phase_ids).select_related('price_item', 'dqe'):
+        total += line.exploded_requirements().get(material.pk, Decimal('0'))
+    return total
+
+
 def baseline_quantity(site, phase, material):
     """The budgeted quantity of `material` for `phase` (and its
-    sous-étapes, if `phase` is top-level), drawn from the site's accepted
-    Devis's source_dqe — combining direct MATERIAL-type DQELines for that
-    material with WORK_ITEM-type DQELines exploded through
+    sous-étapes, if `phase` is top-level), drawn from the chantier's budget
+    DQE (budget_dqe_for_site()) — combining direct MATERIAL-type DQELines
+    for that material with WORK_ITEM-type DQELines exploded through
     MaterialConsumptionRatio. Returns 0 (not None) when the site has no
-    accepted Devis, no source_dqe, or no matching lines — "nothing
-    budgeted" is a fact worth reporting (see MaterialVarianceStatus.
-    NOT_BUDGETED), not an error."""
-    from chantiermobile.constants import DevisStatus
-
-    devis = site.devis_set.filter(status=DevisStatus.ACCEPTE, source_dqe__isnull=False).first()
-    if not devis or not devis.source_dqe_id:
+    budget DQE or no matching lines — "nothing budgeted" is a fact worth
+    reporting (see MaterialVarianceStatus.NOT_BUDGETED), not an error."""
+    dqe = budget_dqe_for_site(site)
+    if dqe is None:
         return Decimal('0')
-
     phase_ids = _phase_and_descendants(phase)
     if not phase_ids:
         return Decimal('0')
+    return _budgeted_quantity(dqe, phase_ids, material)
 
-    total = Decimal('0')
-    lines = devis.source_dqe.lines.filter(phase_id__in=phase_ids).select_related('price_item')
-    for line in lines:
-        exploded = line.exploded_requirements()
-        total += exploded.get(material.pk, Decimal('0'))
-    return total
+
+def comparison_phase(site, phase, material):
+    """The étape a (phase, material) pair is compared at. Normally `phase`
+    itself; but when `phase` is a sous-étape with no budget of its own for
+    the material while its parent étape does budget it (a DQE priced per
+    étape, like the CCLK "synthèse par étape"), the comparison moves up to
+    the parent étape — otherwise every request filed on a sous-étape would
+    read "non budgété" against a perfectly good étape-level budget."""
+    if phase is None or not phase.is_sub_phase:
+        return phase
+    dqe = budget_dqe_for_site(site)
+    if dqe is None:
+        return phase
+    if _budgeted_quantity(dqe, [phase.pk], material) > 0:
+        return phase
+    if _budgeted_quantity(dqe, [phase.parent_phase_id], material) > 0:
+        return phase.parent_phase
+    return phase
 
 
 def cumulative_requested_quantity(site, phase, material):
@@ -89,9 +128,11 @@ def compare_material_usage(site, phase, material, exclude_request_item=None, add
     on top of the (possibly-excluding) cumulative total; pass it to
     preview a not-yet-saved quantity.
 
-    Returns a dict: {baseline, cumulative_requested, variance_pct, status}
-    — variance_pct is None when baseline is 0 (division is meaningless;
-    NOT_BUDGETED already communicates that case)."""
+    Returns a dict: {baseline, cumulative_requested, variance_pct, status,
+    phase} — variance_pct is None when baseline is 0 (division is
+    meaningless; NOT_BUDGETED already communicates that case); `phase` is
+    the étape actually compared (see comparison_phase())."""
+    phase = comparison_phase(site, phase, material)
     baseline = baseline_quantity(site, phase, material)
 
     requested = cumulative_requested_quantity(site, phase, material)
@@ -125,6 +166,7 @@ def compare_material_usage(site, phase, material, exclude_request_item=None, add
         'cumulative_requested': requested,
         'variance_pct': variance_pct,
         'status': status,
+        'phase': phase,
     }
 
 

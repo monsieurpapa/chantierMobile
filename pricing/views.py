@@ -708,7 +708,8 @@ class CabinetMaterialThresholdSettingsView(LoginRequiredMixin, RoleRequiredMixin
 
 class DevisComplianceReportView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, DetailView):
     """Per-étape breakdown of a Site's material-variance comparisons
-    against its accepted Devis's source DQE — the "intelligently
+    against its budget DQE (accepted devis's source DQE, else the approved
+    DQE — see pricing.services.budget_dqe_for_site) — the "intelligently
     comparing material requests to the original devis and detailed devis
     figures" report from the brainstorm, as a read-only page any member
     of the cabinet can consult (not just the director-tier, mirroring
@@ -726,17 +727,17 @@ class DevisComplianceReportView(LoginRequiredMixin, CabinetAccessMixin, PageHead
         return str(reverse_lazy('projects:site_detail', kwargs={'unique_id': self.object.unique_id}))
 
     def get_context_data(self, **kwargs):
-        from pricing.services import compare_material_usage
+        from pricing.services import compare_material_usage, budget_dqe_for_site
         from chantiermobile.constants import DevisStatus
         context = super().get_context_data(**kwargs)
         site = self.object
 
-        devis = site.devis_set.filter(status=DevisStatus.ACCEPTE, source_dqe__isnull=False).first()
-        context['devis'] = devis
+        dqe = budget_dqe_for_site(site)
+        context['budget_dqe'] = dqe
+        context['devis'] = site.devis_set.filter(status=DevisStatus.ACCEPTE, source_dqe=dqe).first() if dqe else None
 
         rows = []
-        if devis:
-            dqe = devis.source_dqe
+        if dqe:
             # Every (phase, material) pair this DQE actually budgets for —
             # a material never requested yet still deserves a row (so a
             # 100%-unspent budget is visible too), but a material neither
