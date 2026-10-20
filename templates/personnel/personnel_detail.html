@@ -152,7 +152,7 @@
                                 <label class="text-600 fs--1">{% trans "Default Daily Rate" %}</label>
                                 <p class="fs-1 fw-bold text-primary">
                                     {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,ACCOUNTANT' %}
-                                    {{ CURRENCY_SYMBOL }}{{ personnel.default_daily_rate }}
+                                    {% if personnel.default_daily_rate is not None %}{{ CURRENCY_SYMBOL }}{{ personnel.default_daily_rate|floatformat:"2g" }}{% else %}—{% endif %}
                                     {% else %}
                                     {% trans "Restricted" %}
                                     {% endif %}
