@@ -298,27 +298,34 @@ def invoice_pdf(request, pk):
             messages.error(request, _("Vous n'avez pas accès à cette facture."))
             return redirect('revenue:invoice_list')
 
-    from core.pdf_utils import render_table_report_pdf
+    from core.pdf_utils import render_table_report_pdf, Signatory, fmt_amount, pour_label
     contract = invoice.contract
     cabinet = contract.site.cabinet
     payments_total = invoice.payments.aggregate(total=Sum('amount'))['total'] or 0
-    rows = [
-        (_("Émetteur"), cabinet.name),
+    info_rows = [
         (_("Client"), contract.client_name),
         (_("Chantier"), contract.site.name),
-        (_("Numéro de facture"), invoice.invoice_number),
+        (_("Adresse"), contract.site.location),
         (_("Date d'émission"), invoice.issued_date.strftime('%d/%m/%Y')),
         (_("Date d'échéance"), invoice.due_date.strftime('%d/%m/%Y')),
-        (_("Montant"), f"{invoice.amount:.2f} $"),
-        (_("Montant payé"), f"{payments_total:.2f} $"),
         (_("Statut"), invoice.get_status_display()),
+    ]
+    rows = [
+        (_("Montant de la facture"), fmt_amount(invoice.amount)),
+        (_("Déjà payé"), fmt_amount(payments_total)),
     ]
     return render_table_report_pdf(
         filename=f"facture-{invoice.invoice_number}.pdf",
-        title=_("Facture %(num)s") % {'num': invoice.invoice_number},
-        subtitle=cabinet.address,
-        columns=[_("Champ"), _("Valeur")],
+        title=_("FACTURE N° %(num)s") % {'num': invoice.invoice_number},
+        subtitle=None,
+        info_rows=info_rows,
+        columns=[_("Désignation"), _("Montant ($)")],
         rows=rows,
+        totals_row=(_("Reste à payer"), fmt_amount(invoice.amount - payments_total)),
+        col_widths=[0.7, 0.3],
+        cabinet=cabinet,
+        amount_in_words=invoice.amount,
+        signatories=[Signatory(pour_label(cabinet), _("La Direction"))],
         generated_by=request.user.get_full_name() or request.user.username,
     )
 
@@ -337,23 +344,34 @@ def contract_pdf(request, pk):
             messages.error(request, _("Vous n'avez pas accès à ce contrat."))
             return redirect('revenue:contract_list')
 
-    from core.pdf_utils import render_table_report_pdf
+    from core.pdf_utils import render_table_report_pdf, Signatory, fmt_amount, pour_label
     cabinet = contract.site.cabinet
-    rows = [
-        (_("Émetteur"), cabinet.name),
+    info_rows = [
         (_("Client"), contract.client_name),
         (_("Chantier"), contract.site.name),
-        (_("Valeur du contrat"), f"{contract.total_value:.2f} $"),
-        (_("Dette avenants"), f"{contract.avenant_debt:.2f} $"),
+        (_("Adresse"), contract.site.location),
         (_("Date de signature"), contract.signed_date.strftime('%d/%m/%Y')),
-        (_("Total payé à ce jour"), f"{contract.total_paid:.2f} $"),
+    ]
+    rows = [
+        (_("Valeur du contrat"), fmt_amount(contract.total_value)),
+        (_("Dette avenants"), fmt_amount(contract.avenant_debt)),
+        (_("Total payé à ce jour"), fmt_amount(contract.total_paid)),
     ]
     return render_table_report_pdf(
         filename=f"contrat-{contract.pk}-{contract.client_name}.pdf",
-        title=_("Contrat — %(client)s") % {'client': contract.client_name},
-        subtitle=cabinet.address,
-        columns=[_("Champ"), _("Valeur")],
+        title=_("CONTRAT — %(client)s") % {'client': contract.client_name},
+        subtitle=None,
+        info_rows=info_rows,
+        columns=[_("Désignation"), _("Montant ($)")],
         rows=rows,
+        totals_row=(_("Solde client"), fmt_amount(contract.client_balance)),
+        col_widths=[0.7, 0.3],
+        cabinet=cabinet,
+        amount_in_words=contract.total_value,
+        signatories=[
+            Signatory(pour_label(cabinet), _("La Direction Générale")),
+            Signatory(_("Le Client"), _("Maître d'ouvrage"), contract.client_name),
+        ],
         generated_by=request.user.get_full_name() or request.user.username,
     )
 
@@ -537,7 +555,7 @@ class DevisListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, Lis
     context_object_name = 'devis_list'
     cabinet_lookup_field = 'site__cabinet'
     header_title = _("Devis")
-    header_subtitle = _("Gérez les devis envoyés aux clients")
+    header_subtitle = _("Offres de prix envoyées aux clients — saisies à la main ou créées depuis un DQE")
 
     def get_header_actions(self):
         return [{
@@ -561,6 +579,47 @@ class DevisListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, Lis
         if status:
             qs = qs.filter(status=status)
         return qs
+
+
+@login_required
+def devis_create_from_dqe(request, dqe_pk):
+    """"Créer un devis depuis ce DQE" (POST, from the DQE page): a draft
+    devis for the DQE's chantier, linked to the DQE, with every DQE line
+    copied and its unit price raised by the margin entered (%). Same roles
+    as creating a devis by hand (DEVIS_ACTION_ROLES), in the DQE's own
+    cabinet."""
+    from decimal import Decimal, InvalidOperation
+    from pricing.models import DQE
+    from .services import create_devis_from_dqe
+
+    dqe = get_object_or_404(DQE.objects.select_related('site', 'cabinet'), pk=dqe_pk)
+    back = redirect('pricing:dqe_detail', pk=dqe.pk)
+    if request.method != 'POST':
+        return back
+    if not can_act_for_cabinet(request, dqe.cabinet, DEVIS_ACTION_ROLES):
+        messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+        return back
+    if dqe.site_id is None:
+        messages.error(request, _("Rattachez d'abord ce DQE à un chantier : un devis appartient toujours à un chantier."))
+        return back
+    client_name = (request.POST.get('client_name') or '').strip()
+    if not client_name:
+        messages.error(request, _("Indiquez le client (maître d'ouvrage) du devis."))
+        return back
+    try:
+        margin = Decimal((request.POST.get('margin_pct') or '0').replace(',', '.'))
+        validity_days = int(request.POST.get('validity_days') or 30)
+    except (InvalidOperation, ValueError):
+        messages.error(request, _("Marge ou durée de validité invalide."))
+        return back
+    if margin < 0 or margin > 1000 or validity_days < 0 or validity_days > 3650:
+        messages.error(request, _("Marge ou durée de validité invalide."))
+        return back
+    devis = create_devis_from_dqe(dqe, client_name=client_name, margin_pct=margin, validity_days=validity_days)
+    messages.success(request, _(
+        "Devis %(num)s créé depuis %(ref)s (%(count)s lignes, marge %(margin)s %%). Relisez-le avant de l'envoyer."
+    ) % {'num': devis.devis_number, 'ref': dqe.reference, 'count': devis.lines.count(), 'margin': floatformat(margin, -2)})
+    return redirect('revenue:devis_detail', pk=devis.pk)
 
 
 class DevisCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, PageHeaderMixin, CreateView):
@@ -753,6 +812,17 @@ class DevisDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, D
             })
         return actions
 
+
+
+class DevisPdfView(DevisDetailView):
+    """"Exporter en PDF": the devis in the cabinet's letterhead layout,
+    with signature boxes (Pour l'<sigle> — La Direction Technique / Vu pour
+    approbation — Le Maître d'ouvrage). Same access as the devis page."""
+
+    def render_to_response(self, context, **response_kwargs):
+        from revenue.documents import devis_pdf_response
+        user = self.request.user
+        return devis_pdf_response(self.object, generated_by=user.get_full_name() or user.get_username())
 
 @login_required
 def devis_send(request, pk):

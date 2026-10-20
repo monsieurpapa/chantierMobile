@@ -57,6 +57,26 @@ class Cabinet(BaseModel):
     address = models.TextField(blank=True)
     tax_id = models.CharField(max_length=50, blank=True, help_text=_("NIF/TIN"))
     logo = models.ImageField(upload_to='cabinets/logos/', blank=True, null=True)
+    # Letterhead of every generated PDF (DQE, devis, invoices, reports) —
+    # added 2026-10-20, modelled on the client's "DEVIS GLOBAL" sheet.
+    legal_name = models.CharField(
+        max_length=255, blank=True, verbose_name=_('Raison sociale (en-tête des documents)'),
+        help_text=_("Ex : Assistance Technique en Génie Civil (ATGC congo.sarl). Vide = nom du cabinet."),
+    )
+    short_name = models.CharField(
+        max_length=50, blank=True, verbose_name=_('Sigle'),
+        help_text=_("Utilisé pour la signature « Pour l'… », ex : A.T.G.C."),
+    )
+    legal_mentions = models.TextField(
+        blank=True, verbose_name=_('Mentions légales'),
+        help_text=_("Une ligne par mention : n° d'agrément, RCCM, ID. NAT., etc."),
+    )
+    phone = models.CharField(max_length=100, blank=True, verbose_name=_('Téléphone(s)'))
+    email = models.CharField(max_length=255, blank=True, verbose_name=_('E-mail(s)'))
+    city = models.CharField(
+        max_length=100, blank=True, verbose_name=_('Ville'),
+        help_text=_("Pour « Fait à … le … » sur les documents, ex : Goma."),
+    )
     material_variance_orange_threshold_pct = models.DecimalField(
         max_digits=6, decimal_places=2, default=100,
         verbose_name=_('Seuil orange (% du devis)'),

@@ -15,6 +15,7 @@ urlpatterns = [
     path('dqe/add/', views.DQECreateView.as_view(), name='dqe_create'),
     path('dqe/<int:pk>/', views.DQEDetailView.as_view(), name='dqe_detail'),
     path('dqe/<int:pk>/edit/', views.DQEUpdateView.as_view(), name='dqe_update'),
+    path('dqe/<int:pk>/pdf/', views.DQEPdfView.as_view(), name='dqe_pdf'),
     path('dqe/<int:pk>/soumettre/', views.dqe_submit_for_approval, name='dqe_submit_for_approval'),
     path('dqe/<int:pk>/approuver/', views.dqe_approve, name='dqe_approve'),
     path('dqe/<int:pk>/rejeter/', views.dqe_reject, name='dqe_reject'),

@@ -8,6 +8,22 @@ price a new project from its own known rates instead of re-pricing every job
 from scratch, and keeps each estimate's line prices as its own snapshot so a
 later catalog price change never silently reprices work already quoted.
 
+### DQE vs devis **(2026-10-20)**
+
+| | DQE (`pricing.DQE`) | Devis (`revenue.Devis`) |
+|---|---|---|
+| Question it answers | What will this chantier cost us? | What do we sell it to the client for? |
+| Prices | Bibliothèque de Prix (cost) | Client prices (cost + margin) |
+| Workflow | Brouillon → En attente → Approuvé / Rejeté (DG / Directeur Technique) | Brouillon → Envoyé → Accepté / Refusé / Expiré (client) |
+| Used for | Material budget (état de besoin comparison, Gantt budgets) | Contract, situations de travaux, invoices |
+
+The UI calls the DQE "DQE / budget chantier" (it used to be called "devis
+global", which read like a devis). The chantier's budget DQE is
+`budget_dqe_for_site()` below: the accepted devis's source DQE, else the
+approved DQE. A devis can be generated from a DQE ("Créer un devis depuis
+ce DQE", `revenue.services.create_devis_from_dqe`): every line copied with
+an optional margin %, linked through `Devis.source_dqe`.
+
 ## Models
 
 ### `PriceLibraryItem`
@@ -108,14 +124,22 @@ when it wants to override one of those defaults (see
 ## Comparison engine (`pricing/services.py`) **(added 2026-10-07)**
 
 Compares what a site has actually requested for a material, at a given étape,
-against what the accepted devis budgeted for it — the heart of the
+against what the chantier's budget DQE budgeted for it — the heart of the
 "Devis & États de besoin" feature.
 
-- `baseline_quantity(site, phase, material)` — finds the site's accepted
-  `Devis` (`status=ACCEPTE`) with a `source_dqe` set, explodes every line of
-  that DQE scoped to `phase` and its sous-étapes (see rollup below), and sums
-  the requested material's exploded quantity. Returns `Decimal('0')` if there
-  is no accepted devis, or none with a `source_dqe`.
+- `budget_dqe_for_site(site)` **(2026-10-20)** — the source DQE of the
+  site's accepted devis (most recent), else the site's approved DQE (most
+  recently updated), else `None`. Before 2026-10-20 only the accepted
+  devis counted.
+- `baseline_quantity(site, phase, material)` — explodes every line of the
+  budget DQE scoped to `phase` and its sous-étapes (see rollup below), and
+  sums the requested material's exploded quantity. Returns `Decimal('0')`
+  if there is no budget DQE.
+- `comparison_phase(site, phase, material)` **(2026-10-20)** — a sous-étape
+  with no budget of its own for the material is compared at its parent
+  étape when the parent budgets it (DQEs priced per étape, like the CCLK
+  synthèse). `compare_material_usage()` returns the étape it used as
+  `phase`.
 - `cumulative_requested_quantity(site, phase, material)` — sums
   `MaterialRequestItem.quantity` for that site/phase-and-descendants/material,
   excluding `REJECTED` items (an optional `exclude_request_item` lets a

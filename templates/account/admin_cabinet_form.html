@@ -98,6 +98,17 @@
                         {% endif %}
                     </div>
 
+                    <h6 class="mt-4 mb-2 text-700"><span class="fas fa-file-pdf me-2"></span>{% trans "En-tête des documents PDF" %}</h6>
+                    <p class="fs--1 text-600">{% trans "Repris en tête de chaque document généré (DQE, devis, factures, rapports)." %}</p>
+                    {% for field in form %}{% if field.name == 'legal_name' or field.name == 'short_name' or field.name == 'legal_mentions' or field.name == 'phone' or field.name == 'email' or field.name == 'city' %}
+                    <div class="mb-3">
+                        <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.errors %}<div class="text-danger fs--1 mt-1">{{ field.errors.0 }}</div>{% endif %}
+                        {% if field.help_text %}<small class="form-text text-muted d-block mt-1">{{ field.help_text }}</small>{% endif %}
+                    </div>
+                    {% endif %}{% endfor %}
+
                     <!-- Non-field Errors -->
                     {% if form.non_field_errors %}
                     <div class="alert alert-danger">

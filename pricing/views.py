@@ -196,7 +196,7 @@ class DQEListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListV
     context_object_name = 'dqes'
     paginate_by = 50
     header_title = _("DQE")
-    header_subtitle = _("Détails Quantitatifs Estimatifs — bordereaux de quantités bâtis sur la bibliothèque de prix")
+    header_subtitle = _("Estimations internes (quantités × prix de la bibliothèque). Le DQE approuvé sert de budget du chantier et peut générer un devis client.")
 
     def get_queryset(self):
         return super().get_queryset().select_related('site').prefetch_related('lines').order_by('-created_at')
@@ -338,6 +338,18 @@ class DQEDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, Det
     def get_queryset(self):
         return super().get_queryset().select_related('site').prefetch_related('lines__price_item')
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Pre-fill "Créer un devis" with the client already known for this
+        # chantier (latest devis), if any.
+        site = self.object.site
+        if site is not None:
+            latest = site.devis_set.exclude(client_name='').order_by('-issue_date', '-pk').first()
+            context['dqe_client_name'] = latest.client_name if latest else ''
+            from pricing.services import budget_dqe_for_site
+            context['is_site_budget'] = budget_dqe_for_site(site) == self.object
+        return context
+
     def get_header_title(self):
         return self.object.reference
 
@@ -352,6 +364,17 @@ class DQEDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, Det
             {'title': _("DQE"), 'url': str(reverse_lazy('pricing:dqe_list'))},
             {'title': self.object.reference, 'url': None},
         ]
+
+
+class DQEPdfView(DQEDetailView):
+    """"Exporter en PDF": the DQE in the cabinet's letterhead layout, with
+    signature boxes (Établi par / Vérifié par / Approuvé par). Same access
+    as the DQE page (any member of the DQE's cabinet)."""
+
+    def render_to_response(self, context, **response_kwargs):
+        from pricing.documents import dqe_pdf_response
+        user = self.request.user
+        return dqe_pdf_response(self.object, generated_by=user.get_full_name() or user.get_username())
 
 
 @login_required
@@ -708,7 +731,8 @@ class CabinetMaterialThresholdSettingsView(LoginRequiredMixin, RoleRequiredMixin
 
 class DevisComplianceReportView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, DetailView):
     """Per-étape breakdown of a Site's material-variance comparisons
-    against its accepted Devis's source DQE — the "intelligently
+    against its budget DQE (accepted devis's source DQE, else the approved
+    DQE — see pricing.services.budget_dqe_for_site) — the "intelligently
     comparing material requests to the original devis and detailed devis
     figures" report from the brainstorm, as a read-only page any member
     of the cabinet can consult (not just the director-tier, mirroring
@@ -726,17 +750,17 @@ class DevisComplianceReportView(LoginRequiredMixin, CabinetAccessMixin, PageHead
         return str(reverse_lazy('projects:site_detail', kwargs={'unique_id': self.object.unique_id}))
 
     def get_context_data(self, **kwargs):
-        from pricing.services import compare_material_usage
+        from pricing.services import compare_material_usage, budget_dqe_for_site
         from chantiermobile.constants import DevisStatus
         context = super().get_context_data(**kwargs)
         site = self.object
 
-        devis = site.devis_set.filter(status=DevisStatus.ACCEPTE, source_dqe__isnull=False).first()
-        context['devis'] = devis
+        dqe = budget_dqe_for_site(site)
+        context['budget_dqe'] = dqe
+        context['devis'] = site.devis_set.filter(status=DevisStatus.ACCEPTE, source_dqe=dqe).first() if dqe else None
 
         rows = []
-        if devis:
-            dqe = devis.source_dqe
+        if dqe:
             # Every (phase, material) pair this DQE actually budgets for —
             # a material never requested yet still deserves a row (so a
             # 100%-unspent budget is visible too), but a material neither

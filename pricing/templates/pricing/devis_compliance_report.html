@@ -18,11 +18,16 @@
         <div class="container-fluid py-4">
             {% include 'includes/page_header.html' %}
 
-            {% if not devis %}
+            {% if not budget_dqe %}
             <div class="alert alert-warning">
-                {% trans "Ce chantier n'a pas de devis accepté relié à un DQE source — aucune comparaison possible. Reliez un DQE au devis accepté (champ « DQE source ») pour activer ce rapport." %}
+                {% trans "Ce chantier n'a pas encore de budget : ni DQE approuvé, ni devis accepté relié à un DQE. Faites approuver un DQE (ou acceptez un devis créé depuis un DQE) pour activer ce rapport." %}
             </div>
             {% else %}
+            <p class="fs--1 text-700 mb-2">
+                {% trans "Budget de référence" %} :
+                <a href="{% url 'pricing:dqe_detail' pk=budget_dqe.pk %}">{{ budget_dqe.reference }} — {{ budget_dqe.title }}</a>
+                {% if devis %}({% blocktrans with number=devis.devis_number %}via le devis accepté {{ number }}{% endblocktrans %}){% else %}({% trans "DQE approuvé" %}){% endif %}
+            </p>
             <div class="card mb-3 border-0 shadow-sm">
                 <div class="card-body p-0">
                     <div class="table-responsive scrollbar">
@@ -31,7 +36,7 @@
                                 <tr>
                                     <th class="align-middle white-space-nowrap">{% trans "Étape" %}</th>
                                     <th class="align-middle white-space-nowrap">{% trans "Matériau" %}</th>
-                                    <th class="align-middle white-space-nowrap text-end">{% trans "Estimation (devis)" %}</th>
+                                    <th class="align-middle white-space-nowrap text-end">{% trans "Budget (DQE)" %}</th>
                                     <th class="align-middle white-space-nowrap text-end">{% trans "Demandé (cumulé)" %}</th>
                                     <th class="align-middle white-space-nowrap text-end">{% trans "Écart" %}</th>
                                     <th class="align-middle white-space-nowrap">{% trans "Statut" %}</th>
@@ -63,7 +68,7 @@
                                         {% elif row.comparison.status == 'ORANGE' %}
                                         <span class="badge rounded-pill badge-subtle-warning">{% trans "À surveiller" %}</span>
                                         {% elif row.comparison.status == 'NOT_BUDGETED' %}
-                                        <span class="badge rounded-pill badge-subtle-secondary">{% trans "Non chiffré au devis" %}</span>
+                                        <span class="badge rounded-pill badge-subtle-secondary">{% trans "Non budgété" %}</span>
                                         {% else %}
                                         <span class="badge rounded-pill badge-subtle-success">{% trans "Dans les clous" %}</span>
                                         {% endif %}
