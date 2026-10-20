@@ -74,3 +74,15 @@ class TestDevisFromDqeView:
         response = director_client.get(reverse('pricing:dqe_detail', args=[dqe_with_lines.pk]))
         assert response.status_code == 200
         assert reverse('revenue:devis_create_from_dqe', args=[dqe_with_lines.pk]).encode() in response.content
+
+
+@pytest.mark.django_db
+class TestBudgetWording:
+    def test_dqe_page_flags_the_site_budget(self, director_client, dqe_with_lines):
+        response = director_client.get(reverse('pricing:dqe_detail', args=[dqe_with_lines.pk]))
+        assert response.context['is_site_budget'] is True
+        assert 'Budget du chantier'.encode() in response.content
+
+    def test_menu_says_budget_chantier(self, director_client):
+        response = director_client.get(reverse('pricing:dqe_list'))
+        assert 'DQE / budget chantier'.encode() in response.content

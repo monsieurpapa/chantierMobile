@@ -196,7 +196,7 @@ class DQEListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListV
     context_object_name = 'dqes'
     paginate_by = 50
     header_title = _("DQE")
-    header_subtitle = _("Détails Quantitatifs Estimatifs — bordereaux de quantités bâtis sur la bibliothèque de prix")
+    header_subtitle = _("Estimations internes (quantités × prix de la bibliothèque). Le DQE approuvé sert de budget du chantier et peut générer un devis client.")
 
     def get_queryset(self):
         return super().get_queryset().select_related('site').prefetch_related('lines').order_by('-created_at')
@@ -346,6 +346,8 @@ class DQEDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, Det
         if site is not None:
             latest = site.devis_set.exclude(client_name='').order_by('-issue_date', '-pk').first()
             context['dqe_client_name'] = latest.client_name if latest else ''
+            from pricing.services import budget_dqe_for_site
+            context['is_site_budget'] = budget_dqe_for_site(site) == self.object
         return context
 
     def get_header_title(self):

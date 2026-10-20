@@ -203,6 +203,9 @@
                                     {% else %}
                                     <span class="badge rounded-pill badge-subtle-warning">{{ dqe.get_status_display }}</span>
                                     {% endif %}
+                                    {% if is_site_budget %}
+                                    <span class="badge rounded-pill badge-subtle-primary ms-1" title="{% trans 'Les états de besoin de ce chantier sont comparés à ce DQE.' %}">{% trans "Budget du chantier" %}</span>
+                                    {% endif %}
                                 </div>
                             </div>
                             {% if dqe.status == 'REJETE' and dqe.rejection_reason %}

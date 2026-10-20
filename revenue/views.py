@@ -537,7 +537,7 @@ class DevisListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, Lis
     context_object_name = 'devis_list'
     cabinet_lookup_field = 'site__cabinet'
     header_title = _("Devis")
-    header_subtitle = _("Gérez les devis envoyés aux clients")
+    header_subtitle = _("Offres de prix envoyées aux clients — saisies à la main ou créées depuis un DQE")
 
     def get_header_actions(self):
         return [{
