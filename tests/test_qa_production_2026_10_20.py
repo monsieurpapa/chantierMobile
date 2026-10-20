@@ -65,3 +65,18 @@ class TestFinding6GroupedAmounts:
         assert response.status_code == 200
         assert '30000,00' not in content
         assert '30 000,00' in content
+
+
+@pytest.mark.django_db
+class TestFinding7FrenchTitles:
+    @pytest.mark.parametrize('url_name,title', [
+        ('finance:expense_list', 'Dépenses'),
+        ('materials:request_list', 'Demandes de matériaux'),
+        ('materials:material_list', 'Catalogue des matériaux'),
+        ('revenue:contract_list', 'Contrats'),
+        ('revenue:payment_list', 'Paiements'),
+    ])
+    def test_page_title_is_french(self, director_client, url_name, title):
+        response = director_client.get(reverse(url_name), HTTP_ACCEPT_LANGUAGE='fr')
+        assert response.status_code == 200
+        assert f'<title>{title} - ChantierMobile'.encode() in response.content
