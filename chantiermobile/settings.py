@@ -220,7 +220,25 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static']
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# File storages. Django 5.1+ ignores the old STATICFILES_STORAGE /
+# DEFAULT_FILE_STORAGE settings, so these must be declared in STORAGES
+# (QA report 2026-10-20: production, on Django 6, was silently storing
+# uploads on the container's ephemeral disk and serving unhashed static
+# files with a 60 s cache).
+# - staticfiles: hashed + compressed in production (WhiteNoise then caches
+#   them for a year); plain storage in DEBUG so tests and `runserver` don't
+#   need a collectstatic manifest.
+# - default (uploads): local disk in DEBUG, Cloudflare R2 in production
+#   (set below).
+STORAGES = {
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {
+        'BACKEND': (
+            'django.contrib.staticfiles.storage.StaticFilesStorage' if DEBUG
+            else 'chantiermobile.storage_backends.StaticStorage'
+        ),
+    },
+}
 
 # Media files (user uploads: cabinet logos, expense receipts)
 MEDIA_URL = '/media/'
@@ -233,7 +251,7 @@ if not DEBUG:
     #   CLOUDFARE_API_TOKEN      → the "Secret Access Key" shown when you create an R2 API token
     #   CLOUDFARE_R2_BUCKET_NAME → the bucket name you created (e.g. "chantiermobile-media")
     #   CLOUDFARE_R2_BUCKET_URL  → S3 endpoint: https://<account-id>.r2.cloudflarestorage.com
-    DEFAULT_FILE_STORAGE = 'chantiermobile.storage_backends.MediaStorage'
+    STORAGES['default'] = {'BACKEND': 'chantiermobile.storage_backends.MediaStorage'}
     AWS_ACCESS_KEY_ID = os.environ.get('CLOUDFARE_R2_TOKEN_NAME')
     AWS_SECRET_ACCESS_KEY = os.environ.get('CLOUDFARE_API_TOKEN')
     AWS_STORAGE_BUCKET_NAME = os.environ.get('CLOUDFARE_R2_BUCKET_NAME', 'chantiermobile-media')
