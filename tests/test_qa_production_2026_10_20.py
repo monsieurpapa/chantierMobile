@@ -35,3 +35,33 @@ class TestFinding5NoDeadButtons:
         assert response.status_code == 200
         assert b'>Filter</button>' not in response.content
         assert b'>Export</button>' not in response.content
+
+
+class TestFinding6MoneyFilter:
+    def test_negative_sign_goes_before_the_symbol(self):
+        from core.templatetags.money import money
+        assert money(Decimal('-200')) in ('-$200,00', '-$200.00')
+
+    def test_thousands_are_grouped(self):
+        from django.utils import translation
+        from core.templatetags.money import money
+        with translation.override('fr'):
+            assert money(Decimal('30000')).replace('\xa0', ' ').replace(' ', ' ') == '$30 000,00'
+
+    def test_empty_value(self):
+        from core.templatetags.money import money
+        assert money(None) == '—'
+
+
+@pytest.mark.django_db
+class TestFinding6GroupedAmounts:
+    def test_budget_list_groups_thousands(self, director_client, site):
+        from datetime import date, timedelta
+        from finance.models import Budget
+        Budget.objects.create(site=site, total_amount=Decimal('30000'), start_date=date.today(),
+                              end_date=date.today() + timedelta(days=365))
+        response = director_client.get(reverse('finance:budget_list'), HTTP_ACCEPT_LANGUAGE='fr')
+        content = response.content.decode().replace('\xa0', ' ').replace(' ', ' ')
+        assert response.status_code == 200
+        assert '30000,00' not in content
+        assert '30 000,00' in content

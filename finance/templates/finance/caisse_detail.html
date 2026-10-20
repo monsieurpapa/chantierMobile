@@ -1,5 +1,6 @@
 {% extends 'falcon_base.html' %}
 {% load static i18n humanize %}
+{% load money %}
 
 {% block title %}{{ caisse.name }} - ChantierMobile{% endblock %}
 
@@ -18,7 +19,7 @@
                     <div class="card h-100">
                         <div class="card-body">
                             <label class="text-600 fs--1">{% trans "Solde d'ouverture" %}</label>
-                            <p class="fs-1 fw-bold mb-0">{{ CURRENCY_SYMBOL }}{{ opening_balance|floatformat:"2g" }}</p>
+                            <p class="fs-1 fw-bold mb-0">{{ opening_balance|money }}</p>
                         </div>
                     </div>
                 </div>
@@ -26,7 +27,7 @@
                     <div class="card h-100">
                         <div class="card-body">
                             <label class="text-600 fs--1">{% trans "Solde actuel" %}</label>
-                            <p class="fs-1 fw-bold {% if closing_balance < 0 %}text-danger{% else %}text-success{% endif %} mb-0">{{ CURRENCY_SYMBOL }}{{ closing_balance|floatformat:"2g" }}</p>
+                            <p class="fs-1 fw-bold {% if closing_balance < 0 %}text-danger{% else %}text-success{% endif %} mb-0">{{ closing_balance|money }}</p>
                         </div>
                     </div>
                 </div>
@@ -156,7 +157,7 @@
                                     <td>{{ row.tx.category.name|default:"-" }}</td>
                                     <td>{{ row.tx.description|default:"-" }}</td>
                                     <td class="text-end fw-semibold">{{ CURRENCY_SYMBOL }}{{ row.tx.amount|floatformat:"2g" }}</td>
-                                    <td class="text-end">{{ CURRENCY_SYMBOL }}{{ row.running_balance|floatformat:"2g" }}</td>
+                                    <td class="text-end">{{ row.running_balance|money }}</td>
                                     <td>
                                         {% if row.tx.proof %}
                                         <a href="{{ row.tx.proof.url }}" target="_blank" rel="noopener"><span class="fas fa-paperclip"></span></a>

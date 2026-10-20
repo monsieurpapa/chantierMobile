@@ -41,12 +41,12 @@
                         <a href="{% url 'projects:site_detail' unique_id=site_row.site.unique_id %}">{{ site_row.site.name }}</a>
                     </h6>
                     <div class="fs--1">
-                        <span class="text-600">{% trans "Convention" %}:</span> <strong>{{ CURRENCY_SYMBOL }}{{ site_row.cap_total|floatformat:2 }}</strong>
+                        <span class="text-600">{% trans "Convention" %}:</span> <strong>{{ CURRENCY_SYMBOL }}{{ site_row.cap_total|floatformat:"2g" }}</strong>
                         &nbsp;·&nbsp;
-                        <span class="text-600">{% trans "Payé" %}:</span> <strong>{{ CURRENCY_SYMBOL }}{{ site_row.paid_total|floatformat:2 }}</strong>
+                        <span class="text-600">{% trans "Payé" %}:</span> <strong>{{ CURRENCY_SYMBOL }}{{ site_row.paid_total|floatformat:"2g" }}</strong>
                         &nbsp;·&nbsp;
                         <span class="text-600">{% trans "Restant" %}:</span>
-                        <strong class="{% if site_row.remaining_total < 0 %}text-danger{% endif %}">{{ CURRENCY_SYMBOL }}{{ site_row.remaining_total|floatformat:2 }}</strong>
+                        <strong class="{% if site_row.remaining_total < 0 %}text-danger{% endif %}">{{ CURRENCY_SYMBOL }}{{ site_row.remaining_total|floatformat:"2g" }}</strong>
                     </div>
                 </div>
                 <div class="card-body p-0">
@@ -64,9 +64,9 @@
                                 {% for phase_row in site_row.phases %}
                                 <tr>
                                     <td>{{ phase_row.label }}</td>
-                                    <td class="text-end">{{ CURRENCY_SYMBOL }}{{ phase_row.cap|floatformat:2 }}</td>
-                                    <td class="text-end">{{ CURRENCY_SYMBOL }}{{ phase_row.paid|floatformat:2 }}</td>
-                                    <td class="text-end {% if phase_row.remaining < 0 %}text-danger{% endif %}">{{ CURRENCY_SYMBOL }}{{ phase_row.remaining|floatformat:2 }}</td>
+                                    <td class="text-end">{{ CURRENCY_SYMBOL }}{{ phase_row.cap|floatformat:"2g" }}</td>
+                                    <td class="text-end">{{ CURRENCY_SYMBOL }}{{ phase_row.paid|floatformat:"2g" }}</td>
+                                    <td class="text-end {% if phase_row.remaining < 0 %}text-danger{% endif %}">{{ CURRENCY_SYMBOL }}{{ phase_row.remaining|floatformat:"2g" }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>

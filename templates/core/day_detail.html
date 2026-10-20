@@ -44,7 +44,7 @@
                                     <td>{{ tx.category.name|default:"—" }}</td>
                                     <td>{{ tx.description|default:"—" }}</td>
                                     <td class="text-end {% if tx.transaction_type == 'ENTREE' %}text-success{% else %}text-danger{% endif %}">
-                                        {% if tx.transaction_type == 'ENTREE' %}+{% else %}-{% endif %}{{ CURRENCY_SYMBOL }}{{ tx.amount }}
+                                        {% if tx.transaction_type == 'ENTREE' %}+{% else %}-{% endif %}{{ CURRENCY_SYMBOL }}{{ tx.amount|floatformat:"2g" }}
                                     </td>
                                 </tr>
                                 {% endfor %}

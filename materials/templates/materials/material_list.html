@@ -39,7 +39,7 @@
                                     <td class="unit py-2 align-middle">{{ mat.unit }}</td>
                                     <td class="cost py-2 align-middle text-end">
                                         {% if mat.estimated_cost_per_unit %}
-                                        {{ CURRENCY_SYMBOL }}{{ mat.estimated_cost_per_unit }}
+                                        {{ CURRENCY_SYMBOL }}{{ mat.estimated_cost_per_unit|floatformat:"2g" }}
                                         {% else %}
                                         -
                                         {% endif %}

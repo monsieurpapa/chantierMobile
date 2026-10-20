@@ -28,12 +28,12 @@
                             <p class="mb-1"><strong>{% trans "Chantier" %} :</strong> {{ assignment.site.name }}</p>
                             {% if assignment.phase %}<p class="mb-1"><strong>{% trans "Étape" %} :</strong> {{ assignment.phase.name }}</p>{% endif %}
                             {% if assignment.name %}<p class="mb-1"><strong>{% trans "Convention" %} :</strong> {{ assignment.name }}</p>{% endif %}
-                            <p class="mb-1"><strong>{% trans "Convention initiale" %} :</strong> {{ CURRENCY_SYMBOL }}{{ assignment.effective_initial_amount|default:"—" }}</p>
-                            <p class="mb-1"><strong>{% trans "Montant actuel (après avenants)" %} :</strong> {{ CURRENCY_SYMBOL }}{{ assignment.convention_amount|default:"—" }}</p>
-                            <p class="mb-1"><strong>{% trans "Déjà payé" %} :</strong> {{ CURRENCY_SYMBOL }}{{ assignment.paid_amount }}</p>
+                            <p class="mb-1"><strong>{% trans "Convention initiale" %} :</strong> {{ CURRENCY_SYMBOL }}{{ assignment.effective_initial_amount|floatformat:"2g"|default:"—" }}</p>
+                            <p class="mb-1"><strong>{% trans "Montant actuel (après avenants)" %} :</strong> {{ CURRENCY_SYMBOL }}{{ assignment.convention_amount|floatformat:"2g"|default:"—" }}</p>
+                            <p class="mb-1"><strong>{% trans "Déjà payé" %} :</strong> {{ CURRENCY_SYMBOL }}{{ assignment.paid_amount|floatformat:"2g" }}</p>
                             <p class="mb-0"><strong>{% trans "Reste à payer" %} :</strong>
                                 {% if assignment.remaining_convention is not None %}
-                                {{ CURRENCY_SYMBOL }}{{ assignment.remaining_convention }}
+                                {{ CURRENCY_SYMBOL }}{{ assignment.remaining_convention|floatformat:"2g" }}
                                 {% else %}
                                 {% trans "Aucun plafond suivi" %}
                                 {% endif %}
@@ -84,7 +84,7 @@
                                 <li class="list-group-item">
                                     <div class="d-flex justify-content-between">
                                         <strong>{{ avenant.date }}</strong>
-                                        <span>{{ CURRENCY_SYMBOL }}{{ avenant.previous_amount }} → {{ CURRENCY_SYMBOL }}{{ avenant.new_amount }}</span>
+                                        <span>{{ CURRENCY_SYMBOL }}{{ avenant.previous_amount|floatformat:"2g" }} → {{ CURRENCY_SYMBOL }}{{ avenant.new_amount|floatformat:"2g" }}</span>
                                     </div>
                                     <p class="mb-0 text-600">{{ avenant.reason }}</p>
                                     <p class="mb-0 text-400 fs--2">{% trans "Enregistré par" %} {{ avenant.recorded_by|default:"—" }}</p>
