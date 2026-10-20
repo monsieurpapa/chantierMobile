@@ -356,7 +356,7 @@ class CabinetForm(forms.ModelForm):
     
     class Meta:
         model = Cabinet
-        fields = ['name', 'address', 'tax_id', 'logo']
+        fields = ['name', 'address', 'tax_id', 'logo', 'legal_name', 'short_name', 'legal_mentions', 'phone', 'email', 'city']
         widgets = {
             'name': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -375,6 +375,12 @@ class CabinetForm(forms.ModelForm):
                 'class': 'form-control',
                 'accept': 'image/*'
             }),
+            'legal_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'short_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'legal_mentions': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '(+243) ...'}),
+            'email': forms.TextInput(attrs={'class': 'form-control'}),
+            'city': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Goma'}),
         }
 
 
