@@ -757,7 +757,7 @@ def expense_report_pdf(request):
         messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
         return redirect('finance:expense_report')
 
-    from core.pdf_utils import render_table_report_pdf
+    from core.pdf_utils import render_table_report_pdf, cabinet_for_request, Signatory, person_name, fmt_amount
 
     qs = _expense_report_queryset(request)
     rows = [
@@ -789,6 +789,7 @@ def expense_report_pdf(request):
         rows=rows,
         totals_row=["", "", "", "", "", "", "Total", f"{total:.2f} $", "", ""],
         generated_by=request.user.get_full_name() or request.user.username,
+        cabinet=cabinet_for_request(request),
     )
 
 
@@ -1558,7 +1559,7 @@ def caisse_report_pdf(request):
         messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
         return redirect('finance:caisse_report')
 
-    from core.pdf_utils import render_table_report_pdf
+    from core.pdf_utils import render_table_report_pdf, cabinet_for_request, Signatory, person_name, fmt_amount
 
     qs = _caisse_ledger_queryset(request)
     rows = [
@@ -1586,6 +1587,7 @@ def caisse_report_pdf(request):
         rows=rows,
         totals_row=["", "", "", "", "", "", "Solde net", f"{(total_entrees - total_sorties):.2f} $"],
         generated_by=request.user.get_full_name() or request.user.username,
+        cabinet=cabinet_for_request(request),
     )
 
 
@@ -2181,14 +2183,14 @@ def payroll_detail_pdf(request, pk):
         messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
         return redirect('finance:payroll_detail', pk=pk)
 
-    from core.pdf_utils import render_table_report_pdf
+    from core.pdf_utils import render_table_report_pdf, cabinet_for_request, Signatory, person_name, fmt_amount
 
     items = payroll_list.items.select_related('personnel', 'assignment').order_by('personnel__last_name')
     rows = [
         (
             str(item.personnel),
             (str(item.assignment) if item.assignment else '-'),
-            f"{item.amount:.2f} $",
+            fmt_amount(item.amount),
             item.progress_note[:60] if item.progress_note else '-',
         )
         for item in items
@@ -2198,10 +2200,17 @@ def payroll_detail_pdf(request, pk):
         filename=f"liste-paie-{payroll_list.pk}.pdf",
         title=_("Liste de paie — %(site)s") % {'site': payroll_list.site.name},
         subtitle=_("Statut : %(status)s") % {'status': payroll_list.get_status_display()},
-        columns=[_("Ouvrier"), _("Convention"), _("Montant"), _("Avancement / justification")],
+        columns=[_("Ouvrier"), _("Convention"), _("Montant ($)"), _("Avancement / justification")],
         rows=rows,
-        totals_row=["", _("Total"), f"{total:.2f} $", ""],
+        totals_row=["", _("Total"), fmt_amount(total), ""],
         generated_by=request.user.get_full_name() or request.user.username,
+        cabinet=payroll_list.site.cabinet,
+        amount_in_words=total,
+        signatories=[
+            Signatory(_("Préparé par"), _("Chef de chantier"), person_name(payroll_list.prepared_by)),
+            Signatory(_("Approuvé par"), _("La Direction")),
+            Signatory(_("Payé par"), _("La Caisse")),
+        ],
     )
 
 
@@ -2214,14 +2223,14 @@ def salary_payment_detail_pdf(request, pk):
         messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
         return redirect('finance:salary_payment_detail', pk=pk)
 
-    from core.pdf_utils import render_table_report_pdf
+    from core.pdf_utils import render_table_report_pdf, cabinet_for_request, Signatory, person_name, fmt_amount
 
     items = salary_payment_list.items.select_related('personnel').order_by('personnel__last_name')
     rows = [
         (
             str(item.personnel),
             item.period,
-            f"{item.amount:.2f} $",
+            fmt_amount(item.amount),
             item.notes[:60] if item.notes else '-',
         )
         for item in items
@@ -2231,10 +2240,17 @@ def salary_payment_detail_pdf(request, pk):
         filename=f"paie-personnel-{salary_payment_list.pk}.pdf",
         title=_("Paie du personnel — %(cabinet)s") % {'cabinet': salary_payment_list.cabinet.name},
         subtitle=_("Statut : %(status)s") % {'status': salary_payment_list.get_status_display()},
-        columns=[_("Agent"), _("Période"), _("Montant"), _("Notes")],
+        columns=[_("Agent"), _("Période"), _("Montant ($)"), _("Notes")],
         rows=rows,
-        totals_row=["", _("Total"), f"{total:.2f} $", ""],
+        totals_row=["", _("Total"), fmt_amount(total), ""],
         generated_by=request.user.get_full_name() or request.user.username,
+        cabinet=salary_payment_list.cabinet,
+        amount_in_words=total,
+        signatories=[
+            Signatory(_("Préparé par"), _("Ressources humaines")),
+            Signatory(_("Approuvé par"), _("La Direction Générale")),
+            Signatory(_("Payé par"), _("La Caisse")),
+        ],
     )
 
 

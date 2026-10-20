@@ -298,27 +298,34 @@ def invoice_pdf(request, pk):
             messages.error(request, _("Vous n'avez pas accès à cette facture."))
             return redirect('revenue:invoice_list')
 
-    from core.pdf_utils import render_table_report_pdf
+    from core.pdf_utils import render_table_report_pdf, Signatory, fmt_amount, pour_label
     contract = invoice.contract
     cabinet = contract.site.cabinet
     payments_total = invoice.payments.aggregate(total=Sum('amount'))['total'] or 0
-    rows = [
-        (_("Émetteur"), cabinet.name),
+    info_rows = [
         (_("Client"), contract.client_name),
         (_("Chantier"), contract.site.name),
-        (_("Numéro de facture"), invoice.invoice_number),
+        (_("Adresse"), contract.site.location),
         (_("Date d'émission"), invoice.issued_date.strftime('%d/%m/%Y')),
         (_("Date d'échéance"), invoice.due_date.strftime('%d/%m/%Y')),
-        (_("Montant"), f"{invoice.amount:.2f} $"),
-        (_("Montant payé"), f"{payments_total:.2f} $"),
         (_("Statut"), invoice.get_status_display()),
+    ]
+    rows = [
+        (_("Montant de la facture"), fmt_amount(invoice.amount)),
+        (_("Déjà payé"), fmt_amount(payments_total)),
     ]
     return render_table_report_pdf(
         filename=f"facture-{invoice.invoice_number}.pdf",
-        title=_("Facture %(num)s") % {'num': invoice.invoice_number},
-        subtitle=cabinet.address,
-        columns=[_("Champ"), _("Valeur")],
+        title=_("FACTURE N° %(num)s") % {'num': invoice.invoice_number},
+        subtitle=None,
+        info_rows=info_rows,
+        columns=[_("Désignation"), _("Montant ($)")],
         rows=rows,
+        totals_row=(_("Reste à payer"), fmt_amount(invoice.amount - payments_total)),
+        col_widths=[0.7, 0.3],
+        cabinet=cabinet,
+        amount_in_words=invoice.amount,
+        signatories=[Signatory(pour_label(cabinet), _("La Direction"))],
         generated_by=request.user.get_full_name() or request.user.username,
     )
 
@@ -337,23 +344,34 @@ def contract_pdf(request, pk):
             messages.error(request, _("Vous n'avez pas accès à ce contrat."))
             return redirect('revenue:contract_list')
 
-    from core.pdf_utils import render_table_report_pdf
+    from core.pdf_utils import render_table_report_pdf, Signatory, fmt_amount, pour_label
     cabinet = contract.site.cabinet
-    rows = [
-        (_("Émetteur"), cabinet.name),
+    info_rows = [
         (_("Client"), contract.client_name),
         (_("Chantier"), contract.site.name),
-        (_("Valeur du contrat"), f"{contract.total_value:.2f} $"),
-        (_("Dette avenants"), f"{contract.avenant_debt:.2f} $"),
+        (_("Adresse"), contract.site.location),
         (_("Date de signature"), contract.signed_date.strftime('%d/%m/%Y')),
-        (_("Total payé à ce jour"), f"{contract.total_paid:.2f} $"),
+    ]
+    rows = [
+        (_("Valeur du contrat"), fmt_amount(contract.total_value)),
+        (_("Dette avenants"), fmt_amount(contract.avenant_debt)),
+        (_("Total payé à ce jour"), fmt_amount(contract.total_paid)),
     ]
     return render_table_report_pdf(
         filename=f"contrat-{contract.pk}-{contract.client_name}.pdf",
-        title=_("Contrat — %(client)s") % {'client': contract.client_name},
-        subtitle=cabinet.address,
-        columns=[_("Champ"), _("Valeur")],
+        title=_("CONTRAT — %(client)s") % {'client': contract.client_name},
+        subtitle=None,
+        info_rows=info_rows,
+        columns=[_("Désignation"), _("Montant ($)")],
         rows=rows,
+        totals_row=(_("Solde client"), fmt_amount(contract.client_balance)),
+        col_widths=[0.7, 0.3],
+        cabinet=cabinet,
+        amount_in_words=contract.total_value,
+        signatories=[
+            Signatory(pour_label(cabinet), _("La Direction Générale")),
+            Signatory(_("Le Client"), _("Maître d'ouvrage"), contract.client_name),
+        ],
         generated_by=request.user.get_full_name() or request.user.username,
     )
 

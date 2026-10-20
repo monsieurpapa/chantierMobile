@@ -722,10 +722,12 @@ def personnel_profile_pdf(request, unique_id):
     return render_table_report_pdf(
         filename=f"profil-{personnel.unique_id}.pdf",
         title=_("Profil ingénieur — %(name)s") % {'name': personnel.get_full_name()},
-        subtitle=personnel.cabinet.name,
+        subtitle=None,
         columns=[_("Champ"), _("Valeur")],
         rows=rows,
+        col_widths=[0.3, 0.7],
         generated_by=request.user.get_full_name() or request.user.username,
+        cabinet=personnel.cabinet,
     )
 
 

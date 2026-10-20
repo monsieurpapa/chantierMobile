@@ -44,7 +44,8 @@ GRID = '#808080'
 
 # The standard PDF fonts only cover Windows-1252; map the few characters
 # that show up in this app's data and fall outside it.
-_CHAR_FALLBACKS = {'ϕ': 'Ø', 'φ': 'Ø', 'Φ': 'Ø', '≤': '<=', '≥': '>=', '×': 'x', ' ': '\xa0', ' ': ' '}
+_CHAR_FALLBACKS = {'ϕ': 'Ø', 'φ': 'Ø', 'Φ': 'Ø', '≤': '<=', '≥': '>=', '×': 'x', '→': '->', '←': '<-',
+                   '\u202f': '\xa0', '\u2009': ' '}
 
 
 def plain_text(value):
@@ -344,7 +345,8 @@ def cabinet_for_request(request):
 # ---------------------------------------------------------------------------
 
 def render_table_report_pdf(*, filename, title, subtitle, columns, rows, totals_row=None, generated_by=None,
-                            cabinet=None, info_rows=None, signatories=None, place=None):
+                            cabinet=None, info_rows=None, signatories=None, place=None, amount_in_words=None,
+                            col_widths=None):
     """Render a tabular report with the cabinet's letterhead and return it
     as an HttpResponse.
 
@@ -356,6 +358,8 @@ def render_table_report_pdf(*, filename, title, subtitle, columns, rows, totals_
     - cabinet: whose letterhead to use (None -> neutral header)
     - info_rows: optional [(label, value)] shown under the title
     - signatories: optional list of Signatory -> signature boxes at the end
+    - amount_in_words: optional amount written out ("Nous disons...")
+    - col_widths: optional column widths as fractions of the page width
     """
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4, landscape
@@ -378,7 +382,8 @@ def render_table_report_pdf(*, filename, title, subtitle, columns, rows, totals_
     if totals_row is not None:
         data.append([cell(v, 'cell_bold') for v in totals_row])
 
-    table = Table(data, repeatRows=1)
+    widths = [width * f for f in col_widths] if col_widths else None
+    table = Table(data, colWidths=widths, repeatRows=1)
     style = [
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor(HEADER_PEACH)),
         ('BOX', (0, 0), (-1, -1), 0.9, colors.black),
@@ -399,8 +404,10 @@ def render_table_report_pdf(*, filename, title, subtitle, columns, rows, totals_
     elements.append(table)
     if not rows:
         elements += [Spacer(1, 0.4 * cm), Paragraph('Aucune donnée pour cette période.', st['text'])]
-    if signatories:
-        elements += [Spacer(1, 0.8 * cm), signature_section(signatories, width, place=place or getattr(cabinet, 'city', '') or None)]
+    if signatories or amount_in_words is not None:
+        elements += [Spacer(1, 0.8 * cm), signature_section(signatories or [], width,
+                                                             place=place or getattr(cabinet, 'city', '') or None,
+                                                             amount=amount_in_words)]
     return pdf_response(_build(elements, pagesize=pagesize, footer_left=_footer_text(cabinet, generated_by)), filename)
 
 
@@ -594,6 +601,14 @@ def status_stamp(obj, new_status, verb):
     if entry.changed_by is not None:
         who = ' par ' + (entry.changed_by.get_full_name() or entry.changed_by.get_username())
     return f"{verb} dans ChantierMobile le {timezone.localtime(entry.changed_at).strftime('%d/%m/%Y')}{who}"
+
+
+def pour_label(cabinet):
+    """"Pour l'A.T.G.C." / "Pour ACME" — who signs on the cabinet's behalf."""
+    short = (getattr(cabinet, 'short_name', '') or getattr(cabinet, 'name', '') or '') if cabinet else ''
+    if not short:
+        return "Pour l'entreprise"
+    return f"Pour l'{short}" if short[:1].upper() in 'AEIOUYHÉÈ' else f'Pour {short}'
 
 
 def person_name(user):

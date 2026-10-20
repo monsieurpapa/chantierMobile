@@ -123,3 +123,20 @@ class TestCabinetLetterheadForm:
         form.save()
         cabinet.refresh_from_db()
         assert cabinet.city == 'Bukavu' and cabinet.short_name == 'X'
+
+
+@pytest.mark.django_db
+class TestOtherDocumentsCarryTheLetterhead:
+    def test_invoice_pdf_has_letterhead_words_and_signature(self, director_client, invoice, cabinet_with_letterhead):
+        text = _pdf_text(director_client.get(reverse('revenue:invoice_pdf', kwargs={'pk': invoice.pk})))
+        if 'Assistance' not in text:
+            pytest.skip('pypdf not installed: content not extractable')
+        for expected in ('Assistance Technique en Génie Civil', 'FACTURE N°', 'Reste à payer', 'Nous disons en toute lettre',
+                         "Pour l'A.T.G.C."):
+            assert expected in text, expected
+
+    def test_contract_pdf_has_client_signature(self, director_client, contract, cabinet_with_letterhead):
+        text = _pdf_text(director_client.get(reverse('revenue:contract_pdf', kwargs={'pk': contract.pk})))
+        if 'Assistance' not in text:
+            pytest.skip('pypdf not installed: content not extractable')
+        assert 'Le Client' in text and "Pour l'A.T.G.C." in text

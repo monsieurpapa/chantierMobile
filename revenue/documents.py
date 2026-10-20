@@ -2,7 +2,7 @@
 from django.utils.text import slugify
 
 from chantiermobile.constants import DevisStatus
-from core.pdf_utils import Signatory, bordereau_sections, render_bordereau_pdf, status_stamp
+from core.pdf_utils import Signatory, bordereau_sections, pour_label, render_bordereau_pdf, status_stamp
 
 
 def devis_pdf_response(devis, *, generated_by=''):
@@ -26,10 +26,8 @@ def devis_pdf_response(devis, *, generated_by=''):
         ('Adresse', site.location),
         ("Maître d'ouvrage", devis.client_name),
     ]
-    short = getattr(cabinet, 'short_name', '') or cabinet.name
-    pour = f"Pour l'{short}" if short[:1].upper() in 'AEIOUYH' else f'Pour {short}'
     signatories = [
-        Signatory(pour, 'La Direction Technique'),
+        Signatory(pour_label(cabinet), 'La Direction Technique'),
         Signatory('Vu pour approbation', "Le Maître d'ouvrage", devis.client_name,
                   stamp=status_stamp(devis, DevisStatus.ACCEPTE, 'Accepté') if devis.status == DevisStatus.ACCEPTE else ''),
     ]

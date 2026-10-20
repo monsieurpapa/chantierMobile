@@ -778,7 +778,7 @@ def achats_report_pdf(request):
         messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
         return redirect('procurement:achats_report')
 
-    from core.pdf_utils import render_table_report_pdf
+    from core.pdf_utils import render_table_report_pdf, cabinet_for_request
 
     qs = _achats_report_queryset(request)
     rows = [
@@ -802,6 +802,7 @@ def achats_report_pdf(request):
         rows=rows,
         totals_row=["", "", "", "", "Total", f"{total:.2f} $", ""],
         generated_by=request.user.get_full_name() or request.user.username,
+        cabinet=cabinet_for_request(request),
     )
 
 
@@ -954,7 +955,7 @@ def stock_report_pdf(request):
         messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
         return redirect('procurement:stock_report')
 
-    from core.pdf_utils import render_table_report_pdf
+    from core.pdf_utils import render_table_report_pdf, cabinet_for_request
 
     qs = _stock_report_queryset(request)
     rows = [
@@ -976,6 +977,7 @@ def stock_report_pdf(request):
         columns=["Date", "Chantier", "Étape", "Article", "Type", "Quantité", "Motif"],
         rows=rows,
         generated_by=request.user.get_full_name() or request.user.username,
+        cabinet=cabinet_for_request(request),
     )
 
 
