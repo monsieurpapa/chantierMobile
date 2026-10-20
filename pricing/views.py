@@ -366,6 +366,17 @@ class DQEDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, Det
         ]
 
 
+class DQEPdfView(DQEDetailView):
+    """"Exporter en PDF": the DQE in the cabinet's letterhead layout, with
+    signature boxes (Établi par / Vérifié par / Approuvé par). Same access
+    as the DQE page (any member of the DQE's cabinet)."""
+
+    def render_to_response(self, context, **response_kwargs):
+        from pricing.documents import dqe_pdf_response
+        user = self.request.user
+        return dqe_pdf_response(self.object, generated_by=user.get_full_name() or user.get_username())
+
+
 @login_required
 def dqe_submit_for_approval(request, pk):
     """DRAFT (or REJETE) -> EN_ATTENTE_APPROBATION. Role-gated to

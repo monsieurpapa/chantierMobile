@@ -795,6 +795,17 @@ class DevisDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, D
         return actions
 
 
+
+class DevisPdfView(DevisDetailView):
+    """"Exporter en PDF": the devis in the cabinet's letterhead layout,
+    with signature boxes (Pour l'<sigle> — La Direction Technique / Vu pour
+    approbation — Le Maître d'ouvrage). Same access as the devis page."""
+
+    def render_to_response(self, context, **response_kwargs):
+        from revenue.documents import devis_pdf_response
+        user = self.request.user
+        return devis_pdf_response(self.object, generated_by=user.get_full_name() or user.get_username())
+
 @login_required
 def devis_send(request, pk):
     """BROUILLON -> ENVOYE. Role-gated to DEVIS_ACTION_ROLES in the devis's

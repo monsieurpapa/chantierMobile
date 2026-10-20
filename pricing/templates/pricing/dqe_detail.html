@@ -82,6 +82,9 @@
 
                 <!-- Sidebar -->
                 <div class="col-lg-4 ps-lg-2">
+                    <a href="{% url 'pricing:dqe_pdf' dqe.pk %}" class="btn btn-falcon-default w-100 mb-3">
+                        <i class="fas fa-file-pdf me-1 text-danger"></i>{% trans "Exporter en PDF (avec signatures)" %}
+                    </a>
                     {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,CHIEF_ENGINEER' %}
                     <div class="card mb-3 border-0 shadow-sm">
                         <div class="card-body p-3 d-grid gap-2">

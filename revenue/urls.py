@@ -34,6 +34,7 @@ urlpatterns = [
     path('devis/depuis-dqe/<int:dqe_pk>/', views.devis_create_from_dqe, name='devis_create_from_dqe'),
     path('devis/<int:pk>/', views.DevisDetailView.as_view(), name='devis_detail'),
     path('devis/<int:pk>/edit/', views.DevisUpdateView.as_view(), name='devis_update'),
+    path('devis/<int:pk>/pdf/', views.DevisPdfView.as_view(), name='devis_pdf'),
     path('devis/<int:pk>/envoyer/', views.devis_send, name='devis_send'),
     path('devis/<int:pk>/accepter/', views.devis_accept, name='devis_accept'),
     path('devis/<int:pk>/refuser/', views.devis_reject, name='devis_reject'),
