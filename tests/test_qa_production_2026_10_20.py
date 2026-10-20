@@ -80,3 +80,21 @@ class TestFinding7FrenchTitles:
         response = director_client.get(reverse(url_name), HTTP_ACCEPT_LANGUAGE='fr')
         assert response.status_code == 200
         assert f'<title>{title} - ChantierMobile'.encode() in response.content
+
+
+@pytest.mark.django_db
+class TestFindings8And9Layout:
+    def test_404_page_has_no_footer_overflow(self, client):
+        response = client.get('/page-qui-nexiste-pas/')
+        assert response.status_code == 404
+        assert b'class="footer"' not in response.content
+
+    def test_logo_script_tolerates_pages_without_sidebar(self, client):
+        response = client.get('/page-qui-nexiste-pas/')
+        assert b'if (!document.getElementById("main-logo")) return;' in response.content
+
+    def test_site_detail_button_rows_wrap(self, director_client, site):
+        response = director_client.get(reverse('projects:site_detail', kwargs={'unique_id': site.unique_id}))
+        assert response.status_code == 200
+        assert b'<div class="d-flex gap-2">' not in response.content
+        assert b'<div class="d-flex flex-wrap gap-2">' in response.content
