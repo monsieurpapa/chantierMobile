@@ -36,7 +36,7 @@
                             <div class="row">
                                 <div class="col-md-4 mb-3">
                                     <label class="form-label text-600 text-uppercase fs--2 fw-bold">{% trans "Total HT" %}</label>
-                                    <h3 class="text-primary fw-bold">{{ CURRENCY_SYMBOL }}{{ devis.total_ht|floatformat:2 }}</h3>
+                                    <h3 class="text-primary fw-bold">{{ CURRENCY_SYMBOL }}{{ devis.total_ht|floatformat:"2g" }}</h3>
                                 </div>
                                 <div class="col-md-4 mb-3">
                                     <label class="form-label text-600 text-uppercase fs--2 fw-bold">{% trans "Émis le" %}</label>
@@ -85,7 +85,7 @@
                                         {% if group.phase %}
                                         <tr class="bg-200">
                                             <td colspan="4" class="fw-bold">{{ group.phase.name }}</td>
-                                            <td class="text-end fw-bold">{{ CURRENCY_SYMBOL }}{{ group.subtotal_with_children|floatformat:2 }}</td>
+                                            <td class="text-end fw-bold">{{ CURRENCY_SYMBOL }}{{ group.subtotal_with_children|floatformat:"2g" }}</td>
                                         </tr>
                                         {% else %}
                                         <tr class="bg-200">
@@ -97,22 +97,22 @@
                                             <td class="ps-4">{{ line.designation }}</td>
                                             <td class="text-center">{{ line.unit }}</td>
                                             <td class="text-center">{{ line.quantity }}</td>
-                                            <td class="text-end">{{ CURRENCY_SYMBOL }}{{ line.unit_price_ht|floatformat:2 }}</td>
-                                            <td class="text-end fw-semi-bold">{{ CURRENCY_SYMBOL }}{{ line.total_ht|floatformat:2 }}</td>
+                                            <td class="text-end">{{ CURRENCY_SYMBOL }}{{ line.unit_price_ht|floatformat:"2g" }}</td>
+                                            <td class="text-end fw-semi-bold">{{ CURRENCY_SYMBOL }}{{ line.total_ht|floatformat:"2g" }}</td>
                                         </tr>
                                         {% endfor %}
                                         {% for sub in group.sub_groups %}
                                         <tr class="bg-100">
                                             <td colspan="4" class="ps-4 fw-semi-bold text-600">{{ sub.phase.name }}</td>
-                                            <td class="text-end fw-semi-bold text-600">{{ CURRENCY_SYMBOL }}{{ sub.subtotal|floatformat:2 }}</td>
+                                            <td class="text-end fw-semi-bold text-600">{{ CURRENCY_SYMBOL }}{{ sub.subtotal|floatformat:"2g" }}</td>
                                         </tr>
                                         {% for line in sub.lines %}
                                         <tr>
                                             <td class="ps-5">{{ line.designation }}</td>
                                             <td class="text-center">{{ line.unit }}</td>
                                             <td class="text-center">{{ line.quantity }}</td>
-                                            <td class="text-end">{{ CURRENCY_SYMBOL }}{{ line.unit_price_ht|floatformat:2 }}</td>
-                                            <td class="text-end fw-semi-bold">{{ CURRENCY_SYMBOL }}{{ line.total_ht|floatformat:2 }}</td>
+                                            <td class="text-end">{{ CURRENCY_SYMBOL }}{{ line.unit_price_ht|floatformat:"2g" }}</td>
+                                            <td class="text-end fw-semi-bold">{{ CURRENCY_SYMBOL }}{{ line.total_ht|floatformat:"2g" }}</td>
                                         </tr>
                                         {% endfor %}
                                         {% endfor %}
@@ -123,7 +123,7 @@
                                     <tfoot class="border-top bg-light">
                                         <tr>
                                             <td colspan="4" class="text-end fw-semibold">{% trans "Total HT" %}</td>
-                                            <td class="text-end fw-bold text-success">{{ CURRENCY_SYMBOL }}{{ devis.total_ht|floatformat:2 }}</td>
+                                            <td class="text-end fw-bold text-success">{{ CURRENCY_SYMBOL }}{{ devis.total_ht|floatformat:"2g" }}</td>
                                         </tr>
                                     </tfoot>
                                 </table>

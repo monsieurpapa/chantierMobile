@@ -35,16 +35,16 @@
                                 {% for phase_row in site_row.phases %}
                                 <tr>
                                     <td>{{ phase_row.label }}</td>
-                                    <td class="text-end">{{ CURRENCY_SYMBOL }}{{ phase_row.cap|floatformat:2 }}</td>
-                                    <td class="text-end">{{ CURRENCY_SYMBOL }}{{ phase_row.paid|floatformat:2 }}</td>
-                                    <td class="text-end {% if phase_row.remaining < 0 %}text-danger{% endif %}">{{ CURRENCY_SYMBOL }}{{ phase_row.remaining|floatformat:2 }}</td>
+                                    <td class="text-end">{{ CURRENCY_SYMBOL }}{{ phase_row.cap|floatformat:"2g" }}</td>
+                                    <td class="text-end">{{ CURRENCY_SYMBOL }}{{ phase_row.paid|floatformat:"2g" }}</td>
+                                    <td class="text-end {% if phase_row.remaining < 0 %}text-danger{% endif %}">{{ CURRENCY_SYMBOL }}{{ phase_row.remaining|floatformat:"2g" }}</td>
                                 </tr>
                                 {% endfor %}
                                 <tr class="fw-bold bg-light">
                                     <td>{% trans "Total chantier" %}</td>
-                                    <td class="text-end">{{ CURRENCY_SYMBOL }}{{ site_row.cap_total|floatformat:2 }}</td>
-                                    <td class="text-end">{{ CURRENCY_SYMBOL }}{{ site_row.paid_total|floatformat:2 }}</td>
-                                    <td class="text-end {% if site_row.remaining_total < 0 %}text-danger{% endif %}">{{ CURRENCY_SYMBOL }}{{ site_row.remaining_total|floatformat:2 }}</td>
+                                    <td class="text-end">{{ CURRENCY_SYMBOL }}{{ site_row.cap_total|floatformat:"2g" }}</td>
+                                    <td class="text-end">{{ CURRENCY_SYMBOL }}{{ site_row.paid_total|floatformat:"2g" }}</td>
+                                    <td class="text-end {% if site_row.remaining_total < 0 %}text-danger{% endif %}">{{ CURRENCY_SYMBOL }}{{ site_row.remaining_total|floatformat:"2g" }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>

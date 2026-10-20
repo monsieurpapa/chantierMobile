@@ -1,7 +1,7 @@
 {% extends 'falcon_base.html' %}
 {% load i18n rbac_tags %}
 
-{% block title %}Material Requests - ChantierMobile{% endblock %}
+{% block title %}{% trans "Demandes de matériaux" %} - ChantierMobile{% endblock %}
 
 {% block content %}
 <div class="container" data-layout="container-fluid">
@@ -57,7 +57,7 @@
                                         <span class="badge bg-info">{{ req.total_items }}</span>
                                     </td>
                                     <td class="align-middle text-center fw-semibold text-success">
-                                        {{ CURRENCY_SYMBOL }}{{ req.total_estimated_cost|floatformat:0 }}
+                                        {{ CURRENCY_SYMBOL }}{{ req.total_estimated_cost|floatformat:"0g" }}
                                     </td>
                                     <td class="align-middle text-center">
                                         <span class="badge rounded-pill 

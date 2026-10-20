@@ -57,7 +57,7 @@
                                                 {% if assignment.convention_amount is not None %}
                                                 {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,ACCOUNTANT,CASHIER' %}
                                                 <span class="badge bg-light text-dark ms-1">
-                                                    {{ CURRENCY_SYMBOL }}{{ assignment.paid_amount|floatformat:0 }} / {{ CURRENCY_SYMBOL }}{{ assignment.convention_amount|floatformat:0 }}
+                                                    {{ CURRENCY_SYMBOL }}{{ assignment.paid_amount|floatformat:"0g" }} / {{ CURRENCY_SYMBOL }}{{ assignment.convention_amount|floatformat:"0g" }}
                                                 </span>
                                                 {% endif %}
                                                 {% endif %}

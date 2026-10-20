@@ -346,7 +346,7 @@
                                             {{ expense.category.name }}
                                         </td>
                                         <td class="align-middle text-end fw-semi-bold">
-                                            {{ CURRENCY_SYMBOL }}{{ expense.amount|floatformat:2 }}
+                                            {{ CURRENCY_SYMBOL }}{{ expense.amount|floatformat:"2g" }}
                                         </td>
                                         <td class="align-middle text-center">
                                             <span class="badge badge-subtle-success">
@@ -409,7 +409,7 @@
                                             </a>
                                         </td>
                                         <td class="align-middle text-end fw-semi-bold">
-                                            {{ CURRENCY_SYMBOL }}{{ invoice.amount|floatformat:2 }}
+                                            {{ CURRENCY_SYMBOL }}{{ invoice.amount|floatformat:"2g" }}
                                         </td>
                                         <td class="align-middle text-center">
                                             <span class="badge badge-subtle-success">

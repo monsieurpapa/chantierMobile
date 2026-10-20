@@ -21,7 +21,7 @@
                                 <span class="badge {% if tx.transaction_type == 'ENTREE' %}bg-success{% else %}bg-danger{% endif %} me-2">
                                     {{ tx.get_transaction_type_display }}
                                 </span>
-                                {{ CURRENCY_SYMBOL }}{{ tx.amount|floatformat:2 }}
+                                {{ CURRENCY_SYMBOL }}{{ tx.amount|floatformat:"2g" }}
                             </h6>
                             {% if can_modify %}
                             <a href="{% url 'finance:caisse_transaction_update' pk=tx.pk %}" class="btn btn-falcon-default btn-sm">
