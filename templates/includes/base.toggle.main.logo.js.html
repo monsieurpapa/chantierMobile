@@ -1,6 +1,8 @@
 {% load static i18n %}
 <script>
       function setMainLogo(pageTheme) {
+            // Pages without the sidebar (login, 404, 500) have no #main-logo.
+            if (!document.getElementById("main-logo")) return;
             if (pageTheme === 'dark') {
                   var mainLogoDiv = document.getElementById("main-logo")
                   var mainLogo = document.createElement("img");
