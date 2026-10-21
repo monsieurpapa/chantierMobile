@@ -1,7 +1,7 @@
 {% extends 'falcon_base.html' %}
 {% load static i18n %}
 
-{% block title %}{% trans "Material Request" %} - ChantierMobile{% endblock %}
+{% block title %}{% trans "État de besoin" %} - ChantierMobile{% endblock %}
 
 {% block content %}
 <div class="container" data-layout="container-fluid">
@@ -45,93 +45,14 @@
                         <!-- Materials Formset Section -->
                         <div class="mb-4">
                             <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h6 class="mb-0"><i class="fas fa-boxes me-2 text-warning"></i>{% trans "Materials to Request" %}</h6>
+                                <h6 class="mb-0"><i class="fas fa-boxes me-2 text-warning"></i>{% trans "Matériaux nécessaires" %}</h6>
                                 <span class="badge bg-info" id="item-count">{{ items_formset|length }} article{{ items_formset|length|pluralize }}</span>
                             </div>
                             
                             <!-- Materials List -->
                             <div id="materials-container" class="space-y-2">
                                 {% for form in items_formset %}
-                                <div class="material-item p-3 border rounded-3 border-200 mb-2" data-form-index="{{ forloop.counter0 }}" data-item-pk="{{ form.instance.pk|default_if_none:'' }}">
-                                    <div class="row g-2 align-items-end">
-                                        <!-- Material Selection -->
-                                        <div class="col-md-4">
-                                            <label class="form-label fs--1 fw-semibold">{% trans "Matériel" %}</label>
-                                            {{ form.material }}
-                                            <div class="fs--2 text-500 my-1 text-center">{% trans "ou" %}</div>
-                                            {{ form.material_name }}
-                                            {% if form.material.errors %}
-                                            <div class="text-danger fs--2 mt-1">
-                                                {{ form.material.errors }}
-                                            </div>
-                                            {% endif %}
-                                            {% if form.material_name.errors %}
-                                            <div class="text-danger fs--2 mt-1">
-                                                {{ form.material_name.errors }}
-                                            </div>
-                                            {% endif %}
-                                        </div>
-
-                                        <!-- Phase (étape) -->
-                                        <div class="col-md-2">
-                                            <label class="form-label fs--1 fw-semibold">{% trans "Étape" %}</label>
-                                            {{ form.phase }}
-                                            {% if form.phase.errors %}
-                                            <div class="text-danger fs--2 mt-1">
-                                                {{ form.phase.errors }}
-                                            </div>
-                                            {% endif %}
-                                        </div>
-
-                                        <!-- Quantity -->
-                                        <div class="col-md-2">
-                                            <label class="form-label fs--1 fw-semibold">{% trans "Quantité" %}</label>
-                                            <div class="input-group">
-                                                {{ form.quantity }}
-                                                <span class="input-group-text material-unit" id="unit-{{ forloop.counter0 }}">—</span>
-                                            </div>
-                                            {% if form.quantity.errors %}
-                                            <div class="text-danger fs--2 mt-1">
-                                                {{ form.quantity.errors }}
-                                            </div>
-                                            {% endif %}
-                                        </div>
-
-                                        <!-- Actions -->
-                                        <div class="col-md-4 d-flex gap-2 align-items-end">
-                                            {% if not forloop.first %}
-                                            <button type="button" class="btn btn-sm btn-outline-danger remove-material" title="{% trans "Retirer ce matériau" %}">
-                                                <i class="fas fa-trash-alt"></i>
-                                            </button>
-                                            {% endif %}
-                                            <button type="button" class="btn btn-sm btn-outline-secondary toggle-notes" title="{% trans "Ajouter une note" %}">
-                                                <i class="fas fa-sticky-note"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <!-- Notes Section (Hidden by default) -->
-                                    <div class="notes-section mt-2" style="display: none;">
-                                        <label class="form-label fs--1 fw-semibold">{% trans "Notes (facultatif)" %}</label>
-                                        {{ form.notes }}
-                                        {% if form.notes.errors %}
-                                        <div class="text-danger fs--2 mt-1">
-                                            {{ form.notes.errors }}
-                                        </div>
-                                        {% endif %}
-                                    </div>
-
-                                    <!-- Estimated Cost + devis/DQE variance badge -->
-                                    <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                        <small class="text-600">{% trans "Coût estimé :" %}</small>
-                                        <strong class="text-primary" id="cost-{{ forloop.counter0 }}">$0.00</strong>
-                                        <span class="badge rounded-pill badge-subtle-secondary variance-badge" id="variance-{{ forloop.counter0 }}" style="display: none;"></span>
-                                    </div>
-
-                                    <!-- Hidden delete checkbox for formset -->
-                                    {{ form.DELETE }}
-                                    {{ form.id }}
-                                </div>
+                                {% include 'materials/includes/request_item_row.html' with form=form index=forloop.counter0 removable=forloop.first|yesno:',1' %}
                                 {% endfor %}
 
                                 <!-- Management form (required for formset) -->
@@ -144,6 +65,10 @@
                                 </div>
                                 {% endif %}
                             </div>
+
+                            <template id="material-row-template">
+                                {% include 'materials/includes/request_item_row.html' with form=items_formset.empty_form index='__prefix__' removable=True %}
+                            </template>
 
                             <!-- Add Material Button -->
                             <button type="button" id="add-material-btn" class="btn btn-sm btn-outline-primary mt-3">
@@ -184,7 +109,7 @@
                                 <i class="fas fa-times me-1"></i>{% trans "Annuler" %}
                             </a>
                             <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-check me-1"></i>{% trans "Soumettre la demande" %}
+                                <i class="fas fa-check me-1"></i>{% trans "Soumettre l'état de besoin" %}
                             </button>
                         </div>
                     </form>
@@ -236,8 +161,8 @@ document.addEventListener('DOMContentLoaded', function () {
         const materialId = select.value;
         const unitSpan = document.getElementById(`unit-${idx}`);
         
-        if (materialData[materialId]) {
-            unitSpan.textContent = materialData[materialId].unit;
+        if (unitSpan) {
+            unitSpan.textContent = (materialData[materialId] && materialData[materialId].unit) || '—';
         }
         updateTotalCost();
     }
@@ -245,10 +170,10 @@ document.addEventListener('DOMContentLoaded', function () {
     // Update all units
     function updateAllUnits() {
         document.querySelectorAll('.material-item').forEach((item, idx) => {
-            const select = item.querySelector('select[name*="material"]');
+            const select = materialSelectOf(item);
             if (select && select.value) {
                 const materialId = select.value;
-                const unitSpan = document.getElementById(`unit-${idx}`);
+                const unitSpan = document.getElementById(`unit-${item.dataset.formIndex}`);
                 if (materialData[materialId]) {
                     unitSpan.textContent = materialData[materialId].unit;
                 }
@@ -259,8 +184,8 @@ document.addEventListener('DOMContentLoaded', function () {
     // Calculate estimated cost
     function calculateItemCost(item) {
         const idx = item.dataset.formIndex;
-        const materialSelect = item.querySelector('select[name*="material"]');
-        const quantityInput = item.querySelector('input[name*="quantity"]');
+        const materialSelect = materialSelectOf(item);
+        const quantityInput = item.querySelector('input[name$="-quantity"]');
         const costSpan = document.getElementById(`cost-${idx}`);
         
         const materialId = materialSelect.value;
@@ -277,7 +202,9 @@ document.addEventListener('DOMContentLoaded', function () {
     // Update total cost
     function updateTotalCost() {
         let total = 0;
-        document.querySelectorAll('.material-item').forEach((item) => {
+        document.querySelectorAll('#materials-container .material-item').forEach((item) => {
+            const deleted = item.querySelector('input[name$="-DELETE"]');
+            if (deleted && deleted.checked) return;
             const costSpan = item.querySelector('[id^="cost-"]');
             const costText = costSpan.textContent.replace('$', '');
             total += parseFloat(costText) || 0;
@@ -304,7 +231,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (btn) {
             btn.addEventListener('click', function (e) {
                 e.preventDefault();
-                const deleteCheckbox = item.querySelector('input[name*="DELETE"]');
+                const deleteCheckbox = item.querySelector('input[name$="-DELETE"]');
                 if (deleteCheckbox) {
                     deleteCheckbox.checked = true;
                     item.style.opacity = '0.5';
@@ -316,22 +243,40 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    // select2 fires jQuery 'change' events, which native listeners never
+    // see; jQuery handlers see both.
+    function onChange(el, handler) {
+        if (window.jQuery) { window.jQuery(el).on('change', handler); }
+        else { el.addEventListener('change', handler); }
+    }
+
+    function materialSelectOf(item) { return item.querySelector('select[name$="-material"]'); }
+
     // Setup material select change handler
     function setupMaterialSelect(item) {
-        const select = item.querySelector('select[name*="material"]');
-        const quantityInput = item.querySelector('input[name*="quantity"]');
+        const select = materialSelectOf(item);
+        const quantityInput = item.querySelector('input[name$="-quantity"]');
 
         if (select) {
-            select.addEventListener('change', function () {
-                updateUnit(this);
+            onChange(select, function () {
+                updateUnit(select);
                 calculateItemCost(item);
                 refreshVarianceBadge(item);
             });
+            // A material added on the spot from the picker: learn its unit
+            // and cost so this row updates without a page reload.
+            if (window.jQuery) {
+                window.jQuery(select).on('dynamicselect:created', function (e) {
+                    const rec = e.record || {};
+                    materialData[String(rec.id)] = { name: rec.text, unit: rec.unit || '—', cost_per_unit: rec.cost_per_unit || 0 };
+                });
+            }
         }
 
         if (quantityInput) {
             quantityInput.addEventListener('input', function () {
                 calculateItemCost(item);
+                updateTotalCost();
                 refreshVarianceBadge(item);
             });
         }
@@ -385,9 +330,9 @@ document.addEventListener('DOMContentLoaded', function () {
         const badge = document.getElementById(`variance-${idx}`);
         if (!badge) return;
 
-        const materialSelect = item.querySelector('select[name*="material"]');
+        const materialSelect = materialSelectOf(item);
         const phaseSelect = item.querySelector('.material-item-phase');
-        const quantityInput = item.querySelector('input[name*="quantity"]');
+        const quantityInput = item.querySelector('input[name$="-quantity"]');
         const siteId = siteSelect ? siteSelect.value : '';
         const materialId = materialSelect ? materialSelect.value : '';
         const phaseId = phaseSelect ? phaseSelect.value : '';
@@ -435,79 +380,28 @@ document.addEventListener('DOMContentLoaded', function () {
         calculateItemCost(item);
         const phaseSelect = item.querySelector('.material-item-phase');
         if (phaseSelect) {
-            phaseSelect.addEventListener('change', function () { refreshVarianceBadge(item); });
+            onChange(phaseSelect, function () { refreshVarianceBadge(item); });
         }
     }
 
-    // Add new material form
+    // Add a line: clone the server-rendered empty form (full catalogue,
+    // same widgets as the first row) instead of hand-written markup.
+    const rowTemplate = document.getElementById('material-row-template');
     addBtn.addEventListener('click', function (e) {
         e.preventDefault();
-        
-        const totalFormsInput = document.querySelector('input[name*="TOTAL_FORMS"]');
-        const currentCount = parseInt(totalFormsInput.value);
-        const newIndex = currentCount;
+        const totalFormsInput = document.querySelector('input[name$="-TOTAL_FORMS"]');
+        const newIndex = parseInt(totalFormsInput.value, 10);
+        const holder = document.createElement('div');
+        holder.innerHTML = rowTemplate.innerHTML.replace(/__prefix__/g, newIndex).trim();
+        const newForm = holder.firstElementChild;
 
-        // Create new form HTML
-        const newForm = document.createElement('div');
-        newForm.className = 'material-item p-3 border rounded-3 border-200 mb-2';
-        newForm.dataset.formIndex = newIndex;
-        newForm.innerHTML = `
-            <div class="row g-2 align-items-end">
-                <div class="col-md-4">
-                    <label class="form-label fs--1 fw-semibold">{% trans "Matériel" %}</label>
-                    <select name="items-${newIndex}-material" id="id_items-${newIndex}-material" class="form-select"
-                        data-control="select2" data-create-url="{% url 'materials:material_quick_create' %}"
-                        data-placeholder="Sélectionner ou ajouter un matériel...">
-                        <option value="">-- {% trans "Sélectionner un matériau" %} --</option>
-                        {% for material in materials %}
-                        <option value="${material.id}" data-unit="${material.unit}" data-cost="${material.estimated_cost_per_unit|default:0}">${material.name} (${material.unit})</option>
-                        {% endfor %}
-                    </select>
-                    <div class="fs--2 text-500 my-1 text-center">ou</div>
-                    <input type="text" name="items-${newIndex}-material_name" class="form-control" placeholder="Ou écrire le nom du matériel...">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label fs--1 fw-semibold">Étape</label>
-                    <select name="items-${newIndex}-phase" class="form-select material-item-phase">
-                        <option value="">-- Sélectionner --</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label fs--1 fw-semibold">{% trans "Quantité" %}</label>
-                    <div class="input-group">
-                        <input type="number" name="items-${newIndex}-quantity" step="0.01" placeholder="0.00" class="form-control">
-                        <span class="input-group-text material-unit" id="unit-${newIndex}">—</span>
-                    </div>
-                </div>
-                <div class="col-md-4 d-flex gap-2 align-items-end">
-                    <button type="button" class="btn btn-sm btn-outline-danger remove-material" title="{% trans "Retirer ce matériau" %}">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary toggle-notes" title="{% trans "Ajouter une note" %}">
-                        <i class="fas fa-sticky-note"></i>
-                    </button>
-                </div>
-            </div>
-            <div class="notes-section mt-2" style="display: none;">
-                <label class="form-label fs--1 fw-semibold">{% trans "Notes (facultatif)" %}</label>
-                <textarea name="items-${newIndex}-notes" class="form-control" placeholder="{% trans "Notes pour cet article (facultatif)" %}" rows="2"></textarea>
-            </div>
-            <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <small class="text-600">{% trans "Coût estimé :" %}</small>
-                <strong class="text-primary" id="cost-${newIndex}">$0.00</strong>
-                <span class="badge rounded-pill badge-subtle-secondary variance-badge" id="variance-${newIndex}" style="display: none;"></span>
-            </div>
-            <input type="hidden" name="items-${newIndex}-id" id="id_items-${newIndex}-id">
-            <input type="hidden" name="items-${newIndex}-DELETE" id="id_items-${newIndex}-DELETE">
-        `;
+        container.insertBefore(newForm, totalFormsInput.parentNode === container ? totalFormsInput : null);
+        totalFormsInput.value = newIndex + 1;
 
-        container.appendChild(newForm);
-        totalFormsInput.value = currentCount + 1;
-
+        if (window.initDynamicSelects) { window.initDynamicSelects(newForm); }
         initializeItem(newForm);
         loadPhasesForItem(newForm, null);
         updateItemCount();
-        if (window.initDynamicSelects) { window.initDynamicSelects(newForm); }
     });
 
     // Update item count
@@ -551,7 +445,7 @@ document.addEventListener('DOMContentLoaded', function () {
             select.setAttribute('data-initial', select.value);
         });
         if (siteSelect.value) loadPhasesForAllItems(false);
-        siteSelect.addEventListener('change', function () { loadPhasesForAllItems(true); });
+        onChange(siteSelect, function () { loadPhasesForAllItems(true); });
     }
 });
 </script>

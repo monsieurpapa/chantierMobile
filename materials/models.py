@@ -51,11 +51,11 @@ class MaterialRequest(BaseModel):
     site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name='material_requests')
     requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='material_requests')
     status = models.CharField(max_length=20, choices=MaterialRequestStatus.choices, default=MaterialRequestStatus.PENDING)
-    notes = models.TextField(blank=True, null=True, help_text=_("Additional notes or instructions for this request"))
+    notes = models.TextField(blank=True, null=True, help_text=_("Notes ou consignes pour cet état de besoin"))
     overage_justification = models.TextField(
         blank=True, verbose_name=_('Justification de dépassement'),
         help_text=_(
-            "Obligatoire uniquement quand au moins un article de cette demande dépasse "
+            "Obligatoire uniquement quand au moins un article de cet état de besoin dépasse "
             "largement l'estimation du devis pour son étape (voir authorize()) — expose le "
             "dépassement au DG et au bureau technique via le rapport de conformité devis."
         ),
@@ -63,6 +63,16 @@ class MaterialRequest(BaseModel):
 
     # Optional link to an expense if approved and purchased (aggregated)
     expense = models.OneToOneField('finance.Expense', on_delete=models.SET_NULL, null=True, blank=True, related_name='material_request')
+
+    class Meta:
+        verbose_name = _('État de besoin')
+        verbose_name_plural = _('États de besoin')
+
+    @property
+    def reference(self):
+        """"EB-12" — the one numbering shown everywhere (was a mix of
+        "REQ-12" and "#12" before 2026-10-21)."""
+        return f'EB-{self.pk}'
 
     def __str__(self):
         # Was hard-coded English ("Request #N - N items for <site>") even
@@ -73,8 +83,8 @@ class MaterialRequest(BaseModel):
         # on caisse_transaction_form.html) now does, so it's user-facing.
         item_count = self.items.count()
         item_label = _("article") if item_count == 1 else _("articles")
-        return _("État de besoin #%(id)s — %(count)d %(item_label)s (%(site)s)") % {
-            'id': self.id, 'count': item_count, 'item_label': item_label, 'site': self.site.name,
+        return _("État de besoin %(ref)s — %(count)d %(item_label)s (%(site)s)") % {
+            'ref': self.reference, 'count': item_count, 'item_label': item_label, 'site': self.site.name,
         }
     
     def clean(self):
@@ -122,7 +132,7 @@ class MaterialRequest(BaseModel):
         from django.core.exceptions import ValidationError
         from core.models import StatusChangeLog
         if not user.is_superuser and self.requested_by_id == user.pk:
-            raise ValidationError(_("Vous ne pouvez pas autoriser votre propre demande de matériaux."))
+            raise ValidationError(_("Vous ne pouvez pas autoriser votre propre état de besoin."))
         if self.status != MaterialRequestStatus.PENDING:
             raise ValidationError(_("Seule une demande en attente peut être autorisée."))
         from pricing.services import has_red_variance
@@ -170,14 +180,14 @@ class MaterialRequest(BaseModel):
             nature=ExpenseNature.MATERIEL,
             amount=amount,
             expense_date=timezone.localdate(),
-            description=_("État de besoin #%(id)s autorisé — %(items)s") % {'id': self.pk, 'items': item_names or _('matériaux')},
+            description=_("État de besoin %(ref)s autorisé — %(items)s") % {'ref': self.reference, 'items': item_names or _('matériaux')},
             status=ExpenseStatus.APPROVED,
         )
         expense.full_clean()
         expense.save()
         ExpenseApproval.objects.create(
             expense=expense, approver=user, status=ExpenseApproval.Status.APPROVED,
-            comments=_("Approuvé automatiquement via l'autorisation de l'état de besoin #%(id)s.") % {'id': self.pk},
+            comments=_("Approuvé automatiquement via l'autorisation de l'état de besoin %(ref)s.") % {'ref': self.reference},
         )
         self.expense = expense
         self.save(update_fields=['expense', 'updated_at'])
@@ -194,7 +204,7 @@ class MaterialRequest(BaseModel):
         from django.core.exceptions import ValidationError
         from core.models import StatusChangeLog
         if not user.is_superuser and self.requested_by_id == user.pk:
-            raise ValidationError(_("Vous ne pouvez pas rejeter votre propre demande de matériaux."))
+            raise ValidationError(_("Vous ne pouvez pas rejeter votre propre état de besoin."))
         if self.status not in (MaterialRequestStatus.PENDING, MaterialRequestStatus.VALIDATED):
             raise ValidationError(_('Cette demande ne peut plus être rejetée.'))
         old_status = self.status
@@ -241,15 +251,15 @@ class MaterialRequestItem(BaseModel):
     notes = models.TextField(blank=True, null=True, help_text=_("Notes specific to this material item"))
 
     class Meta:
-        verbose_name = "Material Request Item"
-        verbose_name_plural = "Material Request Items"
+        verbose_name = _("Ligne d'état de besoin")
+        verbose_name_plural = _("Lignes d'état de besoin")
         # NULL is never equal to NULL in a SQL unique constraint, so this
         # only blocks adding the *same catalog material* twice to a
         # request — free-text rows (material IS NULL) are never affected.
         unique_together = ('request', 'material')
 
     def __str__(self):
-        return f"{self.quantity} of {self.display_name}"
+        return f"{self.quantity} × {self.display_name}"
 
     @property
     def display_name(self):

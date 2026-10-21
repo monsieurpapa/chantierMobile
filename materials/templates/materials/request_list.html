@@ -1,7 +1,7 @@
 {% extends 'falcon_base.html' %}
 {% load i18n rbac_tags %}
 
-{% block title %}{% trans "Demandes de matériaux" %} - ChantierMobile{% endblock %}
+{% block title %}{% trans "États de besoin" %} - ChantierMobile{% endblock %}
 
 {% block content %}
 <div class="container" data-layout="container-fluid">
@@ -94,7 +94,7 @@
                                     <td colspan="7" class="text-center py-5">
                                         <p class="text-muted mb-0">
                                             <i class="fas fa-inbox fa-2x mb-2 d-block opacity-50"></i>
-                                            {% trans "No material requests found." %}
+                                            {% trans "Aucun état de besoin pour le moment." %}
                                         </p>
                                     </td>
                                 </tr>

@@ -1,0 +1,85 @@
+{% load i18n %}
+{# One état de besoin line. Rendered for each formset row and, inside a <template>, for items_formset.empty_form (index "__prefix__") so rows added with "+" carry the full catalogue. #}
+<div class="material-item p-3 border rounded-3 border-200 mb-2" data-form-index="{{ index }}" data-item-pk="{{ form.instance.pk|default_if_none:'' }}">
+    {% if form.non_field_errors %}
+    <div class="alert alert-danger py-1 px-2 fs--1 mb-2">{{ form.non_field_errors|join:" " }}</div>
+    {% endif %}
+    <div class="row g-2 align-items-end">
+        <!-- Material Selection -->
+        <div class="col-md-4">
+            <label class="form-label fs--1 fw-semibold">{% trans "Matériel" %}</label>
+            {{ form.material }}
+            <div class="fs--2 text-500 my-1 text-center">{% trans "ou" %}</div>
+            {{ form.material_name }}
+            {% if form.material.errors %}
+            <div class="text-danger fs--2 mt-1">
+                {{ form.material.errors }}
+            </div>
+            {% endif %}
+            {% if form.material_name.errors %}
+            <div class="text-danger fs--2 mt-1">
+                {{ form.material_name.errors }}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Phase (étape) -->
+        <div class="col-md-2">
+            <label class="form-label fs--1 fw-semibold">{% trans "Étape" %}</label>
+            {{ form.phase }}
+            {% if form.phase.errors %}
+            <div class="text-danger fs--2 mt-1">
+                {{ form.phase.errors }}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Quantity -->
+        <div class="col-md-2">
+            <label class="form-label fs--1 fw-semibold">{% trans "Quantité" %}</label>
+            <div class="input-group">
+                {{ form.quantity }}
+                <span class="input-group-text material-unit" id="unit-{{ index }}">—</span>
+            </div>
+            {% if form.quantity.errors %}
+            <div class="text-danger fs--2 mt-1">
+                {{ form.quantity.errors }}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Actions -->
+        <div class="col-md-4 d-flex gap-2 align-items-end">
+            {% if removable %}
+            <button type="button" class="btn btn-sm btn-outline-danger remove-material" title="{% trans "Retirer ce matériau" %}">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+            {% endif %}
+            <button type="button" class="btn btn-sm btn-outline-secondary toggle-notes" title="{% trans "Ajouter une note" %}">
+                <i class="fas fa-sticky-note"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Notes Section (Hidden by default) -->
+    <div class="notes-section mt-2" style="display: none;">
+        <label class="form-label fs--1 fw-semibold">{% trans "Notes (facultatif)" %}</label>
+        {{ form.notes }}
+        {% if form.notes.errors %}
+        <div class="text-danger fs--2 mt-1">
+            {{ form.notes.errors }}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Estimated Cost + devis/DQE variance badge -->
+    <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <small class="text-600">{% trans "Coût estimé :" %}</small>
+        <strong class="text-primary" id="cost-{{ index }}">$0.00</strong>
+        <span class="badge rounded-pill badge-subtle-secondary variance-badge" id="variance-{{ index }}" style="display: none;"></span>
+    </div>
+
+    <!-- Delete flag for the formset, ticked by the trash button -->
+    <span class="d-none">{{ form.DELETE }}</span>
+    {{ form.id }}
+</div>

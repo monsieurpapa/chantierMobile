@@ -21,6 +21,14 @@
  *                                 create-time param (see data-depends-param)
  *   data-depends-param="site"   POST param name for the above (default "site")
  *
+ * After a quick-create the new option is also added to every other picker
+ * backed by the same data-create-url, and the select fires a jQuery
+ * 'dynamicselect:created' event whose `record` is the endpoint's JSON
+ * ({id, text, ...extra fields}).
+ *
+ * Note: select2 fires jQuery 'change' events. Listen with $(el).on('change')
+ * — a native addEventListener('change') does not see them.
+ *
  * Call window.initDynamicSelects(root) again after inserting new markup
  * into the page (e.g. a cloned formset row) so newly added selects inside
  * `root` get the same treatment. Safe to call repeatedly / on the whole
@@ -121,15 +129,28 @@
             }
 
             clearFieldError($el);
-            var newOption = new Option(result.body.text, result.body.id, true, true);
-            $el.append(newOption);
+            var newId = String(result.body.id);
+            // The endpoint may hand back an existing record (e.g. a material
+            // already in the catalogue): select it rather than duplicating it.
+            if (!$el.find('option').filter(function () { return this.value === newId; }).length) {
+                $el.append(new Option(result.body.text, newId, false, false));
+            }
+            // Other pickers backed by the same endpoint (the other rows of a
+            // formset, say) get the new entry too, unselected.
+            $('select[data-create-url]').not($el).filter(function () {
+                return $(this).data('createUrl') === $el.data('createUrl') &&
+                    !$(this).find('option').filter(function () { return this.value === newId; }).length;
+            }).each(function () {
+                $(this).append(new Option(result.body.text, newId, false, false));
+            });
+            $el.trigger($.Event('dynamicselect:created', { record: result.body }));
 
             if ($el.prop('multiple')) {
                 var current = ($el.val() || []).filter(function (v) { return v !== tempId; });
-                current.push(String(result.body.id));
+                current.push(newId);
                 $el.val(current);
             } else {
-                $el.val(String(result.body.id));
+                $el.val(newId);
             }
             $el.trigger('change');
         }).catch(function (err) {
@@ -170,6 +191,10 @@
                 if (optionExists($el, term)) return null;
                 return { id: NEW_PREFIX + term, text: term, newTag: true };
             };
+            // List "Ajouter « … »" after the matches, so typing "Ciment" then
+            // Enter picks the existing "Ciment (sac)" instead of creating a
+            // near-duplicate.
+            options.insertTag = function (data, tag) { data.push(tag); };
             options.templateResult = function (data) {
                 if (data.loading) return data.text;
                 if (data.newTag) {

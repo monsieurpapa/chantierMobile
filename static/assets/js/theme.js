@@ -3211,9 +3211,12 @@ var searchInit = function searchInit() {
   var hideSearchSuggestion = function hideSearchSuggestion(searchArea) {
     var el = searchArea.querySelector(Selectors.SEARCH_TOGGLE);
     var dropdownMenu = searchArea.querySelector(Selectors.DROPDOWN_MENU);
-    el.setAttribute(Attribute.ARIA_EXPANDED, 'false');
-    el.classList.remove(ClassName.SHOW);
-    dropdownMenu.classList.remove(ClassName.SHOW);
+    // The global search box has no toggle/dropdown: nothing to hide.
+    if (el) {
+      el.setAttribute(Attribute.ARIA_EXPANDED, 'false');
+      el.classList.remove(ClassName.SHOW);
+    }
+    dropdownMenu && dropdownMenu.classList.remove(ClassName.SHOW);
   };
 
   var searchAreas = document.querySelectorAll(Selectors.SEARCH_BOX);
@@ -3231,6 +3234,7 @@ var searchInit = function searchInit() {
       input.addEventListener(Events.FOCUS, function () {
         hideAllSearchAreas();
         var el = searchArea.querySelector(Selectors.SEARCH_TOGGLE);
+        if (!el || !dropdownMenu) return;
         el.setAttribute(Attribute.ARIA_EXPANDED, 'true');
         el.classList.add(ClassName.SHOW);
         dropdownMenu.classList.add(ClassName.SHOW);
