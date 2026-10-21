@@ -44,6 +44,20 @@
                         </div>
 
                         <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label" for="{{ form.phone_number.id_for_label }}"><span class="fab fa-whatsapp text-success me-1"></span>{% trans "Téléphone (WhatsApp)" %}</label>
+                                {{ form.phone_number }}
+                                {% for e in form.phone_number.errors %}<div class="text-danger fs--2">{{ e }}</div>{% endfor %}
+                            </div>
+                            <div class="col-md-6 d-flex align-items-end">
+                                <div class="form-check mb-2">
+                                    {{ form.whatsapp_opt_in }}
+                                    <label class="form-check-label fs--1" for="{{ form.whatsapp_opt_in.id_for_label }}">{{ form.whatsapp_opt_in.help_text }}</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
                             <div class="col-md-3">
                                 <label class="form-label" for="{{ form.personnel_type.id_for_label }}">{% trans "Type" %}</label>
                                 {{ form.personnel_type }}

@@ -17,12 +17,13 @@ class PersonnelForm(forms.ModelForm):
     class Meta:
         model = Personnel
         fields = [
-            'first_name', 'last_name', 'personnel_type', 'category', 'trade', 'status', 'payroll_type',
+            'first_name', 'last_name', 'phone_number', 'whatsapp_opt_in', 'personnel_type', 'category', 'trade', 'status', 'payroll_type',
             'is_chef_de_corps', 'skills', 'experience_notes', 'default_daily_rate', 'monthly_salary', 'user',
         ]
         widgets = {
             'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.FIRST_NAME}),
             'last_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.LAST_NAME}),
+            'whatsapp_opt_in': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'personnel_type': forms.Select(attrs={'class': 'form-select'}),
             'category': forms.Select(attrs={'class': 'form-select'}),
             'trade': forms.Select(attrs={'class': 'form-select'}),

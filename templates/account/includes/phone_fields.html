@@ -1,0 +1,15 @@
+{% load i18n %}
+{# Phone (stored as +243…) and WhatsApp consent — 2026-10-21. #}
+<div class="row mb-3">
+    <label class="col-sm-3 col-form-label" for="{{ form.phone_number.id_for_label }}">
+        <span class="fab fa-whatsapp text-success me-1"></span>{% trans "Téléphone (WhatsApp)" %}
+    </label>
+    <div class="col-sm-9">
+        {{ form.phone_number }}
+        {% for e in form.phone_number.errors %}<div class="text-danger fs--1 mt-1">{{ e }}</div>{% endfor %}
+        <div class="form-check mt-2">
+            {{ form.whatsapp_opt_in }}
+            <label class="form-check-label fs--1" for="{{ form.whatsapp_opt_in.id_for_label }}">{{ form.whatsapp_opt_in.help_text }}</label>
+        </div>
+    </div>
+</div>

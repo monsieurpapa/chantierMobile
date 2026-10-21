@@ -12,6 +12,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils.translation import gettext_lazy as _
 from core.models import BaseModel
+from core.phone import PhoneNumberField, whatsapp_url
 from chantiermobile.constants import UserRoles, ApprovalStatus
 
 class User(AbstractUser):
@@ -20,7 +21,12 @@ class User(AbstractUser):
     single user can hold different roles in different Cabinets (or none)
     without this model changing shape."""
     # Extension of standard user
-    phone_number = models.CharField(max_length=20, blank=True, null=True)
+    # WhatsApp-ready contact (2026-10-21): stored as "+243…" (core/phone.py).
+    phone_number = PhoneNumberField(blank=True, null=True)
+    whatsapp_opt_in = models.BooleanField(
+        default=False, verbose_name=_('Accepte les messages WhatsApp'),
+        help_text=_("A accepté de recevoir des notifications de l'application sur WhatsApp à ce numéro."),
+    )
     must_change_password = models.BooleanField(
         default=False,
         help_text='If true, the user is forced to change their password before using the rest of the app.',
@@ -28,6 +34,10 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.username
+
+    @property
+    def whatsapp_url(self):
+        return whatsapp_url(self.phone_number)
 
     @property
     def approved_cabinet_roles(self):
