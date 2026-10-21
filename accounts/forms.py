@@ -55,19 +55,11 @@ class UserProfileForm(forms.ModelForm):
         })
     )
     
-    phone_number = forms.CharField(
-        max_length=20,
-        required=False,
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Phone Number',
-            'type': 'tel'
-        })
-    )
+    # phone_number: the model's PhoneNumberField (normalised to +243…, tel input).
     
     class Meta:
         model = User
-        fields = ['first_name', 'last_name', 'email', 'phone_number']
+        fields = ['first_name', 'last_name', 'email', 'phone_number', 'whatsapp_opt_in']
 
 
 class UserAdminForm(forms.ModelForm):
@@ -98,15 +90,7 @@ class UserAdminForm(forms.ModelForm):
         })
     )
     
-    phone_number = forms.CharField(
-        max_length=20,
-        required=False,
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Phone Number',
-            'type': 'tel'
-        })
-    )
+    # phone_number: the model's PhoneNumberField (normalised to +243…, tel input).
     
     is_active = forms.BooleanField(
         required=False,
@@ -134,7 +118,7 @@ class UserAdminForm(forms.ModelForm):
     
     class Meta:
         model = User
-        fields = ['first_name', 'last_name', 'email', 'phone_number', 'is_active', 'is_staff', 'is_superuser']
+        fields = ['first_name', 'last_name', 'email', 'phone_number', 'whatsapp_opt_in', 'is_active', 'is_staff', 'is_superuser']
 
 
 class UserCreateForm(forms.ModelForm):
@@ -181,15 +165,7 @@ class UserCreateForm(forms.ModelForm):
         })
     )
 
-    phone_number = forms.CharField(
-        max_length=20,
-        required=False,
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Phone Number',
-            'type': 'tel'
-        })
-    )
+    # phone_number: the model's PhoneNumberField (normalised to +243…, tel input).
 
     is_active = forms.BooleanField(
         required=False,
@@ -218,7 +194,7 @@ class UserCreateForm(forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ['username', 'first_name', 'last_name', 'email', 'phone_number', 'is_active', 'is_staff', 'is_superuser']
+        fields = ['username', 'first_name', 'last_name', 'email', 'phone_number', 'whatsapp_opt_in', 'is_active', 'is_staff', 'is_superuser']
 
 
 class UserCabinetRoleForm(forms.ModelForm):
@@ -432,3 +408,7 @@ class AssignRoleToCabinetUserForm(forms.ModelForm):
             'title': _('Select assignment status')
         })
 
+
+
+for _form in (UserProfileForm, UserAdminForm, UserCreateForm):
+    _form.base_fields['whatsapp_opt_in'].widget.attrs['class'] = 'form-check-input'

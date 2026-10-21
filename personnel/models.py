@@ -13,6 +13,7 @@ from django.db import models, transaction
 from django.core.validators import MaxValueValidator
 from django.utils.translation import gettext_lazy as _
 from core.models import BaseModel
+from core.phone import PhoneNumberField, whatsapp_url
 from accounts.models import Cabinet, User
 from projects.models import Site, ProjectPhase
 from chantiermobile.constants import (
@@ -43,6 +44,13 @@ class Personnel(BaseModel):
     user = models.OneToOneField(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='personnel_profile', help_text=_("Link to system user if they have login access"))
     first_name = models.CharField(max_length=100, verbose_name=_('First Name'))
     last_name = models.CharField(max_length=100, verbose_name=_('Last Name'))
+    # WhatsApp-ready contact (2026-10-21) — most site communication and
+    # reporting happens there. Stored as "+243…" (core/phone.py).
+    phone_number = PhoneNumberField(blank=True, default='')
+    whatsapp_opt_in = models.BooleanField(
+        default=False, verbose_name=_('Accepte les messages WhatsApp'),
+        help_text=_("A accepté de recevoir des messages de l'entreprise sur WhatsApp à ce numéro."),
+    )
     personnel_type = models.CharField(
         max_length=20, choices=PersonnelType.choices, default=PersonnelType.EMPLOYE,
         verbose_name=_('Type'),
@@ -114,6 +122,15 @@ class Personnel(BaseModel):
 
     def get_full_name(self):
         return f"{self.first_name} {self.last_name}"
+
+    @property
+    def contact_phone(self):
+        """Their own number, else their login's."""
+        return self.phone_number or (self.user.phone_number if self.user_id else '') or ''
+
+    @property
+    def whatsapp_url(self):
+        return whatsapp_url(self.contact_phone)
 
     @property
     def is_subcontractor(self):

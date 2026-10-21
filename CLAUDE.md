@@ -128,6 +128,8 @@ class MyView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, RoleRequir
 
 **Magasinier** (`core/roles.py`): a `MAGASINIER` `UserCabinetRole` names one chantier (`UserCabinetRole.site`). Only that person records, edits or deletes stock entrées/sorties there (`procurement/views_movements.py`; editing/deleting reconciles `quantity_on_hand` via `StockMovement.save_with_stock_update()` / `remove_with_stock_update()`). Each entrée has a bon de réception PDF (`BR-00012`) sent to the Directeur technique, who puts a visa on it. A Magasinier-only user is scoped to their chantier and never sees prices: templates check the lazy `hide_prices` context variable, and `MagasinierPriceWallMiddleware` keeps them out of the finance/pricing/revenue/personnel namespaces.
 
+**Phone numbers** (`core/phone.py`): `User.phone_number` and `Personnel.phone_number` are `PhoneNumberField`s stored in E.164 ("+243991234567"; numbers typed without a country code are taken as DRC), with a `whatsapp_opt_in` consent flag — ready for the WhatsApp integration. `whatsapp_url()` builds a wa.me link.
+
 For template-level role checks, use the `has_role` filter from `core/templatetags/rbac_tags.py`:
 
 ```html
