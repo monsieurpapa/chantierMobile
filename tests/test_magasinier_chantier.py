@@ -297,11 +297,11 @@ class TestPriceWall:
         from procurement.models import PurchaseOrder, PurchaseOrderLine
         supplier = Supplier.objects.create(cabinet=stock.site.cabinet, name='F')
         po = PurchaseOrder.objects.create(site=stock.site, supplier=supplier, order_number='PO-MAG-9', order_date=date.today())
-        PurchaseOrderLine.objects.create(purchase_order=po, stock_item=stock, quantity=4, unit_price=Decimal('987.65'))
+        PurchaseOrderLine.objects.create(purchase_order=po, stock_item=stock, quantity=4, unit_price=Decimal('48213.77'))
         for url in (reverse('procurement:purchase_order_detail', kwargs={'pk': po.pk}),
                     reverse('procurement:purchase_order_list'), reverse('materials:material_list')):
             content = mag_client.get(url).content.decode()
-            assert '987' not in content and '11,75' not in content and '11.75' not in content, url
+            assert not any(x in content for x in ('48213', '48 213', '48,213', '48.213', '192855', '192 855', '11,75', '11.75')), url
 
     def test_materials_data_api_hides_cost(self, mag_client, ciment):
         data = mag_client.get(reverse('materials:materials_data')).json()
