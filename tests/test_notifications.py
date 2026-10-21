@@ -114,7 +114,7 @@ class TestMaterialRequestNotifications:
         director_client.post(reverse('materials:request_approve', kwargs={'pk': mat_request.pk}), {'action': 'authorize'})
 
         notification = Notification.objects.get(recipient=engineer_user)
-        assert 'autorisée' in notification.message
+        assert f'état de besoin {mat_request.reference} a été autorisé' in notification.message
 
 
 @pytest.mark.django_db

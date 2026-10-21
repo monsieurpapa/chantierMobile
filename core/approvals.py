@@ -98,8 +98,8 @@ def get_pending_approvals(request):
             status=MaterialRequestStatus.PENDING, site__cabinet_id__in=material_request_cabinets,
         ).select_related('site', 'requested_by').order_by('created_at'):
             items.append({
-                'type': 'material_request', 'type_label': _('Demande de matériaux'), 'icon': 'fa-boxes', 'badge': 'info',
-                'title': f"REQ-{mat_request.pk} — {mat_request.total_items} article(s)",
+                'type': 'material_request', 'type_label': _('État de besoin'), 'icon': 'fa-boxes', 'badge': 'info',
+                'title': f"{mat_request.reference} — {mat_request.total_items} article(s)",
                 'subtitle': mat_request.get_status_display(),
                 'site_name': mat_request.site.name,
                 'requested_by_name': _display_name(mat_request.requested_by),

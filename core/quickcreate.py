@@ -46,6 +46,11 @@ class QuickCreateView(CabinetAccessMixin, LoginRequiredMixin, View):
     def display_text(self, instance):
         return str(instance)
 
+    def extra_data(self, instance):
+        """Extra fields returned alongside id/text, for pickers whose page
+        needs more than a label (e.g. a material's unit and cost)."""
+        return {}
+
     def after_create(self, instance, request, payload):
         """Hook for a side effect once the record is saved — e.g.
         auto-assigning a newly created worker to the site the picker was
@@ -84,4 +89,4 @@ class QuickCreateView(CabinetAccessMixin, LoginRequiredMixin, View):
         except IntegrityError:
             return JsonResponse({'error': _('Cet élément existe peut-être déjà.')}, status=400)
 
-        return JsonResponse({'id': instance.pk, 'text': self.display_text(instance)})
+        return JsonResponse({'id': instance.pk, 'text': self.display_text(instance), **self.extra_data(instance)})

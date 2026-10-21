@@ -332,7 +332,7 @@ class SiteDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, De
                 'type': 'MATERIAL',
                 'date': req.created_at.date(),
                 'timestamp': req.created_at,
-                'title': _("Demande de matériaux n°%(id)s") % {'id': req.id},
+                'title': _("État de besoin %(ref)s") % {'ref': req.reference},
                 'content': _("%(count)s article(s) — Statut : %(status)s") % {'count': req.total_items, 'status': req.get_status_display()},
                 'icon': 'fas fa-boxes',
                 'color': 'info'

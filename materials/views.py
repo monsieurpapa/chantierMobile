@@ -5,6 +5,8 @@ request against a Site (only its lead_engineer may), and the single
 role-gated decision endpoint (approve_material_request) that drives it
 through the single-stage approval described in materials/models.py.
 """
+import re
+
 from django.views.generic import ListView, CreateView, UpdateView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
@@ -136,12 +138,12 @@ class MaterialRequestListView(LoginRequiredMixin, PageHeaderMixin, ListView):
     model = MaterialRequest
     template_name = 'materials/request_list.html'
     context_object_name = 'requests'
-    header_title = _("Demandes de matériaux")
-    header_subtitle = _("Gérez la logistique des matériaux par chantier")
+    header_title = _("États de besoin")
+    header_subtitle = _("Besoins en matériaux des chantiers, à autoriser par la direction")
 
     def get_header_actions(self):
         return [{
-            'label': _("Nouvelle demande"),
+            'label': _("Nouvel état de besoin"),
             'url': str(reverse_lazy('materials:request_create')),
             'icon': 'plus',
             'class': 'btn-falcon-primary'
@@ -182,14 +184,14 @@ class MaterialRequestCreateView(LoginRequiredMixin, PageHeaderMixin, CreateView)
     form_class = MaterialRequestForm
     template_name = 'materials/request_form.html'
     success_url = reverse_lazy('materials:request_list')
-    header_title = _("Nouvelle demande de matériaux")
-    header_subtitle = _("Demandez des articles du catalogue pour un chantier")
+    header_title = _("Nouvel état de besoin")
+    header_subtitle = _("Matériaux du catalogue nécessaires pour un chantier")
     back_url = reverse_lazy('materials:request_list')
 
     def get_breadcrumb_items(self):
         return [
-            {'title': _("Demandes"), 'url': str(reverse_lazy('materials:request_list'))},
-            {'title': _("Nouvelle demande"), 'url': None},
+            {'title': _("États de besoin"), 'url': str(reverse_lazy('materials:request_list'))},
+            {'title': _("Nouvel état de besoin"), 'url': None},
         ]
 
     def get_initial(self):
@@ -227,13 +229,13 @@ class MaterialRequestCreateView(LoginRequiredMixin, PageHeaderMixin, CreateView)
             from core.notifications import notify_role_holders
             notify_role_holders(
                 self.object.site.cabinet, FINAL_AUTHORIZATION_ROLES,
-                _("Nouvelle demande de matériaux à autoriser : REQ-%(id)s (%(count)s article(s))") % {
-                    'id': self.object.pk, 'count': self.object.total_items,
+                _("Nouvel état de besoin à autoriser : %(ref)s (%(count)s article(s))") % {
+                    'ref': self.object.reference, 'count': self.object.total_items,
                 },
                 str(reverse_lazy('materials:request_detail', kwargs={'pk': self.object.pk})),
                 exclude_user=self.request.user,
             )
-            messages.success(self.request, _("Demande de matériaux soumise avec %(count)s article(s).") % {'count': self.object.total_items})
+            messages.success(self.request, _("État de besoin soumis avec %(count)s article(s).") % {'count': self.object.total_items})
             return HttpResponseRedirect(self.get_success_url())
         else:
             return self.form_invalid(form)
@@ -263,16 +265,16 @@ class MaterialRequestUpdateView(LoginRequiredMixin, CabinetAccessMixin, PageHead
         # self.request.user at creation time).
         self.object = self.get_object()
         if self.object.status != MaterialRequestStatus.PENDING:
-            messages.error(request, _("Seule une demande en attente peut être modifiée."))
+            messages.error(request, _("Seul un état de besoin en attente peut être modifié."))
             return redirect('materials:request_detail', pk=self.object.pk)
         is_requester = self.object.requested_by_id == request.user.pk
         if not is_requester and not can_act_for_cabinet(request, self.object.site.cabinet, MATERIAL_REQUEST_EDIT_ADMIN_ROLES):
-            messages.error(request, _("Vous n'avez pas la permission de modifier cette demande."))
+            messages.error(request, _("Vous n'avez pas la permission de modifier cet état de besoin."))
             return redirect('materials:request_detail', pk=self.object.pk)
         return super().dispatch(request, *args, **kwargs)
 
     def get_header_title(self):
-        return _("Modifier la demande n°%(id)s") % {'id': self.object.id}
+        return _("Modifier l'état de besoin %(ref)s") % {'ref': self.object.reference}
 
     def get_header_subtitle(self):
         return _("Chantier : %(name)s") % {'name': self.object.site.name}
@@ -282,8 +284,8 @@ class MaterialRequestUpdateView(LoginRequiredMixin, CabinetAccessMixin, PageHead
 
     def get_breadcrumb_items(self):
         return [
-            {'title': _("Demandes"), 'url': str(reverse_lazy('materials:request_list'))},
-            {'title': f"REQ-{self.object.id}", 'url': str(reverse_lazy('materials:request_detail', kwargs={'pk': self.object.pk}))},
+            {'title': _("États de besoin"), 'url': str(reverse_lazy('materials:request_list'))},
+            {'title': self.object.reference, 'url': str(reverse_lazy('materials:request_detail', kwargs={'pk': self.object.pk}))},
             {'title': _("Modifier"), 'url': None},
         ]
 
@@ -314,7 +316,7 @@ class MaterialRequestUpdateView(LoginRequiredMixin, CabinetAccessMixin, PageHead
             self.object = form.save()
             items_formset.instance = self.object
             items_formset.save()
-            messages.success(self.request, _("Demande de matériaux mise à jour avec %(count)s article(s).") % {'count': self.object.total_items})
+            messages.success(self.request, _("État de besoin mis à jour avec %(count)s article(s).") % {'count': self.object.total_items})
             return HttpResponseRedirect(self.get_success_url())
         else:
             return self.form_invalid(form)
@@ -333,7 +335,7 @@ class MaterialRequestDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHead
         return super().get_queryset().prefetch_related('items__material', 'items__phase')
 
     def get_header_title(self):
-        return _("Demande n°%(id)s") % {'id': self.object.id}
+        return _("État de besoin %(ref)s") % {'ref': self.object.reference}
 
     def get_header_subtitle(self):
         return _("Chantier : %(site)s | %(count)s article(s) | Statut : %(status)s") % {
@@ -347,8 +349,8 @@ class MaterialRequestDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHead
 
     def get_breadcrumb_items(self):
         return [
-            {'title': _("Demandes"), 'url': str(reverse_lazy('materials:request_list'))},
-            {'title': f"REQ-{self.object.id}", 'url': None},
+            {'title': _("États de besoin"), 'url': str(reverse_lazy('materials:request_list'))},
+            {'title': self.object.reference, 'url': None},
         ]
 
     def get_context_data(self, **kwargs):
@@ -390,25 +392,25 @@ def approve_material_request(request, pk):
             mat_request.reject(request.user)
             notify_user(
                 mat_request.requested_by,
-                _("Votre demande de matériaux REQ-%(id)s a été rejetée.") % {'id': mat_request.pk},
+                _("Votre état de besoin %(ref)s a été rejeté.") % {'ref': mat_request.reference},
                 str(reverse_lazy('materials:request_detail', kwargs={'pk': mat_request.pk})),
             )
-            messages.error(request, _("Demande de matériaux rejetée."))
+            messages.error(request, _("État de besoin rejeté."))
         else:
             overage_justification = request.POST.get('overage_justification', '')
             mat_request.authorize(request.user, overage_justification=overage_justification)
             notify_user(
                 mat_request.requested_by,
-                _("Votre demande de matériaux REQ-%(id)s a été autorisée.") % {'id': mat_request.pk},
+                _("Votre état de besoin %(ref)s a été autorisé.") % {'ref': mat_request.reference},
                 str(reverse_lazy('materials:request_detail', kwargs={'pk': mat_request.pk})),
             )
             if mat_request.expense_id:
                 messages.success(request, _(
-                    "Demande de matériaux autorisée — dépense EX-%(id)s créée (%(amount)s$), en attente de paiement."
+                    "État de besoin autorisé — dépense EX-%(id)s créée (%(amount)s$), en attente de paiement."
                 ) % {'id': mat_request.expense_id, 'amount': mat_request.expense.amount})
             else:
                 messages.success(request, _(
-                    "Demande de matériaux autorisée. Aucune dépense liée créée automatiquement (coût estimé indisponible) — enregistrez-la manuellement si nécessaire."
+                    "État de besoin autorisé. Aucune dépense liée créée automatiquement (coût estimé indisponible) — enregistrez-la manuellement si nécessaire."
                 ))
     except ValidationError as e:
         messages.error(request, str(e.message) if hasattr(e, 'message') else str(e))
@@ -440,6 +442,23 @@ class MaterialQuickCreateView(QuickCreateView):
     model = Material
     cabinet_scoped = False
 
+    UNIT_SUFFIX = re.compile(r'^(?P<name>.+?)\s*\((?P<unit>[^()]{1,50})\)\s*$')
+
     def build_instance(self, name, request, cabinet, payload):
-        unit = (payload.get('unit') or '').strip() or _('unité')
-        return Material(name=name, unit=unit)
+        """"Fer à béton 12 (barre)" → name "Fer à béton 12", unit "barre",
+        the same "Nom (unité)" shape the picker displays. An entry that is
+        already in the catalogue (same name and unit, any case) is reused
+        rather than duplicated."""
+        unit = (payload.get('unit') or '').strip()
+        match = self.UNIT_SUFFIX.match(name)
+        if match and not unit:
+            name, unit = match.group('name').strip(), match.group('unit').strip()
+        unit = unit or str(_('unité'))
+        existing = Material.objects.filter(name__iexact=name, unit__iexact=unit).order_by('pk').first()
+        return existing or Material(name=name, unit=unit)
+
+    def extra_data(self, instance):
+        return {
+            'unit': instance.unit,
+            'cost_per_unit': float(instance.estimated_cost_per_unit or 0),
+        }

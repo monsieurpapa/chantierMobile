@@ -259,14 +259,14 @@
                 <div class="card mb-3">
                     <div class="card-header bg-light d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">
-                            <span class="fas fa-clipboard-list me-2"></span>{% trans "Material Requests (Authorized Cabinets)" %}
+                            <span class="fas fa-clipboard-list me-2"></span>{% trans "États de besoin (cabinets autorisés)" %}
                         </h5>
                         <span class="badge badge-subtle-primary">{{ total_material_requests }}</span>
                     </div>
                     <div class="card-body p-0">
                         <p class="fs--2 text-500 px-3 pt-3 mb-2">
                             <span class="fas fa-shield-alt me-1"></span>
-                            {% trans "Showing requests from your authorized projects only." %}
+                            {% trans "Seuls les états de besoin de vos chantiers autorisés sont affichés." %}
                         </p>
                         <div class="table-responsive scrollbar">
                             <table class="table table-sm table-striped fs--1 mb-0">
@@ -297,7 +297,7 @@
                                     {% empty %}
                                     <tr>
                                         <td colspan="4" class="text-center py-4 text-500">
-                                            {% trans "No material requests yet" %}
+                                            {% trans "Aucun état de besoin pour l'instant" %}
                                         </td>
                                     </tr>
                                     {% endfor %}
@@ -308,7 +308,7 @@
                     {% if total_material_requests > 10 %}
                     <div class="card-footer bg-light p-2 text-center">
                         <a class="btn btn-sm btn-link" href="{% url 'materials:request_list' %}">
-                            {% trans "View All Requests" %}
+                            {% trans "Voir tous les états de besoin" %}
                         </a>
                     </div>
                     {% endif %}
@@ -461,7 +461,7 @@
                                 <div class="col-6">
                                     <div class="text-center">
                                         <h3 class="text-warning fw-bold">{{ total_material_requests }}</h3>
-                                        <p class="fs--2 text-500">{% trans "Requests" %}</p>
+                                        <p class="fs--2 text-500">{% trans "États de besoin" %}</p>
                                     </div>
                                 </div>
                                 <div class="col-6">

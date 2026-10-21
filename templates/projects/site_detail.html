@@ -70,7 +70,7 @@
                                 </div>
                                 <div class="col-6 col-md-3">
                                     <div class="p-3 bg-light rounded-3">
-                                        <p class="fs--2 text-500 text-uppercase fw-bold mb-1">{% trans "Material Requests" %}</p>
+                                        <p class="fs--2 text-500 text-uppercase fw-bold mb-1">{% trans "États de besoin" %}</p>
                                         <h5 class="mb-0">{{ site.material_requests.count }}</h5>
                                     </div>
                                 </div>
@@ -472,7 +472,7 @@
                                             {% endif %}
                                             <a class="btn btn-warning btn-sm"
                                                 href="{% url 'materials:request_create' %}?site={{ site.id }}">
-                                                <span class="fas fa-plus me-1"></span>{% trans "New Request" %}
+                                                <span class="fas fa-plus me-1"></span>{% trans "Nouvel état de besoin" %}
                                             </a>
                                         </div>
                                     </div>
@@ -523,8 +523,8 @@
                                     <div class="alert alert-light d-flex align-items-center p-3 mb-0" role="alert">
                                         <i class="fas fa-box text-muted me-2" style="font-size: 1.5rem;"></i>
                                         <div>
-                                            <strong>{% trans "No material requests" %}</strong>
-                                            <p class="fs--1 mb-0 text-600">{% trans "Create your first material request to track supplies" %}</p>
+                                            <strong>{% trans "Aucun état de besoin" %}</strong>
+                                            <p class="fs--1 mb-0 text-600">{% trans "Créez le premier état de besoin de ce chantier pour suivre ses approvisionnements." %}</p>
                                         </div>
                                     </div>
                                     {% endif %}
@@ -848,7 +848,7 @@
                                     <i class="fas fa-boxes"></i>
                                 </div>
                                 <div class="flex-1">
-                                    <p class="mb-0 fs--1 text-600">{% trans "Material Requests" %}</p>
+                                    <p class="mb-0 fs--1 text-600">{% trans "États de besoin" %}</p>
                                     <h6 class="mb-0 fw-semibold">{{ site.material_requests.count }}</h6>
                                 </div>
                             </div>

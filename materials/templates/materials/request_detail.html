@@ -1,7 +1,7 @@
 {% extends 'falcon_base.html' %}
 {% load i18n rbac_tags %}
 
-{% block title %}Material Request Details - ChantierMobile{% endblock %}
+{% block title %}{% trans "État de besoin" %} {{ req.reference }} - ChantierMobile{% endblock %}
 
 {% block content %}
 <div class="container" data-layout="container-fluid">
@@ -23,7 +23,7 @@
                     <!-- Request Overview -->
                     <div class="card mb-3 border-0 shadow-sm">
                         <div class="card-header bg-white border-bottom p-3">
-                            <h5 class="mb-0"><i class="fas fa-shopping-cart me-2 text-primary"></i>{% trans "Request Details" %}</h5>
+                            <h5 class="mb-0"><i class="fas fa-shopping-cart me-2 text-primary"></i>{% trans "Détails de l'état de besoin" %}</h5>
                         </div>
                         <div class="card-body p-4">
                             <div class="row g-3 mb-4">
@@ -175,21 +175,21 @@
                     <!-- Request Metadata -->
                     <div class="card border-0 shadow-sm">
                         <div class="card-header bg-white border-bottom p-3">
-                            <h5 class="mb-0"><i class="fas fa-file-alt me-2 text-secondary"></i>{% trans "Request Information" %}</h5>
+                            <h5 class="mb-0"><i class="fas fa-file-alt me-2 text-secondary"></i>{% trans "Informations" %}</h5>
                         </div>
                         <div class="card-body">
                             <div class="row g-0 mb-2 pb-2 border-bottom">
-                                <div class="col-4 text-600 fw-semibold">{% trans "Request ID:" %}</div>
+                                <div class="col-4 text-600 fw-semibold">{% trans "Référence :" %}</div>
                                 <div class="col-8">
-                                    <code class="bg-light px-2 py-1 rounded">REQ-{{ req.id }}</code>
+                                    <code class="bg-light px-2 py-1 rounded">{{ req.reference }}</code>
                                 </div>
                             </div>
                             <div class="row g-0 mb-2 pb-2 border-bottom">
-                                <div class="col-4 text-600 fw-semibold">{% trans "Requested By:" %}</div>
+                                <div class="col-4 text-600 fw-semibold">{% trans "Soumis par :" %}</div>
                                 <div class="col-8">{{ req.requested_by.get_full_name|default:req.requested_by.username }}</div>
                             </div>
                             <div class="row g-0 mb-2 pb-2 border-bottom">
-                                <div class="col-4 text-600 fw-semibold">{% trans "Date Requested:" %}</div>
+                                <div class="col-4 text-600 fw-semibold">{% trans "Date :" %}</div>
                                 <div class="col-8">{{ req.created_at|date:"M d, Y - H:i" }}</div>
                             </div>
                             <div class="row g-0">
@@ -229,7 +229,7 @@
                                         <i class="fas fa-check me-1"></i>{% trans "Approve" %}
                                     </button>
                                     <button type="submit" name="action" value="reject" class="btn btn-danger"
-                                        data-confirm="{% trans 'Reject this material request? This cannot be undone.' %}">
+                                        data-confirm="{% trans 'Rejeter cet état de besoin ? Cette action est irréversible.' %}">
                                         <i class="fas fa-times me-1"></i>{% trans "Reject" %}
                                     </button>
                                 </div>
@@ -247,7 +247,7 @@
                     <div class="card mb-3 border-0 shadow-sm">
                         <div class="card-body p-3">
                             <a href="{% url 'materials:request_update' pk=req.pk %}" class="btn btn-outline-primary w-100">
-                                <i class="fas fa-edit me-1"></i>{% trans "Edit Request" %}
+                                <i class="fas fa-edit me-1"></i>{% trans "Modifier l'état de besoin" %}
                             </a>
                         </div>
                     </div>

@@ -71,7 +71,7 @@ class TestFinding6GroupedAmounts:
 class TestFinding7FrenchTitles:
     @pytest.mark.parametrize('url_name,title', [
         ('finance:expense_list', 'Dépenses'),
-        ('materials:request_list', 'Demandes de matériaux'),
+        ('materials:request_list', 'États de besoin'),
         ('materials:material_list', 'Catalogue des matériaux'),
         ('revenue:contract_list', 'Contrats'),
         ('revenue:payment_list', 'Paiements'),

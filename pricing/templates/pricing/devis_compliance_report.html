@@ -77,7 +77,7 @@
                                 {% empty %}
                                 <tr>
                                     <td colspan="6" class="text-center py-5">
-                                        <p class="text-600 mb-0">{% trans "Aucune étape chiffrée ou demande de matériaux enregistrée pour ce chantier." %}</p>
+                                        <p class="text-600 mb-0">{% trans "Aucune étape chiffrée ni état de besoin enregistré pour ce chantier." %}</p>
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -106,7 +106,7 @@
                                 {% for req in overage_requests %}
                                 <tr>
                                     <td class="align-middle white-space-nowrap">
-                                        <a href="{% url 'materials:request_detail' req.pk %}">REQ-{{ req.pk }}</a>
+                                        <a href="{% url 'materials:request_detail' req.pk %}">{{ req.reference }}</a>
                                     </td>
                                     <td class="align-middle">{{ req.overage_justification }}</td>
                                 </tr>
