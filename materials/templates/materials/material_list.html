@@ -26,7 +26,7 @@
                                 <tr>
                                     <th class="sort pe-1 align-middle white-space-nowrap">{% trans "Material Name" %}</th>
                                     <th class="sort pe-1 align-middle white-space-nowrap">{% trans "Unit" %}</th>
-                                    <th class="sort pe-1 align-middle white-space-nowrap text-end">{% trans "Est. Cost / Unit" %}</th>
+                                    {% if not hide_prices %}<th class="sort pe-1 align-middle white-space-nowrap text-end">{% trans "Est. Cost / Unit" %}</th>{% endif %}
                                     <th class="no-sort pe-1 align-middle data-table-row-action text-end">{% trans "Actions" %}</th>
                                 </tr>
                             </thead>
@@ -37,13 +37,13 @@
                                         <strong>{{ mat.name }}</strong>
                                     </td>
                                     <td class="unit py-2 align-middle">{{ mat.unit }}</td>
-                                    <td class="cost py-2 align-middle text-end">
+                                    {% if not hide_prices %}<td class="cost py-2 align-middle text-end">
                                         {% if mat.estimated_cost_per_unit %}
                                         {{ CURRENCY_SYMBOL }}{{ mat.estimated_cost_per_unit|floatformat:"2g" }}
                                         {% else %}
                                         -
                                         {% endif %}
-                                    </td>
+                                    </td>{% endif %}
                                     <td class="align-middle white-space-nowrap text-end">
                                         {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,CHIEF_ENGINEER' %}
                                         <a class="btn btn-link text-600 btn-sm"

@@ -1,0 +1,24 @@
+{% load i18n %}
+{# "Chantier du magasinier": shown only while the role picked is Magasinier. #}
+<div class="mb-3" id="magasinier-site-group">
+    <label for="{{ form.site.id_for_label }}" class="form-label">
+        <span class="fas fa-warehouse me-2"></span>{{ form.site.label }}
+        <span class="text-danger">*</span>
+    </label>
+    {% if form.site.errors %}
+    <div class="alert alert-danger mt-2">{{ form.site.errors.0 }}</div>
+    {% endif %}
+    {{ form.site }}
+    <small class="form-text text-muted d-block mt-2">{{ form.site.help_text }}</small>
+</div>
+<script>
+(function () {
+    var role = document.getElementById('{{ form.role.id_for_label }}');
+    var group = document.getElementById('magasinier-site-group');
+    if (!role || !group) return;
+    function sync() { group.style.display = role.value === 'MAGASINIER' ? '' : 'none'; }
+    role.addEventListener('change', sync);
+    if (window.jQuery) { window.jQuery(role).on('change', sync); }
+    sync();
+})();
+</script>

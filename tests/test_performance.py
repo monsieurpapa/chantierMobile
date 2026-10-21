@@ -51,7 +51,8 @@ class TestDatabasePerformance:
         # (Chef de Corps convention-overage feature), another distinct
         # has_role cache key, 'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,
         # CHIEF_ENGINEER'.
-        assert len(ctx.captured_queries) < 23  # No N+1 as row count grows
+        assert len(ctx.captured_queries) < 24  # No N+1 as row count grows
+        # +1 (2026-10-21): is_magasinier_only() — one role lookup per request, cached on the user (navbar hide_prices / Magasinier scoping)
         assert len(response.context['sites']) == 100
     
     def test_expense_list_with_optimization(self, accountant_client):
@@ -93,7 +94,7 @@ class TestDatabasePerformance:
         # convention" link (Chef de Corps convention-overage feature),
         # another distinct has_role cache key,
         # 'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL,CHIEF_ENGINEER'.
-        assert len(ctx.captured_queries) < 22
+        assert len(ctx.captured_queries) < 23  # +1 (2026-10-21): is_magasinier_only() — one role lookup per request, cached on the user (navbar hide_prices / Magasinier scoping)
     
     def test_dashboard_query_performance(self, director_client, user):
         """Test dashboard query performance."""
@@ -410,7 +411,7 @@ class TestSearchPerformance:
             })
 
         assert response.status_code == 200
-        assert len(ctx.captured_queries) < 20
+        assert len(ctx.captured_queries) < 21  # +1 (2026-10-21): is_magasinier_only() — one role lookup per request, cached on the user (navbar hide_prices / Magasinier scoping)
 
 
 @pytest.mark.performance

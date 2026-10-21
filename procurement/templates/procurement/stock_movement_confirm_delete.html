@@ -1,0 +1,40 @@
+{% extends 'falcon_base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Supprimer un mouvement" %} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    {% include 'includes/navbar-vertical.html' with on="stock_report" %}
+    <div class="content">
+        {% include 'includes/navbar-top.html' %}
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+            <div class="row justify-content-center">
+                <div class="col-lg-6">
+                    <div class="card border-danger">
+                        <div class="card-body">
+                            <p class="mb-2">
+                                {% if movement.has_bon_de_reception %}
+                                {% blocktrans with ref=movement.reception_number qty=movement.quantity|floatformat:"-2g" unit=movement.stock_item.unit item=movement.stock_item.name %}L'entrée {{ ref }} ({{ qty }} {{ unit }} de {{ item }}) et son bon de réception seront supprimés, et {{ qty }} {{ unit }} retirés du stock.{% endblocktrans %}
+                                {% else %}
+                                {% blocktrans with qty=movement.quantity|floatformat:"-2g" unit=movement.stock_item.unit item=movement.stock_item.name %}Cette sortie ({{ qty }} {{ unit }} de {{ item }}) sera supprimée et {{ qty }} {{ unit }} remis en stock.{% endblocktrans %}
+                                {% endif %}
+                            </p>
+                            {% if movement.reception_visa_at %}
+                            <p class="text-warning fs--1"><i class="fas fa-exclamation-triangle me-1"></i>{% trans "Ce bon de réception a déjà été visé : le Directeur technique sera prévenu de sa suppression." %}</p>
+                            {% endif %}
+                            <form method="post" class="d-flex justify-content-end gap-2 mt-3">
+                                {% csrf_token %}
+                                <a href="{{ back_url }}" class="btn btn-outline-secondary">{% trans "Annuler" %}</a>
+                                <button type="submit" class="btn btn-danger"><i class="fas fa-trash-alt me-1"></i>{% trans "Supprimer" %}</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}

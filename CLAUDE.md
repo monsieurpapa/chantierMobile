@@ -126,6 +126,8 @@ class MyView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, RoleRequir
 - `RoleRequiredMixin` — add `allowed_roles` class attribute; omit if any authenticated user should have access.
 - `PageHeaderMixin` — injects `header_title`, `header_subtitle`, `breadcrumb_items`, `back_url`, `header_actions` into context.
 
+**Magasinier** (`core/roles.py`): a `MAGASINIER` `UserCabinetRole` names one chantier (`UserCabinetRole.site`). Only that person records, edits or deletes stock entrées/sorties there (`procurement/views_movements.py`; editing/deleting reconciles `quantity_on_hand` via `StockMovement.save_with_stock_update()` / `remove_with_stock_update()`). Each entrée has a bon de réception PDF (`BR-00012`) sent to the Directeur technique, who puts a visa on it. A Magasinier-only user is scoped to their chantier and never sees prices: templates check the lazy `hide_prices` context variable, and `MagasinierPriceWallMiddleware` keeps them out of the finance/pricing/revenue/personnel namespaces.
+
 For template-level role checks, use the `has_role` filter from `core/templatetags/rbac_tags.py`:
 
 ```html

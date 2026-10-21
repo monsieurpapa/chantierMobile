@@ -30,6 +30,7 @@ from .forms import (
 )
 from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet, can_act_for_cabinet
 from core.quickcreate import QuickCreateView
+from core.roles import is_magasinier_only, is_site_magasinier, magasinier_site_ids
 from projects.models import Site, ProjectPhase
 from chantiermobile.constants import PurchaseOrderStatus, UserRoles, CaisseType, StockMovementType, StockReportPeriod, ApprovalStatus
 
@@ -38,6 +39,10 @@ from chantiermobile.constants import PurchaseOrderStatus, UserRoles, CaisseType,
 # record stock entries/exits (their core job) but not create/edit the
 # StockItem catalog entry itself, nor create purchase orders.
 STOCK_ACTION_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER', 'MAGASINIER']
+# Since 2026-10-21 entrées, sorties and transfers are recorded only by the
+# chantier's own Magasinier (core/roles.is_site_magasinier); the director
+# tier keeps inventory adjustments.
+STOCK_ADJUST_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER']
 PURCHASE_ORDER_ACTION_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER', 'ACCOUNTANT']
 # La caissière saisit la preuve de virement envoyée par le financier.
 TRANSFER_ENTRY_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CASHIER']
@@ -172,7 +177,7 @@ class StockItemListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin,
         }]
 
     def get_queryset(self):
-        qs = super().get_queryset().select_related('site', 'material')
+        qs = _scope_to_magasinier_sites(self.request, super().get_queryset().select_related('site', 'material'), 'site_id')
         if self.request.user.is_superuser:
             active_cabinet = get_session_cabinet(self.request)
             if active_cabinet:
@@ -275,7 +280,10 @@ class StockItemDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixi
     cabinet_lookup_field = 'site__cabinet'
 
     def get_queryset(self):
-        return super().get_queryset().select_related('site', 'material').prefetch_related('movements')
+        qs = super().get_queryset().select_related('site', 'material').prefetch_related(
+            'movements__phase', 'movements__moved_by', 'movements__purchase_order_line__purchase_order',
+            'movements__transfer_pair__stock_item__site')
+        return _scope_to_magasinier_sites(self.request, qs, 'site_id')
 
     def get_header_title(self):
         return _("Article : %(name)s") % {'name': self.object.name}
@@ -300,6 +308,8 @@ class StockItemDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixi
         context = super().get_context_data(**kwargs)
         context['movement_form'] = StockMovementForm(stock_item=self.object)
         context['transfer_form'] = StockTransferForm(source_site=self.object.site)
+        context['is_magasinier'] = is_site_magasinier(self.request.user, self.object.site)
+        context['can_adjust'] = can_act_for_cabinet(self.request, self.object.site.cabinet, STOCK_ADJUST_ROLES)
         return context
 
 
@@ -312,10 +322,17 @@ def stock_movement_create(request, pk):
     together."""
     stock_item = get_object_or_404(StockItem, pk=pk)
     if request.method == 'POST':
-        if not can_act_for_cabinet(request, stock_item.site.cabinet, STOCK_ACTION_ROLES):
+        form = StockMovementForm(request.POST, request.FILES, stock_item=stock_item)
+        movement_type = request.POST.get('movement_type')
+        # Entrées and sorties belong to the chantier's Magasinier alone
+        # (2026-10-21); an inventory adjustment stays with the directors.
+        if movement_type in (StockMovementType.IN, StockMovementType.OUT):
+            allowed = is_site_magasinier(request.user, stock_item.site)
+        else:
+            allowed = can_act_for_cabinet(request, stock_item.site.cabinet, STOCK_ADJUST_ROLES)
+        if not allowed:
             messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
             return redirect('procurement:stock_item_detail', pk=pk)
-        form = StockMovementForm(request.POST, request.FILES, stock_item=stock_item)
         if form.is_valid():
             movement = form.save(commit=False)
             movement.stock_item = stock_item
@@ -323,6 +340,9 @@ def stock_movement_create(request, pk):
             try:
                 movement.full_clean()
                 movement.save()
+                if movement.has_bon_de_reception:
+                    from .views_movements import notify_reception
+                    notify_reception(movement, request.user)
                 messages.success(request, _("Mouvement de stock enregistré."))
             except ValidationError as e:
                 messages.error(request, str(e.message) if hasattr(e, 'message') else str(e))
@@ -339,8 +359,9 @@ def stock_transfer_create(request, pk):
     source = get_object_or_404(StockItem, pk=pk)
     if request.method != 'POST':
         return redirect('procurement:stock_item_detail', pk=pk)
-    if not can_act_for_cabinet(request, source.site.cabinet, STOCK_ACTION_ROLES):
-        messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
+    # A transfer is a sortie from this chantier: its Magasinier's call.
+    if not is_site_magasinier(request.user, source.site):
+        messages.error(request, _("Seul le magasinier de ce chantier peut transférer son stock."))
         return redirect('procurement:stock_item_detail', pk=pk)
     form = StockTransferForm(request.POST, source_site=source.site)
     if form.is_valid():
@@ -375,6 +396,8 @@ class PurchaseOrderListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMi
     header_subtitle = _("Gérez les commandes passées auprès des fournisseurs")
 
     def get_header_actions(self):
+        if is_magasinier_only(self.request.user):
+            return []
         return [
             {
                 'label': _("Nouvelle commande"),
@@ -391,7 +414,8 @@ class PurchaseOrderListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMi
         ]
 
     def get_queryset(self):
-        qs = super().get_queryset().select_related('site', 'supplier').prefetch_related('lines')
+        qs = _scope_to_magasinier_sites(
+            self.request, super().get_queryset().select_related('site', 'supplier').prefetch_related('lines'), 'site_id')
         if self.request.user.is_superuser:
             active_cabinet = get_session_cabinet(self.request)
             if active_cabinet:
@@ -566,12 +590,23 @@ class PurchaseOrderDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeader
     cabinet_lookup_field = 'site__cabinet'
 
     def get_queryset(self):
-        return super().get_queryset().select_related('site', 'supplier').prefetch_related('lines__stock_item')
+        qs = super().get_queryset().select_related('site', 'supplier').prefetch_related(
+            'lines__stock_item', 'lines__stock_movements')
+        return _scope_to_magasinier_sites(self.request, qs, 'site_id')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['is_site_magasinier'] = is_site_magasinier(self.request.user, self.object.site)
+        context['can_manage_order'] = can_act_for_cabinet(self.request, self.object.site.cabinet, PURCHASE_ORDER_ACTION_ROLES)
+        return context
 
     def get_header_title(self):
         return _("Commande : %(num)s") % {'num': self.object.order_number}
 
     def get_header_subtitle(self):
+        if is_magasinier_only(self.request.user):
+            return _("Fournisseur : %(supplier)s | Statut : %(status)s") % {
+                'supplier': self.object.supplier.name, 'status': self.object.get_status_display()}
         return _("Fournisseur : %(supplier)s | Total : %(total)s | Statut : %(status)s") % {
             'supplier': self.object.supplier.name,
             'total': self.object.total_ht,
@@ -589,7 +624,8 @@ class PurchaseOrderDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeader
 
     def get_header_actions(self):
         actions = []
-        if self.object.status == PurchaseOrderStatus.BROUILLON:
+        if self.object.status == PurchaseOrderStatus.BROUILLON and can_act_for_cabinet(
+                self.request, self.object.site.cabinet, PURCHASE_ORDER_ACTION_ROLES):
             actions.append({
                 'label': _("Modifier"),
                 'url': str(reverse_lazy('procurement:purchase_order_update', kwargs={'pk': self.object.pk})),
@@ -638,12 +674,17 @@ def purchase_order_receive(request, pk):
     anywhere on send/receive."""
     po = get_object_or_404(PurchaseOrder, pk=pk)
     if request.method == 'POST':
-        if not can_act_for_cabinet(request, po.site.cabinet, PURCHASE_ORDER_ACTION_ROLES):
+        if not (can_act_for_cabinet(request, po.site.cabinet, PURCHASE_ORDER_ACTION_ROLES)
+                or is_site_magasinier(request.user, po.site)):
             messages.error(request, _("Vous n'avez pas la permission d'effectuer cette action."))
             return redirect('procurement:purchase_order_detail', pk=pk)
         try:
+            before = set(StockMovement.objects.filter(purchase_order_line__purchase_order=po).values_list('pk', flat=True))
             po.receive(changed_by=request.user)
-            messages.success(request, _("Réception enregistrée pour la commande %(num)s.") % {'num': po.order_number})
+            from .views_movements import notify_reception
+            for movement in StockMovement.objects.filter(purchase_order_line__purchase_order=po).exclude(pk__in=before):
+                notify_reception(movement, request.user)
+            messages.success(request, _("Réception enregistrée pour la commande %(num)s — bon(s) de réception envoyé(s) au Directeur technique.") % {'num': po.order_number})
         except ValidationError as e:
             messages.error(request, str(e.message) if hasattr(e, 'message') else str(e))
     return redirect('procurement:purchase_order_detail', pk=pk)
@@ -822,6 +863,13 @@ def achats_report_pdf(request):
 STOCK_REPORT_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER', 'ENGINEER', 'MAGASINIER', 'MAGASINIER_GENERAL']
 
 
+def _scope_to_magasinier_sites(request, qs, site_field):
+    """A Magasinier sees their own chantier(s) only."""
+    if is_magasinier_only(request.user):
+        return qs.filter(**{f'{site_field}__in': magasinier_site_ids(request.user)})
+    return qs
+
+
 def _stock_report_queryset(request):
     qs = StockMovement.objects.select_related('stock_item', 'stock_item__site', 'phase', 'moved_by').order_by('-movement_date', '-id')
     if request.user.is_superuser:
@@ -832,6 +880,7 @@ def _stock_report_queryset(request):
         # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now — see core/mixins.py and docs/security.md.
         user_cabinet_ids = request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
         qs = qs.filter(stock_item__site__cabinet__id__in=user_cabinet_ids)
+    qs = _scope_to_magasinier_sites(request, qs, 'stock_item__site_id')
 
     site_id = request.GET.get('site')
     if site_id:
@@ -880,6 +929,7 @@ def _stock_levels_queryset(request):
         # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now — see core/mixins.py and docs/security.md.
         user_cabinet_ids = request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
         qs = qs.filter(site__cabinet__id__in=user_cabinet_ids)
+    qs = _scope_to_magasinier_sites(request, qs, 'site_id')
 
     site_id = request.GET.get('site')
     if site_id:
@@ -910,16 +960,36 @@ class StockReportView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, Li
     def get_queryset(self):
         return _stock_report_queryset(self.request)
 
+    def _magasinier_site(self):
+        """The chantier whose entrées/sorties this user records from here:
+        the one filtered on, or their only one."""
+        site_ids = magasinier_site_ids(self.request.user)
+        selected = self.request.GET.get('site', '')
+        if selected.isdigit() and int(selected) in site_ids:
+            return int(selected)
+        return next(iter(site_ids)) if len(site_ids) == 1 else None
+
     def get_header_actions(self):
-        return [{
+        actions = []
+        site_pk = self._magasinier_site()
+        if site_pk:
+            for kind, label, icon, css in (('entree', _("Nouvelle entrée"), 'arrow-down', 'btn-falcon-success'),
+                                           ('sortie', _("Nouvelle sortie"), 'arrow-up', 'btn-falcon-warning')):
+                actions.append({
+                    'label': label, 'icon': icon, 'class': css,
+                    'url': f"{reverse_lazy('procurement:stock_movement_new', kwargs={'kind': kind})}?site={site_pk}",
+                })
+        actions.append({
             'label': _("Exporter en PDF"),
             'url': f"{reverse_lazy('procurement:stock_report_pdf')}?{self.request.GET.urlencode()}",
             'icon': 'file-pdf',
             'class': 'btn-falcon-danger',
-        }]
+        })
+        return actions
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['magasinier_site_ids'] = magasinier_site_ids(self.request.user)
         context['stock_levels'] = _stock_levels_queryset(self.request)
         if self.request.user.is_superuser:
             active_cabinet = get_session_cabinet(self.request)
@@ -928,6 +998,7 @@ class StockReportView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, Li
             # FIXED 2026-10-06: only an APPROVED UserCabinetRole counts now — see core/mixins.py and docs/security.md.
             user_cabinet_ids = self.request.user.approved_cabinet_roles.values_list('cabinet_id', flat=True)
             sites = Site.objects.filter(cabinet__id__in=user_cabinet_ids)
+        sites = _scope_to_magasinier_sites(self.request, sites, 'pk')
         context['sites'] = sites
         selected_site = self.request.GET.get('site', '')
         context['selected_site'] = selected_site

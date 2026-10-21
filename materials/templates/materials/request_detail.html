@@ -52,7 +52,7 @@
                                 </div>
                             </div>
 
-                            {% if req.expense_id %}
+                            {% if req.expense_id and not hide_prices %}
                             <div class="p-3 bg-light rounded-3 mb-4">
                                 <h6 class="mb-1">
                                     <i class="fas fa-receipt me-1"></i>{% trans "Dépense liée" %}
@@ -105,7 +105,7 @@
                                             <th>{% trans "Material" %}</th>
                                             <th>{% trans "Étape" %}</th>
                                             <th class="text-center">{% trans "Quantity" %}</th>
-                                            <th class="text-end">{% trans "Est. Cost" %}</th>
+                                            {% if not hide_prices %}<th class="text-end">{% trans "Est. Cost" %}</th>{% endif %}
                                             <th>{% trans "Conformité devis" %}</th>
                                         </tr>
                                     </thead>
@@ -139,7 +139,7 @@
                                             <td class="text-center fw-semibold">
                                                 <span class="badge bg-light text-dark">{{ item.quantity }}{% if item.material %} {{ item.material.unit }}{% endif %}</span>
                                             </td>
-                                            <td class="text-end fw-semibold text-primary">{{ CURRENCY_SYMBOL }}{{ item.estimated_cost|floatformat:"2g" }}</td>
+                                            {% if not hide_prices %}<td class="text-end fw-semibold text-primary">{{ CURRENCY_SYMBOL }}{{ item.estimated_cost|floatformat:"2g" }}</td>{% endif %}
                                             <td>
                                                 {% with comparison=item.variance_comparison %}
                                                 {% if comparison %}
@@ -160,13 +160,13 @@
                                         </tr>
                                         {% endfor %}
                                     </tbody>
-                                    <tfoot class="border-top bg-light">
+                                    {% if not hide_prices %}<tfoot class="border-top bg-light">
                                         <tr>
                                             <td colspan="3" class="text-end fw-semibold">{% trans "Total Estimated Cost:" %}</td>
                                             <td class="text-end fw-bold text-success">{{ CURRENCY_SYMBOL }}{{ req.total_estimated_cost|floatformat:"2g" }}</td>
                                             <td></td>
                                         </tr>
-                                    </tfoot>
+                                    </tfoot>{% endif %}
                                 </table>
                             </div>
                         </div>
@@ -273,10 +273,10 @@
                                     <p class="fs--1 text-600 mb-1">{% trans "Total Items" %}</p>
                                     <h5 class="mb-0">{{ req.total_items }}</h5>
                                 </div>
-                                <div class="col-6 text-end">
+{% if not hide_prices %}                                <div class="col-6 text-end">
                                     <p class="fs--1 text-600 mb-1">{% trans "Est. Total" %}</p>
                                     <h5 class="mb-0 text-success">{{ CURRENCY_SYMBOL }}{{ req.total_estimated_cost|floatformat:"0g" }}</h5>
-                                </div>
+                                </div>{% endif %}
                             </div>
                             <div>
                                 <p class="fs--1 text-600 mb-1">{% trans "Status Timeline" %}</p>

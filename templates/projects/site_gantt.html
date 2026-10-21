@@ -25,10 +25,10 @@
                             {% endblocktrans %}
                         </p>
                     </div>
-                    <div class="text-end">
+                    {% if not hide_prices %}<div class="text-end">
                         <p class="fs--2 text-500 text-uppercase fw-bold mb-1">{% trans "Budget matériaux total" %}</p>
                         <h5 class="mb-0">{{ CURRENCY_SYMBOL }}{{ grand_total_budget|floatformat:"2g" }}</h5>
-                    </div>
+                    </div>{% endif %}
                 </div>
                 <div class="card-body p-0">
                     {% if rows %}
@@ -37,7 +37,7 @@
                             <thead class="bg-light">
                                 <tr>
                                     <th style="min-width: 220px;">{% trans "Étape / Tâche" %}</th>
-                                    <th class="text-end" style="min-width: 110px;">{% trans "Budget" %}</th>
+                                    {% if not hide_prices %}<th class="text-end" style="min-width: 110px;">{% trans "Budget" %}</th>{% endif %}
                                     {% for week in weeks %}
                                     <th class="text-center" style="min-width: 28px;" title="{{ week.start|date:'d M Y' }}">{{ week.label }}</th>
                                     {% endfor %}
@@ -64,7 +64,7 @@
                                         {% if not row.is_own_phase_row %}<i class="fas fa-angle-right text-500 me-1"></i>{% endif %}
                                         {{ row.phase.name }}
                                     </td>
-                                    <td class="text-end">{{ CURRENCY_SYMBOL }}{{ row.budget|floatformat:"2g" }}</td>
+                                    {% if not hide_prices %}<td class="text-end">{{ CURRENCY_SYMBOL }}{{ row.budget|floatformat:"2g" }}</td>{% endif %}
                                     {% if row.grid %}
                                         {% for i in row.grid.pre %}<td></td>{% endfor %}
                                         <td colspan="{{ row.grid.span }}" class="gantt-bar {% cycle 'bg-primary' 'bg-info' 'bg-success' 'bg-warning' as barcolor %}" title="{{ row.phase.name }} ({{ row.phase.start_date|date:'d M Y' }} — {{ row.phase.end_date|date:'d M Y'|default:row.phase.start_date }})">&nbsp;</td>

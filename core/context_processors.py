@@ -112,3 +112,12 @@ def notifications_context(request):
             recipient=request.user, is_read=False,
         ).count(),
     }
+
+
+def magasinier_context(request):
+    """`hide_prices`: true for a Magasinier, who sees quantities and never
+    prices (core/roles.py). Lazy, so pages that never ask cost nothing."""
+    from django.utils.functional import SimpleLazyObject
+    from core.roles import is_magasinier_only
+    user = getattr(request, 'user', None)
+    return {'hide_prices': SimpleLazyObject(lambda: is_magasinier_only(user))}

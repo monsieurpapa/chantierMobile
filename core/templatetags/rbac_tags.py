@@ -38,3 +38,11 @@ def has_role(user, role_names):
         roles = role_names.split(',')
         cache[role_names] = UserCabinetRole.objects.filter(user=user, role__in=roles, status=ApprovalStatus.APPROVED).exists()
     return cache[role_names]
+
+
+@register.filter(name='is_site_magasinier')
+def is_site_magasinier_filter(user, site):
+    """{% if request.user|is_site_magasinier:site %} — the chantier's own
+    Magasinier, the only one who records its stock entries and exits."""
+    from core.roles import is_site_magasinier
+    return is_site_magasinier(user, site)

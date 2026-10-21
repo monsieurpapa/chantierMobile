@@ -1,0 +1,110 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n %}
+
+{% block title %}{{ header_title }} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    {% include 'includes/navbar-vertical.html' with on="stock_report" %}
+    <div class="content">
+        {% include 'includes/navbar-top.html' %}
+        <div class="container-fluid py-4">
+            {% include 'includes/page_header.html' %}
+
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <div class="card">
+                        <div class="card-header bg-light d-flex align-items-center gap-2">
+                            <span class="badge {% if is_entry %}bg-success{% else %}bg-warning text-dark{% endif %}">
+                                <i class="fas {% if is_entry %}fa-arrow-down{% else %}fa-arrow-up{% endif %} me-1"></i>{% if is_entry %}{% trans "Entrée" %}{% else %}{% trans "Sortie" %}{% endif %}
+                            </span>
+                            <span class="fs--1 text-600"><i class="fas fa-hard-hat me-1"></i>{{ site.name }}</span>
+                        </div>
+                        <div class="card-body">
+                            {% if is_entry %}
+                            <p class="fs--1 text-600 mb-3"><i class="fas fa-file-signature me-1"></i>{% trans "Un bon de réception est créé pour cette entrée et envoyé au Directeur technique pour visa." %}</p>
+                            {% endif %}
+                            {% if form.non_field_errors %}
+                            <div class="alert alert-danger py-2 fs--1">{{ form.non_field_errors|join:" " }}</div>
+                            {% endif %}
+                            <form method="post" enctype="multipart/form-data" novalidate>
+                                {% csrf_token %}
+                                <input type="hidden" name="site" value="{{ site.pk }}">
+                                {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+                                <div class="row g-3">
+                                    {% if is_entry %}
+                                    <div class="col-12">
+                                        <label class="form-label fw-semibold" for="{{ form.material.id_for_label }}">{{ form.material.label }} <span class="text-danger">*</span></label>
+                                        {{ form.material }}
+                                        <div class="form-text">{% trans "Cherchez dans le catalogue des matériaux, ou tapez « Nom (unité) » pour en ajouter un." %}</div>
+                                        {% for e in form.material.errors %}<div class="text-danger fs--1">{{ e }}</div>{% endfor %}
+                                    </div>
+                                    {% else %}
+                                    <div class="col-12">
+                                        <label class="form-label fw-semibold" for="{{ form.stock_item.id_for_label }}">{{ form.stock_item.label }} <span class="text-danger">*</span></label>
+                                        {{ form.stock_item }}
+                                        {% for e in form.stock_item.errors %}<div class="text-danger fs--1">{{ e }}</div>{% endfor %}
+                                    </div>
+                                    {% endif %}
+                                    <div class="col-sm-6">
+                                        <label class="form-label fw-semibold" for="{{ form.quantity.id_for_label }}">{{ form.quantity.label }} <span class="text-danger">*</span></label>
+                                        {{ form.quantity }}
+                                        {% for e in form.quantity.errors %}<div class="text-danger fs--1">{{ e }}</div>{% endfor %}
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <label class="form-label fw-semibold" for="{{ form.movement_date.id_for_label }}">{{ form.movement_date.label }} <span class="text-danger">*</span></label>
+                                        {{ form.movement_date }}
+                                        {% for e in form.movement_date.errors %}<div class="text-danger fs--1">{{ e }}</div>{% endfor %}
+                                    </div>
+                                    {% if is_entry %}
+                                    <div class="col-sm-6">
+                                        <label class="form-label fw-semibold" for="{{ form.supplier.id_for_label }}">{{ form.supplier.label }}</label>
+                                        {{ form.supplier }}
+                                        {% for e in form.supplier.errors %}<div class="text-danger fs--1">{{ e }}</div>{% endfor %}
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <label class="form-label fw-semibold" for="{{ form.delivery_note_ref.id_for_label }}">{{ form.delivery_note_ref.label }}</label>
+                                        {{ form.delivery_note_ref }}
+                                        {% for e in form.delivery_note_ref.errors %}<div class="text-danger fs--1">{{ e }}</div>{% endfor %}
+                                    </div>
+                                    {% endif %}
+                                    <div class="col-sm-6">
+                                        <label class="form-label fw-semibold" for="{{ form.phase.id_for_label }}">{{ form.phase.label }} <span class="text-500 fw-normal">({% trans "facultatif" %})</span></label>
+                                        {{ form.phase }}
+                                        {% for e in form.phase.errors %}<div class="text-danger fs--1">{{ e }}</div>{% endfor %}
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <label class="form-label fw-semibold" for="{{ form.motif.id_for_label }}">{{ form.motif.label }}</label>
+                                        {{ form.motif }}
+                                        {% for e in form.motif.errors %}<div class="text-danger fs--1">{{ e }}</div>{% endfor %}
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label fw-semibold" for="{{ form.notes.id_for_label }}">{{ form.notes.label }}</label>
+                                        {{ form.notes }}
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label fw-semibold" for="{{ form.facture.id_for_label }}">{{ form.facture.label }}</label>
+                                        {{ form.facture }}
+                                        {% for e in form.facture.errors %}<div class="text-danger fs--1">{{ e }}</div>{% endfor %}
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-end gap-2 mt-4">
+                                    <a href="{{ back_url }}" class="btn btn-outline-secondary">{% trans "Annuler" %}</a>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-check me-1"></i>{% if movement %}{% trans "Enregistrer les modifications" %}{% elif is_entry %}{% trans "Enregistrer l'entrée" %}{% else %}{% trans "Enregistrer la sortie" %}{% endif %}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/phase-select.js' %}"></script>
+{% endblock %}

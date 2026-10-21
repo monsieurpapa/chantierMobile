@@ -27,7 +27,7 @@
                                     <th scope="col">{% trans "N° Commande" %}</th>
                                     <th scope="col">{% trans "Chantier" %}</th>
                                     <th scope="col">{% trans "Fournisseur" %}</th>
-                                    <th scope="col" class="text-end">{% trans "Total" %}</th>
+                                    {% if not hide_prices %}<th scope="col" class="text-end">{% trans "Total" %}</th>{% endif %}
                                     <th scope="col">{% trans "Commandé le" %}</th>
                                     <th scope="col">{% trans "Caisse" %}</th>
                                     <th scope="col" class="text-center">{% trans "Statut" %}</th>
@@ -40,7 +40,7 @@
                                     <td><a href="{% url 'procurement:purchase_order_detail' pk=po.pk %}"><strong>{{ po.order_number }}</strong></a></td>
                                     <td><a href="{% url 'projects:site_detail' unique_id=po.site.unique_id %}">{{ po.site.name }}</a></td>
                                     <td>{{ po.supplier.name }}</td>
-                                    <td class="text-end fw-semi-bold">{{ CURRENCY_SYMBOL }}{{ po.total_ht|floatformat:"2g" }}</td>
+                                    {% if not hide_prices %}<td class="text-end fw-semi-bold">{{ CURRENCY_SYMBOL }}{{ po.total_ht|floatformat:"2g" }}</td>{% endif %}
                                     <td>{{ po.order_date }}</td>
                                     <td><span class="badge bg-secondary">{{ po.get_caisse_display }}</span></td>
                                     <td class="text-center">

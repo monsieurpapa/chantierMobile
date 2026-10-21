@@ -475,6 +475,21 @@ class StockMovement(BaseModel):
         verbose_name=_('Facture'),
         help_text=_('Justificatif (facture/reçu) lié à ce mouvement — facultatif'),
     )
+    # Bon de réception (2026-10-21): an entry's delivery details, and the
+    # Directeur technique's visa once they have reviewed it.
+    supplier = models.ForeignKey(
+        Supplier, on_delete=models.SET_NULL, null=True, blank=True, related_name='stock_movements',
+        verbose_name=_('Fournisseur'),
+    )
+    delivery_note_ref = models.CharField(
+        max_length=100, blank=True, verbose_name=_('N° bon de livraison'),
+        help_text=_('Référence du bon de livraison du fournisseur (facultatif)'),
+    )
+    reception_visa_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='stock_reception_visas', verbose_name=_('Visé par'),
+    )
+    reception_visa_at = models.DateTimeField(null=True, blank=True, verbose_name=_('Visé le'))
 
     class Meta:
         verbose_name = _('Mouvement de stock')
@@ -505,10 +520,94 @@ class StockMovement(BaseModel):
             if not self.quantity:
                 raise ValidationError({'quantity': _("La quantité d'ajustement ne peut pas être nulle.")})
 
-        if self.stock_item_id and self.quantity:
+        # On an edit, save_with_stock_update() checks the stock against the
+        # movement's previous effect instead.
+        if self.stock_item_id and self.quantity and self._state.adding:
             delta = self._signed_delta()
             if self.stock_item.quantity_on_hand + delta < 0:
                 raise ValidationError({'quantity': _('Cette opération rendrait le stock négatif.')})
+
+    # --- Entrées / sorties recorded by the chantier's Magasinier ---------
+
+    @property
+    def site(self):
+        return self.stock_item.site
+
+    @property
+    def is_manual_entry_or_exit(self):
+        """An entry or exit typed in by hand — the only movements that can
+        be edited or deleted. Receipts of a purchase order, transfers and
+        adjustments stay as recorded (their other side would no longer
+        match)."""
+        return (
+            self.movement_type in (StockMovementType.IN, StockMovementType.OUT)
+            and self.purchase_order_line_id is None
+            and self.transfer_pair_id is None
+        )
+
+    @property
+    def has_bon_de_reception(self):
+        return self.movement_type == StockMovementType.IN
+
+    @property
+    def reception_number(self):
+        """"BR-00012": the bon de réception of an entry."""
+        return f'BR-{self.pk:05d}' if self.pk and self.has_bon_de_reception else ''
+
+    @property
+    def effective_supplier(self):
+        if self.supplier_id:
+            return self.supplier
+        if self.purchase_order_line_id:
+            return self.purchase_order_line.purchase_order.supplier
+        return None
+
+    @property
+    def purchase_order(self):
+        return self.purchase_order_line.purchase_order if self.purchase_order_line_id else None
+
+    def save_with_stock_update(self):
+        """Save an edited movement and move the stock by the difference:
+        its previous effect is undone (on its previous article, if the
+        article changed) and the new one applied, all under row locks.
+        Refuses an edit that would leave either article below zero."""
+        from django.core.exceptions import ValidationError
+        if self._state.adding:
+            return self.save()
+        with transaction.atomic():
+            previous = StockMovement.objects.select_for_update().get(pk=self.pk)
+            items = {
+                i.pk: i for i in StockItem.objects.select_for_update().filter(
+                    pk__in={previous.stock_item_id, self.stock_item_id})
+            }
+            deltas = {pk: 0 for pk in items}
+            deltas[previous.stock_item_id] -= previous._signed_delta()
+            deltas[self.stock_item_id] += self._signed_delta()
+            for pk, change in deltas.items():
+                if items[pk].quantity_on_hand + change < 0:
+                    raise ValidationError({'quantity': _(
+                        "Modification impossible : le stock de « %(item)s » deviendrait négatif."
+                    ) % {'item': items[pk].name}})
+            self.save()
+            for pk, change in deltas.items():
+                if change:
+                    StockItem.objects.filter(pk=pk).update(quantity_on_hand=models.F('quantity_on_hand') + change)
+            self.stock_item.refresh_from_db(fields=['quantity_on_hand'])
+
+    def remove_with_stock_update(self):
+        """Delete (soft) this movement and undo its effect on the stock.
+        Refuses when the stock no longer holds what an entry brought in."""
+        from django.core.exceptions import ValidationError
+        with transaction.atomic():
+            item = StockItem.objects.select_for_update().get(pk=self.stock_item_id)
+            change = -self._signed_delta()
+            if item.quantity_on_hand + change < 0:
+                raise ValidationError(_(
+                    "Suppression impossible : une partie de cette entrée est déjà sortie du stock "
+                    "(stock actuel : %(qty)s %(unit)s)."
+                ) % {'qty': item.quantity_on_hand, 'unit': item.unit})
+            StockItem.objects.filter(pk=item.pk).update(quantity_on_hand=models.F('quantity_on_hand') + change)
+            self.delete()
 
     def _signed_delta(self):
         """The signed change this movement applies to quantity_on_hand:

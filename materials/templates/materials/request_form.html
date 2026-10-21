@@ -83,7 +83,7 @@
                                     <p class="fs--1 text-600 mb-1">{% trans "Nombre d'articles :" %}</p>
                                     <h5 class="mb-0" id="total-items">{{ items_formset|length }}</h5>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-6{% if hide_prices %} d-none{% endif %}">
                                     <p class="fs--1 text-600 mb-1">{% trans "Coût total estimé :" %}</p>
                                     <h5 class="mb-0 text-success" id="total-cost">$0.00</h5>
                                 </div>
