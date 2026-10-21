@@ -27,7 +27,7 @@
                                     <th scope="col" class="ps-3 fw-semibold text-600">{% trans "Site" %}</th>
                                     <th scope="col" class="fw-semibold text-600">{% trans "Materials" %}</th>
                                     <th scope="col" class="text-center fw-semibold text-600">{% trans "Total Items" %}</th>
-                                    <th scope="col" class="text-center fw-semibold text-600">{% trans "Est. Cost" %}</th>
+                                    {% if not hide_prices %}<th scope="col" class="text-center fw-semibold text-600">{% trans "Est. Cost" %}</th>{% endif %}
                                     <th scope="col" class="text-center fw-semibold text-600">{% trans "Status" %}</th>
                                     <th scope="col" class="text-end pe-3 fw-semibold text-600">{% trans "Date" %}</th>
                                     <th scope="col" class="text-end pe-3 fw-semibold text-600">{% trans "Actions" %}</th>
@@ -56,9 +56,9 @@
                                     <td class="align-middle text-center">
                                         <span class="badge bg-info">{{ req.total_items }}</span>
                                     </td>
-                                    <td class="align-middle text-center fw-semibold text-success">
+                                    {% if not hide_prices %}<td class="align-middle text-center fw-semibold text-success">
                                         {{ CURRENCY_SYMBOL }}{{ req.total_estimated_cost|floatformat:"0g" }}
-                                    </td>
+                                    </td>{% endif %}
                                     <td class="align-middle text-center">
                                         <span class="badge rounded-pill 
                                         {% if req.status == 'APPROVED' %}bg-success

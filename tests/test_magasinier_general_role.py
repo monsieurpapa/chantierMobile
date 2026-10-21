@@ -30,12 +30,12 @@ def magasinier_general_client(client, magasinier_general_user):
 
 
 @pytest.fixture
-def magasinier_user(db, cabinet):
+def magasinier_user(db, cabinet, site):
     from django.contrib.auth import get_user_model
     from accounts.models import UserCabinetRole
     User = get_user_model()
     u = User.objects.create_user(username='magasinier_plain', email='magasinier_plain@example.com', password='testpass123')
-    UserCabinetRole.objects.create(user=u, cabinet=cabinet, role=UserRoles.MAGASINIER, status=ApprovalStatus.APPROVED)
+    UserCabinetRole.objects.create(user=u, cabinet=cabinet, role=UserRoles.MAGASINIER, site=site, status=ApprovalStatus.APPROVED)
     return u
 
 

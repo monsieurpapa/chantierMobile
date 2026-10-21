@@ -71,11 +71,6 @@
                             </button>
                         </div>
                     </form>
-                    <div class="mt-2">
-                        <a href="{% url 'procurement:stock_report_pdf' %}?{{ request.GET.urlencode }}" class="btn btn-falcon-danger btn-sm">
-                            <i class="fas fa-file-pdf me-1"></i>{% trans "Exporter en PDF" %}
-                        </a>
-                    </div>
                 </div>
             </div>
 
@@ -127,12 +122,14 @@
                                     <th>{% trans "Type" %}</th>
                                     <th class="text-end">{% trans "Quantité" %}</th>
                                     <th>{% trans "Motif" %}</th>
+                                    <th>{% trans "Bon de réception" %}</th>
+                                    <th class="text-end"></th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for m in movements %}
                                 <tr>
-                                    <td>{{ m.movement_date }}</td>
+                                    <td><a href="{% url 'procurement:stock_movement_detail' pk=m.pk %}">{{ m.movement_date|date:"d/m/Y" }}</a></td>
                                     <td>{{ m.stock_item.site.name }}</td>
                                     <td>{{ m.phase.name|default:"-" }}</td>
                                     <td><a href="{% url 'procurement:stock_item_detail' pk=m.stock_item.pk %}">{{ m.stock_item.name }}</a></td>
@@ -147,9 +144,22 @@
                                     </td>
                                     <td class="text-end fw-semibold">{{ m.quantity }} {{ m.stock_item.unit }}</td>
                                     <td>{{ m.motif|default:"-" }}</td>
+                                    <td>
+                                        {% if m.has_bon_de_reception %}
+                                        <a href="{% url 'procurement:bon_de_reception_pdf' pk=m.pk %}" target="_blank" rel="noopener" title="{% trans 'Télécharger le bon de réception' %}"><i class="fas fa-file-pdf text-danger me-1"></i>{{ m.reception_number }}</a>
+                                        {% if m.reception_visa_at %}<span class="badge badge-subtle-success ms-1" title="{% trans 'Visé par le Directeur technique' %}"><i class="fas fa-check"></i> {% trans "visé" %}</span>{% else %}<span class="badge badge-subtle-warning ms-1">{% trans "à viser" %}</span>{% endif %}
+                                        {% else %}—{% endif %}
+                                    </td>
+                                    <td class="text-end text-nowrap">
+                                        <a href="{% url 'procurement:stock_movement_detail' pk=m.pk %}" class="btn btn-link btn-sm p-0 me-2" title="{% trans 'Voir' %}"><i class="fas fa-eye"></i></a>
+                                        {% if m.is_manual_entry_or_exit and m.stock_item.site_id in magasinier_site_ids %}
+                                        <a href="{% url 'procurement:stock_movement_update' pk=m.pk %}" class="btn btn-link btn-sm p-0 me-2" title="{% trans 'Modifier' %}"><i class="fas fa-edit"></i></a>
+                                        <a href="{% url 'procurement:stock_movement_delete' pk=m.pk %}" class="btn btn-link btn-sm p-0 text-danger" title="{% trans 'Supprimer' %}"><i class="fas fa-trash-alt"></i></a>
+                                        {% endif %}
+                                    </td>
                                 </tr>
                                 {% empty %}
-                                <tr><td colspan="7" class="text-center py-4 text-500">{% trans "Aucun mouvement pour cette sélection." %}</td></tr>
+                                <tr><td colspan="9" class="text-center py-4 text-500">{% trans "Aucun mouvement pour cette sélection." %}</td></tr>
                                 {% endfor %}
                             </tbody>
                         </table>

@@ -219,3 +219,111 @@ class SupplierCreditPaymentForm(forms.Form):
         super().__init__(*args, **kwargs)
         from finance.models import Caisse
         self.fields['caisse'].queryset = Caisse.objects.filter(cabinet=cabinet) if cabinet else Caisse.objects.none()
+
+
+class StockEntryExitForm(PhaseCatalogFormMixin, forms.ModelForm):
+    """An entrée or sortie at one chantier, recorded (and later edited) by
+    that chantier's Magasinier — 2026-10-21.
+
+    The chantier and the direction are fixed by the view. An entrée names
+    a material from the Catalogue des matériaux (searchable, with quick
+    add); its article de stock on the chantier is found or created on
+    save. A sortie picks one of the chantier's articles de stock. No price
+    is asked or shown: a Magasinier deals in quantities only."""
+    material = forms.ModelChoiceField(
+        queryset=None, required=False, label=_('Matériau'),
+        widget=DynamicSelectWidget(
+            create_url_name='materials:material_quick_create',
+            placeholder=_('Rechercher dans le catalogue ou ajouter…'),
+        ),
+    )
+
+    class Meta:
+        model = StockMovement
+        fields = ['stock_item', 'quantity', 'movement_date', 'phase', 'supplier', 'delivery_note_ref',
+                  'motif', 'notes', 'facture']
+        labels = {'stock_item': _('Article en stock'), 'facture': _('Justificatif (facture, bon de livraison)')}
+        widgets = {
+            'stock_item': forms.Select(attrs={'class': 'form-select', 'data-control': 'select2',
+                                              'data-placeholder': _('Choisir un article en stock…')}),
+            'quantity': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0.01', 'placeholder': '0.00'}),
+            'movement_date': forms.DateInput(format='%Y-%m-%d', attrs={'class': 'form-control', 'type': 'date'}),
+            'phase': forms.Select(attrs={'class': 'form-select'}),
+            'supplier': DynamicSelectWidget(
+                create_url_name='procurement:supplier_quick_create',
+                placeholder=_('Rechercher ou ajouter un fournisseur…'),
+            ),
+            'delivery_note_ref': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('ex. BL-2026-0412')}),
+            'motif': forms.TextInput(attrs={'class': 'form-control'}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'facture': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+        }
+
+    def __init__(self, *args, site, movement_type, **kwargs):
+        from django.utils import timezone
+        from materials.models import Material
+        from chantiermobile.constants import StockMovementType
+        super().__init__(*args, **kwargs)
+        self.site = site
+        self.movement_type = movement_type
+        self.instance.movement_type = movement_type
+        self.is_entry = movement_type == StockMovementType.IN
+        self.fields['material'].queryset = Material.objects.order_by('name')
+        self.fields['stock_item'].queryset = StockItem.objects.filter(site=site).order_by('name')
+        self.fields['stock_item'].label_from_instance = lambda i: f"{i.name} — {i.quantity_on_hand} {i.unit} en stock"
+        self.fields['supplier'].queryset = Supplier.objects.filter(cabinet=site.cabinet)
+        self.fields['phase'].queryset = site.phases.all()
+        self.fields['phase'].required = False
+        self.fields['phase'].label = _('Étape')
+        self.fields['quantity'].label = _('Quantité reçue') if self.is_entry else _('Quantité sortie')
+        self.fields['movement_date'].label = _('Date de réception') if self.is_entry else _('Date de sortie')
+        for name in ('motif', 'notes', 'facture', 'supplier', 'delivery_note_ref'):
+            self.fields[name].required = False
+        if not self.instance.pk:
+            self.initial.setdefault('movement_date', timezone.localdate())
+        if self.is_entry:
+            self.fields['stock_item'].required = False
+            self.fields['stock_item'].widget = forms.HiddenInput()
+            if self.instance.pk and self.instance.stock_item.material_id:
+                self.initial.setdefault('material', self.instance.stock_item.material_id)
+        else:
+            self.fields['stock_item'].required = True
+            del self.fields['material']
+            del self.fields['supplier']
+            del self.fields['delivery_note_ref']
+            self.fields['motif'].widget.attrs['placeholder'] = _("ex. Coulage dalle niveau 1")
+        enable_phase_catalog(self, 'phase', [site])
+
+    def clean(self):
+        cleaned = super().clean()
+        if self.is_entry:
+            material = cleaned.get('material')
+            if material is None and not (self.instance.pk and self.instance.stock_item_id):
+                self.add_error('material', _('Choisissez le matériau reçu dans le catalogue.'))
+        return cleaned
+
+    def _stock_item_for(self, material, create):
+        item = (StockItem.objects.filter(site=self.site, material=material).first()
+                or StockItem.objects.filter(site=self.site, name__iexact=material.name).first())
+        if item is None and create:
+            item = StockItem.objects.create(site=self.site, material=material, name=material.name, unit=material.unit)
+        elif item is not None and item.material_id is None:
+            item.material = material
+            item.save(update_fields=['material', 'updated_at'])
+        return item
+
+    def _get_validation_exclusions(self):
+        # The article of an entrée is resolved from `material` in clean().
+        exclude = set(super()._get_validation_exclusions())
+        if self.is_entry:
+            exclude.add('stock_item')
+        return exclude
+
+    def save(self, commit=True):
+        movement = super().save(commit=False)
+        movement.movement_type = self.movement_type
+        if self.is_entry and self.cleaned_data.get('material') is not None:
+            movement.stock_item = self._stock_item_for(self.cleaned_data['material'], create=True)
+        if commit:
+            movement.save_with_stock_update()
+        return movement

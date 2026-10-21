@@ -85,6 +85,9 @@ MIDDLEWARE = [
 
     # Force a password change for accounts flagged with must_change_password
     'core.middleware.ForcePasswordChangeMiddleware',
+
+    # A Magasinier never reaches finance / pricing / revenue / personnel
+    'core.middleware.MagasinierPriceWallMiddleware',
 ]
 
 AUTHENTICATION_BACKENDS = [
@@ -124,6 +127,7 @@ TEMPLATES = [
                 'core.context_processors.active_cabinet_context',
                 'core.context_processors.currency_context',
                 'core.context_processors.notifications_context',
+                'core.context_processors.magasinier_context',
             ],
         },
     },

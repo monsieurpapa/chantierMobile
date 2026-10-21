@@ -694,6 +694,7 @@
       </div>
     </div>
 
+    {% if not hide_prices %}
     <!-- Personnel -->
     <div class="col-md-6 col-xxl-4">
       <div class="card h-100">
@@ -715,6 +716,9 @@
       </div>
     </div>
 
+    {% endif %}
+
+    {% if not hide_prices %}
     <!-- Finance -->
     <div class="col-md-6 col-xxl-4">
       <div class="card h-100">
@@ -734,24 +738,34 @@
       </div>
     </div>
 
+    {% endif %}
+
     <!-- Materials -->
     <div class="col-md-6 col-xxl-4">
       <div class="card h-100">
+        {% if hide_prices %}
+        <a href="{% url 'procurement:stock_movement_new' kind='entree' %}" class="btn btn-sm btn-falcon-info rounded-circle position-absolute top-0 end-0 m-3 z-2"
+           title="{% trans 'Nouvelle entrée en stock' %}" aria-label="{% trans 'Nouvelle entrée en stock' %}">
+          <span class="fas fa-plus"></span>
+        </a>
+        {% else %}
         <a href="{% url 'materials:request_create' %}" class="btn btn-sm btn-falcon-info rounded-circle position-absolute top-0 end-0 m-3 z-2"
            title="{% trans 'Nouvel état de besoin' %}" aria-label="{% trans 'Nouvel état de besoin' %}">
           <span class="fas fa-plus"></span>
         </a>
+        {% endif %}
         <div class="card-body p-x1 text-center">
           <div class="icon-item icon-item-xl shadow-none mx-auto mt-x1 bg-info-subtle">
             <span class="text-info fas fa-boxes fs-3"></span>
           </div>
-          <h5 class="mt-3 mb-2"><a class="text-900 hover-primary stretched-link" href="{% url 'materials:request_list' %}">{% trans "Materials & Stock" %}</a></h5>
+          <h5 class="mt-3 mb-2"><a class="text-900 hover-primary stretched-link" href="{% if hide_prices %}{% url 'procurement:stock_report' %}{% else %}{% url 'materials:request_list' %}{% endif %}">{% trans "Materials & Stock" %}</a></h5>
           <h6 class="w-75 mx-auto text-600 mb-x1">{% trans "Gérez le catalogue, le stock et les états de besoin des chantiers." %}
           </h6>
         </div>
       </div>
     </div>
 
+    {% if not hide_prices %}
     <!-- Revenue -->
     <div class="col-md-6 col-xxl-4">
       <div class="card h-100">
@@ -771,6 +785,8 @@
         </div>
       </div>
     </div>
+
+    {% endif %}
 
     {% if request.user.is_superuser %}
     <!-- Administration -->
@@ -796,11 +812,13 @@
 {% endblock %}
 
 {% block echarts %}
+{% if not hide_prices %}
 {{ cashflow_labels|json_script:"cashflow-labels-data" }}
 {{ cashflow_revenue|json_script:"cashflow-revenue-data" }}
 {{ cashflow_expense|json_script:"cashflow-expense-data" }}
 {{ cashflow_margin|json_script:"cashflow-margin-data" }}
 {{ devis_chart|json_script:"devis-chart-data" }}
+{% endif %}
 {{ task_chart|json_script:"task-chart-data" }}
 {{ personnel_chart|json_script:"personnel-chart-data" }}
 <script>

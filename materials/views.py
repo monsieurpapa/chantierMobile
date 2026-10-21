@@ -422,14 +422,16 @@ def materials_data_api(request):
     """API endpoint to fetch material data (units and costs) for dynamic form"""
     from django.http import JsonResponse
     
+    from core.roles import is_magasinier_only
     materials = Material.objects.all().values('id', 'name', 'unit', 'estimated_cost_per_unit')
-    
+    hide_prices = is_magasinier_only(request.user)
+
     data = {}
     for material in materials:
         data[str(material['id'])] = {
             'name': material['name'],
             'unit': material['unit'],
-            'cost_per_unit': float(material['estimated_cost_per_unit'] or 0)
+            'cost_per_unit': 0 if hide_prices else float(material['estimated_cost_per_unit'] or 0)
         }
     
     return JsonResponse(data)
@@ -458,7 +460,9 @@ class MaterialQuickCreateView(QuickCreateView):
         return existing or Material(name=name, unit=unit)
 
     def extra_data(self, instance):
+        from core.roles import is_magasinier_only
+        hide = is_magasinier_only(self.request.user)
         return {
             'unit': instance.unit,
-            'cost_per_unit': float(instance.estimated_cost_per_unit or 0),
+            'cost_per_unit': 0 if hide else float(instance.estimated_cost_per_unit or 0),
         }

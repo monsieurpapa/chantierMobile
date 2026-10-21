@@ -145,9 +145,28 @@ class UserCabinetRole(BaseModel):
         choices=ApprovalStatus.choices,
         default=ApprovalStatus.PENDING
     )
+    # A Magasinier belongs to one chantier (2026-10-21): stock entries and
+    # exits there are theirs alone to record, edit or delete. Only used —
+    # and then required — for UserRoles.MAGASINIER.
+    site = models.ForeignKey(
+        'projects.Site', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='magasinier_roles', verbose_name=_('Chantier'),
+        help_text=_("Chantier du magasinier (obligatoire pour le rôle Magasinier)."),
+    )
 
     class Meta:
         unique_together = ('user', 'cabinet')
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.role == UserRoles.MAGASINIER:
+            if self.site_id is None:
+                raise ValidationError({'site': _("Choisissez le chantier de ce magasinier.")})
+            if self.cabinet_id and self.site.cabinet_id != self.cabinet_id:
+                raise ValidationError({'site': _("Ce chantier n'appartient pas à ce cabinet.")})
+        elif self.site_id is not None:
+            # Only a Magasinier is tied to a chantier; drop a stale choice.
+            self.site = None
 
     def __str__(self):
         return f"{self.user.username} - {self.role} @ {self.cabinet.name}"

@@ -28,12 +28,12 @@ def stock_item(db, site):
 
 
 @pytest.fixture
-def magasinier_user(db, cabinet):
+def magasinier_user(db, cabinet, site):
     from django.contrib.auth import get_user_model
     from accounts.models import UserCabinetRole
     from chantiermobile.constants import UserRoles, ApprovalStatus
     user = get_user_model().objects.create_user(username='magasinier_stk', password='testpass123')
-    UserCabinetRole.objects.create(user=user, cabinet=cabinet, role=UserRoles.MAGASINIER, status=ApprovalStatus.APPROVED)
+    UserCabinetRole.objects.create(user=user, cabinet=cabinet, role=UserRoles.MAGASINIER, site=site, status=ApprovalStatus.APPROVED)
     return user
 
 

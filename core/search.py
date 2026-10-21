@@ -60,10 +60,15 @@ def global_search(request, query):
 
     results = []
 
+    from core.roles import is_magasinier_only, magasinier_site_ids
+    magasinier = is_magasinier_only(request.user)
     sites = Site.objects.filter(
         Q(name__icontains=query) | Q(location__icontains=query),
         cabinet_id__in=cabinet_ids,
-    )[:RESULTS_PER_CATEGORY]
+    )
+    if magasinier:
+        sites = sites.filter(pk__in=magasinier_site_ids(request.user))
+    sites = sites[:RESULTS_PER_CATEGORY]
     for site in sites:
         results.append({
             'type_label': _('Chantier'), 'icon': 'fa-map-marker-alt', 'badge': 'primary',
@@ -71,6 +76,11 @@ def global_search(request, query):
             'subtitle': site.location,
             'url': reverse('projects:site_detail', kwargs={'unique_id': site.unique_id}),
         })
+
+    if magasinier:
+        # Their chantier only — personnel, contracts and invoices are
+        # outside a Magasinier's remit (core/middleware.py).
+        return results
 
     personnel = Personnel.objects.filter(
         Q(first_name__icontains=query) | Q(last_name__icontains=query),

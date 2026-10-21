@@ -9,6 +9,24 @@ from chantiermobile.constants import UserRoles, ApprovalStatus, FormPlaceholders
 User = get_user_model()
 
 
+def _magasinier_site_field(cabinet=None):
+    """The "Chantier" picker shown with the role: required (by
+    UserCabinetRole.clean) only for a Magasinier, ignored otherwise."""
+    from projects.models import Site
+    qs = Site.objects.select_related('cabinet').order_by('cabinet__name', 'name')
+    if cabinet is not None:
+        qs = qs.filter(cabinet=cabinet)
+    field = forms.ModelChoiceField(
+        queryset=qs, required=False,
+        widget=forms.Select(attrs={'class': 'form-select', 'data-magasinier-site': '1'}),
+        label=_('Chantier du magasinier'),
+        help_text=_("Un magasinier appartient à un seul chantier : il y gère seul les entrées et sorties de stock."),
+    )
+    if cabinet is None:
+        field.label_from_instance = lambda site: f"{site.name} — {site.cabinet.name}"
+    return field
+
+
 class UserProfileForm(forms.ModelForm):
     """Form for updating user profile information"""
     
@@ -277,10 +295,11 @@ class AssignUserToCabinetForm(forms.ModelForm):
     
     class Meta:
         model = UserCabinetRole
-        fields = ['cabinet', 'role', 'status']
+        fields = ['cabinet', 'role', 'site', 'status']
     
     def __init__(self, user, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['site'] = _magasinier_site_field()
         self.user = user
         if user is not None:
             # Exclude cabinets user already has roles in
@@ -330,11 +349,13 @@ class AssignUserToCabinetFromCabinetForm(forms.ModelForm):
 
     class Meta:
         model = UserCabinetRole
-        fields = ['user', 'role', 'status']
+        fields = ['user', 'role', 'site', 'status']
 
     def __init__(self, cabinet, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.cabinet = cabinet
+        self.instance.cabinet = cabinet
+        self.fields['site'] = _magasinier_site_field(cabinet)
         # Only show users not already assigned to this cabinet
         already_assigned = UserCabinetRole.objects.filter(
             cabinet=cabinet
@@ -389,7 +410,7 @@ class AssignRoleToCabinetUserForm(forms.ModelForm):
     
     class Meta:
         model = UserCabinetRole
-        fields = ['role', 'status']
+        fields = ['role', 'site', 'status']
         widgets = {
             'role': forms.Select(attrs={
                 'class': 'form-select'
@@ -401,6 +422,7 @@ class AssignRoleToCabinetUserForm(forms.ModelForm):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['site'] = _magasinier_site_field(self.instance.cabinet if self.instance.cabinet_id else None)
         self.fields['role'].widget.attrs.update({
             'class': 'form-select',
             'title': _('Select the user\'s role in this cabinet')

@@ -18,6 +18,7 @@ from django.utils.translation import gettext_lazy as _
 from .models import Site, ProjectPhase, SiteProgress, ProgressPhoto, ProgressComment, PlanningSubmission, SiteLevel, PhaseTemplate
 from .forms import SiteForm, ProjectPhaseForm, SiteProgressForm, PlanningSubmissionForm, SiteLevelFormSet
 from .phase_fields import enable_phase_catalog
+from core.roles import MagasinierSiteScopeMixin
 from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet, can_act_for_cabinet, can_view_cabinet
 from chantiermobile.constants import UserRoles, ApprovalStatus
 
@@ -83,10 +84,11 @@ def _scope_lead_engineer_queryset(form, cabinet):
         form.fields['lead_engineer'].queryset = User.objects.none()
     return form
 
-class SiteListView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
+class SiteListView(LoginRequiredMixin, MagasinierSiteScopeMixin, CabinetAccessMixin, PageHeaderMixin, ListView):
     """Lists the current user's Cabinet-scoped sites. Open to any
     authenticated member of a cabinet; only the "Créer un chantier"
     header action is role-gated (director-tier or CHIEF_ENGINEER)."""
+    magasinier_site_field = 'pk'
     model = Site
     template_name = 'projects/site_list.html'
     context_object_name = 'sites'
@@ -236,11 +238,12 @@ class SiteDeleteView(LoginRequiredMixin, RoleRequiredMixin, CabinetAccessMixin, 
         messages.success(self.request, _("Chantier supprimé avec succès !"))
         return super().delete(request, *args, **kwargs)
 
-class SiteDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, DetailView):
+class SiteDetailView(LoginRequiredMixin, MagasinierSiteScopeMixin, CabinetAccessMixin, PageHeaderMixin, DetailView):
     """A Site's full picture: financials, phases, and a merged activity
     timeline (progress reports, expenses, material requests). Open to
     any authenticated member of the site's cabinet (CabinetAccessMixin);
     not role-gated beyond that."""
+    magasinier_site_field = 'pk'
     model = Site
     template_name = 'projects/site_detail.html'
     context_object_name = 'site'
@@ -344,7 +347,7 @@ class SiteDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, De
         return context
 
 
-class SiteGanttView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, DetailView):
+class SiteGanttView(LoginRequiredMixin, MagasinierSiteScopeMixin, CabinetAccessMixin, PageHeaderMixin, DetailView):
     """Simple week-grid Gantt of a Site's planning (added 2026-10-19,
     meeting-note backlog "Planification des travaux") — one row per
     "tâche" (a sous-étape of a top-level ProjectPhase, matching the
@@ -363,6 +366,7 @@ class SiteGanttView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin, Det
     Open to any authenticated member of the site's cabinet
     (CabinetAccessMixin) — read-only, so no further role gate, same as
     SiteDetailView."""
+    magasinier_site_field = 'pk'
     model = Site
     template_name = 'projects/site_gantt.html'
     context_object_name = 'site'

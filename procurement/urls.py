@@ -1,6 +1,6 @@
 """URL routes for suppliers, purchase orders, stock, and supplier credit."""
 from django.urls import path
-from . import views
+from . import views, views_movements
 
 app_name = 'procurement'
 
@@ -38,6 +38,14 @@ urlpatterns = [
     path('stock/<int:pk>/edit/', views.StockItemUpdateView.as_view(), name='stock_item_update'),
     path('stock/<int:pk>/mouvement/', views.stock_movement_create, name='stock_movement_create'),
     path('stock/<int:pk>/transfert/', views.stock_transfer_create, name='stock_transfer_create'),
+
+    # Entrées / sorties at a chantier (its Magasinier) + bon de réception
+    path('stock/mouvements/<str:kind>/nouveau/', views_movements.stock_movement_create, name='stock_movement_new'),
+    path('stock/mouvements/<int:pk>/', views_movements.StockMovementDetailView.as_view(), name='stock_movement_detail'),
+    path('stock/mouvements/<int:pk>/modifier/', views_movements.stock_movement_update, name='stock_movement_update'),
+    path('stock/mouvements/<int:pk>/supprimer/', views_movements.stock_movement_delete, name='stock_movement_delete'),
+    path('stock/mouvements/<int:pk>/bon-de-reception.pdf', views_movements.bon_de_reception_pdf, name='bon_de_reception_pdf'),
+    path('stock/mouvements/<int:pk>/viser/', views_movements.stock_movement_visa, name='stock_movement_visa'),
 
     # Reports
     path('stock/rapport/', views.StockReportView.as_view(), name='stock_report'),

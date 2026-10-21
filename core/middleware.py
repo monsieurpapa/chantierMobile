@@ -125,3 +125,33 @@ class SessionIdleTimeoutMiddleware:
             except Exception:
                 continue
         return False
+
+
+# Sections that are about money (amounts, rates, prices): a Magasinier
+# deals in quantities only (2026-10-21, core/roles.py).
+MAGASINIER_BLOCKED_NAMESPACES = ('finance', 'pricing', 'revenue', 'personnel')
+
+
+class MagasinierPriceWallMiddleware:
+    """Keeps a Magasinier out of the money sections, whatever the URL —
+    hiding their menu entries alone would not. Only requests into those
+    sections pay for the role lookup."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        return self.get_response(request)
+
+    def process_view(self, request, view_func, view_args, view_kwargs):
+        match = getattr(request, 'resolver_match', None)
+        if match is None or match.namespace not in MAGASINIER_BLOCKED_NAMESPACES:
+            return None
+        user = getattr(request, 'user', None)
+        if user is None or not user.is_authenticated:
+            return None
+        from core.roles import is_magasinier_only
+        if not is_magasinier_only(user):
+            return None
+        messages.error(request, _("Cette section n'est pas accessible au magasinier."))
+        return redirect('procurement:stock_report')
