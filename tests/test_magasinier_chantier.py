@@ -325,3 +325,41 @@ class TestPriceWall:
         movement = StockMovement.objects.get(purchase_order_line__purchase_order=po)
         assert movement.effective_supplier == supplier
         assert Notification.objects.filter(recipient=dt, message__contains=movement.reception_number).exists()
+
+
+@pytest.mark.django_db
+class TestSuperadminNeverLockedOut:
+    """Standing rule (CLAUDE.md): every access limit lets a superadmin through."""
+
+    def test_superadmin_records_edits_and_deletes(self, admin_client, site, ciment, stock):
+        url = reverse('procurement:stock_movement_new', kwargs={'kind': 'entree'}) + f'?site={site.pk}'
+        response = admin_client.post(url, entry_data(ciment, '6'))
+        assert response.status_code == 302
+        movement = StockMovement.objects.filter(stock_item=stock).latest('pk')
+        stock.refresh_from_db()
+        assert stock.quantity_on_hand == Decimal('56')
+        detail = admin_client.get(reverse('procurement:stock_movement_detail', kwargs={'pk': movement.pk}))
+        assert detail.context['can_edit'] is True
+        admin_client.post(reverse('procurement:stock_movement_update', kwargs={'pk': movement.pk}),
+                          entry_data(ciment, '2', stock_item=stock.pk))
+        stock.refresh_from_db()
+        assert stock.quantity_on_hand == Decimal('52')
+        admin_client.post(reverse('procurement:stock_movement_delete', kwargs={'pk': movement.pk}))
+        stock.refresh_from_db()
+        assert stock.quantity_on_hand == Decimal('50')
+
+    def test_superadmin_sortie_and_transfer(self, admin_client, stock, other_site):
+        admin_client.post(reverse('procurement:stock_movement_new', kwargs={'kind': 'sortie'}) + f'?site={stock.site.pk}',
+                          {'stock_item': stock.pk, 'quantity': '5', 'movement_date': '2026-10-21'})
+        admin_client.post(reverse('procurement:stock_transfer_create', kwargs={'pk': stock.pk}),
+                          {'destination_site': other_site.pk, 'quantity': '5'})
+        stock.refresh_from_db()
+        assert stock.quantity_on_hand == Decimal('40')
+
+    def test_superadmin_sees_entry_buttons_once_a_chantier_is_chosen(self, admin_client, site):
+        content = admin_client.get(reverse('procurement:stock_report') + f'?site={site.pk}').content.decode()
+        assert reverse('procurement:stock_movement_new', kwargs={'kind': 'entree'}) in content
+
+    def test_superadmin_sees_prices_and_everything(self, admin_client):
+        assert bool(admin_client.get(reverse('procurement:stock_report')).context['hide_prices']) is False
+        assert admin_client.get(reverse('finance:expense_list')).status_code == 200

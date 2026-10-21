@@ -55,3 +55,28 @@ class MagasinierSiteScopeMixin:
         if is_magasinier_only(self.request.user):
             qs = qs.filter(**{f'{self.magasinier_site_field}__in': magasinier_site_ids(self.request.user)})
         return qs
+
+
+def can_record_stock(request, site):
+    """May this request record, edit, delete or transfer entrées/sorties
+    at `site`? The chantier's Magasinier — or a superadmin."""
+    from core.mixins import can_act_for_cabinet
+    if site is None:
+        return False
+    if request.user.is_superuser:
+        return can_act_for_cabinet(request, site.cabinet, [])
+    return is_site_magasinier(request.user, site)
+
+
+def stock_editor_site_ids(request):
+    """Chantiers where this request may record entrées/sorties: the
+    Magasinier's own, or for a superadmin every chantier (of the cabinet
+    their session is switched to, if any)."""
+    user = request.user
+    if user.is_authenticated and user.is_superuser:
+        from core.mixins import get_session_cabinet
+        from projects.models import Site
+        cabinet = get_session_cabinet(request)
+        qs = Site.objects.filter(cabinet=cabinet) if cabinet else Site.objects.all()
+        return set(qs.values_list('pk', flat=True))
+    return magasinier_site_ids(user)
