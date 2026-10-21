@@ -66,6 +66,7 @@
                                         <a href="{% url 'personnel:personnel_detail' unique_id=person.unique_id %}">
                                             <strong>{{ person.first_name }} {{ person.last_name }}</strong>
                                         </a>
+                                        {% if person.contact_phone %}<a href="{{ person.whatsapp_url }}" target="_blank" rel="noopener" class="text-success ms-1" title="{% trans 'WhatsApp' %} {{ person.contact_phone }}"><span class="fab fa-whatsapp"></span></a>{% endif %}
                                     </td>
                                     <td class="py-2 align-middle white-space-nowrap">
                                         <span class="badge rounded-pill

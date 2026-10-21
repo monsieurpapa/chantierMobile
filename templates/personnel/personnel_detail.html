@@ -56,6 +56,15 @@
                                         {% endfor %}
                                     </div>
                                     <p class="mb-0 fs--1 text-600">{% trans "Employee ID" %}: {{ personnel.unique_id|truncatechars:12 }}</p>
+                                    {% with phone=personnel.contact_phone %}
+                                    {% if phone %}
+                                    <p class="mb-0 mt-2 fs--1">
+                                        <span class="fas fa-phone-alt text-500 me-1"></span><a href="tel:{{ phone }}">{{ phone }}</a>
+                                        <a href="{{ personnel.whatsapp_url }}" target="_blank" rel="noopener" class="btn btn-sm btn-success py-0 px-2 ms-2"><span class="fab fa-whatsapp me-1"></span>WhatsApp</a>
+                                        {% if not personnel.whatsapp_opt_in %}<span class="text-500 fs--2 ms-1">({% trans "accord WhatsApp non enregistré" %})</span>{% endif %}
+                                    </p>
+                                    {% endif %}
+                                    {% endwith %}
                                     {% if personnel.experience_notes %}
                                     <p class="mb-0 fs--1 text-700 mt-2">{{ personnel.experience_notes|linebreaksbr }}</p>
                                     {% endif %}

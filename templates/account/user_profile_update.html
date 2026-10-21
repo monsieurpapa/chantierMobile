@@ -109,14 +109,7 @@
                                 </div>
                             </div>
 
-                            <div class="row mb-3">
-                                <label class="col-sm-3 col-form-label" for="id_phone_number">
-                                    {% trans "Phone Number" %}
-                                </label>
-                                <div class="col-sm-9">
-                                    {{ form.phone_number }}
-                                </div>
-                            </div>
+                            {% include 'account/includes/phone_fields.html' %}
 
                             <div class="row">
                                 <div class="col-sm-9 offset-sm-3">
