@@ -339,36 +339,13 @@
   {% endif %}
   {% endcomment %}
 
+  {% include 'core/includes/site_tracking.html' %}
+
   <!-- ============================================================ -->
-  <!-- Charts row 2: Budget usage, tasks, personnel -->
+  <!-- Charts row 2: tasks, personnel (budget usage → Suivi des chantiers) -->
   <!-- ============================================================ -->
   <div class="row g-3 mb-3">
     {% if can_view_financials %}
-    <div class="col-lg-6">
-      <div class="card h-100">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center">
-          <h6 class="mb-0"><i class="fas fa-chart-pie me-2 text-warning"></i>{% trans "Utilisation budgétaire par chantier" %}</h6>
-          <a href="{% url 'finance:budget_list' %}" class="fs--2">{% trans "Voir tout" %}</a>
-        </div>
-        <div class="card-body">
-          {% for row in budget_rows %}
-          <div class="mb-3 {% if forloop.last %}mb-0{% endif %}">
-            <div class="d-flex justify-content-between align-items-center mb-1">
-              <a href="{{ row.url }}" class="fs--1 fw-semibold text-800 hover-primary text-truncate me-2">{{ row.name }}</a>
-              <span class="badge rounded-pill fs--2 {% if row.usage > 80 %}bg-danger{% elif row.usage > 60 %}bg-warning{% else %}bg-success{% endif %}">{{ row.usage }}%</span>
-            </div>
-            <div class="progress" style="height: 8px;">
-              <div class="progress-bar {% if row.usage > 80 %}bg-danger{% elif row.usage > 60 %}bg-warning{% else %}bg-success{% endif %} rounded-pill" role="progressbar"
-                style="width: {{ row.usage }}%" aria-valuenow="{{ row.usage }}" aria-valuemin="0" aria-valuemax="100"></div>
-            </div>
-            <p class="fs--2 text-500 mt-1 mb-0">{{ CURRENCY_SYMBOL }}{{ row.spent|floatformat:"0g" }} {% trans "sur" %} {{ CURRENCY_SYMBOL }}{{ row.total|floatformat:"0g" }}</p>
-          </div>
-          {% empty %}
-          <p class="text-center text-500 fs--1 py-5 mb-0"><i class="fas fa-inbox me-2"></i>{% trans "Aucun chantier actif avec budget défini." %}</p>
-          {% endfor %}
-        </div>
-      </div>
-    </div>
     {% comment "Masqué temporairement (2026-10-20) : Répartition des tâches, Effectif mobilisé" %}
     <div class="col-lg-3">
       <div class="card h-100">
@@ -466,12 +443,15 @@
               <tr>
                 {% for day in week %}
                 <td class="p-1 align-top {% if not day.in_month %}bg-100 text-400{% endif %} {% if day.is_today %}border-primary border-2{% endif %}" style="height: 64px;">
-                  <a href="{{ day.url }}" class="d-block text-decoration-none {% if day.in_month %}text-800{% else %}text-400{% endif %}">
+                  <a href="{{ day.url }}" data-day="{{ day.date|date:'Y-m-d' }}" class="cm-cal-day d-block text-decoration-none {% if day.in_month %}text-800{% else %}text-400{% endif %}">
                     <div class="fw-bold">{{ day.date|date:"j" }}</div>
                     {% if calendar_show_financials and day.caisse_net is not None %}
                     <div class="fs--2 {% if day.caisse_net >= 0 %}text-success{% else %}text-danger{% endif %}">
                       {% if day.caisse_net >= 0 %}+{% endif %}{{ day.caisse_net|floatformat:"0g" }}
                     </div>
+                    {% endif %}
+                    {% if day.report_count %}
+                    <span class="badge rounded-pill bg-primary fs--3" title="{% trans 'Rapports d’avancement' %}">{{ day.report_count }} <i class="fas fa-clipboard-check"></i></span>
                     {% endif %}
                     {% if day.task_count %}
                     <span class="badge rounded-pill bg-info fs--3">{{ day.task_count }} <i class="fas fa-stream"></i></span>
@@ -487,6 +467,8 @@
       </div>
     </div>
   </div>
+
+  {% include 'core/includes/day_modal.html' %}
 
   <!-- ============================================================ -->
   <!-- Watchlists -->

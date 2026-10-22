@@ -1,0 +1,54 @@
+{% load i18n %}
+{# Calendar day pop-up (2026-10-22): clicking a day shows what happened on it #}
+{# (body fetched from the day page with ?partial=1). Ctrl/⌘-click still opens #}
+{# the full page; if the fetch fails, the browser goes to the page instead.   #}
+<div class="modal fade" id="cm-day-modal" tabindex="-1" aria-labelledby="cm-day-modal-title" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header bg-light">
+        <button type="button" class="btn btn-falcon-default btn-sm me-2" data-cm-day-step="-1" aria-label="{% trans 'Jour précédent' %}"><i class="fas fa-chevron-left"></i></button>
+        <h5 class="modal-title flex-1 text-center" id="cm-day-modal-title"></h5>
+        <button type="button" class="btn btn-falcon-default btn-sm ms-2" data-cm-day-step="1" aria-label="{% trans 'Jour suivant' %}"><i class="fas fa-chevron-right"></i></button>
+        <button type="button" class="btn-close ms-3" data-bs-dismiss="modal" aria-label="{% trans 'Fermer' %}"></button>
+      </div>
+      <div class="modal-body" id="cm-day-modal-body"></div>
+      <div class="modal-footer py-2">
+        <a href="#" id="cm-day-modal-full" class="btn btn-link btn-sm">{% trans "Ouvrir la page du jour" %} <i class="fas fa-external-link-alt ms-1"></i></a>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var modalEl = document.getElementById('cm-day-modal');
+  if (!modalEl || !window.bootstrap) return;
+  var modal = new bootstrap.Modal(modalEl), body = document.getElementById('cm-day-modal-body'),
+      title = document.getElementById('cm-day-modal-title'), full = document.getElementById('cm-day-modal-full'),
+      current = null, base = '{% url "home_day_detail" day="0000-00-00" %}';
+  var fmt = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  function urlFor(iso) { return base.replace('0000-00-00', iso); }
+  function show(iso) {
+    current = iso;
+    title.textContent = fmt.format(new Date(iso + 'T12:00:00')).replace(/^./, function (c) { return c.toUpperCase(); });
+    full.href = urlFor(iso);
+    body.innerHTML = '<div class="text-center py-5 text-500"><span class="spinner-border spinner-border-sm me-2"></span>{% trans "Chargement…" %}</div>';
+    modal.show();
+    fetch(urlFor(iso) + '?partial=1', { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
+      .then(function (html) { if (current === iso) body.innerHTML = html; })
+      .catch(function () { if (current === iso) window.location = urlFor(iso); });
+  }
+  document.querySelectorAll('.cm-cal-day').forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      if (e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) return;
+      e.preventDefault(); show(a.dataset.day);
+    });
+  });
+  modalEl.querySelectorAll('[data-cm-day-step]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var d = new Date(current + 'T12:00:00'); d.setDate(d.getDate() + parseInt(btn.dataset.cmDayStep, 10));
+      show(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'));
+    });
+  });
+});
+</script>

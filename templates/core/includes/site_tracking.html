@@ -1,0 +1,125 @@
+{% load i18n %}
+{# Suivi des chantiers (2026-10-22): where each chantier stands and, for     #}
+{# roles that see money, spent vs budget. Numbers: core/site_tracking.py.    #}
+<div class="card mb-3" id="suivi-chantiers">
+  <div class="card-header bg-light d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <h6 class="mb-0"><i class="fas fa-hard-hat me-2 text-primary"></i>{% trans "Suivi des chantiers" %}</h6>
+    <span class="fs--2 text-500">{% if portfolio %}{% trans "% consommé = dépensé ÷ budget (DQE du chantier, sinon budget)" %}{% else %}{% trans "Avancement d'après les derniers rapports" %}{% endif %}</span>
+  </div>
+
+  {% if portfolio %}
+  <div class="card-body border-bottom pb-2">
+    <div class="row g-2 text-center text-sm-start">
+      <div class="col-6 col-md-4 col-xl-2"><div class="cm-kpi"><div class="cm-kpi-label">{% trans "Budget en cours" %}</div><div class="cm-kpi-value">{{ CURRENCY_SYMBOL }}{{ portfolio.budget|floatformat:"0g" }}</div><div class="cm-kpi-sub">{{ portfolio.sites }} chantier{{ portfolio.sites|pluralize }}{% if portfolio.unbudgeted %} · {{ portfolio.unbudgeted }} {% trans "sans budget" %}{% endif %}</div></div></div>
+      <div class="col-6 col-md-4 col-xl-2"><div class="cm-kpi"><div class="cm-kpi-label">{% trans "Dépensé" %}</div><div class="cm-kpi-value">{{ CURRENCY_SYMBOL }}{{ portfolio.spent|floatformat:"0g" }}</div><div class="cm-kpi-sub">{% trans "dépenses approuvées + sorties de caisse" %}</div></div></div>
+      <div class="col-6 col-md-4 col-xl-2"><div class="cm-kpi"><div class="cm-kpi-label">{% trans "% consommé" %}</div>
+        <div class="cm-kpi-value {% if portfolio.consumed > 100 %}text-danger{% elif portfolio.consumed > 80 %}text-warning{% endif %}">{% if portfolio.consumed is not None %}{{ portfolio.consumed|floatformat:0 }} %{% else %}—{% endif %}</div>
+        <div class="progress mt-1" style="height:6px"><div class="progress-bar {% if portfolio.consumed > 100 %}bg-danger{% elif portfolio.consumed > 80 %}bg-warning{% else %}bg-primary{% endif %}" style="width: {% if portfolio.consumed > 100 %}100{% else %}{{ portfolio.consumed|default:0|floatformat:0 }}{% endif %}%"></div></div></div></div>
+      <div class="col-6 col-md-4 col-xl-2"><div class="cm-kpi"><div class="cm-kpi-label">{% trans "Reste à dépenser" %}</div><div class="cm-kpi-value {% if portfolio.remaining < 0 %}text-danger{% endif %}">{% if portfolio.overrun %}−{{ CURRENCY_SYMBOL }}{{ portfolio.overrun|floatformat:"0g" }}{% elif portfolio.remaining is not None %}{{ CURRENCY_SYMBOL }}{{ portfolio.remaining|floatformat:"0g" }}{% else %}—{% endif %}</div></div></div>
+      <div class="col-6 col-md-4 col-xl-2"><div class="cm-kpi"><div class="cm-kpi-label">{% trans "Encaissé (client)" %}</div><div class="cm-kpi-value text-success">{{ CURRENCY_SYMBOL }}{{ portfolio.received|floatformat:"0g" }}</div></div></div>
+      <div class="col-6 col-md-4 col-xl-2"><div class="cm-kpi"><div class="cm-kpi-label">{% trans "À surveiller" %}</div><div class="cm-kpi-value {% if portfolio.watch %}text-warning{% else %}text-success{% endif %}">{{ portfolio.watch }}</div><div class="cm-kpi-sub">{% trans "dépense en avance sur l'avancement" %}</div></div></div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="card-body p-0">
+    {% if site_tracking %}
+    <div class="table-responsive">
+      <table class="table table-sm fs--1 mb-0 align-middle cm-track">
+        <thead class="bg-200 text-700 text-nowrap">
+          <tr>
+            <th class="ps-3">{% trans "Chantier" %}</th>
+            <th>{% trans "Étape en cours" %}</th>
+            <th style="min-width:130px">{% trans "Avancement" %}</th>
+            {% if portfolio %}
+            <th class="text-end">{% trans "Budget" %}</th>
+            <th class="text-end">{% trans "Dépensé" %}</th>
+            <th style="min-width:130px">{% trans "% consommé" %}</th>
+            <th class="text-end">{% trans "Reste" %}</th>
+            <th class="text-end">{% trans "Encaissé" %}</th>
+            <th>{% trans "Santé" %}</th>
+            {% endif %}
+            <th class="pe-3"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in site_tracking %}
+          <tr class="cm-track-row" data-bs-toggle="collapse" data-bs-target="#etapes-{{ forloop.counter }}" aria-expanded="false" role="button">
+            <td class="ps-3">
+              <a href="{{ row.url }}" class="fw-semibold text-800 hover-primary" onclick="event.stopPropagation()">{{ row.name }}</a>
+              <div class="fs--2 text-500"><span class="badge rounded-pill fs--3 {% if row.status == 'ACTIVE' %}bg-success{% elif row.status == 'PAUSED' %}bg-warning{% elif row.status == 'COMPLETED' %}bg-secondary{% else %}bg-info{% endif %}">{{ row.status_display }}</span>{% if row.lead_engineer %} · {{ row.lead_engineer }}{% endif %}</div>
+            </td>
+            <td>
+              {% if row.current_etape %}<span class="text-800">{{ row.current_etape.name }}</span>
+              <div class="fs--2 text-500">{{ row.current_etape.progress }} %{% if row.current_etape.end %} · {% trans "fin prévue" %} {{ row.current_etape.end|date:"d/m/Y" }}{% endif %}</div>
+              {% elif row.etape_count %}<span class="text-success"><i class="fas fa-check me-1"></i>{% trans "Toutes clôturées" %}</span>
+              {% else %}<span class="text-500">{% trans "Aucune étape" %}</span>{% endif %}
+            </td>
+            <td>
+              {% if row.progress is not None %}
+              <div class="d-flex align-items-center gap-2"><div class="progress flex-1" style="height:6px"><div class="progress-bar bg-info" style="width: {{ row.progress }}%"></div></div><span class="text-nowrap">{{ row.progress }} %</span></div>
+              <div class="fs--2 text-500">{{ row.closed_count }}/{{ row.etape_count }} {% trans "étapes clôturées" %}</div>
+              {% else %}<span class="text-500">—</span>{% endif %}
+            </td>
+            {% if portfolio %}
+            <td class="text-end text-nowrap">{% if row.budget %}{{ CURRENCY_SYMBOL }}{{ row.budget|floatformat:"0g" }}<div class="fs--2 text-500">{{ row.budget_source }}</div>{% else %}<span class="text-500">{% trans "Non défini" %}</span>{% endif %}</td>
+            <td class="text-end text-nowrap">{{ CURRENCY_SYMBOL }}{{ row.spent|floatformat:"0g" }}</td>
+            <td>
+              {% if row.consumed is not None %}
+              <div class="d-flex align-items-center gap-2"><div class="progress flex-1" style="height:6px"><div class="progress-bar bg-{{ row.health.css }}" style="width: {% if row.consumed > 100 %}100{% else %}{{ row.consumed|floatformat:0 }}{% endif %}%"></div></div><span class="text-nowrap fw-semibold text-{{ row.health.css }}">{{ row.consumed|floatformat:0 }} %</span></div>
+              {% else %}<span class="text-500">—</span>{% endif %}
+            </td>
+            <td class="text-end text-nowrap {% if row.remaining < 0 %}text-danger fw-semibold{% endif %}">{% if row.overrun %}−{{ CURRENCY_SYMBOL }}{{ row.overrun|floatformat:"0g" }}{% elif row.remaining is not None %}{{ CURRENCY_SYMBOL }}{{ row.remaining|floatformat:"0g" }}{% else %}—{% endif %}</td>
+            <td class="text-end text-nowrap text-success">{{ CURRENCY_SYMBOL }}{{ row.received|floatformat:"0g" }}</td>
+            <td>{% if row.health %}<span class="badge badge-subtle-{{ row.health.css }}">{{ row.health.label }}</span>{% endif %}</td>
+            {% endif %}
+            <td class="pe-3 text-end text-500">{% if row.etapes %}<i class="fas fa-chevron-down cm-track-chevron" title="{% trans 'Détail par étape' %}"></i>{% endif %}</td>
+          </tr>
+          {% if row.etapes %}
+          <tr class="collapse bg-100" id="etapes-{{ forloop.counter }}">
+            <td colspan="{% if portfolio %}10{% else %}4{% endif %}" class="px-3 py-2">
+              <table class="table table-sm table-borderless fs--2 mb-1">
+                <thead class="text-600"><tr>
+                  <th>{% trans "Étape" %}</th><th>{% trans "Période" %}</th><th style="min-width:120px">{% trans "Avancement" %}</th>
+                  {% if portfolio %}<th class="text-end">{% trans "Budget DQE" %}</th><th class="text-end">{% trans "Dépensé" %}</th><th class="text-end">{% trans "% consommé" %}</th><th>{% trans "Santé" %}</th>{% endif %}
+                </tr></thead>
+                <tbody>
+                  {% for e in row.etapes %}
+                  <tr>
+                    <td class="{% if e.closed %}text-500{% else %}text-800{% endif %}">{% if e.closed %}<i class="fas fa-check-circle text-success me-1"></i>{% elif e == row.current_etape %}<i class="fas fa-play-circle text-primary me-1"></i>{% else %}<i class="far fa-circle text-400 me-1"></i>{% endif %}{{ e.name }}</td>
+                    <td class="text-nowrap text-600">{{ e.start|date:"d/m"|default:"—" }} → {{ e.end|date:"d/m/y"|default:"—" }}</td>
+                    <td><div class="d-flex align-items-center gap-2"><div class="progress flex-1" style="height:5px"><div class="progress-bar bg-info" style="width: {{ e.progress }}%"></div></div>{{ e.progress }} %</div></td>
+                    {% if portfolio %}
+                    <td class="text-end text-nowrap">{% if e.budget %}{{ CURRENCY_SYMBOL }}{{ e.budget|floatformat:"0g" }}{% else %}—{% endif %}</td>
+                    <td class="text-end text-nowrap">{{ CURRENCY_SYMBOL }}{{ e.spent|floatformat:"0g" }}</td>
+                    <td class="text-end text-nowrap">{% if e.consumed is not None %}{{ e.consumed|floatformat:0 }} %{% else %}—{% endif %}</td>
+                    <td>{% if e.health %}<span class="badge badge-subtle-{{ e.health.css }}">{{ e.health.label }}</span>{% endif %}</td>
+                    {% endif %}
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+              <a href="{{ row.gantt_url }}" class="fs--2"><i class="fas fa-stream me-1"></i>{% trans "Ouvrir le planning" %}</a>
+            </td>
+          </tr>
+          {% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="text-center text-500 fs--1 py-5 mb-0"><i class="fas fa-inbox me-2"></i>{% trans "Aucun chantier à suivre." %}</p>
+    {% endif %}
+  </div>
+</div>
+<style>
+  .cm-kpi { background: var(--falcon-gray-100, #f9fafd); border-radius: 8px; padding: 8px 10px; height: 100%; }
+  .cm-kpi-label { font-size: .7rem; text-transform: uppercase; font-weight: 700; color: #748194; letter-spacing: .02em; }
+  .cm-kpi-value { font-size: 1.15rem; font-weight: 700; color: #0b1727; font-variant-numeric: tabular-nums; }
+  .cm-kpi-sub { font-size: .7rem; color: #9da9bb; }
+  .cm-track td { font-variant-numeric: tabular-nums; }
+  .cm-track-row { cursor: pointer; }
+  .cm-track-row:hover { background: rgba(44,123,229,.04); }
+  .cm-track-chevron { transition: transform .2s; }
+  .cm-track-row[aria-expanded="true"] .cm-track-chevron { transform: rotate(180deg); }
+</style>
