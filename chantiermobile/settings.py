@@ -300,3 +300,11 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': crontab(hour=1, minute=0),  # Runs at 01:00 Africa/Kigali daily
     },
 }
+
+
+# Roles that grant exactly the same access, as groups (2026-10-22): one
+# person currently does both the caissier's and the comptable's job, so a
+# CASHIER can do whatever an ACCOUNTANT can and vice versa. Applied to every
+# role check through UserCabinetRole (accounts.models.RoleQuerySet). Set to
+# [] once the two jobs are held by different people.
+ROLE_EQUIVALENCES = [('CASHIER', 'ACCOUNTANT')]
