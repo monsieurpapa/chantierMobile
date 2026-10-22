@@ -315,3 +315,29 @@ class TestFlashMessagesAreVisible:
         assert 'class="cm-flash ' in content
         assert 'class="toast ' not in content
         assert 'cm-flash-copy' in content and 'cm-flash-persistent' in content
+
+
+@pytest.mark.django_db
+class TestCancelForcedPasswordChange:
+    """FIXED 2026-10-22: "Cancel" on the forced password-change page linked
+    to the profile, which ForcePasswordChangeMiddleware sent straight back
+    to the same page. Cancelling now logs out, back to the login page."""
+
+    def test_cancel_logs_out_to_login(self, client, user):
+        user.must_change_password = True
+        user.save(update_fields=['must_change_password'])
+        client.force_login(user)
+        page = client.get(reverse('account_change_password'))
+        assert page.status_code == 200
+        content = page.content.decode()
+        assert 'id="cancel-password-change"' in content
+        assert f'action="{reverse("account_logout")}"' in content
+        response = client.post(reverse('account_logout'), {'next': reverse('account_login')})
+        assert response.status_code == 302
+        assert response['Location'] == reverse('account_login')
+        assert '_auth_user_id' not in client.session
+
+    def test_voluntary_change_cancel_goes_back_to_profile(self, client, user):
+        client.force_login(user)
+        content = client.get(reverse('account_change_password')).content.decode()
+        assert reverse('accounts:profile_update') in content

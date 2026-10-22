@@ -45,7 +45,7 @@ class ForcePasswordChangeMiddleware:
         ):
             messages.info(
                 request,
-                _('For security, please set a new password before continuing.'),
+                _('Par sécurité, choisissez un nouveau mot de passe avant de continuer.'),
             )
             return redirect('account_change_password')
         return self.get_response(request)
