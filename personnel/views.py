@@ -8,6 +8,7 @@ HR_ADMIN_ROLES (cabinet-wide HR authority) vs. a plain ENGINEER scoped to
 SiteAssignmentCreateView.get_form, LeaveCreateView.get_form and
 `_attendance_can_act`.
 """
+import re
 from decimal import Decimal
 import datetime
 import json
@@ -536,6 +537,9 @@ class SiteAssignmentCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAcc
         else:
             form.fields['site'].queryset = Site.objects.none()
             form.fields['personnel'].queryset = Personnel.objects.none()
+        # The role picker: corps de métier + roles already in use (needs
+        # the narrowed `site` queryset, hence here rather than in the form).
+        form.fields['role'].widget.choices = form.role_choices()
         return form
 
     def get_initial(self):
@@ -545,6 +549,7 @@ class SiteAssignmentCreateView(LoginRequiredMixin, RoleRequiredMixin, CabinetAcc
             person = get_object_or_404(Personnel, unique_id=personnel_id)
             initial['personnel'] = person
             initial['daily_rate'] = person.default_daily_rate
+            initial['role'] = person.metier
         # "Assign Staff" on the site detail page links here with ?site=<pk>
         # — prefill it so the field isn't left for the user to reselect
         # from scratch (this was silently ignored before).
@@ -1007,6 +1012,16 @@ class PersonnelQuickCreateView(QuickCreateView):
     model = Personnel
 
     def build_instance(self, name, request, cabinet, payload):
+        # "Jean Mumbere (Maçon)" → trade Maçon, when the part in brackets is
+        # one of the corps de métier (2026-10-21).
+        from chantiermobile.constants import Trade
+        trade = ''
+        match = re.match(r'^(?P<name>.+?)\s*\((?P<trade>[^()]+)\)\s*$', name)
+        if match:
+            by_label = {str(label).lower(): value for value, label in Trade.choices}
+            trade = by_label.get(match.group('trade').strip().lower(), '')
+            if trade:
+                name = match.group('name').strip()
         parts = name.split(None, 1)
         first_name, last_name = parts[0], (parts[1] if len(parts) > 1 else '')
         # SalaryPaymentItemForm's picker (Ingénieurs & Staff tab) sends a
@@ -1023,12 +1038,16 @@ class PersonnelQuickCreateView(QuickCreateView):
             cabinet=cabinet,
             first_name=first_name,
             last_name=last_name,
+            trade=trade,
             default_daily_rate=Decimal('0.00'),
             **kwargs,
         )
 
     def display_text(self, instance):
-        return instance.get_full_name()
+        return instance.name_with_metier
+
+    def extra_data(self, instance):
+        return {'metier': instance.metier}
 
     def after_create(self, instance, request, payload):
         # If this picker was scoped to a site (e.g. the expense form's

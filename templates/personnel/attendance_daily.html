@@ -40,7 +40,7 @@
                                 <tbody>
                                     {% for row in rows %}
                                     <tr>
-                                        <td>{{ row.personnel.get_full_name }}</td>
+                                        <td>{{ row.personnel.get_full_name }}{% if row.personnel.metier %} <span class="badge badge-subtle-dark rounded-pill ms-1">{{ row.personnel.metier }}</span>{% endif %}</td>
                                         <td>
                                             <select name="status_{{ row.personnel.pk }}" class="form-select form-select-sm">
                                                 {% for value, label in status_choices %}

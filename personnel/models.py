@@ -124,6 +124,17 @@ class Personnel(BaseModel):
         return f"{self.first_name} {self.last_name}"
 
     @property
+    def metier(self):
+        """Their corps de métier as people read it ("Maçon"), or ''."""
+        return self.get_trade_display() if self.trade else ''
+
+    @property
+    def name_with_metier(self):
+        """"Jean Mumbere — Maçon", as shown wherever someone is picked or
+        assigned to a chantier."""
+        return f"{self.get_full_name()} — {self.metier}" if self.metier else self.get_full_name()
+
+    @property
     def contact_phone(self):
         """Their own number, else their login's."""
         return self.phone_number or (self.user.phone_number if self.user_id else '') or ''

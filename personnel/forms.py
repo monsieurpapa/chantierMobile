@@ -145,9 +145,81 @@ class SiteAssignmentForm(forms.ModelForm):
         # ConventionForm below (Personnel form's "Chantiers & conventions"
         # section) could skip them — but this is the full, standalone
         # affectation form, where they should stay mandatory as before.
-        self.fields['role'].required = True
+        # `role` may be left empty: it then takes the person's corps de
+        # métier (clean_role below).
+        self.fields['role'].required = False
         self.fields['start_date'].required = True
         self.fields['daily_rate'].required = True
+        # 2026-10-21: the picker shows each person's corps de métier.
+        self.fields['personnel'].label_from_instance = lambda p: p.name_with_metier
+        self.fields['role'].label = _('Rôle sur le chantier')
+        self.fields['role'].widget = forms.Select(attrs={
+            'class': 'form-select', 'data-control': 'select2', 'data-tags': 'true',
+            'data-placeholder': _("Corps de métier ou rôle (ex. Chef d'équipe)"),
+            'data-create-label': _('Ajouter le rôle'),
+        })
+
+    def role_choices(self):
+        """The corps de métier, then roles already used on this cabinet's
+        chantiers, then whatever is set now — the role picker's options;
+        anything else can be typed in."""
+        from chantiermobile.constants import Trade
+        seen, choices = set(), [('', '')]
+
+        def add(label):
+            label = (label or '').strip()
+            if label and label.lower() not in seen:
+                seen.add(label.lower())
+                choices.append((label, label))
+
+        for _value, label in Trade.choices:
+            add(str(label))
+        sites = self.fields['site'].queryset
+        for role in (SiteAssignment.objects.filter(site__in=sites).exclude(role='')
+                     .values_list('role', flat=True).distinct().order_by('role')[:200]):
+            add(role)
+        add(self.data.get(self.add_prefix('role')) if self.is_bound else self.initial.get('role') or self.instance.role)
+        return choices
+
+    def personnel_info(self):
+        """{pk: {"metier", "rate"}} for the page's script, which fills the
+        role (and an empty daily rate) as soon as a person is picked."""
+        return {
+            str(p.pk): {'metier': p.metier, 'rate': str(p.default_daily_rate) if p.default_daily_rate is not None else ''}
+            for p in self.fields['personnel'].queryset.only('pk', 'trade', 'default_daily_rate')
+        }
+
+    def clean_role(self):
+        role = (self.cleaned_data.get('role') or '').strip()
+        if not role:
+            person = self.cleaned_data.get('personnel')
+            if person is not None and person.metier:
+                return person.metier
+            raise forms.ValidationError(_("Indiquez son rôle sur le chantier (ou renseignez son corps de métier sur sa fiche)."))
+        return role
+
+    def clean(self):
+        cleaned = super().clean()
+        # clean_role runs before `personnel` is known when the field order
+        # puts it first; settle an empty role here too.
+        if not cleaned.get('role') and cleaned.get('personnel') is not None and cleaned['personnel'].metier:
+            cleaned['role'] = cleaned['personnel'].metier
+            self.errors.pop('role', None)
+        return cleaned
+
+    def save(self, commit=True):
+        assignment = super().save(commit=commit)
+        # A role that is one of the corps de métier fills in the person's
+        # own métier when their file has none yet.
+        from chantiermobile.constants import Trade
+        person = assignment.personnel
+        if commit and person is not None and not person.trade:
+            by_label = {str(label).lower(): value for value, label in Trade.choices}
+            trade = by_label.get((assignment.role or '').strip().lower())
+            if trade:
+                person.trade = trade
+                person.save(update_fields=['trade', 'updated_at'])
+        return assignment
 
 
 class ConventionForm(PhaseCatalogFormMixin, forms.ModelForm):

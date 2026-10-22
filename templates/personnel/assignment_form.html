@@ -51,9 +51,9 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label" for="{{ form.role.id_for_label }}">{% trans "Role on Site" %}</label>
+                            <label class="form-label" for="{{ form.role.id_for_label }}">{% trans "Rôle sur le chantier" %}</label>
                             {{ form.role }}
-                            <p class="fs--2 text-500">{% trans "e.g. Site Supervisor, Master Mason, General Laborer" %}</p>
+                            <p class="fs--2 text-500 mt-1">{% trans "Nouvelle personne : tapez « Nom (Maçon) » pour enregistrer aussi son corps de métier." %}<br>{% trans "Rempli avec son corps de métier dès que la personne est choisie. Choisissez un autre rôle ou tapez-en un nouveau (ex. « Chef d'équipe »)." %}</p>
                             {% if form.role.errors %}
                             <div class="text-danger fs--2">
                                 {{ form.role.errors }}
@@ -134,10 +134,44 @@
 
 {% block extra_js %}
 <script src="{% static 'assets/js/flatpickr.js' %}"></script>
+{{ form.personnel_info|json_script:"personnel-info" }}
 <script>
     document.querySelectorAll('input, select, textarea').forEach(el => {
         if (!el.classList.contains('form-range')) el.classList.add('form-control');
         if (el.tagName === 'SELECT') { el.classList.remove('form-control'); el.classList.add('form-select'); }
+    });
+
+    // Picking a person fills their corps de métier as the role (unless a
+    // role was typed by hand) and an empty daily rate with their usual one.
+    document.addEventListener('DOMContentLoaded', function () {
+        if (!window.jQuery) return;
+        var $ = window.jQuery;
+        var info = JSON.parse(document.getElementById('personnel-info').textContent || '{}');
+        var $person = $('#{{ form.personnel.id_for_label }}');
+        var $role = $('#{{ form.role.id_for_label }}');
+        var rate = document.getElementById('{{ form.daily_rate.id_for_label }}');
+        var autoRole = $role.val() || '';
+
+        function setRole(value) {
+            if (value && !$role.find('option').filter(function () { return this.value === value; }).length) {
+                $role.append(new Option(value, value, false, false));
+            }
+            $role.val(value).trigger('change');
+            autoRole = value;
+        }
+
+        $person.on('change', function () {
+            var p = info[$person.val()] || {};
+            var current = $role.val() || '';
+            if (!current || current === autoRole) { setRole(p.metier || ''); }
+            if (rate && !rate.value && p.rate) { rate.value = p.rate; }
+        });
+        // A person added on the spot ("Jean Mumbere (Maçon)") brings their
+        // métier along; the change event that follows fills the role.
+        $person.on('dynamicselect:created', function (e) {
+            var rec = e.record || {};
+            info[String(rec.id)] = { metier: rec.metier || '', rate: '' };
+        });
     });
 </script>
 {% endblock %}

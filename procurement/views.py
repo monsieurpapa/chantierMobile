@@ -30,7 +30,7 @@ from .forms import (
 )
 from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet, can_act_for_cabinet
 from core.quickcreate import QuickCreateView
-from core.roles import is_magasinier_only, is_site_magasinier, magasinier_site_ids
+from core.roles import can_record_stock, is_magasinier_only, is_site_magasinier, magasinier_site_ids, stock_editor_site_ids
 from projects.models import Site, ProjectPhase
 from chantiermobile.constants import PurchaseOrderStatus, UserRoles, CaisseType, StockMovementType, StockReportPeriod, ApprovalStatus
 
@@ -40,8 +40,8 @@ from chantiermobile.constants import PurchaseOrderStatus, UserRoles, CaisseType,
 # StockItem catalog entry itself, nor create purchase orders.
 STOCK_ACTION_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER', 'MAGASINIER']
 # Since 2026-10-21 entrées, sorties and transfers are recorded only by the
-# chantier's own Magasinier (core/roles.is_site_magasinier); the director
-# tier keeps inventory adjustments.
+# chantier's own Magasinier — or a superadmin (core/roles.can_record_stock);
+# the director tier keeps inventory adjustments.
 STOCK_ADJUST_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER']
 PURCHASE_ORDER_ACTION_ROLES = ['DIRECTOR', 'DIRECTEUR_TECHNIQUE', 'DIRECTEUR_GENERAL', 'CHIEF_ENGINEER', 'ACCOUNTANT']
 # La caissière saisit la preuve de virement envoyée par le financier.
@@ -308,7 +308,7 @@ class StockItemDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixi
         context = super().get_context_data(**kwargs)
         context['movement_form'] = StockMovementForm(stock_item=self.object)
         context['transfer_form'] = StockTransferForm(source_site=self.object.site)
-        context['is_magasinier'] = is_site_magasinier(self.request.user, self.object.site)
+        context['is_magasinier'] = can_record_stock(self.request, self.object.site)
         context['can_adjust'] = can_act_for_cabinet(self.request, self.object.site.cabinet, STOCK_ADJUST_ROLES)
         return context
 
@@ -327,7 +327,7 @@ def stock_movement_create(request, pk):
         # Entrées and sorties belong to the chantier's Magasinier alone
         # (2026-10-21); an inventory adjustment stays with the directors.
         if movement_type in (StockMovementType.IN, StockMovementType.OUT):
-            allowed = is_site_magasinier(request.user, stock_item.site)
+            allowed = can_record_stock(request, stock_item.site)
         else:
             allowed = can_act_for_cabinet(request, stock_item.site.cabinet, STOCK_ADJUST_ROLES)
         if not allowed:
@@ -360,7 +360,7 @@ def stock_transfer_create(request, pk):
     if request.method != 'POST':
         return redirect('procurement:stock_item_detail', pk=pk)
     # A transfer is a sortie from this chantier: its Magasinier's call.
-    if not is_site_magasinier(request.user, source.site):
+    if not can_record_stock(request, source.site):
         messages.error(request, _("Seul le magasinier de ce chantier peut transférer son stock."))
         return redirect('procurement:stock_item_detail', pk=pk)
     form = StockTransferForm(request.POST, source_site=source.site)
@@ -963,7 +963,7 @@ class StockReportView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, Li
     def _magasinier_site(self):
         """The chantier whose entrées/sorties this user records from here:
         the one filtered on, or their only one."""
-        site_ids = magasinier_site_ids(self.request.user)
+        site_ids = stock_editor_site_ids(self.request)
         selected = self.request.GET.get('site', '')
         if selected.isdigit() and int(selected) in site_ids:
             return int(selected)
@@ -989,7 +989,7 @@ class StockReportView(LoginRequiredMixin, RoleRequiredMixin, PageHeaderMixin, Li
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['magasinier_site_ids'] = magasinier_site_ids(self.request.user)
+        context['magasinier_site_ids'] = stock_editor_site_ids(self.request)
         context['stock_levels'] = _stock_levels_queryset(self.request)
         if self.request.user.is_superuser:
             active_cabinet = get_session_cabinet(self.request)

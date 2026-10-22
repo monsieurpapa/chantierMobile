@@ -20,7 +20,7 @@ from django.views.generic import DetailView
 from chantiermobile.constants import StockMovementType, UserRoles
 from core.mixins import PageHeaderMixin, can_act_for_cabinet
 from core.notifications import notify_role_holders
-from core.roles import is_site_magasinier, magasinier_site_ids
+from core.roles import can_record_stock, stock_editor_site_ids
 from projects.models import Site
 
 from .forms import StockEntryExitForm
@@ -65,8 +65,9 @@ def notify_reception(movement, actor, edited=False):
 
 def _resolve_site(request):
     """The chantier an entrée/sortie is recorded at: ?site=<pk> if the user
-    is its Magasinier, else their only chantier."""
-    site_ids = magasinier_site_ids(request.user)
+    may record there (its Magasinier, or a superadmin), else their only
+    chantier."""
+    site_ids = stock_editor_site_ids(request)
     wanted = request.GET.get('site') or request.POST.get('site')
     if wanted:
         try:
@@ -118,7 +119,10 @@ def stock_movement_create(request, kind):
         raise Http404
     site = _resolve_site(request)
     if site is None:
-        messages.error(request, _("Seul le magasinier d'un chantier peut enregistrer ses entrées et sorties de stock."))
+        if request.user.is_superuser:
+            messages.info(request, _("Choisissez d'abord un chantier dans le filtre du rapport de stock."))
+        else:
+            messages.error(request, _("Seul le magasinier d'un chantier peut enregistrer ses entrées et sorties de stock."))
         return redirect('procurement:stock_report')
     if request.method == 'POST':
         form = StockEntryExitForm(request.POST, request.FILES, site=site, movement_type=movement_type)
@@ -149,7 +153,7 @@ def stock_movement_create(request, kind):
 
 def _editable_movement_or_deny(request, pk):
     movement = get_object_or_404(StockMovement.objects.select_related('stock_item__site'), pk=pk)
-    if not is_site_magasinier(request.user, movement.site):
+    if not can_record_stock(request, movement.site):
         messages.error(request, _("Seul le magasinier de ce chantier peut modifier ses mouvements de stock."))
         return movement, redirect('procurement:stock_movement_detail', pk=pk)
     if not movement.is_manual_entry_or_exit:
@@ -267,10 +271,10 @@ class StockMovementDetailView(LoginRequiredMixin, PageHeaderMixin, DetailView):
         context = super().get_context_data(**kwargs)
         m = self.object
         user = self.request.user
-        context['can_edit'] = m.is_manual_entry_or_exit and is_site_magasinier(user, m.site)
+        context['can_edit'] = m.is_manual_entry_or_exit and can_record_stock(self.request, m.site)
         context['can_visa'] = (m.has_bon_de_reception and m.reception_visa_at is None
                                and can_act_for_cabinet(self.request, m.site.cabinet, RECEPTION_VISA_ROLES))
-        context['is_magasinier'] = is_site_magasinier(user, m.site)
+        context['is_magasinier'] = can_record_stock(self.request, m.site)
         context['stock_after'] = m.stock_item.quantity_on_hand
         return context
 
