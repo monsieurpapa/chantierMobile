@@ -526,10 +526,12 @@ class UserCreateAdminView(LoginRequiredMixin, IsSuperAdminMixin, PageHeaderMixin
         self.object.save()
         messages.success(
             self.request,
-            _('User {username} created. Temporary password: {password} — copy it now and share it securely; they must set their own password on first login.').format(
-                username=self.object.username, password=temp_password
-            )
+            _("Utilisateur {username} créé. Il devra choisir son propre mot de passe à la première connexion.").format(
+                username=self.object.username)
         )
+        # Shown on its own, with a Copier button, until closed
+        # (templates/includes/messages_toast.html).
+        messages.info(self.request, temp_password, extra_tags='temp-password')
         return redirect(self.get_success_url())
 
     def get_success_url(self):
@@ -557,10 +559,12 @@ class UserResetPasswordAdminView(LoginRequiredMixin, IsSuperAdminMixin, View):
 
         messages.success(
             request,
-            _('Password reset for {username}. New temporary password: {password} — copy it now and share it securely; they must set their own password on next login.').format(
-                username=user.username, password=temp_password
-            )
+            _("Mot de passe de {username} réinitialisé. Il devra choisir son propre mot de passe à la prochaine connexion.").format(
+                username=user.username)
         )
+        # Shown on its own, with a Copier button, until closed
+        # (templates/includes/messages_toast.html).
+        messages.info(request, temp_password, extra_tags='temp-password')
         return redirect(request.META.get('HTTP_REFERER') or reverse_lazy('accounts:admin_user_detail', kwargs={'pk': user.pk}))
 
 
