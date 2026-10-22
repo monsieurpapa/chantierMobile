@@ -14,6 +14,8 @@
  * Supported data-* attributes (set by core.widgets.DynamicSelectWidget):
  *   data-control="select2"      required to activate this widget at all
  *   data-create-url="/..."      POST endpoint that creates a new record
+ *   data-tags="true"            (without data-create-url) lets a typed value
+ *                                 be kept as-is — free text, nothing created
  *   data-placeholder="..."      placeholder / search hint text
  *   data-create-label="..."     "Add" label prefix (defaults to a French label)
  *   data-depends-on="id_site"   id of another field this one is scoped to;
@@ -183,13 +185,17 @@
             allowClear: !el.required,
         };
 
-        if (createUrl) {
+        // data-tags="true" without a create URL: free text kept as typed
+        // (a value, not a record — e.g. a role on a chantier).
+        var freeTags = !createUrl && ($el.data('tags') === true || $el.data('tags') === 'true');
+
+        if (createUrl || freeTags) {
             options.tags = true;
             options.createTag = function (params) {
                 var term = $.trim(params.term);
                 if (!term) return null;
                 if (optionExists($el, term)) return null;
-                return { id: NEW_PREFIX + term, text: term, newTag: true };
+                return { id: freeTags ? term : NEW_PREFIX + term, text: term, newTag: true };
             };
             // List "Ajouter « … »" after the matches, so typing "Ciment" then
             // Enter picks the existing "Ciment (sac)" instead of creating a

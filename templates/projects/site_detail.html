@@ -421,7 +421,10 @@
                                                                 </div>
                                                                 <div>
                                                                     <h6 class="mb-0 fw-semibold">{{ assignment.personnel.get_full_name }}</h6>
-                                                                    <p class="fs--2 mb-0 text-600">{{ assignment.role }}</p>
+                                                                    <p class="fs--2 mb-0 text-600">
+                                                                        {% if assignment.personnel.metier %}<span class="badge badge-subtle-dark rounded-pill me-1">{{ assignment.personnel.metier }}</span>{% endif %}
+                                                                        {% if assignment.role and assignment.role != assignment.personnel.metier %}{{ assignment.role }}{% endif %}
+                                                                    </p>
                                                                 </div>
                                                             </div>
                                                         </a>
