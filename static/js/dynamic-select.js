@@ -224,15 +224,91 @@
         }
     }
 
+    // ------------------------------------------------------------------
+    // Étape pickers (2026-10-22): every "Étape" <select> in the app gets a
+    // search box — chantiers have dozens of étapes and sous-étapes, plus
+    // the Catalogue des étapes. Found by name (phase, parent_phase,
+    // catalog_template, formset "-phase" fields) or data-etape, so no form
+    // needs changing. Many pages rebuild these options in script (when the
+    // chantier changes) or set their value in code, and some listen with
+    // a plain addEventListener('change'): all of that keeps working.
+    // ------------------------------------------------------------------
+    var ETAPE_SELECTOR = [
+        'select[name="phase"]', 'select[name$="-phase"]',
+        'select[name="parent_phase"]', 'select[name$="-parent_phase"]',
+        'select[name="catalog_template"]', 'select[data-etape]',
+    ].join(',');
+
+    function initEtape(el) {
+        var $el = $(el);
+        if (el.multiple || $el.data('select2') || el.getAttribute('data-control') === 'select2'
+            || el.getAttribute('data-etape') === 'off') return;
+        var first = el.options[0];
+        $el.select2({
+            theme: 'bootstrap-5',
+            width: '100%',
+            placeholder: el.getAttribute('data-placeholder') || 'Choisir une étape…',
+            // A narrow column (état de besoin lines) must not squeeze the list.
+            dropdownAutoWidth: true,
+            allowClear: !el.required && !!first && first.value === '',
+            language: {
+                noResults: function () { return 'Aucune étape trouvée'; },
+                searching: function () { return 'Recherche…'; },
+            },
+        });
+
+        function refresh() { $el.trigger('change.select2'); }
+
+        // Options rebuilt in script (innerHTML, appendChild…): show the new state.
+        new MutationObserver(refresh).observe(el, { childList: true, subtree: true });
+
+        // Value set in code (el.value = …, el.selectedIndex = …): same.
+        var proto = window.HTMLSelectElement.prototype;
+        ['value', 'selectedIndex'].forEach(function (prop) {
+            var d = Object.getOwnPropertyDescriptor(proto, prop);
+            Object.defineProperty(el, prop, {
+                configurable: true,
+                get: function () { return d.get.call(el); },
+                set: function (v) { d.set.call(el, v); refresh(); },
+            });
+        });
+
+        // select2 announces a pick as a jQuery event only; pass it on as a
+        // real one for listeners added with addEventListener('change').
+        $el.on('change.etapebridge', function (e) {
+            if (!e.originalEvent && !e.etapeBridge) {
+                el.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        });
+    }
+
+    function initEtapes(scope) {
+        if (!scope || !scope.querySelectorAll) return;
+        if (scope.matches && scope.matches(ETAPE_SELECTOR)) initEtape(scope);
+        Array.prototype.forEach.call(scope.querySelectorAll(ETAPE_SELECTOR), initEtape);
+    }
+
     window.initDynamicSelects = function (root) {
         var scope = root || document;
         var nodes = scope.querySelectorAll ? scope.querySelectorAll('[data-control="select2"]') : [];
         Array.prototype.forEach.call(nodes, initOne);
         // If `scope` itself is such an element (e.g. called with a single freshly-created node).
         if (scope.matches && scope.matches('[data-control="select2"]')) initOne(scope);
+        initEtapes(scope);
     };
 
     document.addEventListener('DOMContentLoaded', function () {
         window.initDynamicSelects(document);
+        // Rows added later (formsets, "Ajouter une ligne"): their étape
+        // pickers get the search box too.
+        new MutationObserver(function (mutations) {
+            mutations.forEach(function (m) {
+                Array.prototype.forEach.call(m.addedNodes, function (node) {
+                    if (node.nodeType === 1 && !(node.classList && node.classList.contains('select2-container'))) {
+                        initEtapes(node);
+                    }
+                });
+            });
+        }).observe(document.body, { childList: true, subtree: true });
     });
 })(window, document, window.jQuery);
