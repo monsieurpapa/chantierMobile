@@ -21,11 +21,14 @@ TEMP_PASSWORD_RE = re.compile(r'(Cm-[A-Za-z0-9]{10}!)')
 
 
 def _extract_temp_password(response):
-    messages = [str(m) for m in response.context['messages']]
-    for m in messages:
-        match = TEMP_PASSWORD_RE.search(m)
-        if match:
-            return match.group(1)
+    """The temporary password travels as its own message tagged
+    `temp-password` (shown with a Copier button, since 2026-10-22) — and
+    must actually be in the rendered page."""
+    for m in response.context['messages']:
+        if 'temp-password' in m.tags:
+            password = str(m)
+            assert password in response.content.decode(), 'temporary password not rendered on the page'
+            return password
     return None
 
 
@@ -299,3 +302,16 @@ class TestAdminTemplatesRender:
         response = admin_client.get(reverse('accounts:admin_user_detail', kwargs={'pk': user.pk}))
         assert response.status_code == 200
         assert b'admin:accounts_usercabinetrole_change' not in response.content
+
+
+@pytest.mark.django_db
+class TestFlashMessagesAreVisible:
+    """FIXED 2026-10-22: flash messages used Bootstrap's `toast` class
+    without `show`, so Bootstrap hid every one of them (display:none)."""
+
+    def test_messages_do_not_use_bootstraps_hidden_toast_class(self, admin_client, user):
+        url = reverse('accounts:admin_user_reset_password', kwargs={'pk': user.pk})
+        content = admin_client.post(url, follow=True).content.decode()
+        assert 'class="cm-flash ' in content
+        assert 'class="toast ' not in content
+        assert 'cm-flash-copy' in content and 'cm-flash-persistent' in content

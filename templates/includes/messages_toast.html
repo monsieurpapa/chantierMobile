@@ -1,59 +1,87 @@
 {% load i18n %}
+{# Flash messages (success, error, …), top right of every page.            #}
+{# FIXED 2026-10-22: the boxes used Bootstrap's `toast` class without        #}
+{# `show`, which Bootstrap hides (display:none) — no message was ever seen.  #}
+{# They now use their own classes. A message tagged `persistent` stays until #}
+{# closed; one tagged `temp-password` shows a password to copy, and stays.   #}
 {% if messages %}
-<div class="toast-container">
+<div class="cm-flash-stack" role="status" aria-live="polite">
   {% for message in messages %}
-  <div class="toast toast-{{ message.tags|default:'info' }}" role="alert">
-    <div class="toast-icon">
-      {% if message.tags == 'success' %}
-      <i class="fas fa-check-circle"></i>
-      {% elif message.tags == 'danger' or message.tags == 'error' %}
-      <i class="fas fa-exclamation-circle"></i>
-      {% elif message.tags == 'warning' %}
-      <i class="fas fa-exclamation-triangle"></i>
+  <div class="cm-flash cm-flash-{% if 'error' in message.tags or 'danger' in message.tags %}error{% elif 'warning' in message.tags %}warning{% elif 'success' in message.tags %}success{% else %}info{% endif %}{% if 'persistent' in message.tags or 'temp-password' in message.tags %} cm-flash-persistent{% endif %}">
+    <span class="cm-flash-icon">
+      {% if 'success' in message.tags %}<i class="fas fa-check-circle"></i>
+      {% elif 'error' in message.tags or 'danger' in message.tags %}<i class="fas fa-exclamation-circle"></i>
+      {% elif 'warning' in message.tags %}<i class="fas fa-exclamation-triangle"></i>
+      {% elif 'temp-password' in message.tags %}<i class="fas fa-key"></i>
+      {% else %}<i class="fas fa-info-circle"></i>{% endif %}
+    </span>
+    <div class="cm-flash-body">
+      {% if 'temp-password' in message.tags %}
+      <div class="cm-flash-title">{% trans "Mot de passe temporaire" %}</div>
+      <div class="cm-flash-password">
+        <code>{{ message }}</code>
+        <button type="button" class="btn btn-sm btn-primary cm-flash-copy" data-copy="{{ message }}">
+          <i class="fas fa-copy me-1"></i><span>{% trans "Copier" %}</span>
+        </button>
+      </div>
+      <p class="cm-flash-text">{% trans "Affiché une seule fois : copiez-le et transmettez-le à la personne. Elle choisira son propre mot de passe à la première connexion." %}</p>
       {% else %}
-      <i class="fas fa-info-circle"></i>
+      <div class="cm-flash-title">
+        {% if 'success' in message.tags %}{% trans "Succès !" %}
+        {% elif 'error' in message.tags or 'danger' in message.tags %}{% trans "Erreur !" %}
+        {% elif 'warning' in message.tags %}{% trans "Avertissement !" %}
+        {% else %}{% trans "Information" %}{% endif %}
+      </div>
+      <p class="cm-flash-text">{{ message }}</p>
       {% endif %}
     </div>
-    <div class="toast-content">
-      <div class="toast-title">
-        {% if message.tags == 'success' %}
-        {% trans "Succès !" %}
-        {% elif message.tags == 'danger' or message.tags == 'error' %}
-        {% trans "Erreur !" %}
-        {% elif message.tags == 'warning' %}
-        {% trans "Avertissement !" %}
-        {% else %}
-        {% trans "Information" %}
-        {% endif %}
-      </div>
-      <p class="toast-message">{{ message }}</p>
-    </div>
+    <button type="button" class="cm-flash-close" aria-label="{% trans 'Fermer' %}">&times;</button>
   </div>
-
-  <script>
-    // Auto-dismiss toast after 5 seconds
-    setTimeout(function () {
-      const toast = document.querySelector('.toast:last-child');
-      if (toast) {
-        toast.style.animation = 'slideOutRight 300ms ease-in';
-        setTimeout(() => toast.remove(), 300);
-      }
-    }, 5000);
-  </script>
   {% endfor %}
 </div>
 
 <style>
-  @keyframes slideOutRight {
-    from {
-      opacity: 1;
-      transform: translateX(0);
-    }
-
-    to {
-      opacity: 0;
-      transform: translateX(20px);
-    }
-  }
+  .cm-flash-stack { position: fixed; top: 16px; right: 16px; z-index: 2000; display: flex; flex-direction: column; gap: 10px; width: min(440px, calc(100vw - 32px)); }
+  .cm-flash { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: 10px; background: #fff; color: #344050; box-shadow: 0 6px 24px rgba(0,0,0,.15); border-left: 5px solid #2c7be5; animation: cmFlashIn 200ms ease-out; }
+  .cm-flash-success { border-left-color: #00a35c; } .cm-flash-success .cm-flash-icon { color: #00a35c; }
+  .cm-flash-error { border-left-color: #e63757; } .cm-flash-error .cm-flash-icon { color: #e63757; }
+  .cm-flash-warning { border-left-color: #f5803e; } .cm-flash-warning .cm-flash-icon { color: #d9681f; }
+  .cm-flash-info .cm-flash-icon { color: #2c7be5; }
+  .cm-flash-icon { font-size: 1.15rem; line-height: 1.4; }
+  .cm-flash-body { flex: 1; min-width: 0; }
+  .cm-flash-title { font-weight: 600; margin-bottom: 2px; }
+  .cm-flash-text { margin: 0; font-size: .875rem; overflow-wrap: anywhere; }
+  .cm-flash-password { display: flex; gap: 8px; align-items: center; margin: 6px 0; flex-wrap: wrap; }
+  .cm-flash-password code { font-size: 1.05rem; padding: 4px 8px; background: #f1f4f8; border-radius: 6px; color: #0b1727; user-select: all; }
+  .cm-flash-close { border: 0; background: none; font-size: 1.4rem; line-height: 1; color: #748194; padding: 0 2px; cursor: pointer; }
+  .cm-flash-hide { animation: cmFlashOut 250ms ease-in forwards; }
+  @keyframes cmFlashIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+  @keyframes cmFlashOut { to { opacity: 0; transform: translateX(20px); } }
 </style>
+<script>
+  (function () {
+    function dismiss(el) { el.classList.add('cm-flash-hide'); setTimeout(function () { el.remove(); }, 250); }
+    document.querySelectorAll('.cm-flash').forEach(function (el) {
+      el.querySelector('.cm-flash-close').addEventListener('click', function () { dismiss(el); });
+      if (!el.classList.contains('cm-flash-persistent')) {
+        // Errors stay longer than confirmations.
+        setTimeout(function () { dismiss(el); }, el.classList.contains('cm-flash-error') ? 12000 : 6000);
+      }
+    });
+    document.querySelectorAll('.cm-flash-copy').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var text = btn.getAttribute('data-copy');
+        var done = function () { btn.querySelector('span').textContent = '{% trans "Copié" %}'; };
+        if (navigator.clipboard && window.isSecureContext) {
+          navigator.clipboard.writeText(text).then(done);
+        } else {
+          var code = btn.parentNode.querySelector('code');
+          var range = document.createRange(); range.selectNodeContents(code);
+          var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+          try { document.execCommand('copy'); done(); } catch (e) { /* the text stays selected to copy by hand */ }
+        }
+      });
+    });
+  })();
+</script>
 {% endif %}
