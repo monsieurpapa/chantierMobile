@@ -159,8 +159,10 @@ class UserProfileUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView)
         context['user_roles'] = list(user_roles)
         context['is_director'] = any(role in DIRECTOR_ROLES for role in user_roles)
         context['is_engineer'] = 'ENGINEER' in user_roles or 'CHIEF_ENGINEER' in user_roles
-        context['is_accountant'] = 'ACCOUNTANT' in user_roles
-        context['is_cashier'] = 'CASHIER' in user_roles
+        from accounts.models import equivalent_roles
+        held = set(equivalent_roles(user_roles))
+        context['is_accountant'] = 'ACCOUNTANT' in held
+        context['is_cashier'] = 'CASHIER' in held
         
         return context
     

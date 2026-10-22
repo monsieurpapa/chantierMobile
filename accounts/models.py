@@ -135,6 +135,49 @@ class Cabinet(BaseModel):
                 )
             })
 
+def equivalent_roles(roles):
+    """`roles` plus every role settings.ROLE_EQUIVALENCES declares
+    interchangeable with one of them — e.g. CASHIER ⇄ ACCOUNTANT while one
+    person does both jobs (2026-10-22). Order kept, no duplicates."""
+    from django.conf import settings
+    groups = [set(g) for g in getattr(settings, 'ROLE_EQUIVALENCES', [])]
+    out = []
+    for role in roles:
+        role = str(role)
+        for r in [role] + sorted(set().union(*[g for g in groups if role in g]) - {role}):
+            if r not in out:
+                out.append(r)
+    return out
+
+
+class RoleQuerySet(models.QuerySet):
+    """Every role lookup (`role=…`, `role__in=…`) through UserCabinetRole
+    also matches its equivalent roles (settings.ROLE_EQUIVALENCES). All the
+    app's access checks — RoleRequiredMixin, can_act_for_cabinet, has_role,
+    notifications, the approvals inbox and each view's own query — filter
+    this table, so this one place makes the roles interchangeable
+    everywhere."""
+
+    def _filter_or_exclude(self, negate, args, kwargs):
+        if 'role' in kwargs or 'role__in' in kwargs:
+            kwargs = dict(kwargs)
+            roles = []
+            if 'role' in kwargs:
+                roles.append(kwargs.pop('role'))
+            if 'role__in' in kwargs:
+                roles.extend(kwargs.pop('role__in'))
+            kwargs['role__in'] = equivalent_roles(roles)
+        return super()._filter_or_exclude(negate, args, kwargs)
+
+
+class RoleManager(models.Manager.from_queryset(RoleQuerySet)):
+    """Soft-delete aware (as BaseModel's default manager), with the role
+    equivalences above."""
+
+    def get_queryset(self):
+        return super().get_queryset().filter(is_deleted=False)
+
+
 class UserCabinetRole(BaseModel):
     """The authorization grant: (user, cabinet, role). This single table
     is what every RBAC check in the codebase queries — CabinetAccessMixin,
@@ -164,8 +207,14 @@ class UserCabinetRole(BaseModel):
         help_text=_("Chantier du magasinier (obligatoire pour le rôle Magasinier)."),
     )
 
+    objects = RoleManager()
+
     class Meta:
         unique_together = ('user', 'cabinet')
+        # Related lookups (user.cabinet_roles, cabinet.user_roles) must use
+        # `objects` (soft-delete + role equivalences), not the inherited
+        # `all_objects`, which was declared first.
+        default_manager_name = 'objects'
 
     def clean(self):
         from django.core.exceptions import ValidationError
