@@ -369,7 +369,24 @@ def build_dashboard_context(request):
     activity.sort(key=lambda item: item['timestamp'], reverse=True)
     activity = activity[:8]
 
+    # ------------------------------------------------------------------
+    # Suivi des chantiers (2026-10-22): étape en cours, avancement and —
+    # for roles that see money — budget vs dépensé, étape by étape. See
+    # core/site_tracking.py for the definitions.
+    # ------------------------------------------------------------------
+    from core.roles import is_magasinier_only, magasinier_site_ids
+    from core.site_tracking import build_site_tracking, portfolio_totals
+    show_money = can_view_financials(request)
+    tracked_sites = sites.exclude(status=SiteStatus.CANCELLED)
+    if is_magasinier_only(request.user):
+        tracked_sites = tracked_sites.filter(pk__in=magasinier_site_ids(request.user))
+    site_tracking = build_site_tracking(tracked_sites, with_money=show_money)
+
     return {
+        # Suivi des chantiers
+        'site_tracking': site_tracking,
+        'portfolio': portfolio_totals(site_tracking) if show_money else None,
+
         # Hero KPIs
         'revenue_all': revenue_all,
         'revenue_month': revenue_month,
@@ -491,6 +508,14 @@ def build_calendar_context(request):
     )
     task_counts_by_day = dict(tasks_qs.values_list('start_date').annotate(n=Count('id')))
 
+    # Rapports d'avancement filed that day (2026-10-22).
+    from projects.models import SiteProgress
+    report_counts_by_day = dict(
+        _scope(SiteProgress.objects.all(), 'phase__site__cabinet_id', cabinet_ids)
+        .filter(report_date__gte=first_of_month, report_date__lte=month_end)
+        .values_list('report_date').annotate(n=Count('id'))
+    )
+
     # Calendar.Calendar(firstweekday=0) yields Monday-first weeks, each a
     # list of 7 dates, with days outside first_of_month's month padded in
     # from the previous/next one (never None) — simplest way to always
@@ -506,6 +531,7 @@ def build_calendar_context(request):
                 'is_today': day == today,
                 'caisse_net': caisse_by_day.get(day),
                 'task_count': task_counts_by_day.get(day, 0),
+                'report_count': report_counts_by_day.get(day, 0),
                 'url': reverse('home_day_detail', kwargs={'day': day.isoformat()}),
             })
         weeks.append(week_days)
@@ -545,9 +571,65 @@ def build_day_detail_context(request, day):
         .filter(start_date=day).select_related('site', 'parent_phase').order_by('site__name', 'name')
     )
 
+    # 2026-10-22: the day's reports and other site activity, shown in the
+    # calendar's pop-up (and on this page).
+    from projects.models import SiteProgress, PlanningSubmission
+    from materials.models import MaterialRequest
+    from procurement.models import StockMovement
+    from core.roles import is_magasinier_only, magasinier_site_ids
+
+    report_rows = list(
+        _scope(SiteProgress.objects.all(), 'phase__site__cabinet_id', cabinet_ids)
+        .filter(report_date=day)
+        .select_related('phase__site', 'phase__parent_phase', 'created_by')
+        .prefetch_related('photos')
+        .order_by('phase__site__name', '-created_at')
+    )
+    planning_rows = list(
+        _scope(PlanningSubmission.objects.all(), 'site__cabinet_id', cabinet_ids)
+        .filter(submitted_at__date=day).select_related('site', 'phase', 'submitted_by').order_by('site__name')
+    )
+    request_rows = list(
+        _scope(MaterialRequest.objects.all(), 'site__cabinet_id', cabinet_ids)
+        .filter(created_at__date=day).select_related('site', 'requested_by').prefetch_related('items')
+        .order_by('site__name')
+    )
+    movement_rows = list(
+        _scope(StockMovement.objects.all(), 'stock_item__site__cabinet_id', cabinet_ids)
+        .filter(movement_date=day).select_related('stock_item__site', 'moved_by').order_by('stock_item__site__name', '-id')
+    )
+    due_task_rows = list(
+        _scope(Task.objects.all(), 'site__cabinet_id', cabinet_ids)
+        .filter(due_date=day).select_related('site', 'assigned_to').order_by('site__name')
+    )
+    expense_rows = []
+    if show_financials:
+        expense_rows = list(
+            _scope(Expense.objects.all(), 'site__cabinet_id', cabinet_ids)
+            .filter(expense_date=day).select_related('site', 'category').order_by('site__name')
+        )
+    if is_magasinier_only(request.user):
+        mine = magasinier_site_ids(request.user)
+        report_rows = [r for r in report_rows if r.phase.site_id in mine]
+        planning_rows = [r for r in planning_rows if r.site_id in mine]
+        request_rows = [r for r in request_rows if r.site_id in mine]
+        movement_rows = [r for r in movement_rows if r.stock_item.site_id in mine]
+        due_task_rows = [r for r in due_task_rows if r.site_id in mine]
+        task_rows = [r for r in task_rows if r.site_id in mine]
+
+    sections = [report_rows, planning_rows, task_rows, due_task_rows, request_rows, movement_rows, caisse_rows, expense_rows]
     return {
         'day': day,
+        'prev_day': day - timedelta(days=1),
+        'next_day': day + timedelta(days=1),
         'caisse_rows': caisse_rows,
         'task_rows': task_rows,
+        'report_rows': report_rows,
+        'planning_rows': planning_rows,
+        'request_rows': request_rows,
+        'movement_rows': movement_rows,
+        'due_task_rows': due_task_rows,
+        'expense_rows': expense_rows,
+        'day_is_empty': not any(sections),
         'can_view_financials': show_financials,
     }

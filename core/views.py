@@ -52,6 +52,12 @@ class DayDetailView(LoginRequiredMixin, TemplateView):
         context.update(build_day_detail_context(self.request, day))
         return context
 
+    def get_template_names(self):
+        # The dashboard calendar's pop-up asks for the body alone.
+        if self.request.GET.get('partial') == '1':
+            return ['core/includes/day_detail_body.html']
+        return [self.template_name]
+
 
 class PendingApprovalsView(LoginRequiredMixin, TemplateView):
     """"Approbations en attente" — a single inbox combining every pending

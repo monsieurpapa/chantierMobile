@@ -18,66 +18,14 @@
                 </a>
             </div>
 
-            {% if can_view_financials %}
             <div class="card mb-3">
-                <div class="card-header bg-light">
-                    <h6 class="mb-0"><i class="fas fa-cash-register me-2 text-success"></i>{% trans "Mouvements de caisse" %}</h6>
-                </div>
-                <div class="card-body p-0">
-                    {% if caisse_rows %}
-                    <div class="table-responsive">
-                        <table class="table table-sm table-striped fs--1 mb-0">
-                            <thead class="bg-200 text-900">
-                                <tr>
-                                    <th>{% trans "Caisse" %}</th>
-                                    <th>{% trans "Chantier" %}</th>
-                                    <th>{% trans "Catégorie" %}</th>
-                                    <th>{% trans "Description" %}</th>
-                                    <th class="text-end">{% trans "Montant" %}</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for tx in caisse_rows %}
-                                <tr>
-                                    <td>{{ tx.caisse.name }}</td>
-                                    <td>{{ tx.site.name|default:tx.external_site_label|default:"—" }}</td>
-                                    <td>{{ tx.category.name|default:"—" }}</td>
-                                    <td>{{ tx.description|default:"—" }}</td>
-                                    <td class="text-end {% if tx.transaction_type == 'ENTREE' %}text-success{% else %}text-danger{% endif %}">
-                                        {% if tx.transaction_type == 'ENTREE' %}+{% else %}-{% endif %}{{ CURRENCY_SYMBOL }}{{ tx.amount|floatformat:"2g" }}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% else %}
-                    <p class="text-center text-500 fs--1 py-4 mb-0">{% trans "Aucun mouvement de caisse ce jour-là." %}</p>
-                    {% endif %}
+                <div class="card-body">
+                    {% include 'core/includes/day_detail_body.html' %}
                 </div>
             </div>
-            {% endif %}
-
-            <div class="card mb-3">
-                <div class="card-header bg-light">
-                    <h6 class="mb-0"><i class="fas fa-stream me-2 text-info"></i>{% trans "Tâches planifiées (début)" %}</h6>
-                </div>
-                <div class="card-body p-0">
-                    {% if task_rows %}
-                    <ul class="list-group list-group-flush fs--1">
-                        {% for task in task_rows %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <div>
-                                <a href="{% url 'projects:site_gantt' unique_id=task.site.unique_id %}">{{ task.name }}</a>
-                                <span class="text-500">— {{ task.site.name }}{% if task.parent_phase %} ({{ task.parent_phase.name }}){% endif %}</span>
-                            </div>
-                        </li>
-                        {% endfor %}
-                    </ul>
-                    {% else %}
-                    <p class="text-center text-500 fs--1 py-4 mb-0">{% trans "Aucune tâche planifiée ne débute ce jour-là." %}</p>
-                    {% endif %}
-                </div>
+            <div class="d-flex justify-content-between">
+                <a class="btn btn-falcon-default btn-sm" href="{% url 'home_day_detail' day=prev_day|date:'Y-m-d' %}"><i class="fas fa-chevron-left me-1"></i>{{ prev_day|date:"d/m" }}</a>
+                <a class="btn btn-falcon-default btn-sm" href="{% url 'home_day_detail' day=next_day|date:'Y-m-d' %}">{{ next_day|date:"d/m" }}<i class="fas fa-chevron-right ms-1"></i></a>
             </div>
         </div>
 

@@ -1,0 +1,105 @@
+{% load i18n %}
+{# What happened on `day` — shared by the calendar's pop-up and the full page. #}
+{% if day_is_empty %}
+<p class="text-center text-500 fs--1 py-4 mb-0"><i class="fas fa-inbox me-2"></i>{% trans "Rien d'enregistré ce jour-là." %}</p>
+{% endif %}
+
+{% if report_rows %}
+<div class="mb-3">
+  <h6 class="fs--1 text-uppercase text-600 mb-2"><i class="fas fa-clipboard-check text-primary me-2"></i>{% trans "Rapports d'avancement" %} <span class="badge rounded-pill bg-primary ms-1">{{ report_rows|length }}</span></h6>
+  <div class="d-flex flex-column gap-2">
+    {% for r in report_rows %}
+    <a class="d-block border rounded-3 p-2 text-decoration-none hover-bg-100" href="{% url 'projects:progress_detail' unique_id=r.unique_id %}">
+      <div class="d-flex justify-content-between align-items-start gap-2">
+        <div class="text-800 fs--1">
+          <strong>{{ r.phase.site.name }}</strong>
+          <span class="text-600">· {% if r.phase.parent_phase %}{{ r.phase.parent_phase.name }} › {% endif %}{{ r.phase.name }}</span>
+        </div>
+        <span class="badge rounded-pill {% if r.percentage_complete >= 100 %}bg-success{% else %}bg-primary{% endif %}">{{ r.percentage_complete }} %</span>
+      </div>
+      <p class="fs--1 text-700 mb-1 mt-1">{{ r.description|truncatechars:180 }}</p>
+      <div class="fs--2 text-500">
+        <i class="fas fa-user me-1"></i>{{ r.created_by.get_full_name|default:r.created_by.username|default:"—" }}
+        {% with n=r.photos.all|length %}{% if n %}<span class="ms-2"><i class="fas fa-camera me-1"></i>{{ n }} photo{{ n|pluralize }}</span>{% endif %}{% endwith %}
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% if planning_rows %}
+<div class="mb-3">
+  <h6 class="fs--1 text-uppercase text-600 mb-2"><i class="fas fa-project-diagram text-info me-2"></i>{% trans "Planifications soumises" %}</h6>
+  <ul class="list-unstyled fs--1 mb-0">
+    {% for p in planning_rows %}
+    <li class="mb-1"><strong>{{ p.site.name }}</strong>{% if p.phase %} · {{ p.phase.name }}{% endif %} — {{ p.get_status_display }}
+      <span class="text-500">({{ p.submitted_by.get_full_name|default:p.submitted_by.username|default:"—" }})</span></li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+{% if task_rows or due_task_rows %}
+<div class="mb-3">
+  <h6 class="fs--1 text-uppercase text-600 mb-2"><i class="fas fa-stream text-info me-2"></i>{% trans "Planning" %}</h6>
+  <ul class="list-unstyled fs--1 mb-0">
+    {% for task in task_rows %}
+    <li class="mb-1"><span class="badge badge-subtle-info me-1">{% trans "Début" %}</span>
+      <a href="{% url 'projects:site_gantt' unique_id=task.site.unique_id %}">{{ task.name }}</a>
+      <span class="text-500">— {{ task.site.name }}{% if task.parent_phase %} ({{ task.parent_phase.name }}){% endif %}</span></li>
+    {% endfor %}
+    {% for t in due_task_rows %}
+    <li class="mb-1"><span class="badge badge-subtle-warning me-1">{% trans "Échéance" %}</span>
+      <a href="{% url 'tasks:task_detail' pk=t.pk %}">{{ t.title }}</a>
+      <span class="text-500">— {{ t.site.name }} · {{ t.get_status_display }}{% if t.assigned_to %} · {{ t.assigned_to.get_full_name }}{% endif %}</span></li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+{% if request_rows %}
+<div class="mb-3">
+  <h6 class="fs--1 text-uppercase text-600 mb-2"><i class="fas fa-boxes text-warning me-2"></i>{% trans "États de besoin" %}</h6>
+  <ul class="list-unstyled fs--1 mb-0">
+    {% for req in request_rows %}
+    <li class="mb-1"><a href="{% url 'materials:request_detail' pk=req.pk %}">{{ req.reference }}</a>
+      — {{ req.site.name }} · {{ req.items.all|length }} article{{ req.items.all|length|pluralize }} · {{ req.get_status_display }}
+      <span class="text-500">({{ req.requested_by.get_full_name|default:req.requested_by.username|default:"—" }})</span></li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+{% if movement_rows %}
+<div class="mb-3">
+  <h6 class="fs--1 text-uppercase text-600 mb-2"><i class="fas fa-warehouse text-secondary me-2"></i>{% trans "Stock" %}</h6>
+  <ul class="list-unstyled fs--1 mb-0">
+    {% for m in movement_rows %}
+    <li class="mb-1"><span class="badge {% if m.movement_type == 'IN' %}badge-subtle-success{% elif m.movement_type == 'OUT' %}badge-subtle-danger{% else %}badge-subtle-secondary{% endif %} me-1">{{ m.get_movement_type_display }}</span>
+      <a href="{% url 'procurement:stock_movement_detail' pk=m.pk %}">{{ m.quantity|floatformat:"-2g" }} {{ m.stock_item.unit }} {{ m.stock_item.name }}</a>
+      <span class="text-500">— {{ m.stock_item.site.name }}{% if m.reception_number %} · {{ m.reception_number }}{% endif %}</span></li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+{% if can_view_financials and caisse_rows or can_view_financials and expense_rows %}
+<div class="mb-1">
+  <h6 class="fs--1 text-uppercase text-600 mb-2"><i class="fas fa-cash-register text-success me-2"></i>{% trans "Argent" %}</h6>
+  <ul class="list-unstyled fs--1 mb-0">
+    {% for tx in caisse_rows %}
+    <li class="mb-1 d-flex justify-content-between gap-2">
+      <span>{{ tx.caisse.name }} · {{ tx.site.name|default:tx.external_site_label|default:"—" }}{% if tx.description %} <span class="text-500">— {{ tx.description|truncatechars:60 }}</span>{% endif %}</span>
+      <span class="text-nowrap fw-semibold {% if tx.transaction_type == 'ENTREE' %}text-success{% else %}text-danger{% endif %}">{% if tx.transaction_type == 'ENTREE' %}+{% else %}−{% endif %}{{ CURRENCY_SYMBOL }}{{ tx.amount|floatformat:"2g" }}</span>
+    </li>
+    {% endfor %}
+    {% for e in expense_rows %}
+    <li class="mb-1 d-flex justify-content-between gap-2">
+      <span><span class="badge badge-subtle-dark me-1">{% trans "Dépense" %}</span><a href="{% url 'finance:expense_detail' pk=e.pk %}">{{ e.site.name }}{% if e.category %} · {{ e.category.name }}{% endif %}</a> <span class="text-500">({{ e.get_status_display }})</span></span>
+      <span class="text-nowrap fw-semibold">{{ CURRENCY_SYMBOL }}{{ e.amount|floatformat:"2g" }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
