@@ -413,6 +413,25 @@
                                                 {% for assignment in site.assignments.all %}
                                                 <tr class="align-middle">
                                                     <td class="text-nowrap">
+                                                        {% if assignment.personnel.is_deleted %}
+                                                        {# 2026-10-27: the person's file was deleted but the assignment stayed — no link (it would 404). #}
+                                                        <div class="opacity-75">
+                                                            <div class="d-flex align-items-center gap-2">
+                                                                <div class="avatar avatar-m">
+                                                                    <div class="avatar-name rounded-2"><span>{{ assignment.personnel.first_name|slice:":1"|upper }}</span>
+                                                                    </div>
+                                                                </div>
+                                                                <div>
+                                                                    <h6 class="mb-0 fw-semibold">{{ assignment.personnel.get_full_name }}</h6>
+                                                                    <p class="fs--2 mb-0 text-600">
+                                                                        {% if assignment.personnel.metier %}<span class="badge badge-subtle-dark rounded-pill me-1">{{ assignment.personnel.metier }}</span>{% endif %}
+                                                                        {% if assignment.role and assignment.role != assignment.personnel.metier %}{{ assignment.role }}{% endif %}
+                                                                        <span class="badge badge-subtle-secondary ms-1">{% trans "Retiré du personnel" %}</span>
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        {% else %}
                                                         <a href="{% url 'personnel:personnel_detail' unique_id=assignment.personnel.unique_id %}" class="text-decoration-none">
                                                             <div class="d-flex align-items-center gap-2">
                                                                 <div class="avatar avatar-m">
@@ -428,6 +447,7 @@
                                                                 </div>
                                                             </div>
                                                         </a>
+                                                        {% endif %}
                                                     </td>
                                                     <td class="fs--1">
                                                         <span class="text-600">{{ assignment.start_date|date:"M d, y" }}</span>
