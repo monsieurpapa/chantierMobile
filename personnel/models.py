@@ -272,6 +272,15 @@ class SiteAssignment(BaseModel):
             raise ValidationError({
                 'scope': _("Une convention « chantier entier » ne doit pas être rattachée à une étape précise."),
             })
+        # 2026-10-27: a person can only be assigned to a chantier of their
+        # own cabinet. A mismatch made their profile unreachable (404)
+        # from the chantier's crew list.
+        if self.personnel_id and self.site_id and self.personnel.cabinet_id != self.site.cabinet_id:
+            raise ValidationError({
+                'personnel': _(
+                    "%(name)s appartient à un autre cabinet que ce chantier : choisissez une personne du cabinet « %(cabinet)s »."
+                ) % {'name': self.personnel, 'cabinet': self.site.cabinet},
+            })
 
     def __str__(self):
         return f"{self.personnel} -> {self.site} ({self.role})"

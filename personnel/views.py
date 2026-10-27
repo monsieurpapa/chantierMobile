@@ -27,7 +27,7 @@ from .forms import (
     PersonnelForm, SiteAssignmentForm, SkillForm, PersonnelDocumentForm, LeaveForm, HolidayForm, ConventionFormSet,
     ConventionAvenantForm, PersonnelEvaluationForm,
 )
-from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet, can_act_for_cabinet
+from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet, can_act_for_cabinet, can_view_cabinet
 from core.quickcreate import QuickCreateView
 from chantiermobile.constants import UserRoles, PersonnelPayrollType, DIRECTOR_ROLES, AttendanceStatus, ApprovalStatus
 from projects.models import Site, ProjectPhase
@@ -319,6 +319,28 @@ class PersonnelDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixi
     slug_field = 'unique_id'
     slug_url_kwarg = 'unique_id'
 
+    def get_queryset(self):
+        # FIXED 2026-10-27: a chantier's crew can include a person whose
+        # record sits in another cabinet (assigned before the assignment
+        # form checked the cabinet). Their profile 404'd for everyone
+        # working in the chantier's cabinet. Someone who can see the
+        # chantier's crew can now open that person's profile too.
+        base = Personnel.objects.all()
+        own = super().get_queryset()
+        user = self.request.user
+        if user.is_superuser:
+            active = get_session_cabinet(self.request)
+            if not active:
+                return own
+            cabinets = [active.pk]
+        else:
+            cabinets = list(user.approved_cabinet_roles.values_list('cabinet', flat=True))
+        crew = base.filter(assignments__site__cabinet__in=cabinets, assignments__is_deleted=False)
+        return base.filter(models.Q(pk__in=own.values('pk')) | models.Q(pk__in=crew.values('pk')))
+
+    def _in_own_cabinet(self):
+        return CabinetAccessMixin.get_queryset(self).filter(pk=self.object.pk).exists()
+
     def get_header_title(self):
         return self.object.get_full_name()
 
@@ -353,7 +375,9 @@ class PersonnelDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixi
             user=user, role__in=DIRECTOR_ROLES, status=ApprovalStatus.APPROVED,
         ).exists()
 
-        if is_admin:
+        # Editing stays with the cabinet that owns the record (the edit page
+        # is scoped to it): no button that would lead to a 404.
+        if is_admin and self._in_own_cabinet():
             actions.append({
                 'label': _("Modifier le profil"),
                 'url': str(reverse_lazy('personnel:personnel_update', kwargs={'unique_id': self.object.unique_id})),
@@ -1042,6 +1066,22 @@ class PersonnelQuickCreateView(QuickCreateView):
             default_daily_rate=Decimal('0.00'),
             **kwargs,
         )
+
+    def get_user_cabinet(self):
+        # FIXED 2026-10-27: a name typed in a picker scoped to a chantier
+        # is filed under that chantier's cabinet, not the oldest cabinet a
+        # superadmin on "Tous les cabinets" would otherwise get. Only when
+        # the user may act in that cabinet (superadmins always may).
+        try:
+            payload = json.loads(self.request.body.decode('utf-8')) if self.request.body else {}
+        except (ValueError, UnicodeDecodeError):
+            payload = self.request.POST.dict()
+        site_id = payload.get('site')
+        if site_id and str(site_id).isdigit():
+            site = Site.objects.filter(pk=site_id).select_related('cabinet').first()
+            if site and can_view_cabinet(self.request, site.cabinet):
+                return site.cabinet
+        return super().get_user_cabinet()
 
     def display_text(self, instance):
         return instance.name_with_metier
