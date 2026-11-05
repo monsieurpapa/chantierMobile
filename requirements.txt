@@ -4,6 +4,7 @@ python-dotenv
 Pillow
 celery
 redis
+packaging  # kombu.transport.redis imports it; not pulled in transitively on python:3.12-alpine
 flower
 django-celery-results
 django-celery-beat
