@@ -210,6 +210,7 @@ SESSION_IDLE_TOUCH_INTERVAL_SECONDS = 60  # how often the activity stamp is actu
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SECURE_SSL_REDIRECT = True
+    SECURE_REDIRECT_EXEMPT = [r'^healthz$']  # Railway's plain-HTTP deploy healthcheck
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_HSTS_SECONDS = 31536000  # 1 year

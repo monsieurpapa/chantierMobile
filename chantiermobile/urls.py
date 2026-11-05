@@ -11,12 +11,13 @@ from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
 from core.views import (
     HomeView, DayDetailView, PendingApprovalsView, GlobalSearchView,
-    NotificationListView, notification_open, notifications_mark_all_read,
+    NotificationListView, notification_open, notifications_mark_all_read, healthz,
 )
 from django.views.i18n import set_language
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('healthz', healthz, name='healthz'),
     path('', HomeView.as_view(), name='home'),
     path('jour/<str:day>/', DayDetailView.as_view(), name='home_day_detail'),
     path('approbations/', PendingApprovalsView.as_view(), name='pending_approvals'),
