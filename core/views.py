@@ -8,6 +8,7 @@ independent of Django's view/template machinery.
 from django.views.generic import TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.utils.translation import gettext_lazy as _
@@ -129,3 +130,11 @@ def notifications_mark_all_read(request):
     if request.method == 'POST':
         request.user.notifications.filter(is_read=False).update(is_read=True)
     return redirect('notifications_list')
+
+
+def healthz(request):
+    """Liveness probe for Railway's deploy healthcheck (railway.toml). Public,
+    no DB query, and exempt from SECURE_SSL_REDIRECT (settings) because the
+    probe hits the container over plain HTTP — `/` can't serve here since it
+    redirects anonymous users to the login page."""
+    return HttpResponse('ok', content_type='text/plain')
