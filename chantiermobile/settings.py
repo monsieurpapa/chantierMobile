@@ -265,6 +265,20 @@ if not DEBUG:
     AWS_DEFAULT_ACL = 'public-read'
     AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}
 
+# Send unhandled-exception tracebacks to stdout so they reach Railway's
+# deploy logs. Django's default LOGGING only prints them when DEBUG=True
+# (and otherwise mails ADMINS, which is empty), so a production 500 left
+# no trace at all (2026-11-11: POST /user/admin/cabinets/create/).
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {'console': {'class': 'logging.StreamHandler'}},
+    'loggers': {
+        'django.request': {'handlers': ['console'], 'level': 'ERROR', 'propagate': False},
+        'botocore': {'handlers': ['console'], 'level': 'WARNING', 'propagate': False},
+    },
+}
+
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
