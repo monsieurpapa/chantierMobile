@@ -1,0 +1,409 @@
+{% load static i18n %}<!DOCTYPE html>
+{% get_current_language as LANG %}
+<html lang="{{ LANG|default:'fr' }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% trans "ChantierMobile — gestion de chantiers : avancement, budget, stock et équipes" %}</title>
+  <meta name="description" content="{% trans "Suivez l'avancement, le budget, le stock et les équipes de vos chantiers au même endroit, sur téléphone comme sur ordinateur." %}">
+  <meta name="theme-color" content="#18222D">
+  <meta property="og:title" content="ChantierMobile">
+  <meta property="og:description" content="{% trans "Vos chantiers, vos dépenses et votre stock au même endroit." %}">
+  <meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{% static 'landing/media/suivi-poster.jpg' %}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{% static 'assets/img/favicons/cmc/favicon-32x32.png' %}">
+  <link rel="apple-touch-icon" sizes="180x180" href="{% static 'assets/img/favicons/cmc/apple-touch-icon.png' %}">
+  <link rel="preload" href="{% static 'landing/fonts/barlow-condensed-latin-700-normal.woff2' %}" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{% static 'landing/fonts/barlow-latin-400-normal.woff2' %}" as="font" type="font/woff2" crossorigin>
+  <style>
+    @font-face { font-family: 'Barlow'; font-weight: 400; font-display: swap; src: url("{% static 'landing/fonts/barlow-latin-400-normal.woff2' %}") format('woff2'); }
+    @font-face { font-family: 'Barlow'; font-weight: 500; font-display: swap; src: url("{% static 'landing/fonts/barlow-latin-500-normal.woff2' %}") format('woff2'); }
+    @font-face { font-family: 'Barlow'; font-weight: 600; font-display: swap; src: url("{% static 'landing/fonts/barlow-latin-600-normal.woff2' %}") format('woff2'); }
+    @font-face { font-family: 'Barlow Condensed'; font-weight: 600; font-display: swap; src: url("{% static 'landing/fonts/barlow-condensed-latin-600-normal.woff2' %}") format('woff2'); }
+    @font-face { font-family: 'Barlow Condensed'; font-weight: 700; font-display: swap; src: url("{% static 'landing/fonts/barlow-condensed-latin-700-normal.woff2' %}") format('woff2'); }
+  </style>
+  <link rel="stylesheet" href="{% static 'landing/landing.css' %}">
+</head>
+<body>
+<a class="skip" href="#contenu">{% trans "Aller au contenu" %}</a>
+
+<header class="top" id="top">
+  <div class="wrap top-row">
+    <a class="brand" href="{% url 'landing' %}" aria-label="ChantierMobile — {% trans 'accueil' %}">
+      <img src="{% static 'assets/img/favicons/cmc/android-chrome-192x192.png' %}" alt="" width="36" height="36">
+      <span>ChantierMobile</span>
+    </a>
+    <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="menu">
+      <span class="menu-bars" aria-hidden="true"></span><span class="sr">{% trans "Menu" %}</span>
+    </button>
+    <nav class="menu" id="menu" aria-label="{% trans 'Navigation principale' %}">
+      <ul class="menu-links">
+        <li><a href="#fonctionnalites">{% trans "Fonctionnalités" %}</a></li>
+        <li><a href="#roles">{% trans "Pour qui" %}</a></li>
+        <li><a href="#demarrer">{% trans "Démarrer" %}</a></li>
+        <li><a href="#questions">{% trans "Questions" %}</a></li>
+      </ul>
+      <div class="menu-actions">
+        <form class="lang" action="{% url 'set_language' %}" method="post">{% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          {% if LANG == 'en' %}
+          <button type="submit" name="language" value="fr" lang="fr">Français</button>
+          {% else %}
+          <button type="submit" name="language" value="en" lang="en">English</button>
+          {% endif %}
+        </form>
+        {% if user.is_authenticated %}
+        <a class="btn btn-sign" href="{% url 'home' %}">{% trans "Ouvrir mon tableau de bord" %}</a>
+        {% else %}
+        <a class="link-login" href="{% url 'account_login' %}">{% trans "Se connecter" %}</a>
+        <a class="btn btn-sign" href="{% url 'account_signup' %}">{% trans "Créer un compte" %}</a>
+        {% endif %}
+      </div>
+    </nav>
+  </div>
+</header>
+
+<main id="contenu">
+  <!-- Hero: the dashboard itself, playing -->
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="wrap hero-grid">
+      <div class="hero-copy">
+        <h1 id="hero-title">{% trans "Vos chantiers, vos dépenses et votre stock, enfin au même endroit." %}</h1>
+        <p class="lead">{% blocktrans trimmed %}
+          ChantierMobile remplace les groupes WhatsApp, les cahiers et les tableurs. La direction voit où en est chaque
+          chantier et ce qu'il a déjà coûté ; le terrain envoie ses rapports et ses demandes depuis le téléphone.
+        {% endblocktrans %}</p>
+        <div class="cta-row">
+          {% if user.is_authenticated %}
+          <a class="btn btn-sign btn-lg" href="{% url 'home' %}">{% trans "Ouvrir mon tableau de bord" %}</a>
+          {% else %}
+          <a class="btn btn-sign btn-lg" href="{% url 'account_signup' %}">{% trans "Créer un compte" %}</a>
+          <a class="btn btn-ghost btn-lg" href="{% url 'account_login' %}">{% trans "Se connecter" %}</a>
+          {% endif %}
+        </div>
+        {% if not user.is_authenticated %}
+        {% url 'account_login' as login_url %}
+        <p class="hero-note">{% blocktrans trimmed %}Votre administrateur vous a envoyé un mot de passe temporaire ?
+          <a href="{{ login_url }}">Connectez-vous avec</a>, l'application vous demandera d'en choisir un nouveau.{% endblocktrans %}</p>
+        {% endif %}
+      </div>
+      <figure class="hero-media">
+        <div class="frame frame-browser">
+          <div class="frame-bar" aria-hidden="true"><i></i><i></i><i></i><span>{% trans "Tableau de bord · Suivi des chantiers" %}</span></div>
+          <video class="clip" data-autoplay muted loop playsinline preload="metadata" width="882" height="800"
+                 poster="{% static 'landing/media/suivi-poster.jpg' %}"
+                 aria-label="{% trans "Le tableau de bord : budget, dépensé et % consommé par chantier, puis le détail par étape d'un chantier à surveiller" %}">
+            <source src="{% static 'landing/media/suivi.webm' %}" type="video/webm">
+            <source src="{% static 'landing/media/suivi.mp4' %}" type="video/mp4">
+          </video>
+        </div>
+        <div class="frame frame-phone" aria-hidden="true">
+          <picture>
+            <source srcset="{% static 'landing/media/mobile-rapport.webp' %}" type="image/webp">
+            <img src="{% static 'landing/media/mobile-rapport.jpg' %}" alt="" width="390" height="645" loading="eager">
+          </picture>
+        </div>
+        <figcaption class="sr">{% trans "Démonstration avec des chantiers fictifs." %}</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- Before / after -->
+  <section class="change" aria-labelledby="change-title">
+    <div class="wrap">
+      <h2 id="change-title">{% trans "Ce qui change sur vos chantiers" %}</h2>
+      <div class="change-head" aria-hidden="true">
+        <span>{% trans "Aujourd'hui" %}</span><span>{% trans "Avec ChantierMobile" %}</span>
+      </div>
+      <dl class="change-list">
+        <div class="change-row">
+          <dt>{% trans "Les rapports d'avancement se perdent dans les groupes WhatsApp." %}</dt>
+          <dd>{% trans "Chaque rapport est daté, rattaché à son étape, avec son auteur et ses photos." %}</dd>
+        </div>
+        <div class="change-row">
+          <dt>{% trans "On découvre le dépassement de budget en fin de chantier." %}</dt>
+          <dd>{% trans "Le budget consommé est comparé à l'avancement : une alerte apparaît dès que la dépense prend de l'avance." %}</dd>
+        </div>
+        <div class="change-row">
+          <dt>{% trans "Le stock se compte à la main, quand on y pense." %}</dt>
+          <dd>{% trans "Le magasinier saisit chaque entrée et chaque sortie ; chaque livraison a son bon de réception." %}</dd>
+        </div>
+        <div class="change-row">
+          <dt>{% trans "Les demandes de matériaux arrivent par appel ou par message." %}</dt>
+          <dd>{% trans "L'état de besoin part du chantier, comparé au devis, et la direction l'approuve en un clic." %}</dd>
+        </div>
+        <div class="change-row">
+          <dt>{% trans "Les dépenses passent de main en main sans laisser de trace." %}</dt>
+          <dd>{% trans "Chaque dépense suit son circuit (en attente, approuvée, payée), avec le nom de qui a fait quoi." %}</dd>
+        </div>
+      </dl>
+    </div>
+  </section>
+
+  <!-- Features: one tablist, media swaps on click -->
+  <section class="features" id="fonctionnalites" aria-labelledby="features-title">
+    <div class="wrap">
+      <h2 id="features-title">{% trans "Ce que vous pouvez faire" %}</h2>
+      <p class="section-lead">{% trans "Les écrans ci-dessous sont ceux de l'application, avec des chantiers de démonstration." %}</p>
+      <div class="feat">
+        <div class="feat-tabs" role="tablist" aria-label="{% trans 'Fonctionnalités' %}">
+          <button role="tab" id="t-suivi" aria-controls="p-suivi" aria-selected="true">{% trans "Budget et avancement" %}</button>
+          <button role="tab" id="t-jour" aria-controls="p-jour" aria-selected="false" tabindex="-1">{% trans "Rapports du jour" %}</button>
+          <button role="tab" id="t-besoin" aria-controls="p-besoin" aria-selected="false" tabindex="-1">{% trans "États de besoin" %}</button>
+          <button role="tab" id="t-stock" aria-controls="p-stock" aria-selected="false" tabindex="-1">{% trans "Stock et réceptions" %}</button>
+          <button role="tab" id="t-depenses" aria-controls="p-depenses" aria-selected="false" tabindex="-1">{% trans "Dépenses et caisse" %}</button>
+          <button role="tab" id="t-equipes" aria-controls="p-equipes" aria-selected="false" tabindex="-1">{% trans "Équipes" %}</button>
+        </div>
+
+        <div class="feat-panel" role="tabpanel" id="p-suivi" aria-labelledby="t-suivi">
+          <div class="feat-text">
+            <h3>{% trans "Voir où en est chaque chantier, et ce qu'il a coûté" %}</h3>
+            <p>{% trans "Pour chaque chantier : l'étape en cours, l'avancement, le budget, le dépensé, ce qui reste et ce que le client a payé." %}</p>
+            <ul>
+              <li>{% trans "Badge « À surveiller » quand la dépense avance plus vite que les travaux, « Dépassement » au-delà du budget." %}</li>
+              <li>{% trans "Un clic sur un chantier détaille chaque étape : budget du devis, dépensé, % consommé." %}</li>
+              <li>{% trans "Les montants ne s'affichent qu'aux rôles qui ont accès aux finances." %}</li>
+            </ul>
+          </div>
+          <div class="feat-media frame frame-browser">
+            <div class="frame-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+            <video class="clip" muted loop playsinline preload="none" width="882" height="800"
+                   poster="{% static 'landing/media/suivi-poster.jpg' %}" aria-label="{% trans 'Suivi des chantiers : ouverture du détail par étape' %}">
+              <source src="{% static 'landing/media/suivi.webm' %}" type="video/webm">
+              <source src="{% static 'landing/media/suivi.mp4' %}" type="video/mp4">
+            </video>
+          </div>
+        </div>
+
+        <div class="feat-panel" role="tabpanel" id="p-jour" aria-labelledby="t-jour" hidden>
+          <div class="feat-text">
+            <h3>{% trans "Savoir ce qui s'est passé sur les chantiers, jour par jour" %}</h3>
+            <p>{% trans "Le calendrier compte les rapports envoyés par les ingénieurs. Un clic sur une date ouvre tout ce qui a eu lieu ce jour-là." %}</p>
+            <ul>
+              <li>{% trans "Rapports d'avancement avec l'étape, le pourcentage, l'auteur et les photos." %}</li>
+              <li>{% trans "Tâches à échéance, états de besoin, mouvements de stock et de caisse du jour." %}</li>
+              <li>{% trans "Passez au jour précédent ou suivant sans quitter la fenêtre." %}</li>
+            </ul>
+          </div>
+          <div class="feat-media frame frame-browser">
+            <div class="frame-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+            <video class="clip" muted loop playsinline preload="none" width="1100" height="688"
+                   poster="{% static 'landing/media/calendrier-poster.jpg' %}" aria-label="{% trans 'Calendrier : ouverture du détail du jour, puis du jour précédent' %}">
+              <source src="{% static 'landing/media/calendrier.webm' %}" type="video/webm">
+              <source src="{% static 'landing/media/calendrier.mp4' %}" type="video/mp4">
+            </video>
+          </div>
+        </div>
+
+        <div class="feat-panel" role="tabpanel" id="p-besoin" aria-labelledby="t-besoin" hidden>
+          <div class="feat-text">
+            <h3>{% trans "Des demandes de matériaux claires, comparées au devis" %}</h3>
+            <p>{% trans "L'ingénieur choisit les matériaux dans le catalogue et l'étape concernée. La direction approuve ou rejette." %}</p>
+            <ul>
+              <li>{% trans "Quantités comparées au devis approuvé du chantier." %}</li>
+              <li>{% trans "Recherche rapide des étapes et des matériaux, ajout d'un nouveau sans quitter la page." %}</li>
+              <li>{% trans "Chaque demande a sa référence (EB-…) et son historique." %}</li>
+            </ul>
+          </div>
+          <div class="feat-media frame frame-browser">
+            <div class="frame-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+            <picture>
+              <source srcset="{% static 'landing/media/etat-de-besoin.webp' %}" type="image/webp">
+              <img src="{% static 'landing/media/etat-de-besoin.jpg' %}" width="1400" height="921" loading="lazy"
+                   alt="{% trans "Un état de besoin en attente : matériaux, étape, quantités et boutons Approuver / Rejeter" %}">
+            </picture>
+          </div>
+        </div>
+
+        <div class="feat-panel" role="tabpanel" id="p-stock" aria-labelledby="t-stock" hidden>
+          <div class="feat-text">
+            <h3>{% trans "Un stock juste, tenu par le magasinier du chantier" %}</h3>
+            <p>{% trans "Seul le magasinier du chantier saisit les entrées et les sorties. Il voit les quantités, jamais les prix." %}</p>
+            <ul>
+              <li>{% trans "Chaque livraison génère un bon de réception en PDF, envoyé au directeur technique." %}</li>
+              <li>{% trans "Le directeur technique vise le bon depuis l'application." %}</li>
+              <li>{% trans "Rapport de stock par chantier, étape et période, exportable en PDF." %}</li>
+            </ul>
+          </div>
+          <div class="feat-media frame frame-browser">
+            <div class="frame-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+            <picture>
+              <source srcset="{% static 'landing/media/bon-de-reception.webp' %}" type="image/webp">
+              <img src="{% static 'landing/media/bon-de-reception.jpg' %}" width="1400" height="651" loading="lazy"
+                   alt="{% trans "Une entrée en stock avec son bon de réception BR, en attente du visa du directeur technique" %}">
+            </picture>
+          </div>
+        </div>
+
+        <div class="feat-panel" role="tabpanel" id="p-depenses" aria-labelledby="t-depenses" hidden>
+          <div class="feat-text">
+            <h3>{% trans "Des dépenses approuvées avant d'être payées" %}</h3>
+            <p>{% trans "Chaque dépense est rattachée à un chantier et à une étape, puis approuvée et payée par les bonnes personnes." %}</p>
+            <ul>
+              <li>{% trans "Filtres en attente, approuvées, rejetées, payées." %}</li>
+              <li>{% trans "Caisses, entrées et sorties d'argent, listes de paie." %}</li>
+              <li>{% trans "Rapports de dépenses par chantier et par catégorie." %}</li>
+            </ul>
+          </div>
+          <div class="feat-media frame frame-browser">
+            <div class="frame-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+            <picture>
+              <source srcset="{% static 'landing/media/depenses.webp' %}" type="image/webp">
+              <img src="{% static 'landing/media/depenses.jpg' %}" width="1400" height="857" loading="lazy"
+                   alt="{% trans "La liste des dépenses avec leur chantier, catégorie, montant et statut" %}">
+            </picture>
+          </div>
+        </div>
+
+        <div class="feat-panel" role="tabpanel" id="p-equipes" aria-labelledby="t-equipes" hidden>
+          <div class="feat-text">
+            <h3>{% trans "Qui travaille où, et à quel tarif" %}</h3>
+            <p>{% trans "Affectez le personnel aux chantiers avec son corps de métier et son tarif journalier." %}</p>
+            <ul>
+              <li>{% trans "Le corps de métier s'affiche à côté de chaque nom : maçon, ferrailleur, coffreur…" %}</li>
+              <li>{% trans "Pointage, conventions et cotation du personnel par étape." %}</li>
+              <li>{% trans "Numéros de téléphone enregistrés, prêts pour WhatsApp." %}</li>
+            </ul>
+          </div>
+          <div class="feat-media frame frame-browser">
+            <div class="frame-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+            <picture>
+              <source srcset="{% static 'landing/media/equipe.webp' %}" type="image/webp">
+              <img src="{% static 'landing/media/equipe.jpg' %}" width="1400" height="992" loading="lazy"
+                   alt="{% trans "L'onglet Personnel d'un chantier : noms, corps de métier, période d'affectation et tarif" %}">
+            </picture>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Roles -->
+  <section class="roles" id="roles" aria-labelledby="roles-title">
+    <div class="wrap roles-grid">
+      <div>
+        <h2 id="roles-title">{% trans "Chacun voit ce qui le concerne" %}</h2>
+        <p class="section-lead">{% trans "L'application s'adapte au rôle de chaque personne. Un écran absent du menu n'est pas une panne : il n'est simplement pas pour vous." %}</p>
+        <ul class="role-list">
+          <li><h3>{% trans "Direction" %}</h3><p>{% trans "Suit tous les chantiers et leur budget, approuve les devis, les états de besoin et les dépenses, vise les bons de réception." %}</p></li>
+          <li><h3>{% trans "Chef des ingénieurs" %}</h3><p>{% trans "Envoie les rapports d'avancement, prépare les états de besoin, organise les équipes et note le personnel par étape." %}</p></li>
+          <li><h3>{% trans "Magasinier" %}</h3><p>{% trans "Enregistre les entrées et sorties de son chantier et réceptionne les livraisons. Il ne voit aucun prix." %}</p></li>
+          <li><h3>{% trans "Comptable et caissier" %}</h3><p>{% trans "Tient les caisses, paie les dépenses approuvées et les listes de paie, suit les factures et les encaissements." %}</p></li>
+          <li><h3>{% trans "Administrateur" %}</h3><p>{% trans "Crée les comptes, attribue les rôles et les chantiers, génère les mots de passe temporaires." %}</p></li>
+        </ul>
+      </div>
+      <figure class="roles-phone">
+        <div class="frame frame-phone frame-phone-lg">
+          <picture>
+            <source srcset="{% static 'landing/media/mobile-suivi.webp' %}" type="image/webp">
+            <img src="{% static 'landing/media/mobile-suivi.jpg' %}" width="390" height="754" loading="lazy"
+                 alt="{% trans "Le suivi des chantiers sur un téléphone" %}">
+          </picture>
+        </div>
+        <figcaption>{% trans "Sur le chantier, l'application s'ouvre dans le navigateur du téléphone. Rien à installer." %}</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- Getting started: a real sequence -->
+  <section class="start" id="demarrer" aria-labelledby="start-title">
+    <div class="wrap">
+      <h2 id="start-title">{% trans "Démarrer en quatre étapes" %}</h2>
+      <ol class="steps">
+        <li>
+          <h3>{% trans "Créez votre compte" %}</h3>
+          <p>{% trans "Avec votre adresse e-mail et un mot de passe." %} <a href="{% url 'account_signup' %}">{% trans "Créer un compte" %}</a></p>
+        </li>
+        <li>
+          <h3>{% trans "Recevez votre rôle" %}</h3>
+          <p>{% trans "L'administrateur de votre entreprise vous rattache à votre cabinet et vous donne votre rôle : direction, ingénieur, magasinier, comptable…" %}</p>
+        </li>
+        <li>
+          <h3>{% trans "Connectez-vous" %}</h3>
+          <p>{% trans "Vous retrouvez vos chantiers et les écrans de votre rôle, sur téléphone comme sur ordinateur." %} <a href="{% url 'account_login' %}">{% trans "Se connecter" %}</a></p>
+        </li>
+        <li>
+          <h3>{% trans "Choisissez votre mot de passe" %}</h3>
+          <p>{% trans "Si l'administrateur a créé votre compte, connectez-vous avec le mot de passe temporaire reçu : l'application vous demande aussitôt d'en choisir un." %}</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="faq" id="questions" aria-labelledby="faq-title">
+    <div class="wrap faq-grid">
+      <h2 id="faq-title">{% trans "Questions fréquentes" %}</h2>
+      <div class="faq-list">
+        <details>
+          <summary>{% trans "Faut-il installer une application ?" %}</summary>
+          <p>{% trans "Non. ChantierMobile s'ouvre dans le navigateur, sur téléphone, tablette ou ordinateur." %}</p>
+        </details>
+        <details>
+          <summary>{% trans "Qui voit les montants ?" %}</summary>
+          <p>{% trans "Seuls les rôles qui ont accès aux finances. Le magasinier, par exemple, voit les quantités de son chantier mais jamais les prix." %}</p>
+        </details>
+        <details>
+          <summary>{% trans "Plusieurs entreprises peuvent-elles l'utiliser ?" %}</summary>
+          <p>{% trans "Oui. Chaque cabinet ne voit que ses propres chantiers, son personnel et ses chiffres." %}</p>
+        </details>
+        <details>
+          <summary>{% trans "En quelles langues ?" %}</summary>
+          <p>{% trans "En français et en anglais. Changez de langue à tout moment depuis le menu." %}</p>
+        </details>
+        <details>
+          <summary>{% trans "J'ai oublié mon mot de passe." %}</summary>
+          <p>{% trans "Demandez-en un nouveau par e-mail, ou demandez à votre administrateur de générer un mot de passe temporaire." %}
+            <a href="{% url 'account_reset_password' %}">{% trans "Réinitialiser mon mot de passe" %}</a></p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <section class="closing" aria-labelledby="closing-title">
+    <div class="wrap closing-row">
+      <h2 id="closing-title">{% trans "Suivez votre prochain chantier dans ChantierMobile." %}</h2>
+      <div class="cta-row">
+        {% if user.is_authenticated %}
+        <a class="btn btn-dark btn-lg" href="{% url 'home' %}">{% trans "Ouvrir mon tableau de bord" %}</a>
+        {% else %}
+        <a class="btn btn-dark btn-lg" href="{% url 'account_signup' %}">{% trans "Créer un compte" %}</a>
+        <a class="btn btn-outline-dark btn-lg" href="{% url 'account_login' %}">{% trans "Se connecter" %}</a>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap foot-grid">
+    <div>
+      <a class="brand" href="#top"><img src="{% static 'assets/img/favicons/cmc/android-chrome-192x192.png' %}" alt="" width="32" height="32"><span>ChantierMobile</span></a>
+      <p>{% trans "La gestion de chantiers pour les entreprises du bâtiment : avancement, budget, stock et équipes." %}</p>
+    </div>
+    <nav aria-label="{% trans 'Accès au compte' %}">
+      <h2>{% trans "Votre compte" %}</h2>
+      <ul>
+        <li><a href="{% url 'account_login' %}">{% trans "Se connecter" %}</a></li>
+        <li><a href="{% url 'account_signup' %}">{% trans "Créer un compte" %}</a></li>
+        <li><a href="{% url 'account_reset_password' %}">{% trans "Mot de passe oublié" %}</a></li>
+      </ul>
+    </nav>
+    <nav aria-label="{% trans 'Sur cette page' %}">
+      <h2>{% trans "Sur cette page" %}</h2>
+      <ul>
+        <li><a href="#fonctionnalites">{% trans "Fonctionnalités" %}</a></li>
+        <li><a href="#roles">{% trans "Pour qui" %}</a></li>
+        <li><a href="#demarrer">{% trans "Démarrer" %}</a></li>
+        <li><a href="#questions">{% trans "Questions" %}</a></li>
+      </ul>
+    </nav>
+  </div>
+  <div class="wrap foot-base">
+    <span>© {% now "Y" %} ChantierMobile</span>
+    <span>{% trans "Captures réalisées avec des chantiers de démonstration." %}</span>
+  </div>
+</footer>
+
+<script src="{% static 'landing/landing.js' %}" defer></script>
+</body>
+</html>
