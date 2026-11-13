@@ -89,3 +89,12 @@ def test_dashboard_tracking_rows_toggle_in_js(director_client, site_factory):
     content = director_client.get(reverse('home')).content.decode()
     row = re.search(r'<tr class="cm-track-row"[^>]*>', content).group(0)
     assert 'data-cm-expand=' in row and 'data-bs-toggle' not in row
+
+
+@pytest.mark.django_db
+def test_logout_returns_to_the_landing_page(client, user):
+    client.force_login(user)
+    r = client.post(reverse('account_logout'))
+    assert r.status_code == 302
+    assert r.url == reverse('home')
+    assert 'landing.html' in [t.name for t in client.get(r.url).templates]
