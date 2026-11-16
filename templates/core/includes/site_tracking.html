@@ -44,9 +44,9 @@
         </thead>
         <tbody>
           {% for row in site_tracking %}
-          <tr class="cm-track-row" data-bs-toggle="collapse" data-bs-target="#etapes-{{ forloop.counter }}" aria-expanded="false" role="button">
+          <tr class="cm-track-row"{% if row.etapes %} data-cm-expand="#etapes-{{ forloop.counter }}" aria-controls="etapes-{{ forloop.counter }}" aria-expanded="false" tabindex="0"{% endif %}>
             <td class="ps-3">
-              <a href="{{ row.url }}" class="fw-semibold text-800 hover-primary" onclick="event.stopPropagation()">{{ row.name }}</a>
+              <a href="{{ row.url }}" class="fw-semibold text-800 hover-primary">{{ row.name }}</a>
               <div class="fs--2 text-500"><span class="badge rounded-pill fs--3 {% if row.status == 'ACTIVE' %}bg-success{% elif row.status == 'PAUSED' %}bg-warning{% elif row.status == 'COMPLETED' %}bg-secondary{% else %}bg-info{% endif %}">{{ row.status_display }}</span>{% if row.lead_engineer %} · {{ row.lead_engineer }}{% endif %}</div>
             </td>
             <td>
@@ -112,13 +112,32 @@
     {% endif %}
   </div>
 </div>
+{# FIXED 2026-11-12: the rows used data-bs-toggle="collapse"; the Falcon theme #}
+{# sets pointer-events:none on every child of such an element, so clicking a   #}
+{# row (or the chantier link in it) did nothing. Rows now toggle in JS.        #}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.cm-track-row[data-cm-expand]').forEach(function (row) {
+    var target = document.querySelector(row.getAttribute('data-cm-expand'));
+    if (!target || !window.bootstrap) return;
+    var panel = bootstrap.Collapse.getOrCreateInstance(target, { toggle: false });
+    target.addEventListener('show.bs.collapse', function () { row.setAttribute('aria-expanded', 'true'); });
+    target.addEventListener('hide.bs.collapse', function () { row.setAttribute('aria-expanded', 'false'); });
+    row.addEventListener('click', function (e) { if (!e.target.closest('a, button')) panel.toggle(); });
+    row.addEventListener('keydown', function (e) {
+      if ((e.key === 'Enter' || e.key === ' ') && e.target === row) { e.preventDefault(); panel.toggle(); }
+    });
+  });
+});
+</script>
 <style>
+  .cm-track-row[data-cm-expand]:focus-visible { outline: 2px solid #2c7be5; outline-offset: -2px; }
   .cm-kpi { background: var(--falcon-gray-100, #f9fafd); border-radius: 8px; padding: 8px 10px; height: 100%; }
   .cm-kpi-label { font-size: .7rem; text-transform: uppercase; font-weight: 700; color: #748194; letter-spacing: .02em; }
   .cm-kpi-value { font-size: 1.15rem; font-weight: 700; color: #0b1727; font-variant-numeric: tabular-nums; }
   .cm-kpi-sub { font-size: .7rem; color: #9da9bb; }
   .cm-track td { font-variant-numeric: tabular-nums; }
-  .cm-track-row { cursor: pointer; }
+  .cm-track-row[data-cm-expand] { cursor: pointer; }
   .cm-track-row:hover { background: rgba(44,123,229,.04); }
   .cm-track-chevron { transition: transform .2s; }
   .cm-track-row[aria-expanded="true"] .cm-track-chevron { transform: rotate(180deg); }

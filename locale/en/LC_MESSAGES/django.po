@@ -90,12 +90,13 @@ msgstr ""
 #: templates/projects/site_detail.html:294
 #: templates/projects/site_detail.html:372
 #: templates/projects/site_detail.html:430
-#: templates/projects/site_detail.html:648 templates/projects/site_form.html:50
-#: templates/projects/site_list.html:44
+#: templates/projects/site_detail.html:648
+#: templates/projects/site_form.html:50 templates/projects/site_list.html:44
 msgid "Status"
 msgstr ""
 
-#: accounts/forms.py:277 templates/account/admin_cabinet_confirm_delete.html:45
+#: accounts/forms.py:277
+#: templates/account/admin_cabinet_confirm_delete.html:45
 #: templates/account/admin_cabinets_list.html:117
 msgid "Cabinet Name"
 msgstr ""
@@ -499,7 +500,8 @@ msgstr ""
 msgid "Expense details..."
 msgstr ""
 
-#: chantiermobile/constants.py:86 finance/templates/finance/budget_form.html:26
+#: chantiermobile/constants.py:86
+#: finance/templates/finance/budget_form.html:26
 #: finance/templates/finance/expense_form.html:27
 #: materials/templates/materials/request_form.html:29
 #: templates/personnel/assignment_form.html:44
@@ -1246,7 +1248,8 @@ msgstr ""
 #: templates/account/admin_cabinets_list.html:159
 #: templates/account/admin_user_detail.html:193
 #: templates/personnel/personnel_list.html:67
-#: templates/projects/site_detail.html:161 templates/projects/site_list.html:87
+#: templates/projects/site_detail.html:161
+#: templates/projects/site_list.html:87
 msgid "Edit"
 msgstr ""
 
@@ -2121,10 +2124,8 @@ msgstr ""
 #, python-format
 msgid ""
 "\n"
-"                        You are about to permanently delete the cabinet "
-"<strong>%(object.name)s</strong>. \n"
-"                        This action cannot be undone and will remove all "
-"associated data.\n"
+"                        You are about to permanently delete the cabinet <strong>%(object.name)s</strong>. \n"
+"                        This action cannot be undone and will remove all associated data.\n"
 "                        "
 msgstr ""
 
@@ -2147,13 +2148,11 @@ msgstr ""
 #, python-format
 msgid ""
 "\n"
-"                    This cabinet has %(counter)s user assignment. It will "
-"also be deleted.\n"
+"                    This cabinet has %(counter)s user assignment. It will also be deleted.\n"
 "                    "
 msgid_plural ""
 "\n"
-"                    This cabinet has %(counter)s user assignments. They will "
-"also be deleted.\n"
+"                    This cabinet has %(counter)s user assignments. They will also be deleted.\n"
 "                    "
 msgstr[0] ""
 msgstr[1] ""
@@ -2460,7 +2459,8 @@ msgid "Clear"
 msgstr ""
 
 #: templates/account/admin_cabinets_list.html:119
-#: templates/projects/site_detail.html:640 templates/projects/site_list.html:43
+#: templates/projects/site_detail.html:640
+#: templates/projects/site_list.html:43
 msgid "Location"
 msgstr ""
 
@@ -2474,7 +2474,8 @@ msgstr ""
 
 #: templates/account/admin_cabinets_list.html:167
 #: templates/personnel/personnel_list.html:72
-#: templates/projects/site_detail.html:164 templates/projects/site_list.html:92
+#: templates/projects/site_detail.html:164
+#: templates/projects/site_list.html:92
 msgid "Delete"
 msgstr ""
 
@@ -2566,7 +2567,8 @@ msgstr ""
 #: templates/account/admin_user_detail.html:81
 #: templates/account/admin_user_detail.html:85
 #: templates/account/admin_users_list.html:181
-#: templates/projects/site_detail.html:253 templates/projects/site_list.html:61
+#: templates/projects/site_detail.html:253
+#: templates/projects/site_list.html:61
 #, fuzzy
 #| msgid "Actif"
 msgid "Active"
@@ -2917,7 +2919,8 @@ msgstr ""
 
 #: templates/account/cabinets.html:377
 msgid ""
-"Define roles: Director, Chief Engineer, Engineer, Accountant, Cashier, Worker"
+"Define roles: Director, Chief Engineer, Engineer, Accountant, Cashier, "
+"Worker"
 msgstr ""
 
 #: templates/account/cabinets.html:387
@@ -2934,25 +2937,14 @@ msgid ""
 "Hello from the <b>%(site_name)s</b>!\n"
 "</p>\n"
 "\n"
-"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-"
-"serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: "
-"1.6;color: #999999;\">\n"
-"    You're receiving this e-mail because <b>%(user_display)s</b> has been "
-"registered at %(site_domain)s.\n"
+"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: 1.6;color: #999999;\">\n"
+"    You're receiving this e-mail because <b>%(user_display)s</b> has been registered at %(site_domain)s.\n"
 "</p>\n"
 "\n"
-"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-"
-"serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: "
-"1.6;color: #999999;\">\n"
-"To confirm that this is correct, please click on the \"Confirm\" button "
-"below. \n"
+"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: 1.6;color: #999999;\">\n"
+"To confirm that this is correct, please click on the \"Confirm\" button below. \n"
 "<br/>\n"
-"<a href=\"%(activate_url)s\" target=\"_blank\" style=\"display: inline-"
-"block; color: #ffffff; background-color: #3498db; border: solid 1px #3498db; "
-"border-radius: 5px; box-sizing: border-box; cursor: pointer; text-"
-"decoration: none; font-size: 14px; font-weight: bold; margin: 0; padding: "
-"12px 25px; text-transform: capitalize; border-color: #3498db;\">Confirm</"
-"a> \n"
+"<a href=\"%(activate_url)s\" target=\"_blank\" style=\"display: inline-block; color: #ffffff; background-color: #3498db; border: solid 1px #3498db; border-radius: 5px; box-sizing: border-box; cursor: pointer; text-decoration: none; font-size: 14px; font-weight: bold; margin: 0; padding: 12px 25px; text-transform: capitalize; border-color: #3498db;\">Confirm</a> \n"
 "\n"
 msgstr ""
 
@@ -2961,9 +2953,7 @@ msgstr ""
 msgid ""
 "Hello from %(site_name)s!\n"
 "\n"
-"You're receiving this e-mail because user %(user_display)s at "
-"%(site_domain)s has given yours as an e-mail address to connect their "
-"account.\n"
+"You're receiving this e-mail because user %(user_display)s at %(site_domain)s has given yours as an e-mail address to connect their account.\n"
 "\n"
 "To confirm this is correct, go to %(activate_url)s\n"
 msgstr ""
@@ -2983,35 +2973,21 @@ msgstr ""
 #, python-format
 msgid ""
 "\n"
-"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-"
-"serif;margin-bottom: 30px;font-weight: normal;font-size: 13px;line-height: "
-"1.6;color: #999999;\">\n"
+"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-serif;margin-bottom: 30px;font-weight: normal;font-size: 13px;line-height: 1.6;color: #999999;\">\n"
 "    Hello from the <b>%(site_name)s</b>!\n"
 "</p>\n"
 "\n"
-"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-"
-"serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: "
-"1.6;color: #999999;\">\n"
-"    You're receiving this e-mail because you or someone else has requested a "
-"password for your user account at %(site_domain)s. \n"
+"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: 1.6;color: #999999;\">\n"
+"    You're receiving this e-mail because you or someone else has requested a password for your user account at %(site_domain)s. \n"
 "</p>\n"
 "\n"
-"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-"
-"serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: "
-"1.6;color: #999999;\">\n"
-"    To confirm, please click on the reset button below to reset your "
-"password.\n"
+"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: 1.6;color: #999999;\">\n"
+"    To confirm, please click on the reset button below to reset your password.\n"
 "</p>\n"
 "\n"
-"<a href=\"%(password_reset_url)s\" target=\"_blank\" style=\"display: inline-"
-"block; color: #ffffff; background-color: #3498db; border: solid 1px #3498db; "
-"border-radius: 5px; box-sizing: border-box; cursor: pointer; text-"
-"decoration: none; font-size: 14px; font-weight: bold; margin: 0; padding: "
-"12px 25px; text-transform: capitalize; border-color: #3498db;\">Reset</a> \n"
+"<a href=\"%(password_reset_url)s\" target=\"_blank\" style=\"display: inline-block; color: #ffffff; background-color: #3498db; border: solid 1px #3498db; border-radius: 5px; box-sizing: border-box; cursor: pointer; text-decoration: none; font-size: 14px; font-weight: bold; margin: 0; padding: 12px 25px; text-transform: capitalize; border-color: #3498db;\">Reset</a> \n"
 "\n"
-"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-"
-"serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: "
-"1.6;color: #999999;\">\n"
+"<p style=\"margin: 0;padding: 0;font-family: Helvetica, Arial, sans-serif;margin-bottom: 10px;font-weight: normal;font-size: 13px;line-height: 1.6;color: #999999;\">\n"
 "    It can be safely ignored if you did not request a password reset."
 msgstr ""
 
@@ -3020,10 +2996,8 @@ msgstr ""
 msgid ""
 "Hello from %(site_name)s!\n"
 "\n"
-"You're receiving this e-mail because you or someone else has requested a "
-"password for your user account at %(site_domain)s.\n"
-"It can be safely ignored if you did not request a password reset. Click the "
-"link below to reset your password."
+"You're receiving this e-mail because you or someone else has requested a password for your user account at %(site_domain)s.\n"
+"It can be safely ignored if you did not request a password reset. Click the link below to reset your password."
 msgstr ""
 
 #: templates/account/email/password_reset_key_message.txt:8
@@ -3196,13 +3170,11 @@ msgstr ""
 #, python-format
 msgid ""
 "\n"
-"                                        You have %(counter)s item awaiting "
-"approval\n"
+"                                        You have %(counter)s item awaiting approval\n"
 "                                    "
 msgid_plural ""
 "\n"
-"                                        You have %(counter)s items awaiting "
-"approval\n"
+"                                        You have %(counter)s items awaiting approval\n"
 "                                    "
 msgstr[0] ""
 msgstr[1] ""
@@ -3800,7 +3772,649 @@ msgstr ""
 msgid "Create New Site"
 msgstr "Cabinet Director"
 
+#: chantiermobile/constants.py:21 templates/landing.html:289
+msgid "Magasinier"
+msgstr "Storekeeper"
+
+#: finance/templates/finance/caisse_detail.html:87
+#: finance/templates/finance/caisse_report.html:41
+#: finance/templates/finance/expense_report.html:49 templates/home.html:161
+#: templates/landing.html:115
+msgid "Aujourd'hui"
+msgstr "Today"
+
+#: materials/models.py:69 materials/templates/materials/request_list.html:4
+#: materials/views.py:141 materials/views.py:193 materials/views.py:287
+#: materials/views.py:352 templates/account/user_profile_update.html:457
+#: templates/core/includes/day_detail_body.html:63
+#: templates/includes/navbar-vertical.html:229 templates/landing.html:151
+#: templates/projects/site_detail.html:73
+#: templates/projects/site_detail.html:875
+msgid "États de besoin"
+msgstr "Material requests"
+
+#: tasks/templates/tasks/task_detail.html:106 templates/landing.html:42
+#: templates/landing.html:396
+msgid "Démarrer"
+msgstr "Get started"
+
+#: templates/account/password_reset_from_key_done.html:15
+#: templates/landing.html:57 templates/landing.html:80
+#: templates/landing.html:322 templates/landing.html:370
+#: templates/landing.html:386
+msgid "Se connecter"
+msgstr "Sign in"
+
+#: templates/landing.html:7
+msgid ""
+"ChantierMobile — gestion de chantiers : avancement, budget, stock et équipes"
+msgstr ""
+"ChantierMobile — construction site management: progress, budget, stock and "
+"crews"
+
+#: templates/landing.html:8
+msgid ""
+"Suivez l'avancement, le budget, le stock et les équipes de vos chantiers au "
+"même endroit, sur téléphone comme sur ordinateur."
+msgstr ""
+"Track the progress, budget, stock and crews of your construction sites in "
+"one place, on your phone or your computer."
+
+#: templates/landing.html:11
+msgid "Vos chantiers, vos dépenses et votre stock au même endroit."
+msgstr "Your sites, your spending and your stock in one place."
+
+#: templates/landing.html:27
+msgid "Aller au contenu"
+msgstr "Skip to content"
+
+#: templates/landing.html:31
+msgid "accueil"
+msgstr "home"
+
+#: templates/landing.html:36
+msgid "Menu"
+msgstr "Menu"
+
+#: templates/landing.html:38
+msgid "Navigation principale"
+msgstr "Main navigation"
+
+#: templates/landing.html:40 templates/landing.html:148
+#: templates/landing.html:394
+msgid "Fonctionnalités"
+msgstr "Features"
+
+#: templates/landing.html:41 templates/landing.html:395
+msgid "Pour qui"
+msgstr "Who it's for"
+
+#: templates/landing.html:43 templates/landing.html:397
+msgid "Questions"
+msgstr "Questions"
+
+#: templates/landing.html:55 templates/landing.html:77
+#: templates/landing.html:367
+msgid "Ouvrir mon tableau de bord"
+msgstr "Open my dashboard"
+
+#: templates/landing.html:58 templates/landing.html:79
+#: templates/landing.html:314 templates/landing.html:369
+#: templates/landing.html:387
+msgid "Créer un compte"
+msgstr "Create an account"
+
+#: templates/landing.html:70
+msgid "Vos chantiers, vos dépenses et votre stock, enfin au même endroit."
+msgstr "Your sites, your spending and your stock, finally in one place."
+
+#: templates/landing.html:71
+msgid ""
+"ChantierMobile remplace les groupes WhatsApp, les cahiers et les tableurs. "
+"La direction voit où en est chaque chantier et ce qu'il a déjà coûté ; le "
+"terrain envoie ses rapports et ses demandes depuis le téléphone."
+msgstr ""
+"ChantierMobile replaces WhatsApp groups, notebooks and spreadsheets. "
+"Management sees where every site stands and what it has cost so far; the "
+"field team sends its reports and requests from the phone."
+
+#: templates/landing.html:85
+#, python-format
+msgid ""
+"Votre administrateur vous a envoyé un mot de passe temporaire ? <a "
+"href=\"%(login_url)s\">Connectez-vous avec</a>, l'application vous demandera"
+" d'en choisir un nouveau."
+msgstr ""
+"Did your administrator send you a temporary password? <a "
+"href=\"%(login_url)s\">Sign in with it</a> and the app will ask you to "
+"choose a new one."
+
+#: templates/landing.html:91
+msgid "Tableau de bord · Suivi des chantiers"
+msgstr "Dashboard · Site tracking"
+
+#: templates/landing.html:94
+#, python-format
+msgid ""
+"Le tableau de bord : budget, dépensé et %% consommé par chantier, puis le "
+"détail par étape d'un chantier à surveiller"
+msgstr ""
+"The dashboard: budget, spent and %% used per site, then the stage-by-stage "
+"detail of a site to watch"
+
+#: templates/landing.html:105
+msgid "Démonstration avec des chantiers fictifs."
+msgstr "Demo with fictional sites."
+
+#: templates/landing.html:113
+msgid "Ce qui change sur vos chantiers"
+msgstr "What changes on your sites"
+
+#: templates/landing.html:115
+msgid "Avec ChantierMobile"
+msgstr "With ChantierMobile"
+
+#: templates/landing.html:119
+msgid "Les rapports d'avancement se perdent dans les groupes WhatsApp."
+msgstr "Progress reports get lost in WhatsApp groups."
+
+#: templates/landing.html:120
+msgid ""
+"Chaque rapport est daté, rattaché à son étape, avec son auteur et ses "
+"photos."
+msgstr ""
+"Every report is dated and tied to its stage, with its author and its photos."
+
+#: templates/landing.html:123
+msgid "On découvre le dépassement de budget en fin de chantier."
+msgstr "Budget overruns are discovered when the site is finished."
+
+#: templates/landing.html:124
+msgid ""
+"Le budget consommé est comparé à l'avancement : une alerte apparaît dès que "
+"la dépense prend de l'avance."
+msgstr ""
+"Budget used is compared with progress: an alert appears as soon as spending "
+"runs ahead."
+
+#: templates/landing.html:127
+msgid "Le stock se compte à la main, quand on y pense."
+msgstr "Stock is counted by hand, when someone remembers."
+
+#: templates/landing.html:128
+msgid ""
+"Le magasinier saisit chaque entrée et chaque sortie ; chaque livraison a son"
+" bon de réception."
+msgstr ""
+"The storekeeper records every delivery and every issue; each delivery gets "
+"its receiving note."
+
+#: templates/landing.html:131
+msgid "Les demandes de matériaux arrivent par appel ou par message."
+msgstr "Material requests arrive by phone call or message."
+
+#: templates/landing.html:132
+msgid ""
+"L'état de besoin part du chantier, comparé au devis, et la direction "
+"l'approuve en un clic."
+msgstr ""
+"The request starts on site, is checked against the quote, and management "
+"approves it in one click."
+
+#: templates/landing.html:135
+msgid "Les dépenses passent de main en main sans laisser de trace."
+msgstr "Expenses change hands without leaving a trace."
+
+#: templates/landing.html:136
+msgid ""
+"Chaque dépense suit son circuit (en attente, approuvée, payée), avec le nom "
+"de qui a fait quoi."
+msgstr ""
+"Every expense follows its path (pending, approved, paid), with the name of "
+"who did what."
+
+#: templates/landing.html:145
+msgid "Ce que vous pouvez faire"
+msgstr "What you can do"
+
+#: templates/landing.html:146
+msgid ""
+"Les écrans ci-dessous sont ceux de l'application, avec des chantiers de "
+"démonstration."
+msgstr "The screens below are the real app, filled with demo sites."
+
+#: templates/landing.html:149
+msgid "Budget et avancement"
+msgstr "Budget and progress"
+
+#: templates/landing.html:150
+msgid "Rapports du jour"
+msgstr "Daily reports"
+
+#: templates/landing.html:152
+msgid "Stock et réceptions"
+msgstr "Stock and deliveries"
+
+#: templates/landing.html:153
+msgid "Dépenses et caisse"
+msgstr "Expenses and cash"
+
+#: templates/landing.html:154
+msgid "Équipes"
+msgstr "Crews"
+
+#: templates/landing.html:159
+msgid "Voir où en est chaque chantier, et ce qu'il a coûté"
+msgstr "See where every site stands, and what it has cost"
+
+#: templates/landing.html:160
+msgid ""
+"Pour chaque chantier : l'étape en cours, l'avancement, le budget, le "
+"dépensé, ce qui reste et ce que le client a payé."
+msgstr ""
+"For each site: the current stage, progress, budget, spent, what is left and "
+"what the client has paid."
+
+#: templates/landing.html:162
+msgid ""
+"Badge « À surveiller » quand la dépense avance plus vite que les travaux, "
+"« Dépassement » au-delà du budget."
+msgstr ""
+"A “Watch” badge when spending runs faster than the work, “Overrun” beyond "
+"the budget."
+
+#: templates/landing.html:163
+#, python-format
+msgid ""
+"Un clic sur un chantier détaille chaque étape : budget du devis, dépensé, %%"
+" consommé."
+msgstr "Click a site to see each stage: quoted budget, spent, %% used."
+
+#: templates/landing.html:164
+msgid "Les montants ne s'affichent qu'aux rôles qui ont accès aux finances."
+msgstr "Amounts are only shown to roles with access to finances."
+
+#: templates/landing.html:170
+msgid "Suivi des chantiers : ouverture du détail par étape"
+msgstr "Site tracking: opening the stage-by-stage detail"
+
+#: templates/landing.html:179
+msgid "Savoir ce qui s'est passé sur les chantiers, jour par jour"
+msgstr "Know what happened on site, day by day"
+
+#: templates/landing.html:180
+msgid ""
+"Le calendrier compte les rapports envoyés par les ingénieurs. Un clic sur "
+"une date ouvre tout ce qui a eu lieu ce jour-là."
+msgstr ""
+"The calendar counts the reports sent by engineers. Click a date to open "
+"everything that happened that day."
+
+#: templates/landing.html:182
+msgid ""
+"Rapports d'avancement avec l'étape, le pourcentage, l'auteur et les photos."
+msgstr "Progress reports with the stage, percentage, author and photos."
+
+#: templates/landing.html:183
+msgid ""
+"Tâches à échéance, états de besoin, mouvements de stock et de caisse du "
+"jour."
+msgstr "Tasks due, material requests, stock and cash movements of the day."
+
+#: templates/landing.html:184
+msgid "Passez au jour précédent ou suivant sans quitter la fenêtre."
+msgstr "Move to the previous or next day without leaving the window."
+
+#: templates/landing.html:190
+msgid "Calendrier : ouverture du détail du jour, puis du jour précédent"
+msgstr "Calendar: opening a day's detail, then the previous day"
+
+#: templates/landing.html:199
+msgid "Des demandes de matériaux claires, comparées au devis"
+msgstr "Clear material requests, checked against the quote"
+
+#: templates/landing.html:200
+msgid ""
+"L'ingénieur choisit les matériaux dans le catalogue et l'étape concernée. La"
+" direction approuve ou rejette."
+msgstr ""
+"The engineer picks materials from the catalogue and the stage they are for. "
+"Management approves or rejects."
+
+#: templates/landing.html:202
+msgid "Quantités comparées au devis approuvé du chantier."
+msgstr "Quantities checked against the site's approved quote."
+
+#: templates/landing.html:203
+msgid ""
+"Recherche rapide des étapes et des matériaux, ajout d'un nouveau sans "
+"quitter la page."
+msgstr ""
+"Quick search for stages and materials; add a new one without leaving the "
+"page."
+
+#: templates/landing.html:204
+msgid "Chaque demande a sa référence (EB-…) et son historique."
+msgstr "Each request has its reference (EB-…) and its history."
+
+#: templates/landing.html:212
+msgid ""
+"Un état de besoin en attente : matériaux, étape, quantités et boutons "
+"Approuver / Rejeter"
+msgstr ""
+"A pending material request: materials, stage, quantities and Approve / "
+"Reject buttons"
+
+#: templates/landing.html:219
+msgid "Un stock juste, tenu par le magasinier du chantier"
+msgstr "Accurate stock, kept by the site's storekeeper"
+
+#: templates/landing.html:220
+msgid ""
+"Seul le magasinier du chantier saisit les entrées et les sorties. Il voit "
+"les quantités, jamais les prix."
+msgstr ""
+"Only the site's storekeeper records deliveries and issues. They see "
+"quantities, never prices."
+
+#: templates/landing.html:222
+msgid ""
+"Chaque livraison génère un bon de réception en PDF, envoyé au directeur "
+"technique."
+msgstr ""
+"Each delivery produces a PDF receiving note, sent to the technical director."
+
+#: templates/landing.html:223
+msgid "Le directeur technique vise le bon depuis l'application."
+msgstr "The technical director signs off the note in the app."
+
+#: templates/landing.html:224
+msgid "Rapport de stock par chantier, étape et période, exportable en PDF."
+msgstr "Stock report by site, stage and period, exportable to PDF."
+
+#: templates/landing.html:232
+msgid ""
+"Une entrée en stock avec son bon de réception BR, en attente du visa du "
+"directeur technique"
+msgstr ""
+"A stock delivery with its BR receiving note, awaiting the technical "
+"director's sign-off"
+
+#: templates/landing.html:239
+msgid "Des dépenses approuvées avant d'être payées"
+msgstr "Expenses approved before they are paid"
+
+#: templates/landing.html:240
+msgid ""
+"Chaque dépense est rattachée à un chantier et à une étape, puis approuvée et"
+" payée par les bonnes personnes."
+msgstr ""
+"Every expense is tied to a site and a stage, then approved and paid by the "
+"right people."
+
+#: templates/landing.html:242
+msgid "Filtres en attente, approuvées, rejetées, payées."
+msgstr "Filters for pending, approved, rejected and paid."
+
+#: templates/landing.html:243
+msgid "Caisses, entrées et sorties d'argent, listes de paie."
+msgstr "Cash boxes, money in and out, payrolls."
+
+#: templates/landing.html:244
+msgid "Rapports de dépenses par chantier et par catégorie."
+msgstr "Expense reports by site and by category."
+
+#: templates/landing.html:252
+msgid "La liste des dépenses avec leur chantier, catégorie, montant et statut"
+msgstr "The expense list with site, category, amount and status"
+
+#: templates/landing.html:259
+msgid "Qui travaille où, et à quel tarif"
+msgstr "Who works where, and at what rate"
+
+#: templates/landing.html:260
+msgid ""
+"Affectez le personnel aux chantiers avec son corps de métier et son tarif "
+"journalier."
+msgstr "Assign staff to sites with their trade and daily rate."
+
+#: templates/landing.html:262
+msgid ""
+"Le corps de métier s'affiche à côté de chaque nom : maçon, ferrailleur, "
+"coffreur…"
+msgstr "Each name shows the person's trade: mason, steel fixer, formworker…"
+
+#: templates/landing.html:263
+msgid "Pointage, conventions et cotation du personnel par étape."
+msgstr "Attendance, agreements and staff ratings by stage."
+
+#: templates/landing.html:264
+msgid "Numéros de téléphone enregistrés, prêts pour WhatsApp."
+msgstr "Phone numbers on file, ready for WhatsApp."
+
+#: templates/landing.html:272
+msgid ""
+"L'onglet Personnel d'un chantier : noms, corps de métier, période "
+"d'affectation et tarif"
+msgstr "A site's Staff tab: names, trades, assignment period and rate"
+
+#: templates/landing.html:284
+msgid "Chacun voit ce qui le concerne"
+msgstr "Everyone sees what concerns them"
+
+#: templates/landing.html:285
+msgid ""
+"L'application s'adapte au rôle de chaque personne. Un écran absent du menu "
+"n'est pas une panne : il n'est simplement pas pour vous."
+msgstr ""
+"The app adapts to each person's role. A screen missing from your menu isn't "
+"a bug: it simply isn't meant for you."
+
+#: templates/landing.html:287
+msgid "Direction"
+msgstr "Management"
+
+#: templates/landing.html:287
+msgid ""
+"Suit tous les chantiers et leur budget, approuve les devis, les états de "
+"besoin et les dépenses, vise les bons de réception."
+msgstr ""
+"Follows every site and its budget, approves quotes, material requests and "
+"expenses, signs off receiving notes."
+
+#: templates/landing.html:288
+msgid "Chef des ingénieurs"
+msgstr "Chief engineer"
+
+#: templates/landing.html:288
+msgid ""
+"Envoie les rapports d'avancement, prépare les états de besoin, organise les "
+"équipes et note le personnel par étape."
+msgstr ""
+"Sends progress reports, prepares material requests, organises crews and "
+"rates staff by stage."
+
+#: templates/landing.html:289
+msgid ""
+"Enregistre les entrées et sorties de son chantier et réceptionne les "
+"livraisons. Il ne voit aucun prix."
+msgstr ""
+"Records deliveries and issues on their site and receives shipments. They see"
+" no prices."
+
+#: templates/landing.html:290
+msgid "Comptable et caissier"
+msgstr "Accountant and cashier"
+
+#: templates/landing.html:290
+msgid ""
+"Tient les caisses, paie les dépenses approuvées et les listes de paie, suit "
+"les factures et les encaissements."
+msgstr ""
+"Keeps the cash boxes, pays approved expenses and payrolls, follows invoices "
+"and payments received."
+
+#: templates/landing.html:291
+msgid "Administrateur"
+msgstr "Administrator"
+
+#: templates/landing.html:291
+msgid ""
+"Crée les comptes, attribue les rôles et les chantiers, génère les mots de "
+"passe temporaires."
+msgstr ""
+"Creates accounts, assigns roles and sites, generates temporary passwords."
+
+#: templates/landing.html:299
+msgid "Le suivi des chantiers sur un téléphone"
+msgstr "Site tracking on a phone"
+
+#: templates/landing.html:302
+msgid ""
+"Sur le chantier, l'application s'ouvre dans le navigateur du téléphone. Rien"
+" à installer."
+msgstr "On site, the app opens in the phone's browser. Nothing to install."
+
+#: templates/landing.html:310
+msgid "Démarrer en quatre étapes"
+msgstr "Get started in four steps"
+
+#: templates/landing.html:313
+msgid "Créez votre compte"
+msgstr "Create your account"
+
+#: templates/landing.html:314
+msgid "Avec votre adresse e-mail et un mot de passe."
+msgstr "With your email address and a password."
+
+#: templates/landing.html:317
+msgid "Recevez votre rôle"
+msgstr "Get your role"
+
+#: templates/landing.html:318
+msgid ""
+"L'administrateur de votre entreprise vous rattache à votre cabinet et vous "
+"donne votre rôle : direction, ingénieur, magasinier, comptable…"
+msgstr ""
+"Your company's administrator adds you to your firm and gives you your role: "
+"management, engineer, storekeeper, accountant…"
+
+#: templates/landing.html:321
+msgid "Connectez-vous"
+msgstr "Sign in"
+
+#: templates/landing.html:322
+msgid ""
+"Vous retrouvez vos chantiers et les écrans de votre rôle, sur téléphone "
+"comme sur ordinateur."
+msgstr "You'll find your sites and your role's screens, on phone or computer."
+
+#: templates/landing.html:325
+msgid "Choisissez votre mot de passe"
+msgstr "Choose your password"
+
+#: templates/landing.html:326
+msgid ""
+"Si l'administrateur a créé votre compte, connectez-vous avec le mot de passe"
+" temporaire reçu : l'application vous demande aussitôt d'en choisir un."
+msgstr ""
+"If the administrator created your account, sign in with the temporary "
+"password you received: the app immediately asks you to choose your own."
+
+#: templates/landing.html:335
+msgid "Questions fréquentes"
+msgstr "Frequently asked questions"
+
+#: templates/landing.html:338
+msgid "Faut-il installer une application ?"
+msgstr "Do I need to install an app?"
+
+#: templates/landing.html:339
+msgid ""
+"Non. ChantierMobile s'ouvre dans le navigateur, sur téléphone, tablette ou "
+"ordinateur."
+msgstr ""
+"No. ChantierMobile opens in the browser, on a phone, tablet or computer."
+
+#: templates/landing.html:342
+msgid "Qui voit les montants ?"
+msgstr "Who sees the amounts?"
+
+#: templates/landing.html:343
+msgid ""
+"Seuls les rôles qui ont accès aux finances. Le magasinier, par exemple, voit"
+" les quantités de son chantier mais jamais les prix."
+msgstr ""
+"Only roles with access to finances. The storekeeper, for example, sees their"
+" site's quantities but never the prices."
+
+#: templates/landing.html:346
+msgid "Plusieurs entreprises peuvent-elles l'utiliser ?"
+msgstr "Can several companies use it?"
+
+#: templates/landing.html:347
+msgid ""
+"Oui. Chaque cabinet ne voit que ses propres chantiers, son personnel et ses "
+"chiffres."
+msgstr "Yes. Each firm only sees its own sites, staff and figures."
+
+#: templates/landing.html:350
+msgid "En quelles langues ?"
+msgstr "In which languages?"
+
+#: templates/landing.html:351
+msgid ""
+"En français et en anglais. Changez de langue à tout moment depuis le menu."
+msgstr "French and English. Switch language at any time from the menu."
+
+#: templates/landing.html:354
+msgid "J'ai oublié mon mot de passe."
+msgstr "I forgot my password."
+
+#: templates/landing.html:355
+msgid ""
+"Demandez-en un nouveau par e-mail, ou demandez à votre administrateur de "
+"générer un mot de passe temporaire."
+msgstr ""
+"Request a new one by email, or ask your administrator to generate a "
+"temporary password."
+
+#: templates/landing.html:356
+msgid "Réinitialiser mon mot de passe"
+msgstr "Reset my password"
+
+#: templates/landing.html:364
+msgid "Suivez votre prochain chantier dans ChantierMobile."
+msgstr "Track your next site in ChantierMobile."
+
+#: templates/landing.html:381
+msgid ""
+"La gestion de chantiers pour les entreprises du bâtiment : avancement, "
+"budget, stock et équipes."
+msgstr ""
+"Site management for construction companies: progress, budget, stock and "
+"crews."
+
+#: templates/landing.html:383
+msgid "Accès au compte"
+msgstr "Account access"
+
+#: templates/landing.html:384
+msgid "Votre compte"
+msgstr "Your account"
+
+#: templates/landing.html:388
+msgid "Mot de passe oublié"
+msgstr "Forgot password"
+
+#: templates/landing.html:391 templates/landing.html:392
+msgid "Sur cette page"
+msgstr "On this page"
+
+#: templates/landing.html:403
+msgid "Captures réalisées avec des chantiers de démonstration."
+msgstr "Screenshots taken with demo sites."
+
 #, fuzzy
-#~| msgid "Directeur de Cabinet"
 #~ msgid "Create New Cabinet"
 #~ msgstr "Cabinet Director"

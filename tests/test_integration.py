@@ -281,9 +281,11 @@ class TestDashboardIntegration:
         # The site itself is reflected in the site-portfolio KPIs.
         assert response.context['total_sites_count'] >= 1
 
-        # The expense shows up in the recent-activity feed.
+        # The expense shows up in the recent-activity feed, with its amount
+        # in French formatting (non-breaking-space thousands separator,
+        # decimal comma; see 3f2d207 / ISSUE-008), not raw "1000".
         activity_titles = [item['title'] for item in response.context['activity_items']]
-        assert any('1000' in title for title in activity_titles)
+        assert any('$1\xa0000,00' in title for title in activity_titles), activity_titles
 
 
 @pytest.mark.integration

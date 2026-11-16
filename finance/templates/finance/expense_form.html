@@ -21,6 +21,16 @@
                 <div class="card-body bg-light">
                     <form method="post" enctype="multipart/form-data">
                         {% csrf_token %}
+                        {% if form.errors %}
+                        {# Every error, including any on a field this page does not show. #}
+                        <div class="alert alert-danger fs--1" role="alert">
+                            <strong>{% trans "La dépense n'a pas été enregistrée :" %}</strong>
+                            <ul class="mb-0 ps-3">
+                                {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+                                {% for field in form %}{% for error in field.errors %}<li>{{ field.label }} : {{ error }}</li>{% endfor %}{% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
 
                         <div class="row mb-3">
                             <div class="col-md-6">
@@ -67,6 +77,15 @@
                                 {% endif %}
                             </div>
                         </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label" for="{{ form.expense_date.id_for_label }}">{% trans "Date de la dépense" %}</label>
+                        {{ form.expense_date }}
+                        <p class="fs--2 text-500 mb-0">{% trans "Sert à rattacher la dépense à la bonne période du budget." %}</p>
+                        {% if form.expense_date.errors %}<div class="text-danger fs--2">{{ form.expense_date.errors }}</div>{% endif %}
+                    </div>
+                </div>
 
                 <div class="row mb-3">
                     <div class="col-md-6">

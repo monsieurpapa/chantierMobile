@@ -16,6 +16,15 @@ from core.dashboard import build_dashboard_context, build_calendar_context, buil
 from core.approvals import get_pending_approvals
 from core.search import global_search
 
+
+class LandingView(TemplateView):
+    """Public presentation page (2026-11-12): what ChantierMobile does,
+    with screenshots and short clips of the main features, and every way
+    in — se connecter, créer un compte, mot de passe oublié. Shown at "/"
+    to visitors who are not signed in, and always at /presentation/."""
+    template_name = 'landing.html'
+
+
 class HomeView(LoginRequiredMixin, TemplateView):
     """The main "Tableau de Bord" dashboard — any authenticated user (no
     role restriction beyond cabinet scoping, enforced inside
@@ -27,6 +36,13 @@ class HomeView(LoginRequiredMixin, TemplateView):
     2026-10-19 (meeting-note backlog, "Accueil et tableau de bord") —
     see core.dashboard.build_calendar_context."""
     template_name = 'home.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        # Visitors who are not signed in get the presentation page instead
+        # of being bounced straight to the login form.
+        if not request.user.is_authenticated:
+            return LandingView.as_view()(request, *args, **kwargs)
+        return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

@@ -9,6 +9,7 @@ import json
 
 from django import forms
 from django.forms import inlineformset_factory
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from .models import (
     Expense, Budget, ExpenseCategory, Caisse, CaisseTransaction, CaisseTransactionCategory,
@@ -47,13 +48,18 @@ class ExpenseForm(PhaseCatalogFormMixin, forms.ModelForm):
                 'placeholder': _("Ex: Quincaillerie Kivu, Jean Mukendi..."),
             }),
             'amount': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': FormPlaceholders.AMOUNT}),
-            'expense_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'expense_date': forms.DateInput(format='%Y-%m-%d', attrs={'class': 'form-control', 'type': 'date'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': FormPlaceholders.EXPENSE_DETAILS}),
             'receipt_image': forms.FileInput(attrs={'class': 'form-control'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # FIXED 2026-11-16: the expense form never rendered this required
+        # field, so every new dépense was rejected without a visible error.
+        # It is now on the form and defaults to today.
+        if not self.is_bound and not self.instance.pk and not self.initial.get('expense_date'):
+            self.initial['expense_date'] = timezone.localdate()
         self.fields['personnel'].required = False
         self.fields['phase'].required = False
         # Not required: falls back to the model's MATERIEL default so
