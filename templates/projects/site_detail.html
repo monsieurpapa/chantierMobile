@@ -1,5 +1,5 @@
 {% extends 'falcon_base.html' %}
-{% load static i18n rbac_tags humanize %}
+{% load static i18n rbac_tags humanize audit_tags %}
 
 {% block title %}{{ site.name }} - {% trans "Site Details" %} - ChantierMobile{% endblock %}
 
@@ -54,6 +54,13 @@
                                         {% if request.user|has_role:'DIRECTOR,DIRECTEUR_TECHNIQUE,DIRECTEUR_GENERAL' %}
                                         <a class="btn btn-sm btn-outline-danger" href="{% url 'projects:site_delete' unique_id=site.unique_id %}">
                                             <i class="fas fa-trash me-1"></i>{% trans "Supprimer" %}
+                                        </a>
+                                        {% endif %}
+                                        {% audit_history_url site as history_url %}
+                                        {% if history_url %}
+                                        <a class="btn btn-sm btn-outline-secondary ms-2" href="{{ history_url }}"
+                                           title="{% trans 'Journal d’audit de ce chantier' %}">
+                                            <i class="fas fa-history me-1"></i>{% trans "Historique" %}
                                         </a>
                                         {% endif %}
                                     </div>

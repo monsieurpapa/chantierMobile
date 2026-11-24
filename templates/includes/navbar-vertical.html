@@ -448,6 +448,17 @@
                             </a>
                         </li>
 
+                        <!-- Audit journal (Superadmin Only): dated history of who did -->
+                        <!-- what across the system (core/audit.py, core/audit_views.py). -->
+                        <li class="nav-item">
+                            <a class="nav-link {% if on == 'admin_audit' %}active{% endif %}"
+                                href="{% url 'audit_log_list' %}">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-text ps-1">{% trans "Journal d'audit" %}</span>
+                                </div>
+                            </a>
+                        </li>
+
                         <!-- System Admin (Superadmin Only — Django admin bypasses the -->
                         <!-- app's own safeguards, e.g. no self-delete protection, so it -->
                         <!-- stays a fallback for superadmins rather than a parallel, -->

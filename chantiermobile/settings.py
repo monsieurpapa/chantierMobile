@@ -71,6 +71,9 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    # Remembers the current request so the audit journal (core/audit.py)
+    # knows who made each change, from which IP and URL.
+    'core.audit.AuditContextMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     
@@ -314,6 +317,11 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'revenue.tasks.mark_overdue_invoices',
         'schedule': crontab(hour=1, minute=0),  # Runs at 01:00 Africa/Kigali daily
     },
+    # Prunes audit journal entries older than AUDIT_LOG_RETENTION_DAYS.
+    'purge-audit-log-monthly': {
+        'task': 'core.tasks.purge_audit_log',
+        'schedule': crontab(day_of_month=1, hour=2, minute=0),
+    },
 }
 
 
@@ -323,3 +331,10 @@ CELERY_BEAT_SCHEDULE = {
 # role check through UserCabinetRole (accounts.models.RoleQuerySet). Set to
 # [] once the two jobs are held by different people.
 ROLE_EQUIVALENCES = [('CASHIER', 'ACCOUNTANT')]
+
+
+# Superadmin audit journal (core.AuditLogEntry / core/audit.py).
+# AUDIT_LOG_RETENTION_DAYS is used by core.tasks.purge_audit_log; 0 keeps
+# every entry forever.
+AUDIT_LOG_ENABLED = os.environ.get('AUDIT_LOG_ENABLED', 'True').lower() in ('1', 'true', 'yes')
+AUDIT_LOG_RETENTION_DAYS = int(os.environ.get('AUDIT_LOG_RETENTION_DAYS', '730'))

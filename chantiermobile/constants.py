@@ -474,6 +474,22 @@ class ContractMode(models.TextChoices):
     SUIVI_SEULEMENT = 'SUIVI_SEULEMENT', _('Suivi de chantier seulement')
 
 
+class AuditAction(models.TextChoices):
+    """Kinds of entry in the superadmin audit journal (core.AuditLogEntry).
+    DELETE is the application's normal soft delete (is_deleted flipped);
+    HARD_DELETE is a real SQL DELETE, which only happens outside the
+    application's own screens (Django admin, a CASCADE, a shell)."""
+    CREATE = 'CREATE', _('Création')
+    UPDATE = 'UPDATE', _('Modification')
+    DELETE = 'DELETE', _('Suppression')
+    RESTORE = 'RESTORE', _('Restauration')
+    HARD_DELETE = 'HARD_DELETE', _('Suppression définitive')
+    LOGIN = 'LOGIN', _('Connexion')
+    LOGOUT = 'LOGOUT', _('Déconnexion')
+    LOGIN_FAILED = 'LOGIN_FAILED', _('Échec de connexion')
+    CABINET_SWITCH = 'CABINET_SWITCH', _('Changement de cabinet')
+
+
 # Which of a Site's optional tabs/modules are relevant for each
 # ContractMode — read by Site.get_enabled_modules(). 'personnel' covers
 # the site's own Personnel/Main-d'œuvre tab and its payroll (Liste de
@@ -766,6 +782,7 @@ __all__ = [
     'PhaseStatus',
     'StockReportPeriod',
     'ContractMode',
+    'AuditAction',
     'CONTRACT_MODE_MODULES',
     'WorkCategory',
     'MaterialVarianceStatus',

@@ -46,6 +46,7 @@ from .forms import (
 )
 from projects.models import Site
 from personnel.models import SiteAssignment, Personnel
+from core.audit import history_header_actions
 from core.mixins import (
     CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet, can_act_for_cabinet,
     add_ambiguous_cabinet_field,
@@ -219,6 +220,9 @@ class ExpenseDetailView(LoginRequiredMixin, PageHeaderMixin, DetailView):
             {'title': _("Finance"), 'url': str(reverse_lazy('finance:expense_list'))},
             {'title': f"EX-{self.object.id}", 'url': None},
         ]
+
+    def get_header_actions(self):
+        return history_header_actions(self.request, self.object)
 
     def get_queryset(self):
         qs = super().get_queryset()

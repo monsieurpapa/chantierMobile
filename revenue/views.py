@@ -25,6 +25,7 @@ from .forms import (
     DevisForm, DevisLineFormSet, SituationTravauxForm, SituationLineFormSet,
 )
 from core.mixins import CabinetAccessMixin, RoleRequiredMixin, PageHeaderMixin, get_session_cabinet, can_act_for_cabinet
+from core.audit import history_header_actions
 from projects.models import Site
 
 # Roles allowed to send/accept/reject a Devis or validate/invoice a
@@ -280,7 +281,7 @@ class InvoiceDetailView(LoginRequiredMixin, CabinetAccessMixin, PageHeaderMixin,
             'url': str(reverse_lazy('revenue:invoice_pdf', kwargs={'pk': self.object.pk})),
             'icon': 'file-pdf',
             'class': 'btn-falcon-default',
-        }]
+        }] + history_header_actions(self.request, self.object)
 
 
 @login_required

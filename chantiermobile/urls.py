@@ -14,6 +14,7 @@ from core.views import (
     NotificationListView, notification_open, notifications_mark_all_read, healthz,
 )
 from django.views.i18n import set_language
+from core.audit_views import AuditLogListView, AuditLogDetailView, AuditLogExportView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -26,6 +27,10 @@ urlpatterns = [
     path('notifications/', NotificationListView.as_view(), name='notifications_list'),
     path('notifications/<int:pk>/ouvrir/', notification_open, name='notification_open'),
     path('notifications/tout-marquer-lu/', notifications_mark_all_read, name='notifications_mark_all_read'),
+    # Superadmin audit journal
+    path('journal-audit/', AuditLogListView.as_view(), name='audit_log_list'),
+    path('journal-audit/export.csv', AuditLogExportView.as_view(), name='audit_log_export'),
+    path('journal-audit/<int:pk>/', AuditLogDetailView.as_view(), name='audit_log_detail'),
     path('finance/', include('finance.urls'), name='finance'),
     path('projects/', include('projects.urls'), name='projects'),
     path('personnel/', include('personnel.urls'), name='personnel'),
