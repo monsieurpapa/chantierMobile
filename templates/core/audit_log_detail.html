@@ -1,0 +1,131 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n audit_tags %}
+
+{% block title %}{% trans "Journal d'audit" %} #{{ entry.pk }} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    {% include 'includes/navbar-vertical.html' with on="admin_audit" %}
+
+    <div class="content">
+        {% include 'includes/navbar-top.html' %}
+
+        <div class="container-fluid py-4">
+{% include 'includes/page_header.html' %}
+
+<div class="row g-3">
+    <!-- What changed -->
+    <div class="col-lg-8">
+        <div class="card mb-3">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <span class="badge badge-soft-{{ entry.action|audit_badge }} me-2">
+                        <span class="fas fa-{{ entry.action|audit_icon }} me-1"></span>{{ entry.get_action_display }}
+                    </span>
+                    {{ entry.object_repr|default:"" }}
+                </h5>
+                {% if object_url %}
+                <a href="{{ object_url }}" class="btn btn-sm btn-falcon-default">
+                    <span class="fas fa-external-link-alt me-1"></span>{% trans "Ouvrir l'élément" %}
+                </a>
+                {% endif %}
+            </div>
+            <div class="card-body p-0">
+                {% if change_rows %}
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0 fs--1">
+                        <thead class="bg-200 text-900">
+                            <tr>
+                                <th>{% trans "Champ" %}</th>
+                                {% if entry.action != 'CREATE' %}<th>{% trans "Avant" %}</th>{% endif %}
+                                <th>{% if entry.action == 'CREATE' %}{% trans "Valeur" %}{% else %}{% trans "Après" %}{% endif %}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in change_rows %}
+                            <tr>
+                                <td class="fw-semi-bold">{{ row.label }}</td>
+                                {% if entry.action != 'CREATE' %}
+                                <td class="text-danger" style="white-space: pre-wrap;">{{ row.old|default:"∅" }}</td>
+                                {% endif %}
+                                <td class="{% if entry.action != 'CREATE' %}text-success{% endif %}" style="white-space: pre-wrap;">{{ row.new|default:"∅" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-600 p-3 mb-0">
+                    {% if entry.action == 'LOGIN_FAILED' %}
+                        {% blocktrans with who=entry.actor_label %}Tentative de connexion refusée pour l'identifiant « {{ who }} ».{% endblocktrans %}
+                    {% else %}
+                        {% trans "Aucun détail de champ pour cette action." %}
+                    {% endif %}
+                </p>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if object_history %}
+        <div class="card">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><span class="fas fa-history me-2"></span>{% trans "Autres actions sur cet élément" %}</h6>
+                <a href="{{ object_history_url }}" class="btn btn-sm btn-link">{% trans "Historique complet" %}</a>
+            </div>
+            <ul class="list-group list-group-flush fs--1">
+                {% for h in object_history %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span>
+                        <span class="badge badge-soft-{{ h.action|audit_badge }} me-2">{{ h.get_action_display }}</span>
+                        {{ h.actor_label|default:"—" }}
+                    </span>
+                    <a href="{% url 'audit_log_detail' h.pk %}" class="text-600">{{ h.timestamp|date:"d/m/Y H:i" }}</a>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Who / when / where -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header bg-light"><h6 class="mb-0">{% trans "Contexte" %}</h6></div>
+            <div class="card-body fs--1">
+                <dl class="row mb-0">
+                    <dt class="col-5 text-600">{% trans "Date" %}</dt>
+                    <dd class="col-7">{{ entry.timestamp|date:"d/m/Y H:i:s" }}</dd>
+
+                    <dt class="col-5 text-600">{% trans "Utilisateur" %}</dt>
+                    <dd class="col-7">
+                        {{ entry.actor_label|default:"—" }}
+                        {% if actor_history_url %}<br><a href="{{ actor_history_url }}">{% trans "Toutes ses actions" %}</a>{% endif %}
+                    </dd>
+
+                    {% if entry.content_type_id %}
+                    <dt class="col-5 text-600">{% trans "Type" %}</dt>
+                    <dd class="col-7">{{ entry.model_label }}{% if entry.object_id %} <span class="text-500">#{{ entry.object_id }}</span>{% endif %}</dd>
+                    {% endif %}
+
+                    <dt class="col-5 text-600">{% trans "Cabinet" %}</dt>
+                    <dd class="col-7">{% if entry.cabinet_id %}{{ entry.cabinet.name }}{% else %}—{% endif %}</dd>
+
+                    <dt class="col-5 text-600">{% trans "Adresse IP" %}</dt>
+                    <dd class="col-7">{{ entry.ip_address|default:"—" }}</dd>
+
+                    <dt class="col-5 text-600">{% trans "Requête" %}</dt>
+                    <dd class="col-7 text-break">{% if entry.request_path %}{{ entry.request_method }} {{ entry.request_path }}{% else %}{% trans "Hors requête web (tâche, console)" %}{% endif %}</dd>
+
+                    <dt class="col-5 text-600">{% trans "Navigateur" %}</dt>
+                    <dd class="col-7 text-break text-600">{{ entry.user_agent|default:"—" }}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+
+        </div>
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}

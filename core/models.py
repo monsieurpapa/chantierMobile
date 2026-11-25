@@ -175,3 +175,94 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"{self.recipient} — {self.message}"
+
+
+class AuditLogEntry(models.Model):
+    """One line of the superadmin audit journal ("Journal d'audit"): who
+    did what, to which record, when, and from where.
+
+    Written automatically — never by a view — by core/audit.py: model
+    signals record every create / update / (soft) delete / restore on the
+    business apps' models with a field-by-field diff, and the auth
+    signals record logins, logouts and failed logins. The request that
+    caused the change (user, IP, path) comes from AuditContextMiddleware.
+
+    Append-only by design: save() refuses to rewrite an existing row and
+    delete() refuses outright, so the journal can't be quietly edited
+    from inside the application. (Old rows are pruned only by the
+    core.tasks.purge_audit_log retention task, via a queryset delete.)
+
+    Snapshots (`actor_label`, `object_repr`) are stored alongside the FKs
+    on purpose: the journal must stay readable after the user or the
+    record it talks about has been deleted."""
+    timestamp = models.DateTimeField(default=timezone.now, db_index=True)
+
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='audit_entries',
+    )
+    actor_label = models.CharField(max_length=255, blank=True)
+
+    action = models.CharField(max_length=20, db_index=True)
+
+    content_type = models.ForeignKey(
+        ContentType, on_delete=models.SET_NULL, null=True, blank=True,
+    )
+    object_id = models.CharField(max_length=64, blank=True)
+    object_repr = models.CharField(max_length=255, blank=True)
+
+    # {field_name: {"label": verbose name, "old": str|None, "new": str|None}}
+    changes = models.JSONField(default=dict, blank=True)
+
+    cabinet = models.ForeignKey(
+        'accounts.Cabinet',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='audit_entries',
+    )
+
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=255, blank=True)
+    request_method = models.CharField(max_length=10, blank=True)
+    request_path = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        ordering = ['-timestamp', '-id']
+        verbose_name = "entrée du journal d'audit"
+        verbose_name_plural = "journal d'audit"
+        indexes = [
+            models.Index(fields=['content_type', 'object_id']),
+            models.Index(fields=['actor', 'timestamp']),
+            models.Index(fields=['cabinet', 'timestamp']),
+        ]
+
+    def __str__(self):
+        return f"{self.timestamp:%Y-%m-%d %H:%M} {self.actor_label or '—'} {self.action} {self.object_repr}"
+
+    def save(self, *args, **kwargs):
+        if self.pk is not None and not kwargs.get('force_insert'):
+            raise ValueError("Audit journal entries are append-only.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValueError("Audit journal entries cannot be deleted.")
+
+    def get_action_display(self):
+        from chantiermobile.constants import AuditAction
+        try:
+            return AuditAction(self.action).label
+        except ValueError:
+            return self.action
+
+    @property
+    def model_label(self):
+        if self.content_type_id is None:
+            return ''
+        model = self.content_type.model_class()
+        if model is None:
+            return self.content_type.model
+        return str(model._meta.verbose_name).capitalize()

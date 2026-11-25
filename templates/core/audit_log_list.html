@@ -1,0 +1,221 @@
+{% extends 'falcon_base.html' %}
+{% load static i18n audit_tags %}
+
+{% block title %}{% trans "Journal d'audit" %} - ChantierMobile{% endblock %}
+
+{% block content %}
+<div class="container" data-layout="container-fluid">
+    {% include 'includes/navbar-vertical.html' with on="admin_audit" %}
+
+    <div class="content">
+        {% include 'includes/navbar-top.html' %}
+
+        <div class="container-fluid py-4">
+{% include 'includes/page_header.html' %}
+
+<!-- Activity at a glance -->
+<div class="row g-3 mb-3">
+    <div class="col-6 col-lg-3">
+        <a class="card h-100 text-decoration-none" href="?date_from={{ today_iso }}&date_to={{ today_iso }}">
+            <div class="card-body">
+                <h6 class="text-600 fs--1 mb-1">{% trans "Actions aujourd'hui" %}</h6>
+                <div class="fs-2 fw-bold text-900">{{ stats.today }}</div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <h6 class="text-600 fs--1 mb-1">{% trans "Actions sur 7 jours" %}</h6>
+                <div class="fs-2 fw-bold text-900">{{ stats.week }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <h6 class="text-600 fs--1 mb-1">{% trans "Utilisateurs actifs aujourd'hui" %}</h6>
+                <div class="fs-2 fw-bold text-900">{{ stats.active_users_today }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <a class="card h-100 text-decoration-none" href="{{ failed_logins_url }}">
+            <div class="card-body">
+                <h6 class="text-600 fs--1 mb-1">{% trans "Échecs de connexion (24 h)" %}</h6>
+                <div class="fs-2 fw-bold {% if stats.failed_logins_24h %}text-danger{% else %}text-900{% endif %}">{{ stats.failed_logins_24h }}</div>
+            </div>
+        </a>
+    </div>
+</div>
+
+{% if object_history_label %}
+<div class="alert alert-info d-flex justify-content-between align-items-center">
+    <span><span class="fas fa-history me-2"></span>{% blocktrans with label=object_history_label %}Historique complet de « {{ label }} »{% endblocktrans %}</span>
+    <a href="{% url 'audit_log_list' %}" class="btn btn-sm btn-falcon-default">{% trans "Tout le journal" %}</a>
+</div>
+{% endif %}
+
+<!-- Filters -->
+<div class="card mb-3">
+    <div class="card-header bg-light">
+        <h5 class="mb-0"><span class="fas fa-filter me-2"></span>{% trans "Filtrer le journal" %}</h5>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            {% if filters.object_id %}<input type="hidden" name="object_id" value="{{ filters.object_id }}">{% endif %}
+            <div class="col-md-4">
+                <label class="form-label" for="q">{% trans "Recherche" %}</label>
+                <input type="text" class="form-control" id="q" name="q" value="{{ filters.q }}"
+                       placeholder="{% trans 'Utilisateur, élément, adresse IP, URL…' %}">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="actor">{% trans "Utilisateur" %}</label>
+                <select class="form-select" id="actor" name="actor">
+                    <option value="">{% trans "Tous les utilisateurs" %}</option>
+                    {% for u in actors %}
+                    <option value="{{ u.pk }}" {% if filters.actor == u.pk|stringformat:"s" %}selected{% endif %}>{{ u.get_full_name|default:u.username }} ({{ u.username }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="action">{% trans "Action" %}</label>
+                <select class="form-select" id="action" name="action">
+                    <option value="">{% trans "Toutes les actions" %}</option>
+                    {% for value, label in action_choices %}
+                    <option value="{{ value }}" {% if filters.action == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="model">{% trans "Type d'élément" %}</label>
+                <select class="form-select" id="model" name="model">
+                    <option value="">{% trans "Tous les types" %}</option>
+                    {% for value, label in model_choices %}
+                    <option value="{{ value }}" {% if filters.model == value|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="cabinet">{% trans "Cabinet" %}</label>
+                <select class="form-select" id="cabinet" name="cabinet">
+                    <option value="">{% trans "Tous les cabinets" %}</option>
+                    {% for c in cabinets %}
+                    <option value="{{ c.pk }}" {% if filters.cabinet == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="date_from">{% trans "Du" %}</label>
+                <input type="date" class="form-control" id="date_from" name="date_from" value="{{ filters.date_from }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="date_to">{% trans "Au" %}</label>
+                <input type="date" class="form-control" id="date_to" name="date_to" value="{{ filters.date_to }}">
+            </div>
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary"><span class="fas fa-search me-2"></span>{% trans "Filtrer" %}</button>
+                {% if has_filters %}
+                <a href="{% url 'audit_log_list' %}" class="btn btn-secondary">{% trans "Effacer les filtres" %}</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Entries -->
+<div class="card">
+    <div class="card-header bg-light">
+        <h5 class="mb-0">
+            <span class="fas fa-clipboard-list me-2"></span>
+            {% blocktrans count counter=page_obj.paginator.count %}{{ counter }} entrée{% plural %}{{ counter }} entrées{% endblocktrans %}
+        </h5>
+    </div>
+    <div class="card-body p-0">
+        {% if entries %}
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0 fs--1">
+                <thead class="bg-200 text-900">
+                    <tr>
+                        <th class="align-middle text-nowrap">{% trans "Date" %}</th>
+                        <th class="align-middle">{% trans "Utilisateur" %}</th>
+                        <th class="align-middle">{% trans "Action" %}</th>
+                        <th class="align-middle">{% trans "Élément" %}</th>
+                        <th class="align-middle">{% trans "Détail" %}</th>
+                        <th class="align-middle">{% trans "Cabinet" %}</th>
+                        <th class="align-middle">{% trans "Adresse IP" %}</th>
+                        <th class="align-middle"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for e in entries %}
+                    <tr class="align-middle">
+                        <td class="text-nowrap">
+                            {{ e.timestamp|date:"d/m/Y" }}<br>
+                            <small class="text-600">{{ e.timestamp|date:"H:i:s" }}</small>
+                        </td>
+                        <td>
+                            {% if e.actor_id %}
+                            <a href="?actor={{ e.actor_id }}" title="{% trans 'Voir toutes les actions de cet utilisateur' %}">{{ e.actor_label }}</a>
+                            {% else %}
+                            <span class="text-600">{{ e.actor_label|default:"—" }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge badge-soft-{{ e.action|audit_badge }}">
+                                <span class="fas fa-{{ e.action|audit_icon }} me-1"></span>{{ e.get_action_display }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if e.content_type_id %}<small class="text-600 d-block">{{ e.model_label }}</small>{% endif %}
+                            {% if e.content_type_id and e.object_id %}
+                            <a href="?model={{ e.content_type_id }}&object_id={{ e.object_id|urlencode }}" title="{% trans "Historique de cet élément" %}">{{ e.object_repr|truncatechars:60 }}</a>
+                            {% else %}
+                            {{ e.object_repr|truncatechars:60|default:"—" }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% with rows=e.changes|audit_change_rows %}
+                            {% if e.action == 'UPDATE' or e.action == 'DELETE' or e.action == 'RESTORE' %}
+                                {% for row in rows|slice:":3" %}
+                                <div class="text-truncate" style="max-width: 22rem;">
+                                    <span class="fw-semi-bold">{{ row.label }}</span> :
+                                    <span class="text-600 text-decoration-line-through">{{ row.old|default:"∅" }}</span>
+                                    → {{ row.new|default:"∅" }}
+                                </div>
+                                {% endfor %}
+                                {% if rows|length > 3 %}<small class="text-600">+ {{ rows|length|add:"-3" }} {% trans "autre(s)" %}</small>{% endif %}
+                            {% elif e.action == 'CREATE' %}
+                                <small class="text-600">{% blocktrans count counter=rows|length %}{{ counter }} champ renseigné{% plural %}{{ counter }} champs renseignés{% endblocktrans %}</small>
+                            {% elif e.request_path %}
+                                <small class="text-600">{{ e.request_method }} {{ e.request_path|truncatechars:40 }}</small>
+                            {% endif %}
+                            {% endwith %}
+                        </td>
+                        <td>{% if e.cabinet_id %}{{ e.cabinet.name }}{% else %}<span class="text-500">—</span>{% endif %}</td>
+                        <td class="text-nowrap"><small>{{ e.ip_address|default:"—" }}</small></td>
+                        <td class="text-end">
+                            <a href="{% url 'audit_log_detail' e.pk %}" class="btn btn-link btn-sm p-0" title="{% trans 'Détails' %}">
+                                <span class="fas fa-eye"></span>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-600">
+            <span class="fas fa-clipboard-list fs-3 mb-2 d-block"></span>
+            {% if has_filters %}{% trans "Aucune entrée ne correspond à ces filtres." %}{% else %}{% trans "Le journal est vide pour le moment." %}{% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% include 'includes/pagination.html' %}
+
+        </div>
+        {% include 'includes/footer.html' %}
+    </div>
+</div>
+{% endblock %}

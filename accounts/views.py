@@ -453,6 +453,12 @@ class UserDetailAdminView(LoginRequiredMixin, IsSuperAdminMixin, PageHeaderMixin
                 'icon': 'edit',
                 'class': 'btn-falcon-default',
             },
+            {
+                'label': _("Journal d'activité"),
+                'url': str(reverse_lazy('audit_log_list')) + f'?actor={self.object.pk}',
+                'icon': 'history',
+                'class': 'btn-falcon-default',
+            },
         ]
 
     def get_object(self):
@@ -809,6 +815,12 @@ class CabinetDetailAdminView(LoginRequiredMixin, IsSuperAdminMixin, PageHeaderMi
                 'url': str(reverse_lazy('accounts:admin_assign_user_to_cabinet', kwargs={'cabinet_id': self.object.pk})),
                 'icon': 'user-plus',
                 'class': 'btn-falcon-success',
+            },
+            {
+                'label': _("Journal d'activité"),
+                'url': str(reverse_lazy('audit_log_list')) + f'?cabinet={self.object.pk}',
+                'icon': 'history',
+                'class': 'btn-falcon-default',
             },
         ]
 
